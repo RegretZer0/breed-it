@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Swine in Heat</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Report Swine in Heat</h2>
+
+    <!-- Back button -->
+    <button 
+      style="margin-bottom: 15px; padding: 10px 20px; background-color: #5aa9e6; color: white; border: none; border-radius: 5px; cursor: pointer;"
+      onclick="window.location.href='farmer_dashboard.html'"
+    >
+      ← Back to Dashboard
+    </button>
+
+    <!-- Form -->
+    <form id="heatReportForm">
+      <label for="swineSelect">Select Swine:</label><br>
+      <select id="swineSelect" required></select><br><br>
+
+      <label>Signs of Heat:</label><br>
+      <input type="checkbox" name="signs" value="Red/Swollen Vulva"> Red/Swollen Vulva<br>
+      <input type="checkbox" name="signs" value="Restlessness"> Restlessness<br>
+      <input type="checkbox" name="signs" value="Frequent Mounting"> Frequent Mounting<br>
+      <input type="checkbox" name="signs" value="Clear Mucus"> Clear Mucus<br>
+      <input type="checkbox" name="signs" value="Other"> Other<br><br>
+
+      <label for="evidence">Upload Video/Photo:</label><br>
+      <input type="file" id="evidence" accept="video/*,image/*" required><br><br>
+
+      <button type="submit">Submit Report</button>
+      <p id="reportMessage"></p>
+    </form>
+  </div>
+
+  <script src="/js/farmer_heat.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Farmers</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Simple modal styling */
+    #editModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    #editModal form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <h2>Manage Farmers</h2>
+
+    <!-- Section: Register New Farmer -->
+    <h3>Register New Farmer</h3>
+    <form id="registerFarmerForm">
+      <input type="text" id="name" placeholder="Farmer Full Name" required />
+      <input type="text" id="address" placeholder="Address" />
+      <input type="text" id="contact_no" placeholder="Contact Number" />
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <input type="number" id="num_of_pens" placeholder="Number of Pens" required />
+      <input type="number" id="pen_capacity" placeholder="Pen Capacity" required />
+      <button type="submit">Register Farmer</button>
+      <p id="farmerMessage" class="message"></p>
+    </form>
+
+    <hr />
+
+    <!-- Section: List of Registered Farmers -->
+    <h3>Your Registered Farmers</h3>
+    <ul id="farmersList"></ul>
+
+    <a href="admin_dashboard.html" style="margin-top: 20px; display: inline-block;">Back to Dashboard</a>
+  </div>
+
+  <!-- Edit Farmer Modal -->
+  <div id="editModal">
+    <form id="editFarmerForm">
+      <h3>Edit Farmer</h3>
+      <input type="text" id="editName" placeholder="Name" required />
+      <input type="text" id="editAddress" placeholder="Address" />
+      <input type="text" id="editContact" placeholder="Contact Number" />
+      <input type="number" id="editPens" placeholder="Number of Pens" />
+      <input type="number" id="editCapacity" placeholder="Pen Capacity" />
+      <button type="submit">Update Farmer</button>
+      <button type="button" id="closeModal">Cancel</button>
+    </form>
+  </div>
+
+  <script src="js/manage_farmers.js"></script>
+</body>
+</html>

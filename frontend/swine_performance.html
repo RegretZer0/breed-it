@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swine Performance Management</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Swine Performance Management</h2>
+
+    <!-- Section: Add/Update Swine Performance -->
+    <div class="form-section">
+      <h3>Add / Update Performance</h3>
+      <form id="performanceForm">
+        <label for="swineSelect">Swine:</label>
+        <select id="swineSelect" name="swine_id" required></select>
+
+        <label for="parentType">Parent Type:</label>
+        <input type="text" id="parentType" name="parent_type" required />
+
+        <label for="recordDate">Record Date:</label>
+        <input type="date" id="recordDate" name="record_date" />
+
+        <label for="weight">Weight (kg):</label>
+        <input type="number" id="weight" name="weight" />
+
+        <label for="bodyLength">Body Length (cm):</label>
+        <input type="number" id="bodyLength" name="body_length" />
+
+        <label for="heartGirth">Heart Girth (cm):</label>
+        <input type="number" id="heartGirth" name="heart_girth" />
+
+        <label for="color">Color:</label>
+        <input type="text" id="color" name="color" />
+
+        <label for="teethCount">Teeth Count:</label>
+        <input type="number" id="teethCount" name="teeth_count" />
+
+        <label for="teethAlignment">Teeth Alignment:</label>
+        <input type="text" id="teethAlignment" name="teeth_alignment" />
+
+        <label for="legConformation">Leg Conformation:</label>
+        <input type="text" id="legConformation" name="leg_conformation" />
+
+        <label for="hoofCondition">Hoof Condition:</label>
+        <input type="text" id="hoofCondition" name="hoof_condition" />
+
+        <label for="bodySymmetry">Body Symmetry & Muscling:</label>
+        <input type="text" id="bodySymmetry" name="body_symmetry_and_muscling" />
+
+        <label for="noOfPiglets">No. of Piglets:</label>
+        <input type="number" id="noOfPiglets" name="no_of_piglets" />
+
+        <button type="submit">Save Performance</button>
+      </form>
+    </div>
+
+    <!-- Section: Add/Update AI Record -->
+    <div class="form-section">
+      <h3>Add / Update AI Record</h3>
+      <form id="aiForm">
+        <label for="femaleSwineSelect">Female Swine:</label>
+        <select id="femaleSwineSelect" name="swine_id" required></select>
+
+        <label for="maleSwineSelect">Male Swine:</label>
+        <select id="maleSwineSelect" name="male_swine_id" required></select>
+
+        <label for="inseminationDate">Insemination Date:</label>
+        <input type="date" id="inseminationDate" name="insemination_date" />
+
+        <button type="submit">Save AI Record</button>
+      </form>
+    </div>
+
+    <!-- Section: Existing Records -->
+    <div class="records-section">
+      <h3>Existing Swine Performance Records</h3>
+      <table id="performanceTable">
+        <thead>
+          <tr>
+            <th>ReproductionID</th>
+            <th>SwineID</th>
+            <th>Parent Type</th>
+            <th>Weight</th>
+            <th>Body Length</th>
+            <th>Heart Girth</th>
+            <th>No. of Piglets</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Existing AI Records</h3>
+      <table id="aiTable">
+        <thead>
+          <tr>
+            <th>InseminationID</th>
+            <th>Female SwineID</th>
+            <th>Male SwineID</th>
+            <th>Insemination Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="swine_performance.js"></script>
+</body>
+</html>

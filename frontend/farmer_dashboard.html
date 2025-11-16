@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Farmer Dashboard - BreedIT</title>
+</head>
+<body>
+  <div class="container">
+    <h2>Welcome, Farmer!</h2>
+
+    <!-- Existing buttons -->
+    <button id="viewSwineBtn">View Swine</button>
+    <button id="ovulationBtn">Ovulation Report</button>
+
+    <!-- New button: Report Swine in Heat -->
+    <button id="heatReportBtn">Report Swine in Heat</button>
+
+    <button id="logoutBtn">Logout</button>
+  </div>
+
+  <script>
+    // Redirect buttons
+    document.getElementById("viewSwineBtn").addEventListener("click", () => {
+      window.location.href = "farmer_swine.html";
+    });
+
+    document.getElementById("ovulationBtn").addEventListener("click", () => {
+      window.location.href = "ovulation_report.html";
+    });
+
+    document.getElementById("heatReportBtn").addEventListener("click", () => {
+      window.location.href = "report_heat.html"; // NEW PAGE
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.clear();
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>
