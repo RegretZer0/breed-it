@@ -1,0 +1,77 @@
+<%- include("../partials/landing_header") %>
+
+<!-- Centered signup area -->
+  <main class="signup-viewport">
+    <div class="container-lg h-100">
+      <div class="row justify-content-center align-items-center h-100">
+        <div class="col-xl-3 col-lg-4 col-md-6 col-sm-8">
+          <div class="signup-card p-4">
+            <h2 class="signup-title text-center">Signup</h2>
+
+            <form class="mt-4" id="signupForm" novalidate>
+              <div class="row gx-2 mb-3">
+                <div class="col">
+                  <label class="form-label small text-muted">Firstname</label>
+                  <input type="text" class="form-control form-control-sm" id="firstname" />
+                </div>
+                <div class="col">
+                  <label class="form-label small text-muted">Lastname</label>
+                  <input type="text" class="form-control form-control-sm" id="lastname" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small text-muted">Email</label>
+                <input type="email" class="form-control form-control-sm" id="email" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small text-muted">Phone number</label>
+                <input type="tel" class="form-control form-control-sm" id="phone" placeholder="+63" />
+              </div>
+
+              <div class="mb-3 position-relative">
+                <label class="form-label small text-muted">Password</label>
+                <div class="input-group input-group-sm">
+                  <input type="password" class="form-control" id="password" />
+                  <button class="btn btn-outline-secondary btn-sm toggle-pass" type="button" aria-label="Show password">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="mb-3 position-relative">
+                <label class="form-label small text-muted">Confirm password</label>
+                <div class="input-group input-group-sm">
+                  <input type="password" class="form-control" id="confirm_password" />
+                  <button class="btn btn-outline-secondary btn-sm toggle-pass confirm-toggle" type="button" aria-label="Show password">
+                    <i class="fa-regular fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-outline-dark btn-sm signup-btn">Signup</button>
+              </div>
+
+              <div class="text-center small muted-divider">
+                <span class="divider-line"></span>
+                <span class="divider-text">Already have an Account?</span>
+                <span class="divider-line"></span>
+              </div>
+
+              <div class="text-center mt-3">
+                <a href="/Login" class="create-link">Login</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bootstrap + page JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../../js/register.js"></script>
+</body>
+</html>
