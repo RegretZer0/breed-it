@@ -1,11 +1,26 @@
+/* ============================
+   GLOBAL FIX FOR SCROLL ISSUE
+   ============================ */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;   /* allows scrolling */
+  overflow-x: hidden;
+}
+
+/* ============================
+   ORIGINAL USER STYLES
+   ============================ */
+
 body {
   font-family: Arial, sans-serif;
   background: linear-gradient(to right, #7cc6fe, #5aa9e6);
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
+  align-items: flex-start; /* allow scrolling from top */
+  min-height: 100vh;       /* allow tall content */
+  padding: 20px 0;         /* spacing so container isn't stuck */
 }
 
 .container {
@@ -13,17 +28,19 @@ body {
   padding: 30px;
   border-radius: 15px;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-  width: 350px;
-  text-align: center;
+  width: 90%;          /* increased for performance page */
+  max-width: 900px;    /* caps the large forms */
+  text-align: left;    /* easier to read forms */
 }
 
 h2 {
   margin-bottom: 20px;
   color: #333;
+  text-align: center;
 }
 
-input {
-  width: 90%;
+input, select {
+  width: 95%;
   padding: 10px;
   margin: 10px 0;
   border: 1px solid #ccc;
@@ -63,4 +80,44 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* ============================
+   TABLE FIXES FOR PERFORMANCE PAGE
+   ============================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+table th, table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+table th {
+  background: #e0efff;
+}
+
+/* Prevent table from stretching container */
+.records-section {
+  overflow-x: auto;
+  margin-top: 25px;
+}
+
+/* Spacing between sections */
+.form-section {
+  margin-bottom: 30px;
+}
+
+.report-box {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 10px;
+  background: #f5faff;
+  border: 1px solid #d0e6ff;
+  display: none;
 }

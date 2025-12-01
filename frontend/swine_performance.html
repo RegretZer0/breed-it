@@ -4,54 +4,61 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Swine Performance Management</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <div class="container">
     <h2>Swine Performance Management</h2>
 
+    <!-- Generate Report Button -->
+    <button id="generateReportBtn" style="margin-bottom: 20px;">
+      Generate Breeding Analytics Report
+    </button>
+    <div id="reportOutput" class="report-box"></div>
+
     <!-- Section: Add/Update Swine Performance -->
     <div class="form-section">
       <h3>Add / Update Performance</h3>
       <form id="performanceForm">
+
         <label for="swineSelect">Swine:</label>
         <select id="swineSelect" name="swine_id" required></select>
 
         <label for="parentType">Parent Type:</label>
-        <input type="text" id="parentType" name="parent_type" required />
+        <input type="text" id="parentType" name="parentType" required />
 
         <label for="recordDate">Record Date:</label>
-        <input type="date" id="recordDate" name="record_date" />
+        <input type="date" id="recordDate" name="recordDate" />
 
         <label for="weight">Weight (kg):</label>
         <input type="number" id="weight" name="weight" />
 
         <label for="bodyLength">Body Length (cm):</label>
-        <input type="number" id="bodyLength" name="body_length" />
+        <input type="number" id="bodyLength" name="bodyLength" />
 
         <label for="heartGirth">Heart Girth (cm):</label>
-        <input type="number" id="heartGirth" name="heart_girth" />
+        <input type="number" id="heartGirth" name="heartGirth" />
 
         <label for="color">Color:</label>
         <input type="text" id="color" name="color" />
 
         <label for="teethCount">Teeth Count:</label>
-        <input type="number" id="teethCount" name="teeth_count" />
+        <input type="number" id="teethCount" name="teethCount" />
 
         <label for="teethAlignment">Teeth Alignment:</label>
-        <input type="text" id="teethAlignment" name="teeth_alignment" />
+        <input type="text" id="teethAlignment" name="teethAlignment" />
 
         <label for="legConformation">Leg Conformation:</label>
-        <input type="text" id="legConformation" name="leg_conformation" />
+        <input type="text" id="legConformation" name="legConformation" />
 
         <label for="hoofCondition">Hoof Condition:</label>
-        <input type="text" id="hoofCondition" name="hoof_condition" />
+        <input type="text" id="hoofCondition" name="hoofCondition" />
 
-        <label for="bodySymmetry">Body Symmetry & Muscling:</label>
-        <input type="text" id="bodySymmetry" name="body_symmetry_and_muscling" />
+        <label for="bodySymmetryAndMuscling">Body Symmetry & Muscling:</label>
+        <input type="text" id="bodySymmetryAndMuscling" name="bodySymmetryAndMuscling" />
 
         <label for="noOfPiglets">No. of Piglets:</label>
-        <input type="number" id="noOfPiglets" name="no_of_piglets" />
+        <input type="number" id="noOfPiglets" name="noOfPiglets" />
 
         <button type="submit">Save Performance</button>
       </form>
@@ -80,12 +87,18 @@
       <table id="performanceTable">
         <thead>
           <tr>
-            <th>ReproductionID</th>
             <th>SwineID</th>
             <th>Parent Type</th>
+            <th>Record Date</th>
             <th>Weight</th>
             <th>Body Length</th>
             <th>Heart Girth</th>
+            <th>Color</th>
+            <th>Teeth Count</th>
+            <th>Teeth Alignment</th>
+            <th>Leg Conformation</th>
+            <th>Hoof Condition</th>
+            <th>Body Symmetry & Muscling</th>
             <th>No. of Piglets</th>
             <th>Actions</th>
           </tr>
@@ -97,7 +110,6 @@
       <table id="aiTable">
         <thead>
           <tr>
-            <th>InseminationID</th>
             <th>Female SwineID</th>
             <th>Male SwineID</th>
             <th>Insemination Date</th>
@@ -109,6 +121,6 @@
     </div>
   </div>
 
-  <script src="swine_performance.js"></script>
+  <script src="js/swine_performance.js"></script>
 </body>
 </html>
