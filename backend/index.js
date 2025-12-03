@@ -87,14 +87,86 @@ app.get("/admin_dashboard", (req, res) => {
 });
 
 
-app.get("/pig_management", (req, res) => {
-  res.render("pages/pig_management", {
-    page_title: "Pig Management",
-    current_page: "pig_management"
+// Pig Management Pages
+app.get("/pigmanagement_overview", (req, res) => {
+  res.render("pages/pigmanagement_overview", {
+    page_title: "Pig Management Overview",
+    current_page: "pigmanagement_overview"
+  });
+});
+
+app.get("/pigmanagement_byf", (req, res) => {
+  res.render("pages/pigmanagement_byf", {
+    page_title: "Pig Management BYF",
+    current_page: "pigmanagement_byf"
+  });
+});
+
+app.get("/pigmanagement_health", (req, res) => {
+  res.render("pages/pigmanagement_health", {
+    page_title: "Pig Management Health",
+    current_page: "pigmanagement_health"
+  });
+});
+
+app.get("/pigmanagement_breeding", (req, res) => {
+  res.render("pages/pigmanagement_breeding", {
+    page_title: "Pig Management Breeding",
+    current_page: "pigmanagement_breeding"
+  });
+});
+
+app.get("/pigmanagement_regpig", (req, res) => {
+  res.render("pages/pigmanagement_regpig", {
+    page_title: "Pig Management RegPig",
+    current_page: "pigmanagement_regpig"
   });
 });
 
 
+app.get("/breed_analysis", (req, res) => {
+  res.render("pages/breed_analysis", {
+    page_title: "Breed Analysis",
+    current_page: "breed_analysis"
+  });
+});
+
+app.get("/calendar", (req, res) => {
+  res.render("pages/calendar", {
+    page_title: "Calendar",
+    current_page: "calendar"
+  });
+});
+
+app.get("/reports", (req, res) => {
+  res.render("pages/reports", {
+    page_title: "Reports",
+    current_page: "reports"
+  });
+});
+
+
+// Farmer Pages
+app.get("/farmers_report", (req, res) => {
+  res.render("pages/farmers_report", {
+    page_title: "Farmers Report",
+    current_page: "farmers_report" 
+  });
+});
+
+app.get("/farmers_newacc", (req, res) => {
+  res.render("pages/farmers_newacc", {
+    page_title: "Farmers New Account",
+    current_page: "farmers_newacc" 
+  });
+});
+
+app.get("/farmers_manageacc", (req, res) => {
+  res.render("pages/farmers_manageacc", {
+    page_title: "Farmers Manage Account",
+    current_page: "farmers_manageacc" 
+  });
+});
 
 // Debug helper route (safe to remove later)
 // Prints the resolved views directory and checks if the EJS file exists.

@@ -7,17 +7,17 @@
           <div class="login-card p-4">
             <h2 class="login-title text-center">Login</h2>
 
-            <form class="mt-4" id="loginForm" novalidate>
+            <form class="mt-4" id="loginForm">
               <div class="mb-3">
                 <label class="form-label small text-muted">Email</label>
-                <input type="email" class="form-control form-control-sm" id="email" placeholder="">
+                <input type="email" class="form-control form-control-sm" id="email" placeholder="" required>
               </div>
 
               <div class="mb-2 position-relative">
                 <label class="form-label small text-muted">Password</label>
                 <div class="input-group input-group-sm">
                   <input type="password" class="form-control" id="password" placeholder="">
-                  <button class="btn btn-outline-secondary btn-sm toggle-pass" type="button" aria-label="Show password">
+                  <button class="btn btn-outline-secondary btn-sm toggle-pass" type="button" aria-label="Show password" required>
                     <i class="fa-regular fa-eye"></i>
                   </button>
                 </div>

@@ -1,0 +1,137 @@
+<%- include("../partials/header") %>
+<%- include("../partials/navbar") %>
+<%- include("../partials/sidepanel") %>
+
+<!-- Main content -->
+<main class="main-content">
+  <div class="container-fluid">
+
+    <%- include("../partials/farmer_panel") %>
+
+    <div class="outer-card">
+      <div class="header-row">
+        <h1>MANAGE ACCOUNT</h1>
+      </div>
+
+      <div class="inner-card">
+
+        <!-- Stats -->
+        <div class="stats-row mb-3">
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Total Farmers</div>
+              <div class="stat-value">130</div>
+            </div>
+            <div class="stat-icon amber">
+              <i class="fa-solid fa-user"></i>
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Active</div>
+              <div class="stat-value">30</div>
+            </div>
+            <div class="stat-icon green">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Inactive</div>
+              <div class="stat-value">30</div>
+            </div>
+            <div class="stat-icon red">
+              <i class="fa-solid fa-user-xmark"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======= FILTERS ROW ======= -->
+        <div class="card page-card mb-3">
+          <div class="card-body">
+            <form id="filtersForm" class="row g-2 align-items-center">
+              <div class="col-auto col-md">
+                <select class="form-select form-select-sm" name="location">
+                  <option>Location</option>
+                </select>
+              </div>
+
+              <div class="col-auto col-md">
+                <select class="form-select form-select-sm" name="pigStatus">
+                  <option>Pig Status</option>
+                </select>
+              </div>
+
+              <div class="col-auto col-md">
+                <select class="form-select form-select-sm" name="sex">
+                  <option>Sex</option>
+                </select>
+              </div>
+
+              <div class="col-auto col-md">
+                <select class="form-select form-select-sm" name="phase">
+                  <option>Phase</option>
+                </select>
+              </div>
+
+              <div class="col-auto col-md">
+                <select class="form-select form-select-sm" name="typeOfPig">
+                  <option>Type of Pig</option>
+                </select>
+              </div>
+
+              <div class="col-auto col-md-auto">
+                <input type="date" class="form-control form-control-sm" name="dateFrom" />
+              </div>
+
+              <div class="col-auto text-center d-none d-md-flex align-items-center justify-content-center px-1">
+                <span class="to-dash">— TO —</span>
+              </div>
+
+              <div class="col-auto col-md-auto">
+                <input type="date" class="form-control form-control-sm" name="dateTo"/>
+              </div>
+
+              <div class="col-auto col-md">
+                <input type="text" class="form-control form-control-sm" name="tag" placeholder="Search by tag number" />
+              </div>
+
+              <div class="col-auto">
+                <button class="btn btn-success btn-sm search-btn" type="submit">Search</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <!-- ======= END FILTERS ROW ======= -->
+
+        <div class="table-wrap">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>NAME</th>
+                <th>SEX</th>
+                <th>MUNICIPALITY</th>
+                <th>ADDRESS</th>
+                <th>CONTACT INFO</th>
+                <th>PRODUCTION TYPE</th>
+                <th>FARM SIZE (m²/ha)</th>
+                <th>PEN COUNT</th>
+                <th>CAPACITY</th>
+                <th>ACCOUNT STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+
+            <tbody id="farmersTbody">
+              <!-- JS will populate rows -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+<%- include("../partials/footer") %>

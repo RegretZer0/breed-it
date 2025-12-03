@@ -110,6 +110,27 @@ html, body {
   cursor: pointer;
 }
 
+/* Role selector styles */
+.role-options {
+  display: flex;
+  gap: 18px;
+  margin-top: 6px;
+}
+.role-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 14px;
+  color: var(--dark-gray);
+}
+.role-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-green);
+}
+
 /* Signup button */
 .signup-btn{
   background: transparent;
@@ -165,4 +186,7 @@ html, body {
   .signup-title{ font-size: 24px; }
   .signup-btn{ font-size: 13px; padding: 8px 12px; }
   .muted-divider .divider-line{ width: 60px; }
+
+  /* Stack role options vertically on small screens */
+  .role-options { flex-direction: column; gap: 10px; }
 }

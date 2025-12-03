@@ -6,20 +6,7 @@
     <main class="main-content">
       <div class="container-fluid">
         <!-- Header card with tabs -->
-        <div class="card page-card mb-3">
-          <div class="card-body">
-            <h4 class="page-title">PIG MANAGEMENT</h4>
-
-            <div class="tabs-row mt-3 d-flex flex-wrap gap-3" role="tablist" aria-label="Pig management sections">
-              <a class="tab-btn active" role="tab" href="pigmanagement.html" data-page="pigmanagement.html">Overview</a>
-              <a class="tab-btn" role="tab" href="pigmanagement-by-farmer.html" data-page="pigmanagement-by-farmer.html">By Farmer</a>
-              <a class="tab-btn" role="tab" href="pigmanagement-health.html" data-page="pigmanagement-health.html">Health</a>
-              <a class="tab-btn" role="tab" href="pigmanagement-breeding.html" data-page="pigmanagement-breeding.html">Breeding</a>
-              <a class="tab-btn" role="tab" href="pigmanagement-register.html" data-page="pigmanagement-register.html">Register Pig</a>
-            </div>
-          </div>
-        </div>
-
+        <%- include("../partials/pigmanagement_panel") %>
         <!-- Filters row -->
         <div class="card page-card mb-3">
           <div class="card-body">
