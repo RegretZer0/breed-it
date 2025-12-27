@@ -149,12 +149,6 @@ app.get("/breed_analysis", (req, res) =>
   })
 );
 
-app.get("/calendar", (req, res) =>
-  res.render("pages/calendar", {
-    page_title: "Calendar",
-    current_page: "calendar",
-  })
-);
 
 app.get("/reports", (req, res) =>
   res.render("pages/reports", {
