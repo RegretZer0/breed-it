@@ -13,6 +13,12 @@ const heatReportSchema = new mongoose.Schema({
     required: true 
   },
 
+  admin_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true
+  },
+
   signs: [{ 
     type: String, 
     required: true 
@@ -31,6 +37,12 @@ const heatReportSchema = new mongoose.Schema({
   admin_notes: { 
     type: String, 
     default: "" 
+  },
+
+  status: {
+  type: String,
+  enum: ["pending", "accepted", "rejected"],
+  default: "pending"
   },
 
   date_reported: { 

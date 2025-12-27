@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Local uploaded image path (will be transformed to a public URL by your pipeline)
   const HERO_IMAGE_URL = '/mnt/data/11dbcb6f-aac3-41f1-98a7-21f123f95262.png';
 
+<<<<<<< HEAD
   // If an img with id="heroImg" exists, set its src
   const heroImgEl = document.getElementById('heroImg');
   if (heroImgEl) heroImgEl.src = HERO_IMAGE_URL;
@@ -12,6 +13,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // prevent adding multiple listeners if scripts re-run
     if (btn.dataset.toggleAttached) return;
     btn.dataset.toggleAttached = 'true';
+=======
+  const fullName = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  
+  // Automatically set role to admin
+  const role = "admin";
+
+  if (!fullName || !email || !password) {
+    alert("Please fill out all fields.");
+    return;
+  }
+>>>>>>> c77026dfb006471fe2f49bc6d2dea04e554358c5
 
     btn.addEventListener('click', (ev) => {
       // find the nearest input inside the same input-group

@@ -75,7 +75,7 @@ router.post("/add", async (req, res) => {
   }
 });
 
-// Get swine
+// Get swine (admin OR farmer view)
 router.get("/", async (req, res) => {
   const { userId, role } = req.query;
 
@@ -163,14 +163,23 @@ router.put("/update/:swineId", async (req, res) => {
   }
 });
 
-// Get all swines for dropdowns
+// Get all swines FOR SPECIFIC ADMIN ONLY
 router.get("/all", async (req, res) => {
   try {
-    const swine = await Swine.find()
-      .populate("farmer_id", "name")
-      .lean();
+    const { adminId } = req.query;
 
-    console.log(`[SWINE FETCH ALL] Total swines: ${swine.length}`);
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "adminId is required" });
+    }
+
+    const farmers = await Farmer.find({ registered_by: adminId }).select("_id");
+    const farmerIds = farmers.map(f => f._id);
+
+    const swine = await Swine.find({ farmer_id: { $in: farmerIds } })
+                             .populate("farmer_id", "name")
+                             .lean();
+
+    console.log(`[SWINE FETCH ALL BY ADMIN] Admin: ${adminId}, Found: ${swine.length}`);
 
     const swineData = swine.map(s => ({
       _id: s._id,
@@ -188,14 +197,21 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// Get only male swines
+// Get only male swines (ADMIN-SCOPED)
 router.get("/males", async (req, res) => {
   try {
-    const males = await Swine.find({ sex: "Male" })
-      .populate("farmer_id", "name")
-      .lean();
+    const { adminId } = req.query;
 
-    console.log(`[SWINE FETCH MALES] Total males: ${males.length}`);
+    if (!adminId) return res.status(400).json({ success: false, message: "adminId is required" });
+
+    const farmers = await Farmer.find({ registered_by: adminId }).select("_id");
+    const farmerIds = farmers.map(f => f._id);
+
+    const males = await Swine.find({ sex: "Male", farmer_id: { $in: farmerIds } })
+                             .populate("farmer_id", "name")
+                             .lean();
+
+    console.log(`[SWINE FETCH MALES BY ADMIN] Admin: ${adminId}, Total males: ${males.length}`);
 
     const maleData = males.map(s => ({
       _id: s._id,

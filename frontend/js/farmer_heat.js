@@ -33,6 +33,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const signs = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map(cb => cb.value);
     const evidence = document.getElementById("evidence").files[0];
 
+    const farmerId = localStorage.getItem("userId");
+
     if (!selectedSwine || signs.length === 0 || !evidence) {
       reportMessage.style.color = "red";
       reportMessage.textContent = "Please select swine, at least one sign, and upload evidence.";
@@ -43,7 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.append("swineId", selectedSwine);
     formData.append("signs", JSON.stringify(signs));
     formData.append("evidence", evidence);
-    formData.append("farmerId", userId);
+    formData.append("farmerId", farmerId);
 
     try {
       const res = await fetch("http://localhost:5000/api/heat/add", { 

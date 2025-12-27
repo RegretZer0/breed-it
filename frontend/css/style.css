@@ -1,6 +1,3 @@
-/* ============================
-   GLOBAL FIX FOR SCROLL ISSUE
-   ============================ */
 html, body {
   height: 100%;
   margin: 0;
@@ -8,10 +5,6 @@ html, body {
   overflow-y: auto;   /* allows scrolling */
   overflow-x: hidden;
 }
-
-/* ============================
-   ORIGINAL USER STYLES
-   ============================ */
 
 body {
   font-family: Arial, sans-serif;
@@ -82,9 +75,6 @@ a:hover {
   text-decoration: underline;
 }
 
-/* ============================
-   TABLE FIXES FOR PERFORMANCE PAGE
-   ============================ */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -102,13 +92,11 @@ table th {
   background: #e0efff;
 }
 
-/* Prevent table from stretching container */
 .records-section {
   overflow-x: auto;
   margin-top: 25px;
 }
 
-/* Spacing between sections */
 .form-section {
   margin-bottom: 30px;
 }
@@ -120,4 +108,30 @@ table th {
   background: #f5faff;
   border: 1px solid #d0e6ff;
   display: none;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+.report-table th, .report-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+}
+
+.report-table th {
+  background-color: #f2f2f2;
+}
+
+#reportOutput {
+    display: block !important;
+    visibility: visible !important;
+    min-height: 100px;
+    padding: 15px;
+    border: 2px solid black;
+    background: white;
+    color: black;
 }

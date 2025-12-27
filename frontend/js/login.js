@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btn.dataset.toggleAttached) return;
     btn.dataset.toggleAttached = 'true';
 
+<<<<<<< HEAD
     btn.addEventListener('click', () => {
       // find nearest input (works if toggle inside .input-group, or targets #password)
       const input =
@@ -25,12 +26,54 @@ document.addEventListener('DOMContentLoaded', () => {
       if (input.type === 'password') {
         input.type = 'text';
         if (icon) { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); }
+=======
+  try {
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("Raw response from server:", text);
+      throw new Error("Server returned invalid response.");
+    }
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Login failed");
+    }
+
+    // Save auth info
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("userId", data.user._id);
+    localStorage.setItem("role", data.role);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    messageEl.style.color = "green";
+    messageEl.textContent = "Login successful! Redirecting...";
+
+    // ROLE-BASED REDIRECT (RESTORED)
+    setTimeout(() => {
+      if (data.role === "admin") {
+        window.location.href = "admin_dashboard.html";
+      } else if (data.role === "farmer") {
+        window.location.href = "farmer_dashboard.html";
+>>>>>>> c77026dfb006471fe2f49bc6d2dea04e554358c5
       } else {
         input.type = 'password';
         if (icon) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); }
       }
+<<<<<<< HEAD
     });
   });
+=======
+    }, 800);
+>>>>>>> c77026dfb006471fe2f49bc6d2dea04e554358c5
 
   // Main login form handler
   const form = document.getElementById('loginForm');

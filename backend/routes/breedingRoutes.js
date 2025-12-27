@@ -5,21 +5,16 @@ const SwinePerformance = require("../models/SwinePerformance");
 const AIRecord = require("../models/AIRecord");
 const Swine = require("../models/Swine");
 
-// ----------------------------------------------------
 // Generate Breeding Analytics Report
-// ----------------------------------------------------
 router.get("/report", async (req, res) => {
   try {
-    // Load all records
+
     const performance = await SwinePerformance.find().populate("swine_id");
-    const ai = await AIRecord.find()
+    const ai = await AIRecord.find()                                                                                                                    
       .populate("swine_id")
       .populate("male_swine_id");
 
-    // ----------------------------------------------------
-    // 1. PERFORMANCE SCORE
-    // ----------------------------------------------------
-
+    // Performance Score Calculation
     const performanceScores = performance
       .map(p => {
         const swine = p.swine_id;
@@ -48,7 +43,7 @@ router.get("/report", async (req, res) => {
       })
       .filter(Boolean);
 
-    // Remove duplicates (if multiple performance records exist)
+ 
     const uniquePerf = Object.values(
       performanceScores.reduce((acc, cur) => {
         acc[cur.swine_id] = cur;
@@ -56,10 +51,7 @@ router.get("/report", async (req, res) => {
       }, {})
     );
 
-    // ----------------------------------------------------
-    // 2. REPRODUCTION SCORE (based on number of piglets)
-    // ----------------------------------------------------
-
+    // REPRODUCTION SCORE (based on number of piglets)
     const offspringCounts = {};
 
     ai.forEach(rec => {
@@ -80,10 +72,7 @@ router.get("/report", async (req, res) => {
       })
     );
 
-    // ----------------------------------------------------
-    // 3. COMPATIBILITY SCORE (based on performance of both)
-    // ----------------------------------------------------
-
+    // COMPATIBILITY SCORE (based on performance of both)
     const compatibilityScores = [];
 
     ai.forEach(rec => {
@@ -107,18 +96,13 @@ router.get("/report", async (req, res) => {
       });
     });
 
-    // ----------------------------------------------------
-    // 4. RANKING (high performance → top)
-    // ----------------------------------------------------
+    // RANKING (high performance → top)
 
     const ranking = [...uniquePerf].sort(
       (a, b) => b.performance_score - a.performance_score
     );
 
-    // ----------------------------------------------------
     // RETURN FINAL REPORT
-    // ----------------------------------------------------
-
     res.json({
       performance_scores: uniquePerf,
       reproduction_scores: reproductionScores,

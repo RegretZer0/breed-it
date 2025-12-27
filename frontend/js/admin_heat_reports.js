@@ -9,15 +9,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportImage = document.getElementById("reportImage");
 
   const BACKEND_URL = "http://localhost:5000";
+
+  // get current admin
+  const role = localStorage.getItem("role");
+  const adminId = localStorage.getItem("userId");
+
+  if (role !== "admin" || !adminId) {
+    console.error("⚠ No admin logged in. Access denied.");
+    tableBody.innerHTML = "<tr><td colspan='5'>Access denied</td></tr>";
+    return;
+  }
+
   try {
-    const res = await fetch(`${BACKEND_URL}/api/heat/all`);
+    // Fetch heat reports for this admin only
+    const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`);
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
 
-    // Display populated swine and farmer info
+    tableBody.innerHTML = ""; // clear table before populating
+
     data.reports.forEach(r => {
-      const swineId = r.swine_id?.swine_id || "Unknown";
-      const farmerName = r.farmer_id?.name || "Unknown";
+      const swineId = r.swine_code || "Unknown";
+      const farmerName = r.farmer_name || "Unknown";
       const dateReported = new Date(r.date_reported).toLocaleString();
       const probability = r.heat_probability !== null ? `${r.heat_probability}%` : "N/A";
 
@@ -37,9 +50,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.innerHTML = "<tr><td colspan='5'>Failed to load reports</td></tr>";
   }
 
+  // View report details 
   window.viewReport = async (reportId) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}`);
+      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}?adminId=${encodeURIComponent(adminId)}`);
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
