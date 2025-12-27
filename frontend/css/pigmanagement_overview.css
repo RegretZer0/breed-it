@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+/* ========== Design tokens ========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+  --accent-green: #17c14f;
+
+  /* sizing */
+  --topbar-height: 64px; /* kept for references used elsewhere */
+  --sidebar-width: 210px; /* kept for references used elsewhere */
+  --sidebar-width-overlay: 260px; /* kept for references used elsewhere */
+  --gutter: 18px;
+  --radius: 8px;
+
+  /* typography */
+  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --base-line-height: 1.4;
+  --base-font-size: 14px;
+}
+
+/* ========== Global reset / typography ========== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family-system);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text-dark);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Make interactive elements obvious and keyboard accessible */
+button, [role="button"], a {
+  cursor: pointer;
+  outline: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+/* Keyboard focus styles */
+:focus {
+  outline: 3px solid rgba(21, 67, 255, 0.18);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* Font Awesome webfont restore (safe override) */
+.fa, .fas, .far, .fal, .fab, .fad, .fa-solid, .fa-regular, .fa-brands {
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands";
+  speak: none;
+  font-style: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.fa-solid, .fas { font-weight: 900; }
+.fa-regular, .far { font-weight: 400; }
+.fa-brands, .fab { font-weight: 400; font-family: "Font Awesome 6 Brands"; }
+
+/* ========== Main content (kept) ========== */
+.main-content{
+  flex: 1;
+  padding: var(--gutter);
+  background: var(--bg);
+  min-width: 0;
+}
+
+/* Tabs row */
+.tabs-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+.tabs-row .tab-btn{
+  flex: 0 0 auto;
+  white-space: nowrap;
+  border-radius: 8px;
+  padding: 10px 20px;
+  border: 1px solid #efefef;
+  background: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  color: #111;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tabs-row .tab-btn.active{
+  background: var(--accent-green);
+  color: #fff;
+  border-color: var(--accent-green);
+}
+
+/* Filters form small selects & search */
+.form-select.form-select-sm, .form-control.form-control-sm{
+  border-radius: 6px;
+  border: 1px solid #e6e6e6;
+  height: 38px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+/* Search button style */
+.search-btn{
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+
+/* ========== Table styles for pig listing ========== */
+.custom-table-wrap{
+  padding: 18px;
+  overflow-x: auto; 
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+.custom-table-wrap table {
+  width: max-content;
+  min-width: 700px;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+.table-head th{
+  font-weight: 700;
+  font-size: 12px;
+  color: #222;
+  border-bottom: 1px solid #eee;
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+.table tbody td{
+  padding: 18px 12px;
+  border-top: 1px solid #f3f3f3;
+  font-size: 13px;
+  color: #333;
+}
+.table .empty-row td{
+  height: 120px;
+  border-top: none;
+}
+
+/* Row actions / buttons */
+.table .btn-outline-primary{
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 700;
+  color: #0d6efd;
+  border-color: #cfe0ff;
+  background: #fff;
+}
+
+/* keep shrink-safe */
+.app-shell,
+.main-content,
+.container-fluid,
+.custom-table-wrap {
+  min-width: 0;
+}
+
+.custom-table-wrap th,
+.custom-table-wrap td{
+  white-space: nowrap;
+  padding: 12px;
+}
+
+html, body { overflow-x: hidden; }
+
+.page-card img,
+.page-card svg,
+.page-card iframe { max-width: 100%; height: auto; }
+
+/* ========== Filters responsive behavior (pig management) ========== */
+#filtersForm { align-items: center; }
+#filtersForm .col-auto { display: flex; align-items: center; }
+#filtersForm .form-select, #filtersForm .form-control { min-width: 150px; }
+
+/* On small screens stack each filter control and make them full width */
+@media (max-width: 768px) {
+  #filtersForm { row-gap: 10px; }
+  #filtersForm .col-auto, #filtersForm .col-md { flex: 0 0 100%; width: 100%; max-width: 100%; }
+  #filtersForm .form-select, #filtersForm .form-control { width: 100% !important; min-width: 0; }
+  #filtersForm .col-auto.text-center { display: none; }
+  #filtersForm .col-auto .form-select, #filtersForm .col-auto .form-control { padding-top: 8px; padding-bottom: 8px; }
+  #filtersForm .search-btn { width: 100%; display: block; padding: 10px; font-size: 14px; margin-top: 6px; }
+}
+
+/* Slightly adjust spacing for medium screens for better wrap */
+@media (min-width: 769px) and (max-width: 992px) {
+  #filtersForm .col-auto, #filtersForm .col-md { flex: 0 0 auto; }
+}
+
+/* Visual polish: ensure date inputs and text inputs have same height */
+#filtersForm .form-select, #filtersForm .form-control { height: 38px; border-radius: 6px; }
+
+/* Responsive adjustments for table widths */
+@media (max-width: 1100px) { .custom-table-wrap table { min-width: 600px; } }
+@media (max-width: 880px)  { .custom-table-wrap table { min-width: 520px; } }
+@media (max-width: 520px)  {
+  .custom-table-wrap table { min-width: 420px; }
+  .table-head th { font-size: 11px; padding: 10px; }
+  .table tbody td { font-size: 12px; padding: 9px; }
+}

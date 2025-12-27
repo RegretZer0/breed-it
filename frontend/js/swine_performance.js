@@ -12,117 +12,63 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingPerformanceId = null;
   let editingAIId = null;
 
-  const userId = "PUT_ADMIN_ID_HERE";
+  const userId = "PUT_ADMIN_ID_HERE"; 
   const role = "admin";
 
-  const generateID = (prefix = "R") =>
-    `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const generateID = (prefix = "R") => `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // Fetch Swines
-  const fetchSwines = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/swine/all?userId=${userId}&role=${role}`
-      );
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+  // Fetch Swines for dropdowns
+const fetchSwines = async () => {
+  try {
+    console.log("Fetching swines for userId:", userId, "role:", role);
+    const res = await fetch(`http://localhost:5000/api/swine/all?userId=${userId}&role=${role}`);
+    console.log("Raw fetch response:", res);
 
-      const swines = data.swine;
+    const data = await res.json();
+    console.log("Parsed JSON data:", data);
 
-      swineSelect.innerHTML = "<option value=''>Select Swine</option>";
-      femaleSwineSelect.innerHTML = "<option value=''>Select Female Swine</option>";
-      maleSwineSelect.innerHTML = "<option value=''>Select Male Swine</option>";
+    if (!data.success) throw new Error(data.message);
 
-      swines.forEach((s) => {
-        const option = `<option value="${s._id}">${s.swine_id} (${s.breed || "-"})</option>`;
-        swineSelect.innerHTML += option;
-        if (s.sex.toLowerCase() === "female") femaleSwineSelect.innerHTML += option;
-        if (s.sex.toLowerCase() === "male") maleSwineSelect.innerHTML += option;
-      });
-    } catch (err) {
-      console.error("Failed to fetch swines:", err);
+    const swines = data.swine;
+    console.log("Swines array:", swines);
+
+    swineSelect.innerHTML = "<option value=''>Select Swine</option>";
+    femaleSwineSelect.innerHTML = "<option value=''>Select Female Swine</option>";
+    maleSwineSelect.innerHTML = "<option value=''>Select Male Swine</option>";
+
+    if (!swines || swines.length === 0) {
+      console.warn("No swines found for this user/admin");
+      swineSelect.innerHTML += "<option value=''>No swines available</option>";
+      femaleSwineSelect.innerHTML += "<option value=''>No females available</option>";
+      maleSwineSelect.innerHTML += "<option value=''>No males available</option>";
+      return;
     }
-  };
 
-  // Fetch Performance Records
-  const fetchPerformanceRecords = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/swine-records/performance/all");
-      const data = await res.json();
+    swines.forEach(s => {
+      console.log("Adding swine to dropdown:", s);
+      const option = `<option value="${s._id}">${s.swine_id} (${s.breed || "-"})</option>`;
+      swineSelect.innerHTML += option;
+      if (s.sex.toLowerCase() === "female") femaleSwineSelect.innerHTML += option;
+      if (s.sex.toLowerCase() === "male") maleSwineSelect.innerHTML += option;
+    });
 
-      if (!data.success) throw new Error(data.message);
+  } catch (err) {
+    console.error("Failed to fetch swines:", err);
+    swineSelect.innerHTML = "<option value=''>Failed to load swines</option>";
+    femaleSwineSelect.innerHTML = "<option value=''>Failed to load females</option>";
+    maleSwineSelect.innerHTML = "<option value=''>Failed to load males</option>";
+  }
+};
 
-      performanceTableBody.innerHTML = "";
-      data.records.forEach((record) => {
-        const row = `
-          <tr>
-            <td>${record.swine_id?.swine_id || "-"}</td>
-            <td>${record.parentType || "-"}</td>
-            <td>${record.recordDate ? record.recordDate.split("T")[0] : "-"}</td>
-            <td>${record.weight || "-"}</td>
-            <td>${record.bodyLength || "-"}</td>
-            <td>${record.heartGirth || "-"}</td>
-            <td>${record.color || "-"}</td>
-            <td>${record.teethCount || "-"}</td>
-            <td>${record.teethAlignment || "-"}</td>
-            <td>${record.legConformation || "-"}</td>
-            <td>${record.hoofCondition || "-"}</td>
-            <td>${record.bodySymmetryAndMuscling || "-"}</td>
-            <td>${record.noOfPiglets || "-"}</td>
-            <td><button onclick="editPerformance('${record._id}')">Edit</button></td>
-          </tr>`;
-        performanceTableBody.innerHTML += row;
-      });
-    } catch (err) {
-      console.error("Failed to fetch performance records:", err);
-    }
-  };
 
-  // Fetch AI Records
-  const fetchAIRecords = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/swine-records/ai/all");
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
-
-      aiTableBody.innerHTML = "";
-      data.records.forEach((record) => {
-        const row = `
-          <tr>
-            <td>${record.swine_id?.swine_id || "-"}</td>
-            <td>${record.male_swine_id?.swine_id || "-"}</td>
-            <td>${record.insemination_date ? record.insemination_date.split("T")[0] : "-"}</td>
-            <td><button onclick="editAIRecord('${record._id}')">Edit</button></td>
-          </tr>`;
-        aiTableBody.innerHTML += row;
-      });
-    } catch (err) {
-      console.error("Failed to fetch AI records:", err);
-    }
-  };
-
-  // Submit Performance Form
+  // Submit performance form
   performanceForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const formData = Object.fromEntries(new FormData(performanceForm).entries());
-
-    const payload = {
-      reproductionId: generateID("R"),
-      swine_id: formData.swine_id,
-      parentType: formData.parentType || formData.parent_type || "",
-      weight: formData.weight ? Number(formData.weight) : undefined,
-      bodyLength: formData.bodyLength ? Number(formData.bodyLength) : undefined,
-      heartGirth: formData.heartGirth ? Number(formData.heartGirth) : undefined,
-      color: formData.color || "",
-      teethCount: formData.teethCount ? Number(formData.teethCount) : undefined,
-      teethAlignment: formData.teethAlignment || "",
-      legConformation: formData.legConformation || "",
-      hoofCondition: formData.hoofCondition || "",
-      bodySymmetryAndMuscling: formData.bodySymmetryAndMuscling || "",
-      noOfPiglets: formData.noOfPiglets ? Number(formData.noOfPiglets) : undefined,
-    };
+    const formData = new FormData(performanceForm);
+    const payload = Object.fromEntries(formData.entries());
 
     if (!editingPerformanceId) {
+      payload.reproduction_id = generateID("R");
       await savePerformance(payload);
     } else {
       await updatePerformance(editingPerformanceId, payload);
@@ -134,54 +80,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const savePerformance = async (payload) => {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/performance/add", {
+      const res = await fetch("http://localhost:5000/api/swine/performance/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-
       alert("Performance record saved!");
       fetchPerformanceRecords();
     } catch (err) {
       console.error("Error saving performance:", err);
+      alert("Failed to save performance");
     }
   };
 
   const updatePerformance = async (id, payload) => {
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/swine-records/performance/${id}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`http://localhost:5000/api/swine/performance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-
       alert("Performance record updated!");
       fetchPerformanceRecords();
     } catch (err) {
       console.error("Error updating performance:", err);
+      alert("Failed to update performance");
     }
   };
 
-  // Submit AI Form
+  // Submit AI form
   aiForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const formData = Object.fromEntries(new FormData(aiForm).entries());
-
-    const payload = {
-      insemination_id: generateID("AI"),
-      swine_id: formData.swine_id,
-      male_swine_id: formData.male_swine_id,
-      insemination_date: formData.insemination_date,
-    };
+    const formData = new FormData(aiForm);
+    const payload = Object.fromEntries(formData.entries());
 
     if (!editingAIId) {
+      payload.insemination_id = generateID("AI");
       await saveAIRecord(payload);
     } else {
       await updateAIRecord(editingAIId, payload);
@@ -193,111 +131,70 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const saveAIRecord = async (payload) => {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/ai/add", {
+      const res = await fetch("http://localhost:5000/api/swine/ai/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-
       alert("AI record saved!");
       fetchAIRecords();
     } catch (err) {
       console.error("Error saving AI record:", err);
+      alert("Failed to save AI record");
     }
   };
 
   const updateAIRecord = async (id, payload) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/swine-records/ai/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/swine/ai/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-
       alert("AI record updated!");
       fetchAIRecords();
     } catch (err) {
       console.error("Error updating AI record:", err);
+      alert("Failed to update AI record");
     }
   };
 
-  // Generate Breeding Report with HTML tables
-  document.getElementById("generateReportBtn").addEventListener("click", async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/breeding/report");
-      const result = await response.json();
-
-      const box = document.getElementById("reportOutput");
-      box.style.display = "block";
-
-      const renderTable = (data, headers) => {
-        if (!data || !data.length) return "<p>No data available</p>";
-        let html = "<table border='1' cellpadding='5' cellspacing='0'><tr>";
-        headers.forEach(h => html += `<th>${h}</th>`);
-        html += "</tr>";
-        data.forEach(item => {
-          html += "<tr>";
-          headers.forEach(h => html += `<td>${item[h] !== undefined ? item[h] : '-'}</td>`);
-          html += "</tr>";
-        });
-        html += "</table>";
-        return html;
-      };
-
-      box.innerHTML = `
-        <h3>Breeding Analytics Report</h3>
-        <h4>Performance Scores</h4>
-        ${renderTable(result.performance_scores, ["swine_id", "performance_score"])}
-        <h4>Reproduction Scores</h4>
-        ${renderTable(result.reproduction_scores, ["swine_id", "reproduction_score"])}
-        <h4>Compatibility Scores</h4>
-        ${renderTable(result.compatibility_scores, ["female", "male", "compatibility_score"])}
-        <h4>Ranking</h4>
-        ${renderTable(result.ranking, ["swine_id", "performance_score"])}
-      `;
-    } catch (error) {
-      alert("Failed to generate report.");
-      console.error(error);
-    }
-  });
-
-  // Edit Performance
+  // Edit functions
   window.editPerformance = async (id) => {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/performance/all");
+      const res = await fetch("http://localhost:5000/api/swine/performance/all");
       const data = await res.json();
-      const record = data.records.find((r) => r._id === id);
+      const record = data.records.find(r => r._id === id);
       if (!record) throw new Error("Record not found");
 
       editingPerformanceId = id;
       swineSelect.value = record.swine_id?._id || "";
-      performanceForm.parentType.value = record.parentType || "";
+      performanceForm.parent_type.value = record.parent_type || "";
       performanceForm.weight.value = record.weight || "";
-      performanceForm.bodyLength.value = record.bodyLength || "";
-      performanceForm.heartGirth.value = record.heartGirth || "";
+      performanceForm.body_length.value = record.body_length || "";
+      performanceForm.heart_girth.value = record.heart_girth || "";
       performanceForm.color.value = record.color || "";
-      performanceForm.teethCount.value = record.teethCount || "";
-      performanceForm.teethAlignment.value = record.teethAlignment || "";
-      performanceForm.legConformation.value = record.legConformation || "";
-      performanceForm.hoofCondition.value = record.hoofCondition || "";
-      performanceForm.bodySymmetryAndMuscling.value = record.bodySymmetryAndMuscling || "";
-      performanceForm.noOfPiglets.value = record.noOfPiglets || "";
+      performanceForm.teeth_count.value = record.teeth_count || "";
+      performanceForm.teeth_alignment.value = record.teeth_alignment || "";
+      performanceForm.leg_conformation.value = record.leg_conformation || "";
+      performanceForm.hoof_condition.value = record.hoof_condition || "";
+      performanceForm.body_symmetry_and_muscling.value = record.body_symmetry_and_muscling || "";
+      performanceForm.no_of_piglets.value = record.no_of_piglets || "";
     } catch (err) {
       console.error(err);
       alert("Failed to load record for editing");
     }
   };
 
-  // Edit AI Record
   window.editAIRecord = async (id) => {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/ai/all");
+      const res = await fetch("http://localhost:5000/api/swine/ai/all");
       const data = await res.json();
-      const record = data.records.find((r) => r._id === id);
+      const record = data.records.find(r => r._id === id);
       if (!record) throw new Error("Record not found");
 
       editingAIId = id;
@@ -310,7 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  // Initial Load
+  // Initial load
   await fetchSwines();
   await fetchPerformanceRecords();
   await fetchAIRecords();

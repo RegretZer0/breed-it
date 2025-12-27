@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BREED-IT — <%= page_title %></title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+  <!-- Page CSS -->
+     <link href="../../css/admin_module.css" rel="stylesheet" />
+
+    <% if (page_title === "Admin Dashboard") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/admin_dashboard.css">
+    
+    
+        <!-- PIG MANAGEMENT CATEGORY -->
+    <% } else if (page_title === "Pig Management Overview") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/pigmanagement_panel.css">
+        <link rel="stylesheet" href="/css/pigmanagement_overview.css">
+
+    <% } else if (page_title === "Pig Management BYF") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/pigmanagement_panel.css">
+        <link rel="stylesheet" href="/css/pigmanagement_byf.css">
+
+    <% } else if (page_title === "Pig Management Health") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/pigmanagement_panel.css">
+        <link rel="stylesheet" href="/css/pigmanagement_overview.css">
+
+    <% } else if (page_title === "Pig Management Breeding") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/pigmanagement_panel.css">
+        <link rel="stylesheet" href="/css/pigmanagement_overview.css">
+
+    <% } else if (page_title === "Pig Management RegPig") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/pigmanagement_panel.css">
+        <link rel="stylesheet" href="/css/pigmanagement_overview.css">
+
+
+
+    <% } else if (page_title === "Breed Analysis") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/breed_analysis.css">
+
+    <% } else if (page_title === "Calendar") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/calendar.css">
+
+    <% } else if (page_title === "Reports") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/reports.css">
+
+        
+    <!-- FARMER CATEGORY -->
+    <% } else if (page_title === "Farmers Report") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/farmers_panel.css">
+        <link rel="stylesheet" href="/css/farmers_report.css">
+
+    <% } else if (page_title === "Farmers New Account") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/farmers_panel.css">
+        <link rel="stylesheet" href="/css/farmers_newacc.css">
+
+    <% } else if (page_title === "Farmers Manage Account") { %>
+        <!-- <link rel="stylesheet" href="/css/admin_module.css"> -->
+        <link rel="stylesheet" href="/css/farmers_panel.css">
+        <link rel="stylesheet" href="/css/farmers_manageacc.css">
+
+    <% } else { %>
+        <link rel="stylesheet" href="/css/default.css">
+    <% } %>
+
+</head>
+<body>

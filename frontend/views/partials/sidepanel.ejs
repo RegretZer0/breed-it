@@ -1,0 +1,40 @@
+    <!-- Sidebar -->
+    <aside class="sidebar d-flex flex-column" id="sidebar">
+      
+      <!-- Close icon inside sidebar -->
+      <div class="sidebar-close-wrap d-lg-none">
+        <button id="sidebarCloseBtn" class="sidebar-close-btn" aria-label="Close sidebar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <nav class="nav flex-column w-100 px-2">
+
+        <a href="/admin_dashboard"
+          class="nav-link <%= current_page === 'admin_dashboard' ? 'active' : '' %>">
+          <i class="fa-solid fa-border-all me-2"></i> Dashboard
+        </a>
+
+        <a href="/pigmanagement_overview"
+          class="nav-link <%= current_page === 'pigmanagement_overview' ? 'active' : '' %>">
+          <i class="fa-brands fa-github me-2"></i> Pig Management
+        </a>
+
+        <a href="/breed_analysis"
+          class="nav-link <%= current_page === 'breed_analysis' ? 'active' : '' %>">
+          <i class="fa-solid fa-chart-line me-2"></i> Breed Analysis
+        </a>
+
+        <a href="/reports"
+          class="nav-link <%= current_page === 'reports' ? 'active' : '' %>">
+          <i class="fa-regular fa-file-lines me-2"></i> Reports
+        </a>
+
+        <a href="/farmers_report"
+          class="nav-link <%= current_page === 'farmers' ? 'active' : '' %>">
+          <i class="fa-regular fa-user me-2"></i> Farmers
+        </a>
+
+      </nav>
+    </aside>
+
+    <!-- Overlay for small-screen sidebar -->
+    <div id="overlay" class="overlay d-none"></div>
