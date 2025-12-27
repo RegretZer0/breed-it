@@ -4,9 +4,11 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   const fullName = document.getElementById("name").value.trim();
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
-  const role = document.getElementById("role").value;
+  
+  // Automatically set role to admin
+  const role = "admin";
 
-  if (!fullName || !email || !password || !role) {
+  if (!fullName || !email || !password) {
     alert("Please fill out all fields.");
     return;
   }

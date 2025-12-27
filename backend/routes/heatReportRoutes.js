@@ -19,16 +19,29 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Add new heat report
+// Add new heat report 
 router.post("/add", upload.single("evidence"), async (req, res) => {
   try {
-    const { swineId, signs, farmerId } = req.body;
+    const { swineId, signs, farmerId } = req.body; // removed adminId from frontend
     const file = req.file;
 
     if (!swineId || !signs || !file || !farmerId) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
+    // Get the farmer and their registered admin
+    const farmer = await Farmer.findById(farmerId);
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
+    }
+
+    const adminId = farmer.registered_by; // ✅ correct field
+
+    if (!adminId) {
+      return res.status(400).json({ success: false, message: "Farmer does not have an assigned admin" });
+    }
+
+    // Query by swine_id instead of _id
     const swine = await Swine.findOne({ swine_id: swineId });
     if (!swine) {
       return res.status(404).json({ success: false, message: "Swine not found" });
@@ -36,10 +49,10 @@ router.post("/add", upload.single("evidence"), async (req, res) => {
 
     const signsArray = Array.isArray(signs) ? signs : JSON.parse(signs);
 
-    // Create report
     const newReport = new HeatReport({
       swine_id: swine._id,
       farmer_id: farmerId,
+      admin_id: adminId, // ✅ set admin_id from farmer
       signs: signsArray,
       evidence_url: `/uploads/${file.filename}`
     });
@@ -58,10 +71,13 @@ router.post("/add", upload.single("evidence"), async (req, res) => {
   }
 });
 
-// Get all heat reports
+// Get all heat reports (admin-scoped)
 router.get("/all", async (req, res) => {
   try {
-    const reports = await HeatReport.find()
+    const { adminId } = req.query;
+    if (!adminId) return res.status(400).json({ success: false, message: "adminId is required" });
+
+    const reports = await HeatReport.find({ admin_id: adminId })
       .populate("swine_id", "swine_id breed sex")
       .populate("farmer_id", "name email farmer_id")
       .lean();
@@ -84,22 +100,20 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// Get Single heat report by ID
+// Get single heat report by ID (admin-scoped)
 router.get("/:id", async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id)
+    const { adminId } = req.query;
+    if (!adminId) return res.status(400).json({ success: false, message: "adminId is required" });
+
+    const report = await HeatReport.findOne({ _id: req.params.id, admin_id: adminId })
       .populate("swine_id", "swine_id breed sex")
       .populate("farmer_id", "name email farmer_id")
       .lean();
 
-    if (!report) {
-      return res.status(404).json({ success: false, message: "Heat report not found" });
-    }
+    if (!report) return res.status(404).json({ success: false, message: "Heat report not found or access denied" });
 
-    const heatProbability = Math.min(
-      100,
-      Math.round((report.signs.length / 5) * 100)
-    );
+    const heatProbability = Math.min(100, Math.round((report.signs.length / 5) * 100));
 
     res.json({
       success: true,

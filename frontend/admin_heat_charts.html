@@ -3,45 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Heat Reports - Admin</title>
+  <title>Admin Heat Reports Dashboard</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h2 {
+      margin-top: 40px;
+    }
+
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
+
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
       text-align: left;
     }
+
     th {
       background-color: #f2f2f2;
     }
+
     button {
-      padding: 6px 12px;
+      padding: 5px 10px;
       cursor: pointer;
-      margin-bottom: 15px;
     }
+
     #reportDetails {
       border: 1px solid #ccc;
       padding: 15px;
-      max-width: 500px;
-      margin-top: 20px;
       background-color: #fafafa;
+      max-width: 600px;
+      margin-top: 20px;
+      display: none;
     }
-    #reportDetails video, #reportDetails img {
+
+    #reportDetails video,
+    #reportDetails img {
       display: block;
       margin-top: 10px;
       max-width: 100%;
     }
+
+    .chart-container {
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 40px;
+    }
   </style>
 </head>
 <body>
+  <h1>Admin Heat Reports Dashboard</h1>
+
+  <!-- HEAT REPORTS TABLE -->
   <h2>All Heat Reports</h2>
-
-  <button onclick="window.location.href='admin_heat_charts.html'">View Heat Reports Charts</button>
-
   <table>
     <thead>
       <tr>
@@ -55,7 +76,8 @@
     <tbody id="reportsTableBody"></tbody>
   </table>
 
-  <div id="reportDetails" style="display:none;">
+  <!-- REPORT DETAILS MODAL -->
+  <div id="reportDetails">
     <h3>Report Details</h3>
     <p id="reportSwine"></p>
     <p id="reportFarmer"></p>
@@ -66,6 +88,22 @@
     <button onclick="document.getElementById('reportDetails').style.display='none';">Close</button>
   </div>
 
+  <!-- CHARTS SECTION -->
+  <h2>Heat Reports Analytics</h2>
+
+  <div class="chart-container">
+    <h3>Monthly Reports (Current Year)</h3>
+    <canvas id="monthlyReportsChart" width="400" height="200"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h3>Reports Status</h3>
+    <canvas id="statusReportsChart" width="400" height="200"></canvas>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/js/admin_heat_reports.js"></script>
+  <script src="/js/admin_heat_charts.js"></script>
 </body>
 </html>

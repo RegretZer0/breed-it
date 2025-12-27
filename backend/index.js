@@ -10,13 +10,14 @@ const swineRoutes = require("./routes/swineRoutes.js");
 const heatReportRoutes = require("./routes/heatReportRoutes.js");
 const swinePerformanceRoutes = require("./routes/swinePerformanceRoutes.js");
 const breedingRoutes = require("./routes/breedingRoutes.js");
+const farmerRoutes = require("./routes/farmerRoutes.js");
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
-// ✅ Enable CORS for your frontend
+// Enable CORS for your frontend
 app.use(
   cors({
     origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -31,9 +32,8 @@ app.use(express.urlencoded({ extended: true }));
 // Static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// =====================================
-// 🔌 MongoDB Connection
-// =====================================
+// MongoDB Connection
+
 if (!process.env.MONGO_URI) {
   console.error("❌ ERROR: MONGO_URI missing in .env");
   process.exit(1);
@@ -49,23 +49,20 @@ mongoose
     process.exit(1);
   });
 
-// =====================================
-// 📌 API ROUTES
-// =====================================
+// API ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/swine", swineRoutes);
 app.use("/api/heat", heatReportRoutes);
 app.use("/api/swine-records", swinePerformanceRoutes);
-app.use("/api/breeding", breedingRoutes); // 🔥 NEW: Breeding analytics endpoint
+app.use("/api/breeding", breedingRoutes);
+app.use("/api/farmer", farmerRoutes);
 
 // Health Check Route
 app.get("/", (req, res) => {
   res.send("BreedIT Backend is running...");
 });
 
-// =====================================
-// 🚀 Start Server
-// =====================================
+// Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
