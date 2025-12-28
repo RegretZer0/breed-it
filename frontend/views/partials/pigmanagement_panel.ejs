@@ -2,36 +2,40 @@
           <div class="card-body">
             <h4 class="page-title">PIG MANAGEMENT</h4>
 
-            <div class="tabs-row mt-3 d-flex flex-wrap gap-3" role="tablist" aria-label="Pig management sections">
-                <a href="/pigmanagement_overview"
-                    class="tab-btn <%= current_page === 'pigmanagement' ? 'active' : '' %>"
-                    role="tab">
-                    Overview
-                </a>
+                <div class="tabs-row mt-3 d-flex flex-wrap gap-3"
+                    role="tablist"
+                    aria-label="Pig management sections">
 
-                <a href="/pigmanagement_byf"
-                    class="tab-btn <%= current_page === 'pigmanagement-by-farmer' ? 'active' : '' %>"
+                    <a href="/pigmanagement_overview"
+                    class="tab-btn <%= current_page === 'pigmanagement_overview' ? 'active' : '' %>"
                     role="tab">
-                    By Farmer
-                </a>
+                        Overview
+                    </a>
 
-                <a href="/pigmanagement_health"
-                    class="tab-btn <%= current_page === 'pigmanagement-health' ? 'active' : '' %>"
+                    <a href="/pigmanagement_byf"
+                    class="tab-btn <%= current_page === 'pigmanagement_byf' ? 'active' : '' %>"
                     role="tab">
-                    Health
-                </a>
+                        By Farmer
+                    </a>
 
-                <a href="/pigmanagement_breeding"
-                    class="tab-btn <%= current_page === 'pigmanagement-breeding' ? 'active' : '' %>"
+                    <a href="/pigmanagement_health"
+                    class="tab-btn <%= current_page === 'pigmanagement_health' ? 'active' : '' %>"
                     role="tab">
-                    Breeding
-                </a>
+                        Health
+                    </a>
 
-                <a href="/pigmanagement_regpig"
-                    class="tab-btn <%= current_page === 'pigmanagement-register' ? 'active' : '' %>"
+                    <a href="/pigmanagement_breeding"
+                    class="tab-btn <%= current_page === 'pigmanagement_breeding' ? 'active' : '' %>"
                     role="tab">
-                    Register Pig
-                </a>
+                        Breeding
+                    </a>
+
+                    <a href="/pigmanagement_regpig"
+                    class="tab-btn <%= current_page === 'pigmanagement_regpig' ? 'active' : '' %>"
+                    role="tab">
+                        Register Pig
+                    </a>
+
+                </div>
             </div>
-          </div>
         </div>
