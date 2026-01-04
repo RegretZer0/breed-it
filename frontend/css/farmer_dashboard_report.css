@@ -1,0 +1,216 @@
+/* =========================
+   REPORT CONTAINER
+========================= */
+.report-container {
+  padding: 24px;
+  padding-top: 80px; 
+  max-width: 1200px;
+  margin: auto;
+  flex: 1;
+  width: 100%;
+}
+
+/* =========================
+   PAGE TITLE
+========================= */
+.page-title {
+  text-align: center;
+  margin: 28px 0 20px;
+  font-weight: 800;
+}
+
+/* =========================
+   TABS
+========================= */
+.report-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  border-radius: 24px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #2ecc71;
+  color: #ffffff;
+}
+
+.tab.outline {
+  border: 2px solid #2ecc71;
+  background: #ffffff;
+  color: #2ecc71;
+}
+
+/* =========================
+   FILTERS
+========================= */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.filter label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter select,
+.filter input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #cccccc;
+}
+
+.chat-btn {
+  background: #2db0c5;
+  border: none;
+  color: #ffffff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   LOGS
+========================= */
+.section-title {
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.report-card {
+  border: 1.5px solid #cfcfcf;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-btn {
+  border: 2px solid #4a76ff;
+  background: #ffffff;
+  color: #4a76ff;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   CREATE REPORT FORM
+========================= */
+.hidden {
+  display: none;
+}
+
+.form-card {
+  border: 1.5px solid #cfcfcf;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-card label {
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.form-card input,
+.form-card select,
+.form-card textarea {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #cccccc;
+}
+
+textarea {
+  min-height: 80px;
+}
+
+/* =========================
+   UPLOAD
+========================= */
+.upload-box {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  width: 60px;
+  height: 60px;
+  border: 2px dashed #aaaaaa;
+  background: none;
+  border-radius: 10px;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+#previewContainer img,
+#previewContainer video {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* =========================
+   FORM ACTIONS
+========================= */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  border: 2px solid #ff6b6b;
+  background: #ffffff;
+  color: #ff6b6b;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.send-btn {
+  background: #2ecc71;
+  color: #ffffff;
+  border: none;
+  padding: 10px 26px;
+  border-radius: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   MOBILE
+========================= */
+@media (max-width: 576px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,131 @@
+<%- include("../partials/farmer_nav") %>
+<div class="app-root">
+<!-- CONTENT -->
+  <main class="report-container">
+    <h2 class="page-title">REPORT</h2>
+
+    <!-- TABS -->
+    <div class="report-tabs">
+      <button class="tab active" id="logsTab">LOGS</button>
+      <button class="tab outline" id="createTab">CREATE REPORT</button>
+    </div>
+
+    <!-- ================= LOGS ================= -->
+    <section id="logsSection">
+      <div class="filters">
+        <div class="filter">
+          <label>Report Status</label>
+          <select>
+            <option>Recent</option>
+            <option>Completed</option>
+            <option>Pending</option>
+          </select>
+        </div>
+
+        <div class="filter">
+          <label>Date</label>
+          <input type="date" />
+        </div>
+
+        <button class="chat-btn">
+          <i class="fa-solid fa-comments"></i> CHAT
+        </button>
+      </div>
+
+      <h4 class="section-title">Recent Logs</h4>
+
+      <div class="report-card">
+        <div class="report-info">
+          <p><strong>Report ID:</strong> T01231</p>
+          <p><strong>Pig Tag ID:</strong> E-0001</p>
+          <p><strong>Date Created:</strong> 08/12/25</p>
+        </div>
+        <button class="view-btn">VIEW</button>
+      </div>
+    </section>
+
+    <!-- ================= CREATE REPORT ================= -->
+    <section id="createSection" class="hidden">
+      <div class="form-card">
+        <h4>Information</h4>
+
+        <div class="form-row">
+          <div>
+            <label>Report ID</label>
+            <input type="text" value="T01231" readonly />
+          </div>
+
+          <div>
+            <label>Select Pig</label>
+            <select>
+              <option>E-0001</option>
+              <option>E-0002</option>
+            </select>
+          </div>
+        </div>
+
+        <label>Health Concerns</label>
+        <select>
+          <option>Select</option>
+          <option>Coughing</option>
+          <option>Fever</option>
+          <option>Injury</option>
+        </select>
+
+        <label>Feeding and Growth</label>
+        <select>
+          <option>Select</option>
+          <option>Normal</option>
+          <option>Poor Appetite</option>
+        </select>
+
+        <label>Reproductive Signs</label>
+        <select>
+          <option>Select</option>
+          <option>In Heat</option>
+          <option>Pregnant</option>
+        </select>
+
+        <label>Vaccination and Medication</label>
+        <select>
+          <option>Select</option>
+          <option>Vaccinated</option>
+          <option>Needs Medication</option>
+        </select>
+
+        <label>Pig Status</label>
+        <select>
+          <option>Select</option>
+          <option>Healthy</option>
+          <option>Sick</option>
+        </select>
+
+        <label>Other Concerns / Remarks</label>
+        <textarea placeholder="Type your concerns here"></textarea>
+
+        <!-- UPLOAD -->
+        <label>Upload Image / Video</label>
+        <div class="upload-box">
+          <input
+            type="file"
+            id="mediaUpload"
+            accept="image/*,video/*"
+            multiple
+            hidden
+          />
+          <button class="upload-btn" id="uploadBtn">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <div id="previewContainer"></div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="form-actions">
+          <button class="cancel-btn" id="cancelCreate">CANCEL</button>
+          <button class="send-btn">SEND</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+  <%- include("../partials/farmer_footer") %>

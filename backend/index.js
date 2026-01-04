@@ -157,7 +157,7 @@ app.get("/reports", (req, res) =>
   })
 );
 
-// Farmers
+// Admin Dashboard - Farmers
 app.get("/farmers_report", (req, res) =>
   res.render("pages/farmers_report", {
     page_title: "Farmers Report",
@@ -176,6 +176,54 @@ app.get("/farmers_manageacc", (req, res) =>
   res.render("pages/farmers_manageacc", {
     page_title: "Farmers Manage Account",
     current_page: "farmers_manageacc",
+  })
+);
+
+
+// Farmer Dashboard
+// app.get("/farmer_dashboard", (req, res) =>
+//   res.render("pages/farmer_dashboard", {
+//     page_title: "Farmer Dashboard",
+//     current_page: "farmer_dashboard",
+//     user: req.session.user // or req.user
+//   })
+// );
+
+app.get("/farmer_dashboard", (req, res) =>
+  res.render("pages/farmer_dashboard", {
+    page_title: "Farmer Dashboard",
+    current_page: "farmer_dashboard",
+    user: {
+      firstName: "Juan"
+    }
+  })
+);
+
+app.get("/farmer_mypigs", (req, res) =>
+  res.render("pages/farmer_mypigs", {
+    page_title: "Farmer My Pigs",
+    current_page: "farmer_mypigs",
+  })
+);
+
+app.get("/farmer_dashboard_report", (req, res) =>
+  res.render("pages/farmer_dashboard_report", {
+    page_title: "Farmer Dashboard Report",
+    current_page: "farmer_dashboard_report",
+  })
+);
+
+app.get("/farmer_profile", (req, res) =>
+  res.render("pages/farmer_profile", {
+    page_title: "Farmer Profile",
+    current_page: "farmer_profile",
+  })
+);
+
+app.get("/farmer_help", (req, res) =>
+  res.render("pages/farmer_help", {
+    page_title: "Farmer Help",
+    current_page: "farmer_help",
   })
 );
 

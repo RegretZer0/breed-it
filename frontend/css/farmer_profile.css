@@ -1,0 +1,221 @@
+/* =========================
+   VISIBILITY HELPERS
+========================= */
+.hidden {
+  display: none;
+}
+
+/* =========================
+   CONTAINER
+========================= */
+.profile-container {
+  padding: 24px;
+  padding-top: 80px; 
+  max-width: 1200px;
+  margin: auto;
+  flex: 1;
+  width: 100%;
+}
+
+/* =========================
+   PAGE TITLE
+========================= */
+.page-title {
+  text-align: center;
+  margin: 28px 0 20px;
+  font-weight: 800;
+}
+
+/* =========================
+   PROFILE CARD (VIEW & EDIT)
+========================= */
+.profile-card {
+  border: 1.5px solid #cfcfcf;
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* =========================
+   AVATAR (VIEW MODE)
+========================= */
+.profile-avatar {
+  width: 90px;
+  height: 90px;
+  background: #2ecc71;
+  color: #ffffff;
+  border-radius: 50%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+
+/* =========================
+   NAME & ROLE
+========================= */
+.profile-card h3 {
+  margin-top: 14px;
+  font-weight: 800;
+}
+
+.role {
+  font-size: 14px;
+  color: #666666;
+  margin-bottom: 16px;
+}
+
+/* =========================
+   INFO ROWS (VIEW MODE)
+========================= */
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #eeeeee;
+  font-size: 14px;
+}
+
+.info-row span {
+  color: #666666;
+}
+
+/* =========================
+   EDIT BUTTON (VIEW MODE)
+========================= */
+.edit-btn {
+  margin-top: 20px;
+  background: #2ecc71;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   EDIT PROFILE FORM
+========================= */
+.profile-card h4 {
+  margin-bottom: 16px;
+  font-weight: 800;
+}
+
+/* FORM LABELS */
+.profile-card label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: left;
+}
+
+/* FORM INPUTS */
+.profile-card input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #cccccc;
+  font-size: 14px;
+}
+
+/* =========================
+   AVATAR UPLOAD (EDIT MODE)
+========================= */
+.avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Avatar preview */
+.avatar-preview {
+  width: 70px;
+  height: 70px;
+  background: #2ecc71;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  overflow: hidden;
+}
+
+/* Change avatar button */
+.avatar-upload button {
+  background: #ffffff;
+  border: 2px solid #2ecc71;
+  color: #2ecc71;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.avatar-upload button:hover {
+  background: #2ecc71;
+  color: #ffffff;
+}
+
+/* =========================
+   FORM ACTION BUTTONS
+========================= */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  gap: 12px;
+}
+
+.save-btn {
+  background: #2ecc71;
+  color: #ffffff;
+  border: none;
+  padding: 12px 26px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #ffffff;
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 12px 26px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* =========================
+   ACCESSIBILITY
+========================= */
+button:focus-visible {
+  outline: 3px solid rgba(46, 204, 113, 0.5);
+  outline-offset: 2px;
+}
+
+/* =========================
+   MOBILE OPTIMIZATION
+========================= */
+@media (max-width: 576px) {
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .save-btn,
+  .cancel-btn {
+    width: 100%;
+  }
+}

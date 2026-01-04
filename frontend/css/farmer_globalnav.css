@@ -1,0 +1,330 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+/* =========================
+   GLOBAL RESET
+========================= */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  font-family: 'Roboto', system-ui, -apple-system, "Segoe UI", Arial;
+  background: #ffffff;
+}
+
+/* =========================
+   FIXED HEADER (GLOBAL)
+========================= */
+.page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  background: #2ecc71;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+}
+
+/* HEADER BUTTONS */
+.back-btn,
+.menu-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.back-btn:active,
+.menu-btn:active {
+  opacity: 0.7;
+}
+
+/* LEFT SLOT */
+.nav-left {
+  display: flex;
+  align-items: center;
+}
+
+/* Prevent shifting when back button hidden */
+.back-btn-placeholder {
+  width: 22px;
+  height: 22px;
+}
+
+/* =========================
+   MOBILE MENU
+========================= */
+.mobile-menu {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  z-index: 9999;
+  display: none;
+  padding: 24px;
+}
+
+.mobile-menu.active {
+  display: block;
+}
+
+/* Close icon */
+.mobile-menu .close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+/* Menu list */
+.mobile-menu .menu-list {
+  list-style: none;
+  padding: 80px 0 0;
+  margin: 0;
+}
+
+.mobile-menu .menu-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  padding: 16px 0;
+  cursor: pointer;
+  border-bottom: 1px solid #ddd;
+}
+
+.mobile-menu .menu-list li i {
+  font-size: 18px;
+  color: #2ecc71;
+}
+
+.mobile-menu .menu-list li:active {
+  background: #f2f2f2;
+}
+
+/* =========================
+   SIDE PANELS (SETTINGS & NOTIFICATIONS)
+========================= */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  background: #ffffff;
+  z-index: 100000;
+  transition: right 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-panel.active {
+  right: 0;
+}
+
+/* PANEL HEADER */
+.panel-header {
+  height: 64px;
+  background: #2ecc71;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.close-panel {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.close-panel:active {
+  opacity: 0.7;
+}
+
+/* PANEL CONTENT */
+.panel-content {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* =========================
+   SETTINGS PANEL UI
+========================= */
+.settings-section {
+  margin-bottom: 28px;
+}
+
+.settings-section h4 {
+  margin-bottom: 12px;
+  font-weight: 800;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* LANGUAGE */
+.settings-select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* TOGGLE SWITCH */
+.switch {
+  position: relative;
+  width: 46px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #ccc;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.switch input:checked + .slider {
+  background: #2ecc71;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(22px);
+}
+
+.theme-label {
+  font-weight: 700;
+}
+
+/* SETTINGS ACTIONS */
+.settings-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.save-btn {
+  background: #2ecc71;
+  color: #ffffff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset-btn {
+  background: #ffffff;
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  padding: 12px 28px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+/* =========================
+   DARK MODE – FULL OVERRIDE
+========================= */
+body.dark,
+body.dark .app-root {
+  background: #121212;
+  color: #eaeaea;
+}
+
+/* ALL PAGE CONTAINERS */
+body.dark .dashboard-container,
+body.dark .report-container,
+body.dark .help-container,
+body.dark .profile-container {
+  background: #121212;
+}
+
+/* CARDS */
+body.dark .dashboard-card,
+body.dark .profile-card,
+body.dark .form-card,
+body.dark .report-card,
+body.dark .help-card {
+  background: #1e1e1e;
+  border-color: #333;
+}
+
+/* HEADERS */
+body.dark .page-header,
+body.dark .panel-header {
+  background: #1b7a4a;
+}
+
+/* MENUS */
+body.dark .mobile-menu,
+body.dark .side-panel {
+  background: #1e1e1e;
+}
+
+body.dark .menu-list li {
+  color: #eaeaea;
+  border-color: #333;
+}
+
+body.dark .menu-list li:hover {
+  background: #2a2a2a;
+}
+
+/* INPUTS */
+body.dark input,
+body.dark select,
+body.dark textarea {
+  background: #2a2a2a;
+  color: #ffffff;
+  border-color: #444;
+}
+
+/* =========================
+   FULL HEIGHT LAYOUT FIX
+========================= */
+html, body {
+  min-height: 100%;
+}
+
+.app-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
