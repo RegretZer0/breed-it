@@ -1,4 +1,10 @@
+// farmer_swine.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔐 Protect the page: only farmers
+  await authGuard("farmer");
+
   const userId = localStorage.getItem("userId");
   const role = "farmer";
   const token = localStorage.getItem("token");

@@ -1,11 +1,23 @@
+// admin_swine_records.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔐 Protect the page
+  await authGuard("admin"); // only admins
+
   const performanceTableBody = document.getElementById("performanceTableBody");
   const aiTableBody = document.getElementById("aiTableBody");
+
+  const BACKEND_URL = "http://localhost:5000";
+  const token = localStorage.getItem("token"); // include token for secure requests
 
   // Fetch Swine Performance Records
   async function loadPerformanceRecords() {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/performance/all");
+      const res = await fetch(`${BACKEND_URL}/api/swine-records/performance/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
@@ -36,7 +48,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Fetch AI Records
   async function loadAIRecords() {
     try {
-      const res = await fetch("http://localhost:5000/api/swine-records/ai/all");
+      const res = await fetch(`${BACKEND_URL}/api/swine-records/ai/all`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
@@ -80,9 +95,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         heart_girth: heartGirth
       };
 
-      const res = await fetch("http://localhost:5000/api/swine-records/performance/add", {
+      const res = await fetch(`${BACKEND_URL}/api/swine-records/performance/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload)
       });
 
@@ -106,9 +124,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const payload = { swine_id: swineId, insemination_date: inseminationDate, male_swine_id: maleSwineId };
 
-      const res = await fetch("http://localhost:5000/api/swine-records/ai/add", {
+      const res = await fetch(`${BACKEND_URL}/api/swine-records/ai/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload)
       });
 

@@ -1,4 +1,10 @@
+// admin_heat_reports.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // First, protect the page
+  await authGuard("admin"); // only admins
+
   const tableBody = document.getElementById("reportsTableBody");
   const reportDetails = document.getElementById("reportDetails");
   const reportSwine = document.getElementById("reportSwine");
@@ -9,20 +15,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportImage = document.getElementById("reportImage");
 
   const BACKEND_URL = "http://localhost:5000";
-
-  // get current admin
-  const role = localStorage.getItem("role");
-  const adminId = localStorage.getItem("userId");
-
-  if (role !== "admin" || !adminId) {
-    console.error("⚠ No admin logged in. Access denied.");
-    tableBody.innerHTML = "<tr><td colspan='5'>Access denied</td></tr>";
-    return;
-  }
+  const adminId = localStorage.getItem("userId"); // logged-in admin
 
   try {
     // Fetch heat reports for this admin only
-    const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`);
+    const token = localStorage.getItem("token"); // 🔐 include token
+    const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include", // include session cookie
+    });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
 
@@ -50,10 +53,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     tableBody.innerHTML = "<tr><td colspan='5'>Failed to load reports</td></tr>";
   }
 
-  // View report details 
+  // View report details
   window.viewReport = async (reportId) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}?adminId=${encodeURIComponent(adminId)}`);
+      const token = localStorage.getItem("token"); // 🔐 include token
+      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}?adminId=${encodeURIComponent(adminId)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 

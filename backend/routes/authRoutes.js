@@ -6,15 +6,35 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
 
-// Login
-router.post("/login", async (req, res) => {
-  console.log("Login attempt received:", req.body);
+// ----------------------
+// JWT helper
+// ----------------------
+const JWT_SECRET = process.env.JWT_SECRET || "super_secret_jwt_key";
 
+function generateToken(user) {
+  return jwt.sign(
+    {
+      id: user._id,
+      role: user.role,
+      email: user.email,
+      name: user.fullName || user.name || "User",
+    },
+    JWT_SECRET,
+    { expiresIn: "1d" }
+  );
+}
+
+// ----------------------
+// Login with Session + JWT
+// ----------------------
+router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and password are required" });
     }
 
     let user = await User.findOne({ email });
@@ -26,39 +46,138 @@ router.post("/login", async (req, res) => {
     }
 
     if (!user) {
-      console.log("User not found for email:", email);
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log("Invalid password for user:", email);
-      return res.status(400).json({ success: false, message: "Invalid password" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid password" });
     }
 
-    const token = jwt.sign({ id: user._id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    // 🔐 REGENERATE SESSION ID
+    req.session.regenerate(async (err) => {
+      if (err)
+        return res
+          .status(500)
+          .json({ success: false, message: "Session error" });
 
-    console.log("Login successful for:", email, "Role:", role);
-    res.json({ success: true, message: "Login successful", token, role, user });
+      // Store session user
+      req.session.user = {
+        id: user._id,
+        role,
+        email: user.email,
+        name: user.fullName || user.name || "User",
+      };
+
+      // Create JWT token
+      const token = generateToken({
+        _id: user._id,
+        role,
+        email: user.email,
+        fullName: user.fullName,
+        name: user.name,
+      });
+
+      return res.json({
+        success: true,
+        message: "Login successful",
+        user: req.session.user,
+        role,
+        token, // <-- FRONTEND will store this
+      });
+    });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error" });
   }
 });
 
-// -Register Admin
+// ----------------------
+// Logout
+// ----------------------
+router.post("/logout", (req, res) => {
+  if (!req.session) {
+    return res.json({ success: true, message: "Already logged out" });
+  }
+
+  req.session.destroy((err) => {
+    if (err)
+      return res
+        .status(500)
+        .json({ success: false, message: "Logout failed" });
+
+    res.clearCookie("connect.sid", { path: "/" });
+    res.json({ success: true, message: "Logged out successfully" });
+  });
+});
+
+// ----------------------
+// Get current user
+// Supports:
+//  ✔️ Session
+//  ✔️ JWT header: Authorization: Bearer <token>
+// ----------------------
+router.get("/me", (req, res) => {
+  // Session check first
+  if (req.session?.user) {
+    return res.json({ success: true, user: req.session.user });
+  }
+
+  // JWT check next
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Not authenticated" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return res.json({
+      success: true,
+      user: {
+        id: decoded.id,
+        role: decoded.role,
+        email: decoded.email,
+        name: decoded.name,
+      },
+    });
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid or expired token" });
+  }
+});
+
+// ----------------------
+// Register Admin
+// ----------------------
 router.post("/register", async (req, res) => {
   const { fullName, address, contact_info, email, password } = req.body;
 
   try {
     if (!fullName || !email || !password) {
-      return res.status(400).json({ success: false, message: "Full name, email, and password are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Full name, email, and password are required",
+        });
     }
 
     const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Email already registered" });
-    }
+    if (existing)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -72,37 +191,64 @@ router.post("/register", async (req, res) => {
     });
 
     await newUser.save();
-    console.log("Admin registered:", newUser.email);
-    res.status(201).json({ success: true, message: "Admin registered successfully", user: newUser });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Admin registered successfully",
+        user: newUser,
+      });
   } catch (error) {
     console.error("Admin registration error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error",
+        error: error.message,
+      });
   }
 });
 
+// ----------------------
 // Register Farmer
+// ----------------------
 router.post("/register-farmer", async (req, res) => {
-  const { name, address, contact_no, email, password, num_of_pens, pen_capacity, adminId } = req.body;
-
-  console.log("Register farmer payload:", req.body);
+  const {
+    name,
+    address,
+    contact_no,
+    email,
+    password,
+    num_of_pens,
+    pen_capacity,
+    adminId,
+  } = req.body;
 
   try {
     if (!name || !email || !password || !adminId) {
-      return res.status(400).json({ success: false, message: "Name, email, password, and adminId are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Name, email, password, and adminId are required",
+        });
     }
 
     const admin = await User.findById(adminId);
     if (!admin || admin.role !== "admin") {
       return res.status(400).json({ success: false, message: "Invalid admin ID" });
     }
-    console.log("Found admin:", admin.email);
 
     const existing = await Farmer.findOne({ email });
-    if (existing) return res.status(400).json({ success: false, message: "Email already registered" });
+    if (existing)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Safe farmer ID generation
+    // Generate farmer_id
     let nextNumber = 1;
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
     if (lastFarmer?.farmer_id) {
@@ -111,7 +257,6 @@ router.post("/register-farmer", async (req, res) => {
       if (!isNaN(lastNum)) nextNumber = lastNum + 1;
     }
     const farmer_id = `Farmer-${String(nextNumber).padStart(5, "0")}`;
-    console.log("Generated farmer_id:", farmer_id);
 
     const newFarmer = new Farmer({
       name,
@@ -123,28 +268,37 @@ router.post("/register-farmer", async (req, res) => {
       num_of_pens: num_of_pens || 0,
       pen_capacity: pen_capacity || 0,
       registered_by: adminId,
-      user_id: adminId, // Link farmer to admin as initial user_id
+      user_id: adminId,
     });
 
     await newFarmer.save();
-    console.log("Farmer saved:", newFarmer.email, "ID:", newFarmer.farmer_id);
-
-    res.status(201).json({ success: true, message: "Farmer registered successfully", farmer: newFarmer });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Farmer registered successfully",
+        farmer: newFarmer,
+      });
   } catch (error) {
     console.error("Farmer registration error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Server error",
+        error: error.message,
+      });
   }
 });
 
-// Get farmers registered by a specific admin
+// ----------------------
+// Get farmers registered by admin
+// ----------------------
 router.get("/farmers/:adminId", async (req, res) => {
   const { adminId } = req.params;
 
   try {
     const farmers = await Farmer.find({ registered_by: adminId }).select("-password -__v");
-    console.log(`Fetched ${farmers.length} farmers for admin ${adminId}`);
-    farmers.forEach(f => console.log(`Farmer: ${f.name}, ID: ${f.farmer_id}`));
-
     res.json({ success: true, farmers });
   } catch (error) {
     console.error("Fetch farmers error:", error);
@@ -152,16 +306,16 @@ router.get("/farmers/:adminId", async (req, res) => {
   }
 });
 
+// ----------------------
 // Update Farmer
+// ----------------------
 router.put("/update-farmer/:farmerId", async (req, res) => {
   const { farmerId } = req.params;
   const { name, address, contact_no, email, num_of_pens, pen_capacity } = req.body;
 
   try {
     const farmer = await Farmer.findOne({ farmer_id: farmerId });
-    if (!farmer) {
-      return res.status(404).json({ success: false, message: "Farmer not found" });
-    }
+    if (!farmer) return res.status(404).json({ success: false, message: "Farmer not found" });
 
     if (name) farmer.name = name;
     if (address) farmer.address = address;
@@ -171,8 +325,6 @@ router.put("/update-farmer/:farmerId", async (req, res) => {
     if (pen_capacity !== undefined) farmer.pen_capacity = pen_capacity;
 
     await farmer.save();
-    console.log("Updated farmer:", farmer.name, "ID:", farmer.farmer_id);
-
     res.json({ success: true, message: "Farmer updated successfully", farmer });
   } catch (error) {
     console.error("Update farmer error:", error);

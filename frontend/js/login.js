@@ -1,3 +1,9 @@
+// Clear any old auth state on load (prevents “ghost login”)
+localStorage.removeItem("token");
+localStorage.removeItem("user");
+localStorage.removeItem("role");
+localStorage.removeItem("userId");
+
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -13,6 +19,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
+      credentials: "include",   // ⬅ important (session cookie)
     });
 
     const text = await res.text();
@@ -20,29 +27,36 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     let data;
     try {
       data = JSON.parse(text);
-    } catch {
-      console.error("Raw response from server:", text);
-      throw new Error("Server returned invalid response.");
+    } catch (err) {
+      console.error("Invalid JSON returned:", text);
+      throw new Error("Unexpected server response");
     }
 
     if (!res.ok || !data.success) {
       throw new Error(data.message || "Login failed");
     }
 
-    // Save auth info
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("userId", data.user._id);
-    localStorage.setItem("role", data.role);
+    // ---------------------------
+    // Store BOTH session + token
+    // ---------------------------
+
+    // Session is already stored as cookie automatically
+    // Token is optional—only store if backend sends
+    if (data.token) {
+      localStorage.setItem("token", data.token);
+    }
+
     localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("userId", data.user.id || data.user._id);
+    localStorage.setItem("role", data.user.role);
 
     messageEl.style.color = "green";
     messageEl.textContent = "Login successful! Redirecting...";
 
-    // ROLE-BASED REDIRECT (RESTORED)
     setTimeout(() => {
-      if (data.role === "admin") {
+      if (data.user.role === "admin") {
         window.location.href = "admin_dashboard.html";
-      } else if (data.role === "farmer") {
+      } else if (data.user.role === "farmer") {
         window.location.href = "farmer_dashboard.html";
       } else {
         messageEl.style.color = "red";
@@ -51,8 +65,8 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     }, 800);
 
   } catch (err) {
-    console.error("Login error:", err);
+    console.error(err);
     messageEl.style.color = "red";
-    messageEl.textContent = err.message;
+    messageEl.textContent = err.message || "Login failed";
   }
 });
