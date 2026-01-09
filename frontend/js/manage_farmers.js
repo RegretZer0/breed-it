@@ -2,8 +2,8 @@
 import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect the page: only admins
-  await authGuard("admin");
+  // 🔐 Protect the page: only farm managers
+  await authGuard("farm_manager");
 
   const token = localStorage.getItem("token");
   const adminId = localStorage.getItem("userId");
@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, address, contact_no, email, password, num_of_pens, pen_capacity, adminId }),
+        body: JSON.stringify({ name, address, contact_no, email, password, num_of_pens, pen_capacity, managerId: adminId }),
       });
 
       const text = await res.text();

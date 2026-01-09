@@ -3,7 +3,7 @@ import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page
-  await authGuard("admin"); // only admins
+  await authGuard("farm_manager"); // only farm managers
 
   const performanceTableBody = document.getElementById("performanceTableBody");
   const aiTableBody = document.getElementById("aiTableBody");

@@ -28,7 +28,7 @@ function requireSessionAndToken(req, res, next) {
       return res.status(401).json({ success: false, message: "Session/token mismatch. Please log in again." });
     }
 
-    // 5) Attach user
+    // 5) Attach user to request
     req.user = decoded;
     next();
   } catch (err) {
@@ -37,27 +37,13 @@ function requireSessionAndToken(req, res, next) {
   }
 }
 
-// -----------------------------
-// Role guards
-// -----------------------------
+// Simple authenticated check
 function isAuthenticated(req, res, next) {
   if (req.session && req.session.user) return next();
   return res.status(401).json({ success: false, message: "Not authenticated" });
 }
 
-function isAdmin(req, res, next) {
-  if (req.session?.user?.role === "admin") return next();
-  return res.status(403).json({ success: false, message: "Admin access only" });
-}
-
-function isFarmer(req, res, next) {
-  if (req.session?.user?.role === "farmer") return next();
-  return res.status(403).json({ success: false, message: "Farmer access only" });
-}
-
 module.exports = {
   requireSessionAndToken,
   isAuthenticated,
-  isAdmin,
-  isFarmer,
 };

@@ -3,7 +3,7 @@ import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
   // First, protect the page
-  await authGuard("admin"); // only admins
+  await authGuard("farm_manager"); // only farm managers
 
   const tableBody = document.getElementById("reportsTableBody");
   const reportDetails = document.getElementById("reportDetails");
@@ -15,10 +15,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportImage = document.getElementById("reportImage");
 
   const BACKEND_URL = "http://localhost:5000";
-  const adminId = localStorage.getItem("userId"); // logged-in admin
+  const adminId = localStorage.getItem("userId"); // logged-in farm manager
 
   try {
-    // Fetch heat reports for this admin only
+    // Fetch heat reports for this farm manager only
     const token = localStorage.getItem("token"); // 🔐 include token
     const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`, {
       headers: {

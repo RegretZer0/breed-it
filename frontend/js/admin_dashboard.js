@@ -6,13 +6,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   messageEl.style.fontWeight = "bold";
   document.body.prepend(messageEl);
 
-  // Check if user is authenticated and is an admin
-  const user = await authGuard("admin");
+  // Check if user is authenticated and is a farm manager
+  const user = await authGuard("farm_manager");
   if (!user) return; // authGuard will redirect if not authenticated
 
-  // Show admin name
+  // Show farm manager name
   const welcome = document.querySelector(".dashboard-container h2");
-  if (welcome) welcome.textContent = `Welcome, ${user.name || "Admin"}`;
+  if (welcome) welcome.textContent = `Welcome, ${user.name || "Farm Manager"}`;
 
   // Logout handler
   const logoutBtn = document.getElementById("logoutBtn");

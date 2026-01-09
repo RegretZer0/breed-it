@@ -1,9 +1,3 @@
-// Clear any old auth state on load (prevents “ghost login”)
-localStorage.removeItem("token");
-localStorage.removeItem("user");
-localStorage.removeItem("role");
-localStorage.removeItem("userId");
-
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -19,53 +13,48 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include",   // ⬅ important (session cookie)
+      credentials: "include", // ✅ Include session cookie
     });
 
-    const text = await res.text();
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err) {
-      console.error("Invalid JSON returned:", text);
-      throw new Error("Unexpected server response");
-    }
+    const data = await res.json();
 
     if (!res.ok || !data.success) {
       throw new Error(data.message || "Login failed");
     }
 
-    // ---------------------------
-    // Store BOTH session + token
-    // ---------------------------
-
-    // Session is already stored as cookie automatically
-    // Token is optional—only store if backend sends
+    // -------------------------------
+    // Store session + JWT info
+    // -------------------------------
     if (data.token) {
-      localStorage.setItem("token", data.token);
+      localStorage.setItem("token", data.token); // ✅ Store JWT token
     }
-
     localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem("userId", data.user.id || data.user._id);
+    localStorage.setItem("userId", data.user._id || data.user.id);
     localStorage.setItem("role", data.user.role);
 
     messageEl.style.color = "green";
     messageEl.textContent = "Login successful! Redirecting...";
 
+    // -------------------------------
+    // Redirect based on role
+    // -------------------------------
     setTimeout(() => {
-      if (data.user.role === "admin") {
-        window.location.href = "admin_dashboard.html";
-      } else if (data.user.role === "farmer") {
-        window.location.href = "farmer_dashboard.html";
-      } else {
-        messageEl.style.color = "red";
-        messageEl.textContent = "Unknown role. Please contact admin.";
+      switch (data.user.role) {
+        case "farm_manager":
+          window.location.href = "admin_dashboard.html";
+          break;
+        case "farmer":
+          window.location.href = "farmer_dashboard.html";
+          break;
+        default:
+          console.warn("Unknown role detected:", data.user.role);
+          messageEl.style.color = "red";
+          messageEl.textContent = "Unknown role. Please contact administrator.";
       }
     }, 800);
 
   } catch (err) {
-    console.error(err);
+    console.error("Login error:", err);
     messageEl.style.color = "red";
     messageEl.textContent = err.message || "Login failed";
   }

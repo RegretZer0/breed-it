@@ -3,13 +3,13 @@ import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
   // First, protect the page
-  await authGuard("admin"); // only allow admins
+  await authGuard("farm_manager"); // only allow farm managers
 
-  const adminId = localStorage.getItem("userId"); // logged-in admin
+  const adminId = localStorage.getItem("userId"); // logged-in farm manager
   const BACKEND_URL = "http://localhost:5000";
 
   if (!adminId) {
-    console.error("No admin logged in.");
+    console.error("No farm manager logged in.");
     return;
   }
 

@@ -38,7 +38,7 @@ router.post("/login", async (req, res) => {
     }
 
     let user = await User.findOne({ email });
-    let role = "admin";
+    let role = "farm_manager"; // default role
 
     if (!user) {
       user = await Farmer.findOne({ email });
@@ -92,9 +92,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
@@ -119,30 +117,44 @@ router.post("/logout", (req, res) => {
 
 // ----------------------
 // Get current user
-// Supports:
-//  ✔️ Session
-//  ✔️ JWT header: Authorization: Bearer <token>
 // ----------------------
 router.get("/me", (req, res) => {
-  // Session check first
-  if (req.session?.user) {
-    return res.json({ success: true, user: req.session.user });
+  console.log("🔍 /me CHECK");
+  console.log("Session ID:", req.sessionID);
+  console.log("Session object:", req.session);
+  console.log("Session user:", req.session?.user);
+  console.log("Cookies:", req.headers.cookie);
+
+  // ✅ Session check FIRST
+  if (req.session && req.session.user) {
+    console.log("✅ AUTH VIA SESSION");
+    return res.json({
+      success: true,
+      source: "session",
+      user: req.session.user,
+    });
   }
 
-  // JWT check next
+  // 🔁 JWT fallback (debugged)
   const authHeader = req.headers.authorization;
+  console.log("Authorization header:", authHeader);
+
   if (!authHeader) {
+    console.warn("❌ No session, no token");
     return res
       .status(401)
-      .json({ success: false, message: "Not authenticated" });
+      .json({ success: false, reason: "NO_SESSION_NO_TOKEN" });
   }
 
   const token = authHeader.split(" ")[1];
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log("✅ AUTH VIA JWT", decoded);
+
     return res.json({
       success: true,
+      source: "jwt",
       user: {
         id: decoded.id,
         role: decoded.role,
@@ -151,14 +163,24 @@ router.get("/me", (req, res) => {
       },
     });
   } catch (err) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Invalid or expired token" });
+    console.error("❌ JWT INVALID:", err.message);
+    return res.status(401).json({
+      success: false,
+      reason: "INVALID_TOKEN",
+    });
   }
 });
 
+router.get("/debug/session", (req, res) => {
+  res.json({
+    sessionID: req.sessionID,
+    session: req.session,
+    cookies: req.headers.cookie || null,
+  });
+});
+
 // ----------------------
-// Register Admin
+// Register Farm Manager
 // ----------------------
 router.post("/register", async (req, res) => {
   const { fullName, address, contact_info, email, password } = req.body;
@@ -187,7 +209,7 @@ router.post("/register", async (req, res) => {
       contact_info,
       email,
       password: hashedPassword,
-      role: "admin",
+      role: "farm_manager",
     });
 
     await newUser.save();
@@ -195,11 +217,11 @@ router.post("/register", async (req, res) => {
       .status(201)
       .json({
         success: true,
-        message: "Admin registered successfully",
+        message: "Farm Manager registered successfully",
         user: newUser,
       });
   } catch (error) {
-    console.error("Admin registration error:", error);
+    console.error("Farm Manager registration error:", error);
     res
       .status(500)
       .json({
@@ -222,22 +244,22 @@ router.post("/register-farmer", async (req, res) => {
     password,
     num_of_pens,
     pen_capacity,
-    adminId,
+    managerId, // <-- updated from adminId
   } = req.body;
 
   try {
-    if (!name || !email || !password || !adminId) {
+    if (!name || !email || !password || !managerId) {
       return res
         .status(400)
         .json({
           success: false,
-          message: "Name, email, password, and adminId are required",
+          message: "Name, email, password, and managerId are required",
         });
     }
 
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== "admin") {
-      return res.status(400).json({ success: false, message: "Invalid admin ID" });
+    const manager = await User.findById(managerId);
+    if (!manager || manager.role !== "farm_manager") {
+      return res.status(400).json({ success: false, message: "Invalid Farm Manager ID" });
     }
 
     const existing = await Farmer.findOne({ email });
@@ -267,8 +289,8 @@ router.post("/register-farmer", async (req, res) => {
       farmer_id,
       num_of_pens: num_of_pens || 0,
       pen_capacity: pen_capacity || 0,
-      registered_by: adminId,
-      user_id: adminId,
+      registered_by: managerId,
+      user_id: managerId,
     });
 
     await newFarmer.save();
@@ -292,13 +314,13 @@ router.post("/register-farmer", async (req, res) => {
 });
 
 // ----------------------
-// Get farmers registered by admin
+// Get farmers registered by Farm Manager
 // ----------------------
-router.get("/farmers/:adminId", async (req, res) => {
-  const { adminId } = req.params;
+router.get("/farmers/:managerId", async (req, res) => {
+  const { managerId } = req.params;
 
   try {
-    const farmers = await Farmer.find({ registered_by: adminId }).select("-password -__v");
+    const farmers = await Farmer.find({ registered_by: managerId }).select("-password -__v");
     res.json({ success: true, farmers });
   } catch (error) {
     console.error("Fetch farmers error:", error);

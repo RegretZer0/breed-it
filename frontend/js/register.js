@@ -6,7 +6,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e) => 
   const password = document.getElementById("password").value.trim();
   
   // Automatically set role to admin
-  const role = "admin";
+  const role = "farm_manager";
 
   if (!fullName || !email || !password) {
     alert("Please fill out all fields.");

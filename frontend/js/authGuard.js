@@ -2,7 +2,7 @@
  * authGuard.js
  * 
  * Protect frontend pages by checking JWT token and session with backend.
- * @param {string} requiredRole - "admin", "farmer", or null for any logged-in user
+ * @param {string} requiredRole - "admin", "farm_manager", "farmer", or null for any logged-in user
  * @returns {Promise<object|null>} - Returns user object if authenticated, else redirects
  */
 export async function authGuard(requiredRole = null) {
@@ -10,7 +10,7 @@ export async function authGuard(requiredRole = null) {
   const token = localStorage.getItem("token");
 
   if (!token) {
-    // Not logged in
+    console.warn("[authGuard] No token found in localStorage.");
     alert("You are not logged in. Redirecting to login...");
     window.location.href = "login.html";
     return null;
@@ -26,29 +26,43 @@ export async function authGuard(requiredRole = null) {
       },
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      console.error("[authGuard] Failed to parse JSON from /api/auth/me:", parseErr);
+      console.log("[authGuard] Raw response text:", await res.text());
+      localStorage.clear();
+      alert("Server returned invalid response. Redirecting to login...");
+      window.location.href = "login.html";
+      return null;
+    }
+
+    console.log("[authGuard] /api/auth/me response:", res.status, data);
 
     if (!res.ok || !data.success || !data.user) {
-      // Session expired or invalid
+      console.warn("[authGuard] Session invalid or expired. Clearing localStorage.");
       localStorage.clear();
-      alert("Session expired. Redirecting to login...");
+      alert("Session expired. Please log in again.");
       window.location.href = "login.html";
       return null;
     }
 
     // Role check
     if (requiredRole && data.user.role !== requiredRole) {
+      console.warn(`[authGuard] Access denied. Required role: ${requiredRole}, actual role: ${data.user.role}`);
       localStorage.clear();
       alert("Access denied. Redirecting to login...");
       window.location.href = "login.html";
       return null;
     }
 
-    // Return the authenticated user object
+    // Success
+    console.log("[authGuard] Authenticated user:", data.user);
     return data.user;
 
   } catch (err) {
-    console.error("Auth check failed:", err);
+    console.error("[authGuard] Auth check failed due to server error:", err);
     localStorage.clear();
     alert("Server error. Redirecting to login...");
     window.location.href = "login.html";

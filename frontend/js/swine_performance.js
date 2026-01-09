@@ -1,8 +1,8 @@
 import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect page: only admins
-  await authGuard("admin");
+  // 🔐 Protect page: only farm_managers
+  await authGuard("farm_manager");
 
   const performanceForm = document.getElementById("performanceForm");
   const aiForm = document.getElementById("aiForm");

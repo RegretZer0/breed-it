@@ -1,25 +1,26 @@
 // manage_swine.js
-import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect page: only admins
-  await authGuard("admin");
+  // 🔐 Protect page: only farm managers
+  const user = await authGuard("farm_manager");
+  if (!user) return; // authGuard already redirects if not logged in or role mismatch
 
   const token = localStorage.getItem("token");
-  const adminId = localStorage.getItem("userId");
-  const role = localStorage.getItem("role");
+  const managerId = user.id || user._id; // use the authenticated user's ID
+  const role = user.role;
 
   const swineList = document.getElementById("swineList");
   const registerForm = document.getElementById("registerSwineForm");
   const swineMessage = document.getElementById("swineMessage");
-  const farmerSelect = document.getElementById("farmerSelect"); // dropdown for farmers
-  const sexSelect = document.getElementById("sex"); // dropdown for sex
-  const batchInput = document.getElementById("batch"); // batch input (text)
+  const farmerSelect = document.getElementById("farmerSelect");
+  const sexSelect = document.getElementById("sex");
+  const batchInput = document.getElementById("batch");
 
   // Fetch and display farmers (Dropdown)
   async function loadFarmers() {
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/farmers/${adminId}`, {
+      const res = await fetch(`http://localhost:5000/api/auth/farmers/${managerId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -51,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Fetch and display swine
   async function fetchSwine() {
     try {
-      const res = await fetch(`http://localhost:5000/api/swine?userId=${adminId}&role=${role}`, {
+      const res = await fetch(`http://localhost:5000/api/swine?userId=${managerId}&role=${role}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -119,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         inventoryStatus: document.getElementById("inventory_status").value.trim(),
         dateTransfer: document.getElementById("date_transfer").value,
         batch: batchValue,
-        adminId: adminId,
+        managerId: managerId,
       };
 
       try {
