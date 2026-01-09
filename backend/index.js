@@ -194,7 +194,7 @@ app.get("/farmer_dashboard", (req, res) =>
     page_title: "Farmer Dashboard",
     current_page: "farmer_dashboard",
     user: {
-      firstName: "Juan"
+      firstName: "Juan Test"
     }
   })
 );

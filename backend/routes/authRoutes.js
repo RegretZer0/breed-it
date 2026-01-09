@@ -80,39 +80,46 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Register Farmer
+// Register Farmer - I MODFIFIED THIS ROUTE -WBgit
 router.post("/register-farmer", async (req, res) => {
   const { name, address, contact_no, email, password, num_of_pens, pen_capacity, adminId } = req.body;
 
-  console.log("Register farmer payload:", req.body);
-
   try {
-    if (!name || !email || !password || !adminId) {
-      return res.status(400).json({ success: false, message: "Name, email, password, and adminId are required" });
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required"
+      });
     }
-
-    const admin = await User.findById(adminId);
-    if (!admin || admin.role !== "admin") {
-      return res.status(400).json({ success: false, message: "Invalid admin ID" });
-    }
-    console.log("Found admin:", admin.email);
 
     const existing = await Farmer.findOne({ email });
-    if (existing) return res.status(400).json({ success: false, message: "Email already registered" });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
+    }
+
+    // Optional admin
+    let registeredByAdmin = null;
+    if (adminId) {
+      const admin = await User.findById(adminId);
+      if (!admin || admin.role !== "admin") {
+        return res.status(400).json({ success: false, message: "Invalid admin ID" });
+      }
+      registeredByAdmin = admin._id;
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Safe farmer ID generation
+    // Generate farmer_id
     let nextNumber = 1;
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
     if (lastFarmer?.farmer_id) {
-      const parts = lastFarmer.farmer_id.split("-");
-      const lastNum = parseInt(parts[1]);
+      const lastNum = parseInt(lastFarmer.farmer_id.split("-")[1]);
       if (!isNaN(lastNum)) nextNumber = lastNum + 1;
     }
-    const farmer_id = `Farmer-${String(nextNumber).padStart(5, "0")}`;
-    console.log("Generated farmer_id:", farmer_id);
 
+    const farmer_id = `Farmer-${String(nextNumber).padStart(5, "0")}`;
+
+    // Create farmer FIRST
     const newFarmer = new Farmer({
       name,
       address,
@@ -122,19 +129,37 @@ router.post("/register-farmer", async (req, res) => {
       farmer_id,
       num_of_pens: num_of_pens || 0,
       pen_capacity: pen_capacity || 0,
-      registered_by: adminId,
-      user_id: adminId, // Link farmer to admin as initial user_id
+
+      // TEMP placeholders (will be overwritten)
+      registered_by: "temp",
+      user_id: "temp"
     });
 
-    await newFarmer.save();
-    console.log("Farmer saved:", newFarmer.email, "ID:", newFarmer.farmer_id);
+    // Self-register OR admin-register logic
+    if (registeredByAdmin) {
+      newFarmer.registered_by = registeredByAdmin;
+      newFarmer.user_id = registeredByAdmin;
+    } else {
+      // Self signup → farmer references itself
+      newFarmer.registered_by = newFarmer._id;
+      newFarmer.user_id = newFarmer._id;
+    }
 
-    res.status(201).json({ success: true, message: "Farmer registered successfully", farmer: newFarmer });
+    await newFarmer.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Farmer registered successfully",
+      farmer: newFarmer
+    });
+
   } catch (error) {
     console.error("Farmer registration error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+
 
 // Get farmers registered by a specific admin
 router.get("/farmers/:adminId", async (req, res) => {
