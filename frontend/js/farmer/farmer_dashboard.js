@@ -1,5 +1,5 @@
 // farmer_dashboard.js
-import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+import { authGuard } from "../auth/authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page

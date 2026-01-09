@@ -1,5 +1,5 @@
 // admin_heat_reports.js
-import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+import { authGuard } from "../auth/authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
   // First, protect the page

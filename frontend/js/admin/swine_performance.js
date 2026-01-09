@@ -1,4 +1,4 @@
-import { authGuard } from "./authGuard.js";
+import { authGuard } from "../auth/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect page: only admins
