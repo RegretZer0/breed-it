@@ -1,44 +1,39 @@
-document.addEventListener("DOMContentLoaded", () => {
-  loadLoginLogs();
-});
+import { authGuard } from "./authGuard.js";
 
-async function loadLoginLogs() {
-  const list = document.getElementById("loginLogs");
-  if (!list) return;
+document.addEventListener("DOMContentLoaded", async () => {
+  const messageEl = document.createElement("p");
+  messageEl.style.color = "red";
+  messageEl.style.fontWeight = "bold";
+  document.body.prepend(messageEl);
 
-  try {
-    const res = await fetch("/api/auth/logs", {
-      credentials: "include",
+  // Check if user is authenticated and is an admin
+  const user = await authGuard("admin");
+  if (!user) return; // authGuard will redirect if not authenticated
+
+  // Show admin name
+  const welcome = document.querySelector(".dashboard-container h2");
+  if (welcome) welcome.textContent = `Welcome, ${user.name || "Admin"}`;
+
+  // Logout handler
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      try {
+        await fetch("http://localhost:5000/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+
+        // clear frontend auth
+        localStorage.clear();
+
+        window.location.href = "login.html";
+      } catch (err) {
+        console.error("Logout error:", err);
+        alert("Logout failed. Try again.");
+      }
     });
-
-    const data = await res.json();
-
-    if (!data.success || !data.logs.length) {
-      list.innerHTML = "<li class='log-loading'>No recent logins.</li>";
-      return;
-    }
-
-    list.innerHTML = "";
-
-    data.logs.forEach(log => {
-      const li = document.createElement("li");
-
-      const time = new Date(log.createdAt).toLocaleString();
-
-      li.innerHTML = `
-        <div>
-          <span class="log-user">${log.name}</span>
-          <span class="log-role ${log.role}">${log.role}</span>
-        </div>
-        <div class="log-time">${time}</div>
-      `;
-
-      list.appendChild(li);
-    });
-
-  } catch (err) {
-    console.error("Failed to load logs:", err);
-    list.innerHTML =
-      "<li class='log-loading'>Error loading activity.</li>";
   }
-}
+});

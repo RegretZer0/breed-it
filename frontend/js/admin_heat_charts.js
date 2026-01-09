@@ -1,4 +1,10 @@
+// admin_heat_charts.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // First, protect the page
+  await authGuard("admin"); // only allow admins
+
   const adminId = localStorage.getItem("userId"); // logged-in admin
   const BACKEND_URL = "http://localhost:5000";
 
@@ -17,7 +23,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- FETCH REPORTS ----------------
   async function loadReports() {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`);
+      const token = localStorage.getItem("token"); // 🔐 include token
+      const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include", // include session cookie
+      });
+
       const data = await res.json();
 
       if (!data.success) throw new Error(data.message || "Failed to load reports");

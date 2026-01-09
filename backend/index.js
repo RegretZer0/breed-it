@@ -3,12 +3,15 @@ const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
-const fs = require("fs");
+const session = require("express-session");
+const MongoStore = require("connect-mongo").default;
+
 
 // =======================
 // ROUTES
 // =======================
 const authRoutes = require("./routes/authRoutes.js");
+const { isAuthenticated, isAdmin, isFarmer } = require("./middleware/authMiddleware");
 const swineRoutes = require("./routes/swineRoutes.js");
 const heatReportRoutes = require("./routes/heatReportRoutes.js");
 const swinePerformanceRoutes = require("./routes/swinePerformanceRoutes.js");
@@ -67,9 +70,37 @@ mongoose
     process.exit(1);
   });
 
-// =======================
-// API ROUTES (DO NOT TOUCH ORDER)
-// =======================
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'some_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 1 day
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 24 * 60 * 60, // 1 day in seconds
+  }),
+}));
+
+// 🚫🚫 PREVENT DASHBOARD FROM BEING CACHED AFTER LOGOUT
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
+// Example usage in a route
+app.get("/api/farmer/admin/:adminId/farmers", isAuthenticated, isAdmin, async (req, res) => {
+  try {
+    const farmers = await Farmer.find({ registered_by: req.params.adminId }).select("-password -__v");
+    res.json({ success: true, farmers });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+// API ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/swine", swineRoutes);
 app.use("/api/heat", heatReportRoutes);

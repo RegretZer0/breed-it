@@ -1,4 +1,10 @@
+// farmer_heat.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔐 Protect the page: only farmers
+  await authGuard("farmer");
+
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId"); // farmer ID
 
@@ -6,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportForm = document.getElementById("heatReportForm");
   const reportMessage = document.getElementById("reportMessage");
 
-  // Load farmer's swine
+  // ---------------- LOAD FARMER'S SWINE ----------------
   try {
     const res = await fetch(`http://localhost:5000/api/swine?userId=${userId}&role=farmer`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -25,15 +31,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineSelect.innerHTML = "<option value=''>Error loading swine</option>";
   }
 
-  // Handle form submission
+  // ---------------- HANDLE FORM SUBMISSION ----------------
   reportForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const selectedSwine = swineSelect.value;
     const signs = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map(cb => cb.value);
     const evidence = document.getElementById("evidence").files[0];
-
-    const farmerId = localStorage.getItem("userId");
 
     if (!selectedSwine || signs.length === 0 || !evidence) {
       reportMessage.style.color = "red";
@@ -45,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.append("swineId", selectedSwine);
     formData.append("signs", JSON.stringify(signs));
     formData.append("evidence", evidence);
-    formData.append("farmerId", farmerId);
+    formData.append("farmerId", userId);
 
     try {
       const res = await fetch("http://localhost:5000/api/heat/add", { 
@@ -70,4 +74,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       reportMessage.textContent = "Server error occurred.";
     }
   });
+
+  // ---------------- LOGOUT BUTTON (optional) ----------------
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await fetch("http://localhost:5000/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch (err) {
+        console.error("Logout error:", err);
+      } finally {
+        localStorage.clear();
+        window.location.href = "login.html";
+      }
+    });
+  }
 });

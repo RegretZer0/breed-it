@@ -1,4 +1,10 @@
+// farmer_profile.js
+import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔐 Protect the page: only farmers
+  await authGuard("farmer");
+
   const token = localStorage.getItem("token");
   const farmerId = localStorage.getItem("userId"); // Using _id
   const profileMessage = document.getElementById("profileMessage");
@@ -54,8 +60,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Logout handler
   const logoutBtn = document.getElementById("logoutBtn");
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.clear();
-    window.location.href = "login.html";
+  logoutBtn?.addEventListener("click", async () => {
+    try {
+      await fetch("http://localhost:5000/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
   });
 });
