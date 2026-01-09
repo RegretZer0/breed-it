@@ -1,35 +1,36 @@
 import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const messageEl = document.createElement("p");
-  messageEl.style.color = "red";
-  messageEl.style.fontWeight = "bold";
-  document.body.prepend(messageEl);
-
-  // Check if user is authenticated and is an admin
+  // ============================
+  // Auth check (ADMIN only)
+  // ============================
   const user = await authGuard("admin");
-  if (!user) return; // authGuard will redirect if not authenticated
+  if (!user) return; // authGuard handles redirect
 
-  // Show admin name
-  const welcome = document.querySelector(".dashboard-container h2");
-  if (welcome) welcome.textContent = `Welcome, ${user.name || "Admin"}`;
+  // ============================
+  // Load login activity logs
+  // ============================
+  loadLoginLogs();
 
+  // ============================
   // Logout handler
+  // ============================
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async (e) => {
       e.preventDefault();
 
       try {
-        await fetch("http://localhost:5000/api/auth/logout", {
+        await fetch("/api/auth/logout", {
           method: "POST",
           credentials: "include",
         });
 
-        // clear frontend auth
+        // Clear frontend auth
         localStorage.clear();
 
-        window.location.href = "login.html";
+        // Redirect to EJS login route
+        window.location.href = "/Login";
       } catch (err) {
         console.error("Logout error:", err);
         alert("Logout failed. Try again.");
@@ -37,3 +38,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 });
+
+// ============================
+// Load recent login logs
+// ============================
+async function loadLoginLogs() {
+  const list = document.getElementById("loginLogs");
+  if (!list) return;
+
+  try {
+    const res = await fetch("/api/auth/logs", {
+      credentials: "include",
+    });
+
+    const data = await res.json();
+
+    if (!data.success || !data.logs || !data.logs.length) {
+      list.innerHTML = "<li class='log-loading'>No recent logins.</li>";
+      return;
+    }
+
+    list.innerHTML = "";
+
+    data.logs.forEach((log) => {
+      const li = document.createElement("li");
+      const time = new Date(log.createdAt).toLocaleString();
+
+      li.innerHTML = `
+        <div>
+          <span class="log-user">${log.name}</span>
+          <span class="log-role ${log.role}">${log.role}</span>
+        </div>
+        <div class="log-time">${time}</div>
+      `;
+
+      list.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error("Failed to load logs:", err);
+    list.innerHTML =
+      "<li class='log-loading'>Error loading activity.</li>";
+  }
+}
