@@ -1,58 +1,47 @@
-// farmer_dashboard.js
-import { authGuard } from "../auth/authGuard.js"; // 🔐 import authGuard
+document.addEventListener("DOMContentLoaded", () => {
 
-document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect the page
-  await authGuard("farmer"); // only farmers
+  // 🔐 Force reload if page restored from BFCache
+  window.addEventListener("pageshow", event => {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
 
-  const farmerId = localStorage.getItem("userId");
-  const token = localStorage.getItem("token");
+  // =========================
+  // DASHBOARD NAVIGATION
+  // =========================
 
-  // View Swine
-  const viewSwineBtn = document.getElementById("viewSwineBtn");
-  if (viewSwineBtn) {
-    viewSwineBtn.addEventListener("click", () => {
-      window.location.href = "farmer_swine.html";
-    });
-  }
+  document.getElementById("viewSwineBtn")?.addEventListener("click", () => {
+    window.location.href = "/farmer/pigs";
+  });
 
-  // Heat Report
-  const heatReportBtn = document.getElementById("heatReportBtn");
-  if (heatReportBtn) {
-    heatReportBtn.addEventListener("click", () => {
-      window.location.href = "report_heat.html";
-    });
-  }
+  document.getElementById("heatReportBtn")?.addEventListener("click", () => {
+    window.location.href = "/farmer/reports";
+  });
 
-  // View Profile
-  const profileBtn = document.getElementById("profileBtn");
-  if (profileBtn) {
-    profileBtn.addEventListener("click", () => {
-      window.location.href = "farmer_profile.html";
-    });
-  }
+  document.getElementById("profileBtn")?.addEventListener("click", () => {
+    window.location.href = "/farmer/profile";
+  });
 
-  // Logout
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        // 🔒 Optionally notify backend of logout
-        await fetch("http://localhost:5000/api/auth/logout", {
-          method: "POST",
-          credentials: "include",
-        });
-      } catch (err) {
-        console.error("Logout error:", err);
-      } finally {
-        // Clear local storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        localStorage.removeItem("user");
+  // =========================
+  // LOGOUT
+  // =========================
 
-        window.location.href = "login.html";
-      }
-    });
-  }
+document.querySelector('[data-action="logout"]')
+  ?.addEventListener("click", async () => {
+    console.log("🚪 Logout clicked");
+
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      console.log("✅ Logout request sent");
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      localStorage.clear();
+      window.location.href = "/login";
+    }
+  });
 });

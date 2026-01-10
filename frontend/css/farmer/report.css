@@ -108,6 +108,60 @@
   cursor: pointer;
 }
 
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #ddd;
+  border-top: 3px solid #2ecc71;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* =========================
+   REPORT MODAL
+========================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #ffffff;
+  width: 90%;
+  max-width: 520px;
+  border-radius: 16px;
+  padding: 20px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.close-modal {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 22px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+
+
 /* =========================
    CREATE REPORT FORM
 ========================= */

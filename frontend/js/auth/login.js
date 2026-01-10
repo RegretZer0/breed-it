@@ -1,72 +1,95 @@
-// Clear any old auth state on load (prevents “ghost login”)
+// ============================
+// Clear any old auth state
+// ============================
 localStorage.removeItem("token");
 localStorage.removeItem("user");
 localStorage.removeItem("role");
 localStorage.removeItem("userId");
 
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("loginForm");
+  if (!form) return;
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
   const messageEl = document.getElementById("message");
 
-  messageEl.style.color = "black";
-  messageEl.textContent = "Logging in...";
+  // ============================
+  // Password toggle (eye icon)
+  // ============================
+  document.querySelectorAll(".toggle-pass").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      // find the input inside the SAME input-group
+      const group = btn.closest(".input-group");
+      if (!group) return;
 
-  try {
-    const res = await fetch("http://localhost:5000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      credentials: "include",   // ⬅ important (session cookie)
-    });
+      const input = group.querySelector("input");
+      const icon = btn.querySelector("i");
 
-    const text = await res.text();
+      if (!input || !icon) return;
 
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (err) {
-      console.error("Invalid JSON returned:", text);
-      throw new Error("Unexpected server response");
-    }
-
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || "Login failed");
-    }
-
-    // ---------------------------
-    // Store BOTH session + token
-    // ---------------------------
-
-    // Session is already stored as cookie automatically
-    // Token is optional—only store if backend sends
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-    }
-
-    localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem("userId", data.user.id || data.user._id);
-    localStorage.setItem("role", data.user.role);
-
-    messageEl.style.color = "green";
-    messageEl.textContent = "Login successful! Redirecting...";
-
-    setTimeout(() => {
-      if (data.user.role === "admin") {
-        window.location.href = "admin_dashboard.html";
-      } else if (data.user.role === "farmer") {
-        window.location.href = "farmer_dashboard.html";
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
       } else {
-        messageEl.style.color = "red";
-        messageEl.textContent = "Unknown role. Please contact admin.";
+        input.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
       }
-    }, 800);
+    });
+  });
 
-  } catch (err) {
-    console.error(err);
-    messageEl.style.color = "red";
-    messageEl.textContent = err.message || "Login failed";
-  }
+  // ============================
+  // Login submit
+  // ============================
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    messageEl.style.color = "black";
+    messageEl.textContent = "Logging in...";
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      // Optional token storage
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("userId", data.user.id);
+      localStorage.setItem("role", data.user.role);
+
+      messageEl.style.color = "green";
+      messageEl.textContent = "Login successful! Redirecting...";
+
+      setTimeout(() => {
+        if (data.user.role === "admin") {
+          window.location.href = "/admin/dashboard";
+        } else if (data.user.role === "farmer") {
+          window.location.href = "/farmer/dashboard";
+        }
+      }, 600);
+
+    } catch (err) {
+      console.error("Login error:", err);
+      messageEl.style.color = "red";
+      messageEl.textContent = err.message || "Login failed";
+    }
+  });
 });

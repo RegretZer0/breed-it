@@ -21,8 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
      BACK BUTTON
   ========================= */
   document.querySelector(".back-btn")?.addEventListener("click", () => {
-    if (window.location.pathname !== "/farmer_dashboard") {
-      window.location.href = "/farmer_dashboard";
+    if (window.location.pathname !== "/farmer/dashboard") {
+      window.location.href = "/farmer/dashboard";
     }
   });
 

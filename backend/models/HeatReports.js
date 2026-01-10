@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 
 const heatReportSchema = new mongoose.Schema({
+  // ✅ NEW: USER-FRIENDLY REPORT ID
+  report_code: {
+    type: String,
+    unique: true,
+    index: true
+  },
+
   swine_id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: "Swine", 
@@ -40,9 +47,9 @@ const heatReportSchema = new mongoose.Schema({
   },
 
   status: {
-  type: String,
-  enum: ["pending", "accepted", "rejected"],
-  default: "pending"
+    type: String,
+    enum: ["pending", "accepted", "rejected"],
+    default: "pending"
   },
 
   date_reported: { 

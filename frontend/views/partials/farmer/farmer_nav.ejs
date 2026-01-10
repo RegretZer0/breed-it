@@ -9,22 +9,20 @@
 
   <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  
+  <!-- Global Farmer Nav CSS -->
+  <link rel="stylesheet" href="../../../css/farmer/globalNav.css">
 
   <% if (page_title === "Farmer Dashboard") { %>
-    <link rel="stylesheet" href="/css/farmer_globalnav.css">
-    <link rel="stylesheet" href="/css/farmer_dashboard.css">
-  <% } else if (page_title === "Farmer My Pigs") { %>
-    <link rel="stylesheet" href="/css/farmer_globalnav.css">
-    <link rel="stylesheet" href="/css/farmer_mypigs.css">
-  <% } else if (page_title === "Farmer Dashboard Report") { %>
-    <link rel="stylesheet" href="/css/farmer_globalnav.css">
-    <link rel="stylesheet" href="/css/farmer_dashboard_report.css">
-  <% } else if (page_title === "Farmer Profile") { %>
-    <link rel="stylesheet" href="/css/farmer_globalnav.css">
-    <link rel="stylesheet" href="/css/farmer_profile.css">
-  <% } else if (page_title === "Farmer Help") { %>
-    <link rel="stylesheet" href="/css/farmer_globalnav.css">
-    <link rel="stylesheet" href="/css/farmer_help.css">
+    <link rel="stylesheet" href="../../../css/farmer/farmer_dashboard.css">
+  <% } else if (page_title === "MyPigs") { %>
+    <link rel="stylesheet" href="../../../css/farmer/mypigs.css">
+  <% } else if (page_title === "Reports") { %>
+    <link rel="stylesheet" href="../../../css/farmer/report.css">
+  <% } else if (page_title === "Profile") { %>
+    <link rel="stylesheet" href="../../../css/farmer/profile.css">
+  <% } else if (page_title === "Help") { %>
+    <link rel="stylesheet" href="../../../css/farmer/help.css">
   <% } %>
 </head>
 
@@ -62,7 +60,7 @@
 <header class="page-header">
   <div class="nav-left">
     <% if (current_page !== "farmer_dashboard") { %>
-      <button class="back-btn">
+      <button class="back-btn" id="backBtn">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
     <% } else { %>

@@ -228,4 +228,45 @@ router.get("/males", async (req, res) => {
   }
 });
 
+
+// Farmer - My Pigs (Card View)
+router.get("/farmer/mypigs", async (req, res) => {
+  try {
+    const { farmerId } = req.query;
+
+    if (!farmerId) {
+      return res.status(400).json({
+        success: false,
+        message: "farmerId is required"
+      });
+    }
+
+    const farmer = await Farmer.findById(farmerId);
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer not found"
+      });
+    }
+
+    const swine = await Swine.find({ farmer_id: farmer._id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.json({
+      success: true,
+      pigs: swine
+    });
+
+  } catch (error) {
+    console.error("[MY PIGS ERROR]:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+});
+
+
 module.exports = router;

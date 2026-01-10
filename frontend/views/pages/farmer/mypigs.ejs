@@ -1,0 +1,20 @@
+<%- include("../../partials/farmer/farmer_nav") %>
+
+<div class="pigs-container">
+  <h2 class="page-title">MY PIGS</h2>
+
+  <p id="loadingMessage">Loading pigs...</p>
+
+  <div id="pigList"></div>
+</div>
+
+<!-- DETAILS MODAL -->
+<div id="pigModal" class="modal hidden">
+  <div class="modal-content">
+    <span id="closeModal">&times;</span>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<%- include("../../partials/farmer/farmer_footer") %>
+
