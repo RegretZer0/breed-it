@@ -2,10 +2,18 @@
  * authGuard.js
  * 
  * Protect frontend pages by checking JWT token and session with backend.
- * @param {string} requiredRole - "admin", "farm_manager", "farmer", or null for any logged-in user
+ * @param {string|string[]|null} requiredRole - "admin", "farm_manager", "farmer", "encoder", or null for any logged-in user
  * @returns {Promise<object|null>} - Returns user object if authenticated, else redirects
  */
 export async function authGuard(requiredRole = null) {
+  // Convert single role string to array for uniformity
+  let allowedRoles = [];
+  if (typeof requiredRole === "string") {
+    allowedRoles = [requiredRole];
+  } else if (Array.isArray(requiredRole)) {
+    allowedRoles = requiredRole;
+  }
+
   // Check token in localStorage
   const token = localStorage.getItem("token");
 
@@ -49,8 +57,8 @@ export async function authGuard(requiredRole = null) {
     }
 
     // Role check
-    if (requiredRole && data.user.role !== requiredRole) {
-      console.warn(`[authGuard] Access denied. Required role: ${requiredRole}, actual role: ${data.user.role}`);
+    if (allowedRoles.length > 0 && !allowedRoles.includes(data.user.role)) {
+      console.warn(`[authGuard] Access denied. Allowed roles: ${allowedRoles.join(", ")}, actual role: ${data.user.role}`);
       localStorage.clear();
       alert("Access denied. Redirecting to login...");
       window.location.href = "login.html";

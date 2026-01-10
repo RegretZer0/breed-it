@@ -13,7 +13,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include", // ✅ Include session cookie
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -22,9 +22,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       throw new Error(data.message || "Login failed");
     }
 
-    // -------------------------------
     // Store session + JWT info
-    // -------------------------------
     if (data.token) {
       localStorage.setItem("token", data.token); // ✅ Store JWT token
     }
@@ -35,11 +33,15 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     messageEl.style.color = "green";
     messageEl.textContent = "Login successful! Redirecting...";
 
-    // -------------------------------
     // Redirect based on role
-    // -------------------------------
     setTimeout(() => {
       switch (data.user.role) {
+        case "system_admin":
+          window.location.href = "system_admin_dashboard.html";
+          break;
+        case "encoder":
+          window.location.href = "encoder_dashboard.html";
+          break;
         case "farm_manager":
           window.location.href = "admin_dashboard.html";
           break;

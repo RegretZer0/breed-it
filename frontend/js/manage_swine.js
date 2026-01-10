@@ -1,15 +1,55 @@
-// manage_swine.js
 import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect page: only farm managers
-  const user = await authGuard("farm_manager");
-  if (!user) return; // authGuard already redirects if not logged in or role mismatch
+  // Protect page: farm managers OR encoders
+  const user = await authGuard(["farm_manager", "encoder"]);
+  if (!user) return;
 
   const token = localStorage.getItem("token");
-  const managerId = user.id || user._id; // use the authenticated user's ID
   const role = user.role;
 
+  // DETERMINE MANAGER ID
+  let managerId = null;
+
+  try {
+    if (role === "farm_manager") {
+      managerId = user.id;
+    }
+
+    if (role === "encoder") {
+      if (user.managerId) {
+        managerId = user.managerId;
+      } else {
+        const res = await fetch(
+          `http://localhost:5000/api/auth/encoders/single/${user.id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
+          }
+        );
+
+        const data = await res.json();
+        if (!res.ok || !data.success || !data.encoder) {
+          throw new Error("Encoder profile not found");
+        }
+
+        managerId = data.encoder.managerId;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to determine managerId:", err);
+    return;
+  }
+
+  console.log("Current user role:", role);
+  console.log("Manager ID determined:", managerId);
+
+  if (!managerId) {
+    console.error("Manager ID is missing");
+    return;
+  }
+
+  // DOM ELEMENTS
   const swineList = document.getElementById("swineList");
   const registerForm = document.getElementById("registerSwineForm");
   const swineMessage = document.getElementById("swineMessage");
@@ -17,119 +57,111 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sexSelect = document.getElementById("sex");
   const batchInput = document.getElementById("batch");
 
-  // Fetch and display farmers (Dropdown)
+  // FETCH FARMERS
   async function loadFarmers() {
     try {
-      const res = await fetch(`http://localhost:5000/api/auth/farmers/${managerId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      console.log("Loading farmers for managerId:", managerId);
+
+      const res = await fetch(
+        `http://localhost:5000/api/auth/farmers/${managerId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        }
+      );
 
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to load farmers");
+      console.log("Farmers received:", data);
 
-      farmerSelect.innerHTML = '<option value="">Select Farmer</option>';
+      farmerSelect.innerHTML = `<option value="">Select Farmer</option>`;
 
-      if (!data.farmers || data.farmers.length === 0) {
-        const option = document.createElement("option");
-        option.value = "";
-        option.textContent = "No farmers registered";
-        farmerSelect.appendChild(option);
+      if (!data.success || !data.farmers?.length) {
+        farmerSelect.innerHTML += `<option>No farmers available</option>`;
         return;
       }
 
-      data.farmers.forEach(farmer => {
+      data.farmers.forEach((farmer) => {
         const option = document.createElement("option");
         option.value = farmer._id;
-        option.textContent = farmer.name;
+        option.textContent = farmer.name || farmer.fullName || "Unnamed Farmer";
         farmerSelect.appendChild(option);
       });
     } catch (err) {
       console.error("Error loading farmers:", err);
-      farmerSelect.innerHTML = '<option value="">Error loading farmers</option>';
+      farmerSelect.innerHTML = `<option>Error loading farmers</option>`;
     }
   }
 
-  // Fetch and display swine
+  // FETCH SWINE (SESSION-SCOPED)
   async function fetchSwine() {
     try {
-      const res = await fetch(`http://localhost:5000/api/swine?userId=${managerId}&role=${role}`, {
+      console.log("Loading swine (session scoped)");
+
+      const res = await fetch(`http://localhost:5000/api/swine`, {
         headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
 
       const data = await res.json();
+      console.log("Swine data received:", data);
 
-      if (!res.ok || !data.success) {
-        swineList.innerHTML = `<li>Error: ${data.message || "Failed to fetch swine"}</li>`;
-        return;
-      }
+      swineList.innerHTML = `<li>Loading...</li>`;
 
-      swineList.innerHTML = "";
-      if (!data.swine || data.swine.length === 0) {
+      if (!res.ok || !data.success || !data.swine?.length) {
         swineList.innerHTML = "<li>No swine registered yet</li>";
         return;
       }
 
-      data.swine.forEach(sw => {
+      swineList.innerHTML = "";
+      data.swine.forEach((sw) => {
         const li = document.createElement("li");
-        li.textContent = `SwineID: ${sw.swine_id}, Batch: ${sw.batch}, Farmer: ${sw.farmer_name || "N/A"}, Sex: ${sw.sex}, Breed: ${sw.breed}, Status: ${sw.status || "N/A"}`;
+        li.textContent = `SwineID: ${sw.swine_id}, Batch: ${sw.batch}, Farmer: ${
+          sw.farmer_name || "N/A"
+        }, Sex: ${sw.sex}, Breed: ${sw.breed}, Status: ${sw.status || "N/A"}`;
         swineList.appendChild(li);
       });
-
     } catch (err) {
-      console.error("Error fetching swine:", err);
-      swineList.innerHTML = "<li>Server error</li>";
+      console.error("Error loading swine:", err);
+      swineList.innerHTML = "<li>Error loading swine</li>";
     }
   }
 
-  // Register new swine
+  // REGISTER NEW SWINE
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const selectedFarmerId = farmerSelect.value;
-      const selectedSex = sexSelect.value;
-      const batchValue = batchInput.value.trim();
-
-      if (!selectedFarmerId) {
+      if (!farmerSelect.value || !sexSelect.value || !batchInput.value.trim()) {
         swineMessage.style.color = "red";
-        swineMessage.textContent = "Please select a farmer";
-        return;
-      }
-
-      if (!selectedSex) {
-        swineMessage.style.color = "red";
-        swineMessage.textContent = "Please select sex";
-        return;
-      }
-
-      if (!batchValue) {
-        swineMessage.style.color = "red";
-        swineMessage.textContent = "Please enter batch";
+        swineMessage.textContent = "All required fields must be filled";
         return;
       }
 
       const payload = {
-        farmer_id: selectedFarmerId,
-        sex: selectedSex,
+        farmer_id: farmerSelect.value,
+        sex: sexSelect.value,
         color: document.getElementById("color").value.trim(),
         breed: document.getElementById("breed").value.trim(),
         birthDate: document.getElementById("birth_date").value,
         status: document.getElementById("status").value.trim(),
         sireId: document.getElementById("sire_id").value.trim(),
         damId: document.getElementById("dam_id").value.trim(),
-        inventoryStatus: document.getElementById("inventory_status").value.trim(),
+        inventoryStatus: document
+          .getElementById("inventory_status")
+          .value.trim(),
         dateTransfer: document.getElementById("date_transfer").value,
-        batch: batchValue,
-        managerId: managerId,
+        batch: batchInput.value.trim(),
+        managerId,
       };
 
       try {
         const res = await fetch("http://localhost:5000/api/swine/add", {
           method: "POST",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
           },
+          credentials: "include",
           body: JSON.stringify(payload),
         });
 
@@ -152,7 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Initial load
-  loadFarmers();
-  fetchSwine();
+  /* ---------------- INITIAL LOAD ---------------- */
+  await loadFarmers();
+  await fetchSwine();
 });

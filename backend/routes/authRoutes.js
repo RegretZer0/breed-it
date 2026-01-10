@@ -3,18 +3,16 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const { JWT_SECRET } = require("../config/jwt");
+
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
 
-// ----------------------
 // JWT helper
-// ----------------------
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_jwt_key";
-
 function generateToken(user) {
   return jwt.sign(
     {
-      id: user._id,
+      id: user._id.toString(),
       role: user.role,
       email: user.email,
       name: user.fullName || user.name || "User",
@@ -24,70 +22,77 @@ function generateToken(user) {
   );
 }
 
-// ----------------------
 // Login with Session + JWT
-// ----------------------
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password are required" });
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
     }
 
+    // Try to find user in Users collection first
     let user = await User.findOne({ email });
-    let role = "farm_manager"; // default role
+    let role;
 
-    if (!user) {
+    if (user) {
+      role = user.role; // use DB role for User (including system_admin)
+    } else {
+      // If not found, check Farmers collection
       user = await Farmer.findOne({ email });
-      role = "farmer";
+      role = "farmer"; // farmers always have 'farmer' role
     }
 
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid password" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid password",
+      });
     }
 
-    // 🔐 REGENERATE SESSION ID
-    req.session.regenerate(async (err) => {
-      if (err)
-        return res
-          .status(500)
-          .json({ success: false, message: "Session error" });
+    req.session.regenerate((err) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: "Session error",
+        });
+      }
 
-      // Store session user
+      // ✅ store the correct role from DB
       req.session.user = {
-        id: user._id,
+        id: user._id.toString(),
         role,
         email: user.email,
         name: user.fullName || user.name || "User",
+        managerId: user.managerId || null,
       };
 
-      // Create JWT token
       const token = generateToken({
         _id: user._id,
         role,
         email: user.email,
         fullName: user.fullName,
         name: user.name,
+        managerId: user.managerId || null, // include managerId in JWT
       });
 
-      return res.json({
+      res.json({
         success: true,
         message: "Login successful",
         user: req.session.user,
         role,
-        token, // <-- FRONTEND will store this
+        token,
       });
     });
   } catch (error) {
@@ -96,38 +101,21 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ----------------------
 // Logout
-// ----------------------
 router.post("/logout", (req, res) => {
-  if (!req.session) {
-    return res.json({ success: true, message: "Already logged out" });
-  }
-
-  req.session.destroy((err) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ success: false, message: "Logout failed" });
-
-    res.clearCookie("connect.sid", { path: "/" });
+  req.session?.destroy(() => {
+    res.clearCookie("connect.sid");
     res.json({ success: true, message: "Logged out successfully" });
   });
 });
 
-// ----------------------
 // Get current user
-// ----------------------
 router.get("/me", (req, res) => {
-  console.log("🔍 /me CHECK");
-  console.log("Session ID:", req.sessionID);
-  console.log("Session object:", req.session);
-  console.log("Session user:", req.session?.user);
-  console.log("Cookies:", req.headers.cookie);
+  console.log("=== /me DEBUG ===");
+  console.log("Session:", req.session?.user);
+  console.log("Auth header:", req.headers.authorization);
 
-  // ✅ Session check FIRST
-  if (req.session && req.session.user) {
-    console.log("✅ AUTH VIA SESSION");
+  if (req.session?.user) {
     return res.json({
       success: true,
       source: "session",
@@ -135,75 +123,56 @@ router.get("/me", (req, res) => {
     });
   }
 
-  // 🔁 JWT fallback (debugged)
   const authHeader = req.headers.authorization;
-  console.log("Authorization header:", authHeader);
-
   if (!authHeader) {
-    console.warn("❌ No session, no token");
-    return res
-      .status(401)
-      .json({ success: false, reason: "NO_SESSION_NO_TOKEN" });
+    return res.status(401).json({
+      success: false,
+      reason: "NO_SESSION_NO_TOKEN",
+    });
   }
 
-  const token = authHeader.split(" ")[1];
-
   try {
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, JWT_SECRET);
-    console.log("✅ AUTH VIA JWT", decoded);
 
-    return res.json({
+    console.log("Decoded JWT:", decoded);
+
+    res.json({
       success: true,
       source: "jwt",
-      user: {
-        id: decoded.id,
-        role: decoded.role,
-        email: decoded.email,
-        name: decoded.name,
-      },
+      user: decoded,
     });
   } catch (err) {
-    console.error("❌ JWT INVALID:", err.message);
-    return res.status(401).json({
+    console.error("JWT error:", err);
+    res.status(401).json({
       success: false,
       reason: "INVALID_TOKEN",
     });
   }
 });
 
-router.get("/debug/session", (req, res) => {
-  res.json({
-    sessionID: req.sessionID,
-    session: req.session,
-    cookies: req.headers.cookie || null,
-  });
-});
-
-// ----------------------
 // Register Farm Manager
-// ----------------------
 router.post("/register", async (req, res) => {
   const { fullName, address, contact_info, email, password } = req.body;
 
   try {
     if (!fullName || !email || !password) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Full name, email, and password are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Full name, email, and password are required",
+      });
     }
 
-    const existing = await User.findOne({ email });
-    if (existing)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already registered" });
+    if (await User.findOne({ email })) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = new User({
+    const newUser = await User.create({
       fullName,
       address,
       contact_info,
@@ -212,29 +181,17 @@ router.post("/register", async (req, res) => {
       role: "farm_manager",
     });
 
-    await newUser.save();
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Farm Manager registered successfully",
-        user: newUser,
-      });
+    res.status(201).json({
+      success: true,
+      message: "Farm Manager registered successfully",
+      user: newUser,
+    });
   } catch (error) {
-    console.error("Farm Manager registration error:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server error",
-        error: error.message,
-      });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ----------------------
 // Register Farmer
-// ----------------------
 router.post("/register-farmer", async (req, res) => {
   const {
     name,
@@ -244,43 +201,42 @@ router.post("/register-farmer", async (req, res) => {
     password,
     num_of_pens,
     pen_capacity,
-    managerId, // <-- updated from adminId
+    managerId,
   } = req.body;
 
   try {
     if (!name || !email || !password || !managerId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Name, email, password, and managerId are required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, password, and managerId are required",
+      });
     }
 
     const manager = await User.findById(managerId);
     if (!manager || manager.role !== "farm_manager") {
-      return res.status(400).json({ success: false, message: "Invalid Farm Manager ID" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Farm Manager ID",
+      });
     }
 
-    const existing = await Farmer.findOne({ email });
-    if (existing)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already registered" });
+    if (await Farmer.findOne({ email })) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate farmer_id
-    let nextNumber = 1;
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
-    if (lastFarmer?.farmer_id) {
-      const parts = lastFarmer.farmer_id.split("-");
-      const lastNum = parseInt(parts[1]);
-      if (!isNaN(lastNum)) nextNumber = lastNum + 1;
-    }
-    const farmer_id = `Farmer-${String(nextNumber).padStart(5, "0")}`;
+    const nextNum = lastFarmer
+      ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
+      : 1;
 
-    const newFarmer = new Farmer({
+    const farmer_id = `Farmer-${String(nextNum).padStart(5, "0")}`;
+
+    const farmer = await Farmer.create({
       name,
       address,
       contact_no,
@@ -293,65 +249,178 @@ router.post("/register-farmer", async (req, res) => {
       user_id: managerId,
     });
 
-    await newFarmer.save();
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Farmer registered successfully",
-        farmer: newFarmer,
-      });
+    res.status(201).json({
+      success: true,
+      message: "Farmer registered successfully",
+      farmer,
+    });
   } catch (error) {
-    console.error("Farmer registration error:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Server error",
-        error: error.message,
-      });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ----------------------
-// Get farmers registered by Farm Manager
-// ----------------------
+// Get farmers by manager
 router.get("/farmers/:managerId", async (req, res) => {
-  const { managerId } = req.params;
-
   try {
-    const farmers = await Farmer.find({ registered_by: managerId }).select("-password -__v");
+    const managerId = req.params.managerId;
+
+    console.log("=== FETCH FARMERS DEBUG ===");
+    console.log("Requested managerId:", managerId);
+
+    const farmers = await Farmer.find({
+      $or: [{ registered_by: managerId }, { user_id: managerId }],
+    }).select("-password -__v");
+
+    console.log("Farmers found:", farmers.length);
+    console.log("Farmers data:", farmers);
+
     res.json({ success: true, farmers });
   } catch (error) {
     console.error("Fetch farmers error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ----------------------
 // Update Farmer
-// ----------------------
 router.put("/update-farmer/:farmerId", async (req, res) => {
-  const { farmerId } = req.params;
-  const { name, address, contact_no, email, num_of_pens, pen_capacity } = req.body;
+  try {
+    const farmer = await Farmer.findOne({ farmer_id: req.params.farmerId });
+    if (!farmer) {
+      return res.status(404).json({
+        success: false,
+        message: "Farmer not found",
+      });
+    }
+
+    Object.assign(farmer, req.body);
+    await farmer.save();
+
+    res.json({
+      success: true,
+      message: "Farmer updated successfully",
+      farmer,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Register Encoder
+router.post("/register-encoder", async (req, res) => {
+  const {
+    fullName,
+    address,
+    contact_info,
+    email,
+    password,
+    managerId
+  } = req.body;
 
   try {
-    const farmer = await Farmer.findOne({ farmer_id: farmerId });
-    if (!farmer) return res.status(404).json({ success: false, message: "Farmer not found" });
+    if (!fullName || !email || !password || !managerId) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name, email, password, and managerId are required",
+      });
+    }
 
-    if (name) farmer.name = name;
-    if (address) farmer.address = address;
-    if (contact_no) farmer.contact_no = contact_no;
-    if (email) farmer.email = email;
-    if (num_of_pens !== undefined) farmer.num_of_pens = num_of_pens;
-    if (pen_capacity !== undefined) farmer.pen_capacity = pen_capacity;
+    const manager = await User.findById(managerId);
+    if (!manager || manager.role !== "farm_manager") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Farm Manager ID",
+      });
+    }
 
-    await farmer.save();
-    res.json({ success: true, message: "Farmer updated successfully", farmer });
+    if (await User.findOne({ email })) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const encoder = await User.create({
+      fullName,
+      address,
+      contact_info,
+      email,
+      password: hashedPassword,
+      role: "encoder",
+      managerId,
+      status: "active"
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Encoder registered successfully",
+      encoder,
+    });
   } catch (error) {
-    console.error("Update farmer error:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Register encoder error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
+
+// Get encoders by manager
+router.get("/encoders/:managerId", async (req, res) => {
+  try {
+    const encoders = await User.find({
+      role: "encoder",
+      managerId: req.params.managerId
+    }).select("-password -__v");
+
+    res.json({ success: true, encoders });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Update Encoder
+router.put("/update-encoder/:id", async (req, res) => {
+  try {
+    const encoder = await User.findById(req.params.id);
+    if (!encoder || encoder.role !== "encoder") {
+      return res.status(404).json({
+        success: false,
+        message: "Encoder not found",
+      });
+    }
+
+    Object.assign(encoder, req.body);
+    await encoder.save();
+
+    res.json({
+      success: true,
+      message: "Encoder updated successfully",
+      encoder,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get single encoder by ID
+router.get("/encoders/single/:id", async (req, res) => {
+  try {
+    const encoder = await User.findOne({ _id: req.params.id, role: "encoder" }).select("-password -__v");
+    if (!encoder) {
+      return res.status(404).json({
+        success: false,
+        message: "Encoder not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      encoder, // ✅ frontend expects .encoder.managerId
+    });
+  } catch (error) {
+    console.error("Fetch single encoder error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 
 module.exports = router;

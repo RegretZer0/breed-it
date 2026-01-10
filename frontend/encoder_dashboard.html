@@ -3,21 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard</title>
+  <title>Encoder Dashboard</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="dashboard-container">
-    <h2>Welcome, Admin</h2>
+    <h2>Welcome, <span id="encoderName">Encoder</span></h2>
 
-    <!-- Section: Links to Manage Accounts -->
-    <div style="margin: 20px 0;">
-      <a href="manage_accounts.html">
-        <button class="button">Manage Accounts</button>
-      </a>
-    </div>
-
-    <!-- Section: Link to Manage Swine -->
+    <!-- Section: Links to Manage Swine -->
     <div style="margin: 20px 0;">
       <a href="manage_swine.html">
         <button class="button">Manage Swine</button>
@@ -47,6 +40,6 @@
   </div>
 
   <!-- Connect JS -->
-  <script type="module" src="./js/admin_dashboard.js"></script>
+  <script type="module" src="./js/encoder_dashboard.js"></script>
 </body>
 </html>

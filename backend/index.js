@@ -1,25 +1,31 @@
+require("dotenv").config(); // ✅ MUST be first
+
 const express = require("express");
-const dotenv = require("dotenv");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 
-// Routes
-const authRoutes = require("./routes/authRoutes.js");
-const swineRoutes = require("./routes/swineRoutes.js");
-const heatReportRoutes = require("./routes/heatReportRoutes.js");
-const swinePerformanceRoutes = require("./routes/swinePerformanceRoutes.js");
-const breedingRoutes = require("./routes/breedingRoutes.js");
-const farmerRoutes = require("./routes/farmerRoutes.js");
+const adminRoutes = require("./routes/adminRoutes");
 
-// Middleware
-const { isAuthenticated, isAdmin, isFarmer } = require("./middleware/authMiddleware");
+// ENV VALIDATION (FAIL FAST)
+if (!process.env.MONGO_URI) {
+  console.error("❌ ERROR: MONGO_URI missing in .env");
+  process.exit(1);
+}
 
-// Load environment variables
-dotenv.config();
+if (!process.env.JWT_SECRET) {
+  console.error("❌ ERROR: JWT_SECRET missing in .env");
+  process.exit(1);
+}
 
+if (!process.env.SESSION_SECRET) {
+  console.error("❌ ERROR: SESSION_SECRET missing in .env");
+  process.exit(1);
+}
+
+// APP INIT
 const app = express();
 
 // CORS
@@ -30,19 +36,14 @@ app.use(
   })
 );
 
-// Body parsers
+// BODY PARSERS
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static uploads
+// STATIC FILES
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// MongoDB connection
-if (!process.env.MONGO_URI) {
-  console.error("❌ ERROR: MONGO_URI missing in .env");
-  process.exit(1);
-}
-
+// MONGODB CONNECTION
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
   .then(() => console.log("✅ MongoDB Connected"))
@@ -51,17 +52,19 @@ mongoose
     process.exit(1);
   });
 
-// Session config
+
+// SESSION CONFIG (MongoDB)
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "some_secret",
+    name: "breedit.sid",
+    secret: process.env.SESSION_SECRET, // ✅ enforced
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       httpOnly: true,
-      sameSite: "lax", // allows cross-origin cookies from localhost
-      secure: false,   // only true if using HTTPS
+      sameSite: "lax",
+      secure: false, // true only if HTTPS
     },
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
@@ -70,8 +73,7 @@ app.use(
   })
 );
 
-
-// Prevent caching after logout
+// PREVENT CACHE AFTER LOGOUT
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
   res.setHeader("Pragma", "no-cache");
@@ -79,21 +81,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// API routes
-app.use("/api/auth", authRoutes);
-app.use("/api/swine", swineRoutes);
-app.use("/api/heat", heatReportRoutes);
-app.use("/api/swine-records", swinePerformanceRoutes);
-app.use("/api/breeding", breedingRoutes);
-app.use("/api/farmer", farmerRoutes);
+// ROUTES
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/swine", require("./routes/swineRoutes"));
+app.use("/api/heat", require("./routes/heatReportRoutes"));
+app.use("/api/swine-records", require("./routes/swinePerformanceRoutes"));
+app.use("/api/breeding", require("./routes/breedingRoutes"));
+app.use("/api/farmer", require("./routes/farmerRoutes"));
+app.use("/api/admin", adminRoutes);
 
-// Health check
+// HEALTH CHECK
 app.get("/", (req, res) => {
   res.send("BreedIT Backend is running...");
 });
 
-// Start server
+// START SERVER
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log("🔐 JWT Secret Loaded:", !!process.env.JWT_SECRET);
 });

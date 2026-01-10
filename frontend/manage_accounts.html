@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Accounts</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    #editModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    #editModal form {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .farmer-only {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <h2>Manage Accounts</h2>
+
+    <!-- 🔁 ROLE SWITCH -->
+    <label for="accountRole"><strong>Account Type</strong></label>
+    <select id="accountRole">
+      <option value="farmer">Farmer</option>
+      <option value="encoder">Encoder</option>
+    </select>
+
+    <hr />
+
+    <!-- 📝 REGISTER ACCOUNT -->
+    <h3>Register New Account</h3>
+    <form id="registerFarmerForm">
+      <input type="text" id="name" placeholder="Full Name" required />
+      <input type="text" id="address" placeholder="Address" />
+      <input type="text" id="contact_no" placeholder="Contact Number" />
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+
+      <!-- 🐷 FARMER-ONLY FIELDS -->
+      <div class="farmer-only">
+        <input type="number" id="num_of_pens" placeholder="Number of Pens" />
+        <input type="number" id="pen_capacity" placeholder="Pen Capacity" />
+      </div>
+
+      <button type="submit">Register</button>
+      <p id="farmerMessage" class="message"></p>
+    </form>
+
+    <hr />
+
+    <!-- 📋 ACCOUNT LIST -->
+    <h3>Your Accounts</h3>
+    <ul id="farmersList"></ul>
+
+    <a href="admin_dashboard.html" style="margin-top:20px;display:inline-block;">
+      Back to Dashboard
+    </a>
+  </div>
+
+  <!-- ✏️ EDIT MODAL -->
+  <div id="editModal">
+    <form id="editFarmerForm">
+      <h3>Edit Account</h3>
+
+      <input type="text" id="editName" placeholder="Full Name" required />
+      <input type="text" id="editAddress" placeholder="Address" />
+      <input type="text" id="editContact" placeholder="Contact Number" />
+
+      <!-- 🐷 FARMER-ONLY EDIT FIELDS -->
+      <div class="farmer-only">
+        <input type="number" id="editPens" placeholder="Number of Pens" />
+        <input type="number" id="editCapacity" placeholder="Pen Capacity" />
+      </div>
+
+      <button type="submit">Update</button>
+      <button type="button" id="closeModal">Cancel</button>
+    </form>
+  </div>
+
+  <script type="module" src="js/manage_accounts.js"></script>
+</body>
+</html>
