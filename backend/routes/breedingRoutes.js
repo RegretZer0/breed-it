@@ -5,12 +5,17 @@ const SwinePerformance = require("../models/SwinePerformance");
 const AIRecord = require("../models/AIRecord");
 const Swine = require("../models/Swine");
 
-// Generate Breeding Analytics Report
-router.get("/report", async (req, res) => {
-  try {
+const { requireSessionAndToken } = require("../middleware/authMiddleware");
+const { allowRoles } = require("../middleware/roleMiddleware");
 
-    const performance = await SwinePerformance.find().populate("swine_id");
-    const ai = await AIRecord.find()                                                                                                                    
+// Generate Breeding Analytics Report
+router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+  try {
+    const user = req.user;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+
+    const performance = await SwinePerformance.find({ manager_id: managerId }).populate("swine_id");
+    const ai = await AIRecord.find({ manager_id: managerId })
       .populate("swine_id")
       .populate("male_swine_id");
 
