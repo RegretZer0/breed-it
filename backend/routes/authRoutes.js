@@ -244,6 +244,7 @@ router.post("/register-farmer", async (req, res) => {
       email,
       password: hashedPassword,
       farmer_id,
+      role: "farmer",
       num_of_pens: num_of_pens || 0,
       pen_capacity: pen_capacity || 0,
       registered_by: managerId,

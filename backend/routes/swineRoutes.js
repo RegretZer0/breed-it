@@ -106,7 +106,7 @@ router.post(
 );
 
 // ----------------------
-// Get swine (manager, encoder, farmer)
+// Get all swine (manager / encoder / farmer)
 // ----------------------
 router.get(
   "/",
@@ -121,19 +121,19 @@ router.get(
         const farmers = await Farmer.find({ registered_by: user.id });
         swine = await Swine.find({
           farmer_id: { $in: farmers.map(f => mongoose.Types.ObjectId(f._id)) },
-        }).populate("farmer_id", "name");
+        }).populate("farmer_id", "first_name last_name");
       } else if (user.role === "encoder") {
         const farmers = await Farmer.find({ registered_by: user.managerId });
         swine = await Swine.find({
           farmer_id: { $in: farmers.map(f => mongoose.Types.ObjectId(f._id)) },
-        }).populate("farmer_id", "name");
+        }).populate("farmer_id", "first_name last_name");
       } else if (user.role === "farmer") {
         swine = await Swine.find({
           farmer_id: mongoose.Types.ObjectId(user.farmerProfileId),
-        }).populate("farmer_id", "name");
+        }).populate("farmer_id", "first_name last_name");
       }
 
-      const swineData = swine.map(s => ({
+      const swineData = swine.map((s) => ({
         _id: s._id,
         swine_id: s.swine_id,
         batch: s.batch,
@@ -146,17 +146,15 @@ router.get(
         date_registered: s.date_registered,
         sire_id: s.sire_id,
         dam_id: s.dam_id,
-        farmer_name: s.farmer_id?.name || "N/A",
+        farmer_name: s.farmer_id
+          ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}`.trim()
+          : "N/A",
       }));
 
       res.json({ success: true, swine: swineData });
     } catch (error) {
       console.error("[SWINE FETCH ERROR]:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-        error: error.message,
-      });
+      res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
 );
@@ -189,11 +187,19 @@ router.put(
         return res.status(403).json({ success: false, message: "Access denied" });
 
       const allowedFields = [
-        "sex", "color", "breed", "birth_date", "status",
-        "sire_id", "dam_id", "inventory_status", "date_transfer", "batch"
+        "sex",
+        "color",
+        "breed",
+        "birth_date",
+        "status",
+        "sire_id",
+        "dam_id",
+        "inventory_status",
+        "date_transfer",
+        "batch",
       ];
 
-      allowedFields.forEach(field => {
+      allowedFields.forEach((field) => {
         if (updates[field] !== undefined) swine[field] = updates[field];
       });
 
@@ -208,7 +214,7 @@ router.put(
 );
 
 // ----------------------
-// Get all swines (manager / encoder scoped)
+// Get all swine for manager/encoder
 // ----------------------
 router.get(
   "/all",
@@ -217,43 +223,29 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-
-      const managerId =
-        user.role === "farm_manager" ? user.id : user.managerId;
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
       if (!managerId) {
-        return res.status(403).json({
-          success: false,
-          message: "Manager not linked",
-        });
+        return res.status(403).json({ success: false, message: "Manager not linked" });
       }
 
-      const farmers = await Farmer.find({
-        registered_by: managerId,
-      }).select("_id");
+      const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
+      const farmerIds = farmers.map((f) => f._id);
 
-      const farmerIds = farmers.map(f => f._id);
-
-      const swine = await Swine.find({
-        registered_by: managerId,
-      })
-        .populate("farmer_id", "name")
+      const swine = await Swine.find({ farmer_id: { $in: farmerIds } })
+        .populate("farmer_id", "first_name last_name")
         .lean();
 
       res.json({ success: true, swine });
     } catch (err) {
       console.error("[SWINE FETCH ALL ERROR]:", err);
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-        error: err.message,
-      });
+      res.status(500).json({ success: false, message: "Server error", error: err.message });
     }
   }
 );
 
 // ----------------------
-// Get only male swines
+// Get only male swine
 // ----------------------
 router.get(
   "/males",
@@ -265,10 +257,10 @@ router.get(
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
       const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
-      const farmerIds = farmers.map(f => mongoose.Types.ObjectId(f._id));
+      const farmerIds = farmers.map((f) => mongoose.Types.ObjectId(f._id));
 
       const males = await Swine.find({ sex: "Male", farmer_id: { $in: farmerIds } })
-        .populate("farmer_id", "name")
+        .populate("farmer_id", "first_name last_name")
         .lean();
 
       res.json({ success: true, males });

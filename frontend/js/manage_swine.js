@@ -99,6 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       console.log("Loading swine (session scoped)");
 
+      // ✅ Backend should populate farmer_id
       const res = await fetch(`http://localhost:5000/api/swine/all`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
@@ -116,10 +117,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       swineList.innerHTML = "";
       data.swine.forEach((sw) => {
+        // ✅ If populated, sw.farmer_id will have first_name & last_name
+        const farmerName =
+          sw.farmer_id && sw.farmer_id.first_name
+            ? `${sw.farmer_id.first_name} ${sw.farmer_id.last_name}`.trim()
+            : "N/A";
+
         const li = document.createElement("li");
-        li.textContent = `SwineID: ${sw.swine_id}, Batch: ${sw.batch}, Farmer: ${
-          sw.farmer_name || "N/A"
-        }, Sex: ${sw.sex}, Breed: ${sw.breed}, Status: ${sw.status || "N/A"}`;
+        li.textContent = `SwineID: ${sw.swine_id}, Batch: ${sw.batch}, Farmer: ${farmerName}, Sex: ${sw.sex}, Breed: ${sw.breed || "N/A"}, Status: ${sw.status || "N/A"}`;
         swineList.appendChild(li);
       });
     } catch (err) {
