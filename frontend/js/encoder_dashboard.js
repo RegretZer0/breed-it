@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Show encoder name
   const welcome = document.querySelector(".dashboard-container h2");
-  if (welcome) welcome.textContent = `Welcome, ${user.name || user.fullName || "Encoder"}`;
+  if (welcome) welcome.textContent = `Welcome, ${user.name || "Encoder"}`;
 
   // Logout handler
   const logoutBtn = document.getElementById("logoutBtn");

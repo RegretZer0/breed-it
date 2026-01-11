@@ -2,9 +2,29 @@
 import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // First, protect the page
-  await authGuard("farm_manager"); // only farm managers
+  // ---------------- AUTHENTICATION ----------------
+  // Allow both farm_manager and encoder
+  const user = await authGuard(["farm_manager", "encoder"]);
+  if (!user) return;
 
+  const role = user.role;
+  const token = localStorage.getItem("token");
+  const BACKEND_URL = "http://localhost:5000";
+
+  // ---------------- DETERMINE ADMIN/FARM MANAGER ID ----------------
+  // Encoders will use their managerId to fetch reports
+  let adminId = null;
+  if (role === "farm_manager") {
+    adminId = user.id;
+  } else if (role === "encoder") {
+    adminId = user.managerId; // managerId must exist from updated authMiddleware
+    if (!adminId) {
+      console.error("Encoder does not have a linked managerId");
+      return;
+    }
+  }
+
+  // ---------------- DOM ELEMENTS ----------------
   const tableBody = document.getElementById("reportsTableBody");
   const reportDetails = document.getElementById("reportDetails");
   const reportSwine = document.getElementById("reportSwine");
@@ -14,55 +34,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportVideo = document.getElementById("reportVideo");
   const reportImage = document.getElementById("reportImage");
 
-  const BACKEND_URL = "http://localhost:5000";
-  const adminId = localStorage.getItem("userId"); // logged-in farm manager
-
-  try {
-    // Fetch heat reports for this farm manager only
-    const token = localStorage.getItem("token"); // 🔐 include token
-    const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include", // include session cookie
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
-
-    tableBody.innerHTML = ""; // clear table before populating
-
-    data.reports.forEach(r => {
-      const swineId = r.swine_code || "Unknown";
-      const farmerName = r.farmer_name || "Unknown";
-      const dateReported = new Date(r.date_reported).toLocaleString();
-      const probability = r.heat_probability !== null ? `${r.heat_probability}%` : "N/A";
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${swineId}</td>
-        <td>${farmerName}</td>
-        <td>${dateReported}</td>
-        <td>${probability}</td>
-        <td><button onclick="viewReport('${r._id}')">View</button></td>
-      `;
-      tableBody.appendChild(row);
-    });
-
-  } catch (err) {
-    console.error("Error fetching heat reports:", err);
-    tableBody.innerHTML = "<tr><td colspan='5'>Failed to load reports</td></tr>";
-  }
-
-  // View report details
-  window.viewReport = async (reportId) => {
+  // ---------------- FETCH HEAT REPORTS ----------------
+  async function loadReports() {
     try {
-      const token = localStorage.getItem("token"); // 🔐 include token
-      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}?adminId=${encodeURIComponent(adminId)}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${BACKEND_URL}/api/heat/all?adminId=${encodeURIComponent(adminId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
+
+      const data = await res.json();
+      console.log("Heat reports received:", data);
+
+      tableBody.innerHTML = ""; // clear table before populating
+
+      if (!res.ok || !data.success || !data.reports?.length) {
+        tableBody.innerHTML = "<tr><td colspan='5'>No reports found</td></tr>";
+        return;
+      }
+
+      data.reports.forEach(r => {
+        const swineId = r.swine_code || "Unknown";
+        const farmerName = r.farmer_name || "Unknown";
+        const dateReported = new Date(r.date_reported).toLocaleString();
+        const probability = r.heat_probability !== null ? `${r.heat_probability}%` : "N/A";
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${swineId}</td>
+          <td>${farmerName}</td>
+          <td>${dateReported}</td>
+          <td>${probability}</td>
+          <td><button onclick="viewReport('${r._id}')">View</button></td>
+        `;
+        tableBody.appendChild(row);
+      });
+    } catch (err) {
+      console.error("Error fetching heat reports:", err);
+      tableBody.innerHTML = "<tr><td colspan='5'>Failed to load reports</td></tr>";
+    }
+  }
+
+  // ---------------- VIEW REPORT DETAILS ----------------
+  window.viewReport = async (reportId) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}?adminId=${encodeURIComponent(adminId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
@@ -101,4 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Failed to load report details");
     }
   };
+
+  // ---------------- INITIAL LOAD ----------------
+  await loadReports();
 });

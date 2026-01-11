@@ -22,13 +22,17 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       throw new Error(data.message || "Login failed");
     }
 
+    // Combine first_name + last_name for consistent display
+    const fullName = `${data.user.first_name || ""} ${data.user.last_name || ""}`.trim() || "User";
+
     // Store session + JWT info
     if (data.token) {
       localStorage.setItem("token", data.token); // ✅ Store JWT token
     }
-    localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem("user", JSON.stringify({ ...data.user, name: fullName }));
     localStorage.setItem("userId", data.user._id || data.user.id);
     localStorage.setItem("role", data.user.role);
+    localStorage.setItem("name", fullName); // optional quick access to name
 
     messageEl.style.color = "green";
     messageEl.textContent = "Login successful! Redirecting...";

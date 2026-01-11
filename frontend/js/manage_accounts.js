@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const li = document.createElement("li");
 
       li.innerHTML = `
-        ${acc.fullName || acc.name}
+       ${acc.first_name || ""} ${acc.last_name || ""}
         ${
           currentRole === "farmer"
             ? ` - Pens: ${acc.num_of_pens}, Capacity: ${acc.pen_capacity}`
@@ -92,12 +92,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // REGISTER
-
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const payload = {
-      name: document.getElementById("name").value.trim(), // <--- changed
+      first_name: document.getElementById("first_name").value.trim(),
+      last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
       contact_info: document.getElementById("contact_no").value.trim(),
       email: document.getElementById("email").value.trim(),
@@ -145,7 +145,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // EDIT
 
   function openEditModal(acc) {
-    document.getElementById("editName").value = acc.fullName || acc.name;
+    document.getElementById("editFirstName").value = acc.first_name || "";
+    document.getElementById("editLastName").value = acc.last_name || "";
     document.getElementById("editAddress").value = acc.address || "";
     document.getElementById("editContact").value = acc.contact_info || "";
 
@@ -162,10 +163,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.preventDefault();
 
     const payload = {
-      fullName: document.getElementById("editName").value.trim(),
+      first_name: document.getElementById("editFirstName").value.trim(),
+      last_name: document.getElementById("editLastName").value.trim(),
       address: document.getElementById("editAddress").value.trim(),
       contact_info: document.getElementById("editContact").value.trim()
     };
+
 
     if (currentRole === "farmer") {
       payload.num_of_pens = Number(document.getElementById("editPens").value);

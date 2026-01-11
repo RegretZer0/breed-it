@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
   const role = user.role;
 
-  // DETERMINE MANAGER ID
+  // ---------------- DETERMINE MANAGER ID ----------------
   let managerId = null;
 
   try {
@@ -45,11 +45,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.log("Manager ID determined:", managerId);
 
   if (!managerId) {
-    console.error("Manager ID is missing");
+    console.error("Manager ID is missing — cannot load farmers or swine");
     return;
   }
 
-  // DOM ELEMENTS
+  // ---------------- DOM ELEMENTS ----------------
   const swineList = document.getElementById("swineList");
   const registerForm = document.getElementById("registerSwineForm");
   const swineMessage = document.getElementById("swineMessage");
@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sexSelect = document.getElementById("sex");
   const batchInput = document.getElementById("batch");
 
-  // FETCH FARMERS
+  // ---------------- FETCH FARMERS ----------------
   async function loadFarmers() {
     try {
       console.log("Loading farmers for managerId:", managerId);
@@ -83,7 +83,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       data.farmers.forEach((farmer) => {
         const option = document.createElement("option");
         option.value = farmer._id;
-        option.textContent = farmer.name || farmer.fullName || "Unnamed Farmer";
+        option.textContent =
+          `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim() ||
+          "Unnamed Farmer";
         farmerSelect.appendChild(option);
       });
     } catch (err) {
@@ -92,12 +94,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // FETCH SWINE (SESSION-SCOPED)
+  // ---------------- FETCH SWINE (MANAGER/ENCODER SCOPED) ----------------
   async function fetchSwine() {
     try {
       console.log("Loading swine (session scoped)");
 
-      const res = await fetch(`http://localhost:5000/api/swine`, {
+      const res = await fetch(`http://localhost:5000/api/swine/all`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
@@ -126,7 +128,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // REGISTER NEW SWINE
+  // ---------------- REGISTER NEW SWINE ----------------
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -146,9 +148,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         status: document.getElementById("status").value.trim(),
         sireId: document.getElementById("sire_id").value.trim(),
         damId: document.getElementById("dam_id").value.trim(),
-        inventoryStatus: document
-          .getElementById("inventory_status")
-          .value.trim(),
+        inventoryStatus: document.getElementById("inventory_status").value.trim(),
         dateTransfer: document.getElementById("date_transfer").value,
         batch: batchInput.value.trim(),
         managerId,
@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           swineMessage.style.color = "green";
           swineMessage.textContent = "Swine added successfully!";
           registerForm.reset();
-          fetchSwine();
+          fetchSwine(); // refresh list
         } else {
           swineMessage.style.color = "red";
           swineMessage.textContent = data.message || "Failed to add swine";
@@ -184,7 +184,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /* ---------------- INITIAL LOAD ---------------- */
+  // ---------------- BACK TO DASHBOARD ----------------
+  const backBtn = document.getElementById("backDashboardBtn");
+  if (backBtn) {
+    backBtn.addEventListener("click", async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return (window.location.href = "login.html");
+
+      try {
+        const res = await fetch("http://localhost:5000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+
+        const data = await res.json();
+        console.log("Back button /me response:", data);
+
+        if (!res.ok || !data.success || !data.user) {
+          localStorage.clear();
+          return (window.location.href = "login.html");
+        }
+
+        const userRole = data.user.role;
+
+        if (userRole === "system_admin" || userRole === "farm_manager") {
+          window.location.href = "admin_dashboard.html";
+        } else if (userRole === "encoder") {
+          window.location.href = "encoder_dashboard.html";
+        } else {
+          window.location.href = "login.html";
+        }
+      } catch (err) {
+        console.error("Back to dashboard redirect failed:", err);
+        window.location.href = "login.html";
+      }
+    });
+  }
+
+  // ---------------- INITIAL LOAD ----------------
   await loadFarmers();
   await fetchSwine();
 });

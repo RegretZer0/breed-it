@@ -64,7 +64,7 @@ function renderUsersTable(users) {
   users.forEach(user => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${user.fullName || user.name || "-"}</td>
+      <td>${user.name || "-"}</td>
       <td>${user.email}</td>
       <td>
         <select class="roleSelect" data-id="${user._id}">

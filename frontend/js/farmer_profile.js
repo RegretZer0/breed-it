@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const farmer = data.farmer;
 
     // Populate the HTML fields
-    nameEl.textContent = farmer.name || "-";
+    nameEl.textContent = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim() || "-";
     emailEl.textContent = farmer.email || "-";
     farmerIdEl.textContent = farmer.farmer_id || "-";
     addressEl.textContent = farmer.address || "-";

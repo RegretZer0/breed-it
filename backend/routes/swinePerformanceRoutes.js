@@ -8,6 +8,13 @@ const Swine = require("../models/Swine");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
+// Helper to get actual managerId for the user
+const getManagerId = (user, bodyManagerId) => {
+  if (user.role === "farm_manager") return user.id;
+  if (user.role === "encoder") return user.managerId;
+  return bodyManagerId; // fallback
+};
+
 // ----------------------
 // Swine Performance CRUD
 // ----------------------
@@ -19,21 +26,13 @@ router.post(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId, swine_id } = req.body;
-      if (!managerId || !swine_id) {
-        return res.status(400).json({ success: false, message: "managerId and swine_id are required" });
-      }
-
       const user = req.user;
+      const managerId = getManagerId(user, req.body.managerId);
+      const { swine_id } = req.body;
 
-      // Access control
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
+      if (!swine_id) return res.status(400).json({ success: false, message: "swine_id is required" });
 
+      // Verify swine belongs to manager
       const swine = await Swine.findOne({ _id: swine_id, registered_by: managerId });
       if (!swine) return res.status(403).json({ success: false, message: "Swine not found or does not belong to this manager" });
 
@@ -57,12 +56,9 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      let filter = {};
+      const managerId = getManagerId(user, req.query.managerId);
 
-      if (user.role === "farm_manager") filter = { manager_id: user.id };
-      else if (user.role === "encoder") filter = { manager_id: user.managerId };
-
-      const records = await SwinePerformance.find(filter)
+      const records = await SwinePerformance.find({ manager_id: managerId })
         .populate("swine_id", "swine_id breed sex color")
         .lean();
 
@@ -82,19 +78,13 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      const record = await SwinePerformance.findById(req.params.id)
+      const managerId = getManagerId(user, req.query.managerId);
+
+      const record = await SwinePerformance.findOne({ _id: req.params.id, manager_id: managerId })
         .populate("swine_id", "swine_id breed sex color")
         .lean();
 
       if (!record) return res.status(404).json({ success: false, message: "Record not found" });
-
-      // Access control
-      if (
-        user.role === "farm_manager" && record.manager_id.toString() !== user.id ||
-        user.role === "encoder" && record.manager_id.toString() !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
 
       res.json({ success: true, record });
     } catch (err) {
@@ -111,18 +101,9 @@ router.put(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId, swine_id } = req.body;
       const user = req.user;
-
-      if (!managerId) return res.status(400).json({ success: false, message: "managerId is required" });
-
-      // Access control
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
+      const managerId = getManagerId(user, req.body.managerId);
+      const { swine_id } = req.body;
 
       if (swine_id) {
         const swine = await Swine.findOne({ _id: swine_id, registered_by: managerId });
@@ -153,18 +134,8 @@ router.delete(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId } = req.query;
       const user = req.user;
-
-      if (!managerId) return res.status(400).json({ success: false, message: "managerId is required" });
-
-      // Access control
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
+      const managerId = getManagerId(user, req.query.managerId);
 
       const deleted = await SwinePerformance.findOneAndDelete({ _id: req.params.id, manager_id: managerId });
       if (!deleted) return res.status(404).json({ success: false, message: "Record not found" });
@@ -189,19 +160,12 @@ router.post(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId, swine_id, male_swine_id } = req.body;
       const user = req.user;
+      const managerId = getManagerId(user, req.body.managerId);
+      const { swine_id, male_swine_id } = req.body;
 
-      if (!managerId || !swine_id || !male_swine_id) {
-        return res.status(400).json({ success: false, message: "managerId, swine_id, and male_swine_id are required" });
-      }
-
-      // Access control
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
+      if (!swine_id || !male_swine_id) {
+        return res.status(400).json({ success: false, message: "swine_id and male_swine_id are required" });
       }
 
       const swines = await Swine.find({ _id: { $in: [swine_id, male_swine_id] }, registered_by: managerId });
@@ -227,12 +191,9 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      let filter = {};
+      const managerId = getManagerId(user, req.query.managerId);
 
-      if (user.role === "farm_manager") filter = { manager_id: user.id };
-      else if (user.role === "encoder") filter = { manager_id: user.managerId };
-
-      const records = await AIRecord.find(filter)
+      const records = await AIRecord.find({ manager_id: managerId })
         .populate("swine_id", "swine_id breed sex color")
         .populate("male_swine_id", "swine_id breed sex color")
         .lean();
@@ -253,19 +214,14 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      const record = await AIRecord.findById(req.params.id)
+      const managerId = getManagerId(user, req.query.managerId);
+
+      const record = await AIRecord.findOne({ _id: req.params.id, manager_id: managerId })
         .populate("swine_id", "swine_id breed sex color")
         .populate("male_swine_id", "swine_id breed sex color")
         .lean();
 
       if (!record) return res.status(404).json({ success: false, message: "AI record not found" });
-
-      if (
-        user.role === "farm_manager" && record.manager_id.toString() !== user.id ||
-        user.role === "encoder" && record.manager_id.toString() !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
 
       res.json({ success: true, record });
     } catch (err) {
@@ -282,10 +238,9 @@ router.put(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId, swine_id, male_swine_id } = req.body;
       const user = req.user;
-
-      if (!managerId) return res.status(400).json({ success: false, message: "managerId is required" });
+      const managerId = getManagerId(user, req.body.managerId);
+      const { swine_id, male_swine_id } = req.body;
 
       const swineIdsToCheck = [];
       if (swine_id) swineIdsToCheck.push(swine_id);
@@ -294,13 +249,6 @@ router.put(
       if (swineIdsToCheck.length > 0) {
         const swines = await Swine.find({ _id: { $in: swineIdsToCheck }, registered_by: managerId });
         if (swines.length !== swineIdsToCheck.length) return res.status(403).json({ success: false, message: "One or more swines do not belong to this manager" });
-      }
-
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
       }
 
       const updated = await AIRecord.findOneAndUpdate(
@@ -327,17 +275,8 @@ router.delete(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const { managerId } = req.query;
       const user = req.user;
-
-      if (!managerId) return res.status(400).json({ success: false, message: "managerId is required" });
-
-      if (
-        user.role === "farm_manager" && managerId !== user.id ||
-        user.role === "encoder" && managerId !== user.managerId
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
+      const managerId = getManagerId(user, req.query.managerId);
 
       const deleted = await AIRecord.findOneAndDelete({ _id: req.params.id, manager_id: managerId });
       if (!deleted) return res.status(404).json({ success: false, message: "AI record not found" });

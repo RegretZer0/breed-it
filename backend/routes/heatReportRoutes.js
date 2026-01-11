@@ -41,12 +41,13 @@ router.post(
       const farmer = await Farmer.findById(farmerId);
       if (!farmer) return res.status(404).json({ success: false, message: "Farmer not found" });
 
-      // Access control: only allow farm_manager, encoder, or farmer submitting their own
       const user = req.user;
+
+      // ---------------- ACCESS CONTROL ----------------
       if (
-        user.role === "farm_manager" && farmer.registered_by.toString() !== user.id ||
-        user.role === "encoder" && farmer.registered_by.toString() !== user.managerId ||
-        user.role === "farmer" && farmer.user_id.toString() !== user.id
+        (user.role === "farm_manager" && farmer.registered_by.toString() !== user.id) ||
+        (user.role === "encoder" && (!user.managerId || farmer.registered_by.toString() !== user.managerId)) ||
+        (user.role === "farmer" && farmer.user_id.toString() !== user.id)
       ) {
         return res.status(403).json({ success: false, message: "Access denied" });
       }
@@ -57,9 +58,10 @@ router.post(
       const newReport = new HeatReport({
         swine_id: swine._id,
         farmer_id: farmerId,
-        manager_id: farmer.registered_by, // renamed from admin_id
+        manager_id: farmer.registered_by, // always use the manager of the farmer
         signs: Array.isArray(signs) ? signs : JSON.parse(signs),
-        evidence_url: `/uploads/${file.filename}`
+        evidence_url: `/uploads/${file.filename}`,
+        date_reported: new Date()
       });
 
       await newReport.save();
@@ -73,26 +75,30 @@ router.post(
 );
 
 // ----------------------
-// Get all heat reports for a farm_manager
+// Get all heat reports for a manager
 // ----------------------
 router.get(
   "/all",
   requireSessionAndToken,
-  allowRoles("farm_manager", "encoder", "farmer"),
+  allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
       const user = req.user;
-      let filter = {};
+      let managerId;
 
       if (user.role === "farm_manager") {
-        filter = { manager_id: user.id };
+        managerId = user.id;
       } else if (user.role === "encoder") {
-        filter = { manager_id: user.managerId };
-      } else if (user.role === "farmer") {
-        filter = { farmer_id: user.id };
+        managerId = user.managerId;
+        if (!managerId) return res.status(403).json({ success: false, message: "Encoder has no linked manager" });
       }
 
-      const reports = await HeatReport.find(filter)
+      // Fetch all farmers under this manager
+      const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
+      const farmerIds = farmers.map(f => f._id);
+
+      // Fetch heat reports for all farmers under this manager
+      const reports = await HeatReport.find({ farmer_id: { $in: farmerIds } })
         .populate("swine_id", "swine_id breed sex")
         .populate("farmer_id", "name email farmer_id")
         .lean();
@@ -132,7 +138,7 @@ router.get(
 
       if (!report) return res.status(404).json({ success: false, message: "Heat report not found" });
 
-      // Access control
+      // ---------------- ACCESS CONTROL ----------------
       if (
         (user.role === "farm_manager" && report.manager_id.toString() !== user.id) ||
         (user.role === "encoder" && report.manager_id.toString() !== user.managerId) ||
