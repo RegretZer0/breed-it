@@ -1,23 +1,27 @@
-// Generic role guard
+// Generic role guard (for page routes)
 function allowRoles(...roles) {
   return (req, res, next) => {
+    // Not logged in
     if (!req.user || !req.user.role) {
-      return res.status(401).json({ success: false, message: "User role not found" });
+      return res.redirect("/login");
     }
 
+    // Role not allowed
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: "Access denied for your role" });
+      return res.status(403).render("errors/403", {
+        page_title: "Access Denied",
+      });
     }
 
     next();
   };
 }
 
-// Optional individual guards
-const isSystemAdmin = (req, res, next) => allowRoles("system_admin")(req, res, next);
-const isFarmManager = (req, res, next) => allowRoles("farm_manager")(req, res, next);
-const isEncoder = (req, res, next) => allowRoles("encoder")(req, res, next);
-const isFarmer = (req, res, next) => allowRoles("farmer")(req, res, next);
+// Role-specific helpers
+const isSystemAdmin = allowRoles("system_admin");
+const isFarmManager = allowRoles("farm_manager");
+const isEncoder = allowRoles("encoder");
+const isFarmer = allowRoles("farmer");
 
 module.exports = {
   allowRoles,

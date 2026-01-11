@@ -1,0 +1,42 @@
+<!-- Header card with tabs -->
+<div class="card page-card mb-3">
+  <div class="card-body">
+
+    <h4 class="page-title">ACCOUNT MANAGEMENT</h4>
+
+    <div
+      class="tabs-row mt-3 d-flex flex-wrap gap-3"
+      role="tablist"
+      aria-label="Farmer management sections"
+    >
+
+      <!-- FARMERS REPORT -->
+      <a
+        href="/farm-manager/reports"
+        class="tab-btn <%= current_page === 'reports' ? 'active' : '' %>"
+        role="tab"
+      >
+        Farmers Report
+      </a>
+
+      <!-- NEW ACCOUNT -->
+      <a
+        href="/farm-manager/user-management/create"
+        class="tab-btn <%= current_page === 'farmers_new_account' ? 'active' : '' %>"
+        role="tab"
+      >
+        New Account
+      </a>
+
+      <!-- MANAGE ACCOUNT -->
+      <a
+        href="/farm-manager/user-management/manage"
+        class="tab-btn <%= current_page === 'farmers_manage_account' ? 'active' : '' %>"
+        role="tab"
+      >
+        Manage Account
+      </a>
+
+    </div>
+  </div>
+</div>

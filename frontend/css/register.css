@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* =====================
+   Variables
+===================== */
+:root{
+  --dark-gray: #2e2e2e;
+  --muted: #8a8a8a;
+  --divider: #dcdcdc;
+
+  --card-border: rgba(0,0,0,0.08);
+  --link-blue: #1560ff;
+  --bg: #ffffff;
+  --brand-green: #2fb23f;
+}
+
+/* =====================
+   Base
+===================== */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Roboto', system-ui, -apple-system, "Segoe UI",
+               "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--dark-gray);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =====================
+   Top bar
+===================== */
+.top-bar{
+  border-bottom: 1px solid #f2f2f2;
+  background: var(--bg);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 12px;
+}
+
+.brand-logo{
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.brand-text{
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--dark-gray);
+  letter-spacing: 0.6px;
+  margin: 0;
+}
+
+/* =====================
+   Signup viewport
+===================== */
+.signup-viewport{
+  min-height: calc(100vh - 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  background: var(--bg);
+}
+
+/* =====================
+   Signup card
+===================== */
+.signup-card{
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+/* =====================
+   Title
+===================== */
+.signup-title{
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--dark-gray);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* =====================
+   Form labels & inputs
+===================== */
+.form-label{
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.form-control{
+  width: 100%;
+  height: 40px;
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #e1e1e1;
+  box-shadow: none;
+}
+
+.form-control:focus{
+  border-color: #cfcfcf;
+  outline: none;
+  box-shadow: none;
+}
+
+/* =====================
+   Password input
+===================== */
+.input-group .toggle-pass{
+  background: transparent;
+  border-left: 1px solid #e6e6e6;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+
+.input-group .toggle-pass:focus{
+  box-shadow: none;
+}
+
+/* =====================
+   Signup button
+===================== */
+.signup-btn{
+  width: 100%;
+  background: transparent;
+  color: #222;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.signup-btn.primary{
+  background: var(--brand-green);
+  border-color: var(--brand-green);
+  color: #fff;
+}
+
+/* =====================
+   Divider
+===================== */
+.muted-divider{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.muted-divider .divider-line{
+  width: 90px;
+  height: 1px;
+  background: var(--divider);
+}
+
+.muted-divider .divider-text{
+  font-size: 12px;
+  color: #9a9a9a;
+}
+
+/* =====================
+   Login link
+===================== */
+.create-link{
+  color: var(--link-blue);
+  font-weight: 700;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.create-link:hover{
+  text-decoration: underline;
+}
+
+/* =====================
+   Responsive
+===================== */
+@media (max-width: 767px){
+  .signup-card{
+    padding: 24px 18px;
+    margin: 0 14px;
+  }
+
+  .signup-viewport{
+    padding: 20px 0;
+    min-height: calc(100vh - 64px);
+  }
+
+  .brand-text{
+    font-size: 18px;
+  }
+
+  .signup-title{
+    font-size: 24px;
+  }
+
+  .form-control{
+    height: 38px;
+    font-size: 14px;
+  }
+
+  .signup-btn{
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .muted-divider .divider-line{
+    width: 60px;
+  }
+}
+
+/* =====================
+   Mobile layout fixes
+===================== */
+
+/* Stack first & last name on small screens */
+@media (max-width: 575px) {
+  .signup-card .row.gx-2 > .col {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .signup-card .row.gx-2 > .col:not(:last-child) {
+    margin-bottom: 12px;
+  }
+}
+
+/* Ensure clean mobile spacing */
+@media (max-width: 480px) {
+  .signup-card {
+    padding: 20px 16px;
+  }
+
+  .signup-title {
+    font-size: 22px;
+  }
+
+  .form-control {
+    height: 38px;
+  }
+
+  .signup-btn {
+    padding: 8px 12px;
+  }
+
+  .muted-divider .divider-line {
+    width: 25%;
+  }
+}

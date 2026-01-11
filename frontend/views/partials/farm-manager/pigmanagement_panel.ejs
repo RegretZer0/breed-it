@@ -1,0 +1,31 @@
+<div class="card page-card mb-3">
+  <div class="card-body">
+    <h4 class="page-title">PIG MANAGEMENT</h4>
+
+    <div
+      class="tabs-row mt-3 d-flex flex-wrap gap-3"
+      role="tablist"
+      aria-label="Pig management sections"
+    >
+
+      <!-- OVERVIEW -->
+      <a
+        href="/farm-manager/pig-management"
+        class="tab-btn <%= current_page === 'pig_management_overview' ? 'active' : '' %>"
+        role="tab"
+      >
+        Overview
+      </a>
+
+      <!-- REGISTER PIG -->
+      <a
+        href="/farm-manager/pig-management/register"
+        class="tab-btn <%= current_page === 'pig_management_register' ? 'active' : '' %>"
+        role="tab"
+      >
+        Register Pig
+      </a>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+<%- include("../../partials/farmer/farmer_nav") %>
+
+<div class="app-root">
+  <main class="profile-container">
+    <h2 class="page-title">PROFILE</h2>
+
+    <!-- VIEW PROFILE -->
+    <section id="viewProfile" class="profile-card">
+
+      <div class="profile-avatar" id="avatarPreview">
+        <i class="fa-solid fa-user"></i>
+      </div>
+
+      <!-- FULL NAME -->
+      <h3 id="profileName">Loading...</h3>
+      <p class="role">Pig Farmer</p>
+
+      <div class="info-row">
+        <span>Contact Number</span>
+        <strong id="contact_no">-</strong>
+      </div>
+
+      <div class="info-row">
+        <span>Email</span>
+        <strong id="email">-</strong>
+      </div>
+
+      <div class="info-row">
+        <span>Address</span>
+        <strong id="address">-</strong>
+      </div>
+
+      <div class="info-row">
+        <span>Farmer ID</span>
+        <strong id="farmer_id">-</strong>
+      </div>
+
+      <div class="info-row">
+        <span>Number of Pens</span>
+        <strong id="num_of_pens">0</strong>
+      </div>
+
+      <div class="info-row">
+        <span>Pen Capacity</span>
+        <strong id="pen_capacity">0</strong>
+      </div>
+
+      <p id="profileMessage" class="small text-danger mt-2"></p>
+
+      <button class="edit-btn" id="editProfileBtn">
+        <i class="fa-solid fa-pen"></i> EDIT PROFILE
+      </button>
+    </section>
+
+    <!-- EDIT PROFILE (UI only) -->
+    <section id="editProfile" class="profile-card hidden">
+      <h4>Edit Profile</h4>
+
+      <label>Name</label>
+      <input type="text" id="editName" />
+
+      <label>Contact Number</label>
+      <input type="text" id="editContact_no" />
+
+      <label>Email</label>
+      <input type="email" id="editEmail" />
+
+      <label>Address</label>
+      <input type="text" id="editAddress" />
+
+      <div class="actions">
+        <button class="cancel-btn" id="cancelEdit">CANCEL</button>
+        <button class="save-btn">SAVE</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<%- include("../../partials/farmer/farmer_footer") %>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BREED-IT — <%= page_title %></title>
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+
+  <!-- Font Awesome -->
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- Farm Manager Base CSS (always loaded) -->
+  <link rel="stylesheet" href="../../../css/farm-manager/sub_modules.css">
+
+  <% if (page_title === "Farm Manager Dashboard") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/dashboard.css">
+
+  <% } else if (page_title === "Pig Management Overview") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/panel.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/overview.css">
+
+  <% } else if (page_title === "Pig Management RegPig") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/panel.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/register_pig.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/overview.css">
+
+  <% } else if (page_title === "Breed Analysis") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/breed_analysis.css">
+
+  <% } else if (page_title === "Reports") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/reports.css">
+
+
+  <% } else if (page_title === "Farmers Report") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/farmers_report.css">
+
+  <% } else if (page_title === "Create Account") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/user-managment/create_account.css">
+
+  <% } else if (page_title === "Manage Account") { %>
+    <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
+    <link rel="stylesheet" href="../../../css/farm-manager/user-managment/manage_account.css">
+    
+  <% } else { %>
+    <link rel="stylesheet" href="/css/default.css">
+  <% } %>
+
+</head>
+<body>

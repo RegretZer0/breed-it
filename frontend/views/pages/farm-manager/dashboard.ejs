@@ -1,0 +1,128 @@
+<%- include("../../partials/farm-manager/header") %>
+<%- include("../../partials/farm-manager/navbar") %>
+<%- include("../../partials/farm-manager/sidepanel") %>
+
+   <!-- Main content -->
+    <main class="main-content">
+      <div class="container-fluid">
+        <!-- Dashboard Header card -->
+        <div class="card page-card">
+          <div class="card-body">
+            <h4 class="page-title">DASHBOARD</h4>
+
+            <!-- stat cards grid -->
+            <div class="row g-3 mt-3 stats-grid">
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Total Pigs</div>
+                    <div class="stat-number">130</div>
+                  </div>
+                  <div class="stat-icon orange"><i class="fa-solid fa-ghost"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Total Farmers</div>
+                    <div class="stat-number">54</div>
+                  </div>
+                  <div class="stat-icon blue"><i class="fa-regular fa-user"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Alive</div>
+                    <div class="stat-number">32</div>
+                  </div>
+                  <div class="stat-icon green"><i class="fa-regular fa-heart"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Mortality</div>
+                    <div class="stat-number">30</div>
+                  </div>
+                  <div class="stat-icon red"><i class="fa-solid fa-heartbeat"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Farrowing Phase</div>
+                    <div class="stat-number">23</div>
+                  </div>
+                  <div class="stat-icon blue2"><i class="fa-solid fa-circle-plus"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Weaning Phase</div>
+                    <div class="stat-number">14</div>
+                  </div>
+                  <div class="stat-icon teal"><i class="fa-regular fa-star"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">In-heat Phase</div>
+                    <div class="stat-number">12</div>
+                  </div>
+                  <div class="stat-icon brown"><i class="fa-solid fa-droplet"></i></div>
+                </div>
+              </div>
+
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Pregnant Sow</div>
+                    <div class="stat-number">23</div>
+                  </div>
+                  <div class="stat-icon purple"><i class="fa-regular fa-heart"></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main content area (two columns) -->
+        <div class="row mt-3 g-3">
+          <div class="col-lg-8">
+            <div class="card page-card large-card">
+              <div class="card-body">
+                <div class="placeholder-rect mb-4"></div>
+                <div class="placeholder-rect"></div>
+              </div>
+            </div>
+          </div>
+
+        <div class="col-lg-4">
+          <div class="card page-card right-card mb-3">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Recent Login Activity</h5>
+
+              <ul id="loginLogs" class="login-log-list">
+                <li class="log-loading">Loading activity…</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+
+<%- include("../../partials/farm-manager/footer") %>

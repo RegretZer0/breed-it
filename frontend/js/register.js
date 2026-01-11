@@ -1,35 +1,65 @@
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
+document.getElementById("signupForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const fullName = document.getElementById("name").value.trim();
+  const firstName = document.getElementById("first_name").value.trim();
+  const lastName = document.getElementById("last_name").value.trim();
   const email = document.getElementById("email").value.trim();
+  const phone = document.getElementById("phone").value.trim();
   const password = document.getElementById("password").value.trim();
-  
-  // Automatically set role to admin
+  const confirmPassword = document.getElementById("confirm_password").value.trim();
+  const messageEl = document.getElementById("message");
+
   const role = "farm_manager";
 
-  if (!fullName || !email || !password) {
-    alert("Please fill out all fields.");
+  messageEl.style.color = "black";
+  messageEl.textContent = "Creating account...";
+
+  if (!firstName || !lastName || !email || !password || !confirmPassword) {
+    messageEl.style.color = "red";
+    messageEl.textContent = "Please fill out all required fields.";
     return;
   }
 
+  if (password !== confirmPassword) {
+    messageEl.style.color = "red";
+    messageEl.textContent = "Passwords do not match.";
+    return;
+  }
+
+  // Combine for backend compatibility
+  const fullName = `${firstName} ${lastName}`;
+
   try {
-    const response = await fetch("http://localhost:5000/api/auth/register", {
+    const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName, email, password, role }),
+      body: JSON.stringify({
+        firstName,
+        lastName,
+        fullName, // backward-compatible
+        email,
+        phone,
+        password,
+        role,
+      }),
     });
 
-    const data = await response.json();
+    const data = await res.json();
 
-    if (!response.ok) {
+    if (!res.ok || !data.success) {
       throw new Error(data.message || "Registration failed.");
     }
 
-    alert("Registration successful! Please log in.");
-    window.location.href = "login.html";
-  } catch (error) {
-    console.error("Registration error:", error);
-    alert(error.message);
+    messageEl.style.color = "green";
+    messageEl.textContent = "Registration successful! Redirecting to login...";
+
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1000);
+
+  } catch (err) {
+    console.error("Registration error:", err);
+    messageEl.style.color = "red";
+    messageEl.textContent = err.message || "Registration failed.";
   }
 });

@@ -1,0 +1,218 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+/* =========== Root tokens (topbar & sidebar relevant) =========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-green: #17c14f; /* sidebar active */
+
+  /* sizing */
+  --topbar-height: 64px;
+  --sidebar-width: 210px;
+  --sidebar-width-overlay: 260px;
+  --gutter: 18px;
+  --radius: 8px;
+
+  /* typography */
+  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --base-line-height: 1.4;
+  --base-font-size: 14px;
+}
+
+/* =========== Global reset / basics =========== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family-system);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text-dark);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Make interactive elements obvious and keyboard accessible */
+button, [role="button"], a {
+  cursor: pointer;
+  outline: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+/* Keyboard focus styles (visible and high-contrast) */
+:focus {
+  outline: 3px solid rgba(21, 67, 255, 0.18);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* =========== Topbar =========== */
+.topbar{
+  height: var(--topbar-height);
+  border-bottom: 1px solid var(--muted-border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 calc(var(--gutter) - 6px);
+  z-index: 1100;
+}
+
+.brand-logo{
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: inline-block;
+}
+.brand-text{
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text-dark);
+  letter-spacing: 0.6px;
+  margin: 0;
+}
+
+/* Top-right icons */
+.icon-btn, .burger-btn {
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #111;
+  background: transparent;
+  border: none;
+}
+.icon-btn:hover, .burger-btn:hover { background: rgba(0,0,0,0.03); }
+
+/* =========== Shell layout (keeps topbar height accounted for) =========== */
+.app-shell{
+  display: flex;
+  min-height: calc(100vh - var(--topbar-height));
+  position: relative;
+  gap: var(--gutter);
+  align-items: flex-start;
+  padding: var(--gutter);
+  padding-top: 0; /* topbar sits above the shell */
+}
+
+/* =========== Sidebar =========== */
+.sidebar{
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--muted-border);
+  padding-top: 18px;
+  padding-left: 12px;
+  padding-right: 12px;
+  background: var(--bg);
+  z-index: 1050;
+  transition: transform .25s ease, box-shadow .25s ease;
+  border-radius: 0;
+}
+
+/* Close icon wrapper inside sidebar (small screens) */
+.sidebar-close-wrap{
+  display:flex;
+  justify-content:flex-end;
+  padding-right:6px;
+  padding-bottom:6px;
+}
+.sidebar-close-btn{
+  border:none;
+  background:transparent;
+  font-size:18px;
+  padding:6px;
+  border-radius:6px;
+}
+.sidebar-close-btn:hover{ background: rgba(0,0,0,0.03); }
+
+/* Sidebar nav links */
+.sidebar .nav-link{
+  color: #111;
+  padding: 12px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  gap: 8px;
+}
+.sidebar .nav-link i{ width: 24px; text-align: center; margin-right: 6px; }
+.sidebar .nav-link.active{
+  background: var(--accent-green);
+  color: #fff;
+  box-shadow: none;
+}
+
+/* overlay used when sidebar is open on small screens */
+.overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 1040;
+  transition: opacity .2s ease;
+}
+
+/* --- RESPONSIVE: make sidebar collapse & slide in on small screens --- */
+/* Default: small screens (<992px) hide sidebar (off-canvas to left) and show burger */
+@media (max-width: 991.98px){
+  .sidebar{
+    position: fixed;
+    left: 0;
+    top: var(--topbar-height); /* below topbar */
+    height: calc(100vh - var(--topbar-height));
+    transform: translateX(-110%); /* hidden by default */
+    box-shadow: none;
+    width: var(--sidebar-width-overlay); /* slightly wider when overlayed */
+    border-right: 1px solid rgba(0,0,0,0.06);
+    border-radius: 0 6px 6px 0;
+  }
+
+  body.sidebar-open .sidebar{
+    transform: translateX(0);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  /* show overlay when open */
+  #overlay.d-none{ display: none; }
+  body.sidebar-open #overlay{
+    display: block;
+  }
+
+  /* show burger on small */
+  .burger-btn{ display: inline-flex; }
+
+  /* show close wrap on small screens */
+  .sidebar-close-wrap{ display: flex; }
+}
+
+/* Large screens (>=992px): sidebar visible as normal, burger hidden, overlay never used */
+@media (min-width: 992px){
+  .sidebar{
+    position: relative;
+    transform: none;
+    height: auto;
+    width: var(--sidebar-width);
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .burger-btn{ display: none; }
+  .sidebar-close-wrap{ display:none; }
+  #overlay{ display: none !important; }
+}

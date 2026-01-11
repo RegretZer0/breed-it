@@ -1,0 +1,49 @@
+<%- include("../../partials/farmer/farmer_nav") %>
+
+<div class="app-root">
+<!-- MAIN CONTENT -->
+<main class="dashboard-container">
+
+  <!-- GREETING (MOVED HERE) -->
+  <div class="dashboard-greeting">
+    <h2>Hello, <%= user?.fullName || "Farmer" %></h2>
+    <p id="phDateTime">Loading date and time...</p>
+  </div>
+
+  <h3 class="dashboard-title" data-i18n="dashboard">DASHBOARD</h3>
+
+  <div class="dashboard-grid">
+
+    <a href="/farmer/pigs" class="dashboard-card">
+      <div class="icon-circle green">
+        <i class="fa-solid fa-piggy-bank"></i>
+      </div>
+      <span data-i18n="my_pigs">MY PIGS</span>
+    </a>
+
+    <a href="/farmer/reports" class="dashboard-card">
+      <div class="icon-circle blue">
+        <i class="fa-solid fa-file-pen"></i>
+      </div>
+      <span data-i18n="report">REPORT</span>
+    </a>
+
+    <a href="/farmer/profile" class="dashboard-card">
+      <div class="icon-circle orange">
+        <i class="fa-solid fa-user"></i>
+      </div>
+      <span data-i18n="profile">PROFILE</span>
+    </a>
+
+    <a href="/farmer/help" class="dashboard-card">
+      <div class="icon-circle purple">
+        <i class="fa-solid fa-question"></i>
+      </div>
+      <span data-i18n="help">HELP</span>
+    </a>
+
+
+  </div>
+</main>
+</div>
+<%- include("../../partials/farmer/farmer_footer") %>

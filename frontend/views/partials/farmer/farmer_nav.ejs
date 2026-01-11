@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  
+  <!-- Global Farmer Nav CSS -->
+  <link rel="stylesheet" href="../../../css/farmer/globalNav.css">
+
+  <% if (page_title === "Farmer Dashboard") { %>
+    <link rel="stylesheet" href="../../../css/farmer/farmer_dashboard.css">
+  <% } else if (page_title === "MyPigs") { %>
+    <link rel="stylesheet" href="../../../css/farmer/mypigs.css">
+  <% } else if (page_title === "Reports") { %>
+    <link rel="stylesheet" href="../../../css/farmer/report.css">
+  <% } else if (page_title === "Profile") { %>
+    <link rel="stylesheet" href="../../../css/farmer/profile.css">
+  <% } else if (page_title === "Help") { %>
+    <link rel="stylesheet" href="../../../css/farmer/help.css">
+  <% } %>
+</head>
+
+<body>
+
+<!-- =========================
+     MOBILE MENU
+========================= -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="close-btn" id="closeMenu">
+    <i class="fa-solid fa-xmark"></i>
+  </div>
+
+  <ul class="menu-list">
+    <li data-action="notifications">
+        <i class="fa-solid fa-bell"></i>
+        <span data-i18n="notifications">Notifications</span>
+    </li>
+
+    <li data-action="settings">
+        <i class="fa-solid fa-gear"></i>
+        <span data-i18n="settings">Settings</span>
+    </li>
+
+    <li data-action="logout">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span data-i18n="logout">Logout</span>
+    </li>
+  </ul>
+</div>
+
+<!-- =========================
+     HEADER
+========================= -->
+<header class="page-header">
+  <div class="nav-left">
+    <% if (current_page !== "farmer_dashboard") { %>
+      <button class="back-btn" id="backBtn">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+    <% } else { %>
+      <div class="back-btn-placeholder"></div>
+    <% } %>
+  </div>
+
+  <button class="menu-btn" id="openMenu">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+</header>
+
+<!-- =========================
+     SETTINGS PANEL
+========================= -->
+<div class="side-panel" id="settingsPanel">
+  <div class="panel-header">
+    <h3>Settings</h3>
+    <button class="close-panel" data-close="settingsPanel">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  <div class="panel-content">
+
+    <div class="settings-section">
+      <h4 data-i18n="appearance">Appearance</h4>
+
+      <div class="setting-row">
+        <span>Theme</span>
+
+        <label class="switch">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider"></span>
+        </label>
+
+        <span class="theme-label" id="themeLabel">Light</span>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h4 data-i18n="language">Language</h4>
+
+      <select id="languageSelect" class="settings-select">
+        <option value="en">English</option>
+        <option value="tl">Tagalog</option>
+      </select>
+    </div>
+
+    <div class="settings-actions">
+        <button class="reset-btn" data-i18n="reset" id="resetSettings">Reset</button>
+        <button class="save-btn" data-i18n="save" id="saveSettings">Save</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================
+     NOTIFICATIONS PANEL
+========================= -->
+<div class="side-panel" id="notificationsPanel">
+  <div class="panel-header">
+    <h3>Notifications</h3>
+    <button class="close-panel" data-close="notificationsPanel">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  <div class="panel-content" id="notificationsList">
+    <div class="notification empty">
+      You have no notifications yet.
+    </div>
+  </div>
+</div>

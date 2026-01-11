@@ -1,0 +1,66 @@
+<!-- Sidebar -->
+<aside class="sidebar d-flex flex-column" id="sidebar">
+
+  <!-- Close icon inside sidebar -->
+  <div class="sidebar-close-wrap d-lg-none">
+    <button
+      id="sidebarCloseBtn"
+      class="sidebar-close-btn"
+      aria-label="Close sidebar"
+    >
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+
+  <nav class="nav flex-column w-100 px-2">
+
+    <!-- DASHBOARD -->
+    <a
+      href="/farm-manager/dashboard"
+      class="nav-link <%= current_page === 'dashboard' ? 'active' : '' %>"
+    >
+      <i class="fa-solid fa-border-all me-2"></i>
+      Dashboard
+    </a>
+
+    <!-- PIG MANAGEMENT -->
+    <a
+      href="/farm-manager/pig-management/"
+      class="nav-link <%= current_page.startsWith('pig_management') ? 'active' : '' %>"
+    >
+      <i class="fa-solid fa-piggy-bank me-2"></i>
+      Pig Management
+    </a>
+
+    <!-- BREED ANALYSIS -->
+    <a
+      href="/farm-manager/breed-analysis"
+      class="nav-link <%= current_page === 'breed_analysis' ? 'active' : '' %>"
+    >
+      <i class="fa-solid fa-chart-line me-2"></i>
+      Breed Analysis
+    </a>
+
+    <!-- REPORTS -->
+    <a
+      href="/farm-manager/reports"
+      class="nav-link <%= current_page === 'reports' ? 'active' : '' %>"
+    >
+      <i class="fa-regular fa-file-lines me-2"></i>
+      Reports
+    </a>
+
+    <!-- FARMERS / USER MANAGEMENT -->
+    <a
+      href="/farm-manager/user-management/manage"
+      class="nav-link <%= current_page.startsWith('farmers_') ? 'active' : '' %>"
+    >
+      <i class="fa-regular fa-user me-2"></i>
+      Account Management
+    </a>
+
+  </nav>
+</aside>
+
+<!-- Overlay for small-screen sidebar -->
+<div id="overlay" class="overlay d-none"></div>

@@ -1,0 +1,116 @@
+<%- include("../../../partials/farm-manager/header") %>
+<%- include("../../../partials/farm-manager/navbar") %>
+<%- include("../../../partials/farm-manager/sidepanel") %>
+
+<!-- Main content -->
+<main class="main-content"> 
+  <div class="container-fluid">
+    <%- include("../../../partials/farm-manager/farmer_panel.ejs") %>
+
+
+      <section class="card form-card">
+        <header class="form-header">
+          <h2>CREATE AN ACCOUNT</h2>
+        </header>
+
+        <div class="card-body">
+          <div class="subheading">User Information</div>
+
+          <form id="createAccountForm" class="grid-form" autocomplete="off">
+
+            <!-- Row 1 -->
+            <div class="field">
+              <label>Name</label>
+              <input type="text" required />
+            </div>
+
+            <div class="field small">
+            <label>Sex</label>
+            <select required>
+                <option value="" disabled selected hidden>Select Gender</option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
+            </div>
+
+            <div class="field small">
+            <label>Municipal</label>
+            <select required>
+                <option value="" disabled selected hidden>Select Municipal</option>
+                <option>Boac</option>
+                <option>Gasan</option>
+                <option>Buenavista</option>
+                <option>Torrijos</option>
+                <option>Santa Cruz</option>
+                <option>Mogpog</option>
+            </select>
+            </div>
+
+
+            <div class="field">
+              <label>Address</label>
+              <input type="text" required />
+            </div>
+
+            <!-- Row 2 -->
+            <div class="field">
+              <label>Contact Info</label>
+              <input type="text" required>
+            </div>
+
+            <div class="field small">
+            <label>Production Type</label>
+            <select required>
+                <option value="" disabled selected hidden>Select Production Type</option>
+                <option>Breeder</option>
+                <option>Fatener</option>
+                <option>Both</option>
+              </select>
+            </div>
+
+            <div class="field tiny">
+              <label>Farm Size (m²/ha)</label>
+              <input type="number" placeholder="Farm Size" required />
+            </div>
+
+            <div class="field tiny">
+              <label>Pen Count</label>
+              <input type="number" required />
+            </div>
+
+            <div class="field tiny">
+              <label>Capacity</label>
+              <input type="number" required />
+            </div>
+
+            <!-- Row 3 -->
+            <div class="field">
+              <label>Training Attended (if any)</label>
+              <input type="text" placeholder="Training Attended" />
+            </div>
+
+            <div class="field">
+              <label>Password</label>
+              <input type="password" required />
+            </div>
+
+            <div class="field small">
+              <label>Membership Date</label>
+              <input type="text" />
+            </div>
+
+            <!-- Buttons -->
+            <div class="buttons">
+              <button type="reset" class="btn btn-clear">CLEAR</button>
+              <button type="submit" class="btn btn-save">SAVE</button>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+
+  </div> <!-- container-fluid -->
+</main>
+
+<%- include("../../../partials/farm-manager/footer") %>

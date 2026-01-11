@@ -1,0 +1,44 @@
+/* =========================
+   HELP CONTAINER
+========================= */
+.help-container {
+  padding: 24px;
+  padding-top: 80px; 
+  max-width: 1200px;
+  margin: auto;
+  flex: 1;
+  width: 100%;
+}
+
+/* =========================
+   PAGE TITLE
+========================= */
+.page-title {
+  text-align: center;
+  margin: 32px 0 24px;
+  font-weight: 800;
+}
+
+/* =========================
+   HELP CARDS
+========================= */
+.help-card {
+  border: 1.5px solid #bdbdbd;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.help-card:hover {
+  background: #f8f8f8;
+}
+
+.help-card i {
+  font-size: 18px;
+}
