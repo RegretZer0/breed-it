@@ -25,8 +25,8 @@
 
     <!-- PIG MANAGEMENT -->
     <a
-      href="/farm-manager/pig-management/"
-      class="nav-link <%= current_page.startsWith('pig_management') ? 'active' : '' %>"
+      href="/farm-manager/pig-management"
+      class="nav-link <%= current_section === 'pig_management' ? 'active' : '' %>"
     >
       <i class="fa-solid fa-piggy-bank me-2"></i>
       Pig Management
@@ -50,10 +50,10 @@
       Reports
     </a>
 
-    <!-- FARMERS / USER MANAGEMENT -->
+    <!-- ACCOUNT MANAGEMENT -->
     <a
       href="/farm-manager/user-management/manage"
-      class="nav-link <%= current_page.startsWith('farmers_') ? 'active' : '' %>"
+      class="nav-link <%= current_section === 'manage' ? 'active' : '' %>"
     >
       <i class="fa-regular fa-user me-2"></i>
       Account Management

@@ -105,6 +105,15 @@ app.use(
 );
 
 /* =========================
+   SESSION → EJS USER BINDING
+   (AFTER session, BEFORE routes)
+========================= */
+app.use((req, res, next) => {
+  res.locals.user = req.session?.user || null;
+  next();
+});
+
+/* =========================
    PREVENT CACHE AFTER LOGOUT
 ========================= */
 app.use((req, res, next) => {

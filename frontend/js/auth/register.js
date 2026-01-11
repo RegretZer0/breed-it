@@ -1,91 +1,58 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("signupForm");
+document.getElementById("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-  if (!form) return;
+  const first_name = document.getElementById("first_name").value.trim();
+  const last_name = document.getElementById("last_name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const contact_info = document.getElementById("phone").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const confirmPassword = document.getElementById("confirm_password").value.trim();
+  const messageEl = document.getElementById("message");
 
-  const fullNameInput = document.getElementById("full_name");
-  const emailInput = document.getElementById("email");
-  const phoneInput = document.getElementById("phone");
-  const passwordInput = document.getElementById("password");
-  const confirmPasswordInput = document.getElementById("confirm_password");
+  messageEl.style.color = "black";
+  messageEl.textContent = "Creating account...";
 
-  // ============================
-  // Password toggle (eye icon)
-  // ============================
-  document.querySelectorAll(".toggle-pass").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const input = btn.closest(".input-group").querySelector("input");
-      const icon = btn.querySelector("i");
+  if (!first_name || !last_name || !email || !password || !confirmPassword) {
+    messageEl.style.color = "red";
+    messageEl.textContent = "Please fill out all required fields.";
+    return;
+  }
 
-      if (input.type === "password") {
-        input.type = "text";
-        icon.classList.replace("fa-eye", "fa-eye-slash");
-      } else {
-        input.type = "password";
-        icon.classList.replace("fa-eye-slash", "fa-eye");
-      }
+  if (password !== confirmPassword) {
+    messageEl.style.color = "red";
+    messageEl.textContent = "Passwords do not match.";
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name,
+        last_name,
+        email,
+        contact_info,
+        password,
+      }),
     });
-  });
 
-  // ============================
-  // Form submit
-  // ============================
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    const data = await res.json();
 
-    const fullName = fullNameInput.value.trim();
-    const email = emailInput.value.trim();
-    const phone = phoneInput.value.trim();
-    const password = passwordInput.value.trim();
-    const confirmPassword = confirmPasswordInput.value.trim();
-
-    // ============================
-    // Validations
-    // ============================
-    if (!fullName || !email || !phone || !password || !confirmPassword) {
-      alert("Please fill out all required fields.");
-      return;
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Registration failed.");
     }
 
-    if (password.length < 6) {
-      alert("Password must be at least 6 characters long.");
-      return;
-    }
+    messageEl.style.color = "green";
+    messageEl.textContent = "Registration successful! Redirecting to login...";
 
-    if (password !== confirmPassword) {
-      alert("Passwords do not match.");
-      return;
-    }
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1000);
 
-    // ============================
-    // Farmer is DEFAULT role
-    // ============================
-    const payload = {
-      name: fullName,
-      email,
-      contact_no: phone,
-      password
-    };
-
-    try {
-      const response = await fetch("/api/auth/register-farmer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed.");
-      }
-
-      alert("Account created successfully! You may now log in.");
-      window.location.href = "/Login";
-
-    } catch (error) {
-      console.error("Registration error:", error);
-      alert(error.message);
-    }
-  });
+  } catch (err) {
+    console.error("Registration error:", err);
+    messageEl.style.color = "red";
+    messageEl.textContent = err.message || "Registration failed.";
+  }
 });

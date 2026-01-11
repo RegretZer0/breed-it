@@ -63,3 +63,30 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     messageEl.textContent = err.message || "Login failed";
   }
 });
+
+// =========================
+// TOGGLE PASSWORD VISIBILITY
+// =========================
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleBtn = document.querySelector(".toggle-pass");
+  const passwordInput = document.getElementById("password");
+  const icon = toggleBtn?.querySelector("i");
+
+  if (!toggleBtn || !passwordInput || !icon) return;
+
+  toggleBtn.addEventListener("click", () => {
+    const isHidden = passwordInput.type === "password";
+
+    passwordInput.type = isHidden ? "text" : "password";
+
+    // Toggle icon
+    icon.classList.toggle("fa-eye", !isHidden);
+    icon.classList.toggle("fa-eye-slash", isHidden);
+
+    // Accessibility
+    toggleBtn.setAttribute(
+      "aria-label",
+      isHidden ? "Hide password" : "Show password"
+    );
+  });
+});

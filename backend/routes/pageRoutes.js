@@ -1,6 +1,12 @@
 const express = require("express");
 const router = express.Router();
 
+const {
+  requireLogin,
+  requireFarmManager,
+  requireFarmer,
+} = require("../middleware/pageAuth.middleware");
+
 /* =========================
    AUTH / PUBLIC PAGES
 ========================= */
@@ -34,112 +40,183 @@ router.get("/register", (req, res) => {
 ========================= */
 
 // Farmer Dashboard
-router.get("/farmer/dashboard", (req, res) => {
-  res.render("pages/farmer/farmer_dashboard", {
-    page_title: "Farmer Dashboard",
-    current_page: "farmer_dashboard",
-  });
-});
+router.get(
+  "/farmer/dashboard",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/farmer_dashboard", {
+      page_title: "Farmer Dashboard",
+      current_section: "dashboard",
+      current_page: "farmer_dashboard",
+    });
+  }
+);
 
 // My Pigs
-router.get("/farmer/mypigs", (req, res) => {
-  res.render("pages/farmer/mypigs", {
-    page_title: "My Pigs",
-    current_page: "mypigs",
-  });
-});
+router.get(
+  "/farmer/mypigs",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/mypigs", {
+      page_title: "My Pigs",
+      current_section: "pigs",
+      current_page: "mypigs",
+    });
+  }
+);
 
 // Farmer Profile
-router.get("/farmer/profile", (req, res) => {
-  res.render("pages/farmer/profile", {
-    page_title: "Profile",
-    current_page: "profile",
-  });
-});
+router.get(
+  "/farmer/profile",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/profile", {
+      page_title: "Profile",
+      current_section: "profile",
+      current_page: "profile",
+    });
+  }
+);
 
 // Farmer Reports
-router.get("/farmer/report", (req, res) => {
-  res.render("pages/farmer/report", {
-    page_title: "Reports",
-    current_page: "report",
-  });
-});
+router.get(
+  "/farmer/report",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/report", {
+      page_title: "Reports",
+      current_section: "reports",
+      current_page: "report",
+    });
+  }
+);
 
 // Farmer Help
-router.get("/farmer/help", (req, res) => {
-  res.render("pages/farmer/help", {
-    page_title: "Help",
-    current_page: "help",
-  });
-});
+router.get(
+  "/farmer/help",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/help", {
+      page_title: "Help",
+      current_section: "help",
+      current_page: "help",
+    });
+  }
+);
 
 /* =========================
    FARM MANAGER PAGES
 ========================= */
 
 // Dashboard
-router.get("/farm-manager/dashboard", (req, res) => {
-  res.render("pages/farm-manager/dashboard", {
-    page_title: "Farm Manager Dashboard",
-    current_page: "dashboard",
-  });
-});
+router.get(
+  "/farm-manager/dashboard",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/dashboard", {
+      page_title: "Farm Manager Dashboard",
+      current_section: "dashboard",
+      current_page: "dashboard",
+    });
+  }
+);
 
 // Breed Analysis
-router.get("/farm-manager/breed-analysis", (req, res) => {
-  res.render("pages/farm-manager/breed_analysis", {
-    page_title: "Breed Analysis",
-    current_page: "breed_analysis",
-  });
-});
+router.get(
+  "/farm-manager/breed-analysis",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/breed_analysis", {
+      page_title: "Breed Analysis",
+      current_section: "analysis",
+      current_page: "breed_analysis",
+    });
+  }
+);
 
 // Reports
-router.get("/farm-manager/reports", (req, res) => {
-  res.render("pages/farm-manager/reports", {
-    page_title: "Reports",
-    current_page: "reports",
-  });
-});
+router.get(
+  "/farm-manager/reports",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/reports", {
+      page_title: "Reports",
+      current_section: "reports",
+      current_page: "reports",
+    });
+  }
+);
 
 /* =========================
    FARM MANAGER – USER MANAGEMENT
 ========================= */
 
 // Create Account
-router.get("/farm-manager/user-management/create", (req, res) => {
-  res.render("pages/farm-manager/user-management/create_account", {
-    page_title: "Create Account",
-    current_page: "create_account",
-  });
-});
+router.get(
+  "/farm-manager/user-management/create",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/user-management/create_account", {
+      page_title: "Create Account",
+      current_section: "user_management",
+      current_page: "create_account",
+    });
+  }
+);
 
 // Manage Account
-router.get("/farm-manager/user-management/manage", (req, res) => {
-  res.render("pages/farm-manager/user-management/manage_account", {
-    page_title: "Manage Account",
-    current_page: "manage_account",
-  });
-});
+router.get(
+  "/farm-manager/user-management/manage",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/user-management/manage_account", {
+      page_title: "Manage Account",
+      current_section: "user_management",
+      current_page: "manage_account",
+    });
+  }
+);
 
 /* =========================
    FARM MANAGER – PIG MANAGEMENT
 ========================= */
 
 // Pig Management Overview
-router.get("/farm-manager/pig-management", (req, res) => {
-  res.render("pages/farm-manager/pig-management/overview", {
-    page_title: "Pig Management Overview",
-    current_page: "pig_management_overview",
-  });
-});
+router.get(
+  "/farm-manager/pig-management",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/pig-management/overview", {
+      page_title: "Pig Management Overview",
+      current_section: "pig_management",
+      current_page: "overview",
+    });
+  }
+);
 
 // Register Pig
-router.get("/farm-manager/pig-management/register", (req, res) => {
-  res.render("pages/farm-manager/pig-management/register_pig", {
-    page_title: "Pig Management RegPig",
-    current_page: "pig_management_register",
-  });
-});
-
+router.get(
+  "/farm-manager/pig-management/register",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/pig-management/register_pig", {
+      page_title: "Register Pig",
+      current_section: "pig_management",
+      current_page: "register_pig",
+    });
+  }
+);
 
 module.exports = router;

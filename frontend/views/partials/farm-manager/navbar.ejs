@@ -1,34 +1,252 @@
-  <!-- Topbar -->
-  <header class="topbar d-flex align-items-center">
-    <div class="container-fluid d-flex align-items-center px-3">
-      <div class="d-flex align-items-center top-left">
-        <!-- Burger icon -->
-        <button id="burgerBtn" class="burger-btn me-2 d-lg-none" aria-label="Open sidebar">
-          <i class="fa-solid fa-bars fa-lg"></i>
+<!-- Topbar -->
+<header class="topbar d-flex align-items-center">
+  <div class="container-fluid d-flex align-items-center px-3">
+
+    <!-- Left section -->
+    <div class="d-flex align-items-center top-left">
+      <!-- Burger icon -->
+      <button
+        type="button"
+        id="burgerBtn"
+        class="burger-btn me-2 d-lg-none"
+        aria-label="Open sidebar"
+      >
+        <i class="fa-solid fa-bars fa-lg"></i>
+      </button>
+
+      <img
+        src="../../images/logo.png"
+        alt="Breed-it logo"
+        class="brand-logo"
+      />
+      <div class="brand-text ms-2">BREED-IT</div>
+    </div>
+
+    <!-- Right section -->
+    <div class="ms-auto d-flex align-items-center gap-3 top-icons">
+
+      <!-- Notifications -->
+      <button
+        type="button"
+        class="icon-btn"
+        title="Notifications"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#notificationsPanel"
+      >
+        <i class="fa-regular fa-bell fa-lg"></i>
+      </button>
+
+      <!-- Settings -->
+      <button
+        type="button"
+        class="icon-btn"
+        title="Settings"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#settingsPanel"
+      >
+        <i class="fa-solid fa-gear fa-lg"></i>
+      </button>
+
+      <!-- User dropdown -->
+      <div class="dropdown">
+        <button
+          type="button"
+          class="icon-btn dropdown-toggle"
+          id="userDropdown"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          title="User"
+        >
+          <i class="fa-regular fa-user fa-lg"></i>
         </button>
 
-        <img src="../../images/logo.png" alt="Breed-it logo" class="brand-logo" />
-        <div class="brand-text ms-2">BREED-IT</div>
-      </div>
+        <ul
+          class="dropdown-menu dropdown-menu-end"
+          aria-labelledby="userDropdown"
+        >
+          <li>
+            <button
+              type="button"
+              class="dropdown-item"
+              data-bs-toggle="modal"
+              data-bs-target="#accountSettingsModal"
+            >
+              Account Settings
+            </button>
+          </li>
 
-      <div class="ms-auto d-flex align-items-center gap-3 top-icons">
-        <button class="icon-btn" title="Notifications"><i class="fa-regular fa-bell fa-lg"></i></button>
-        <button class="icon-btn" title="Settings"><i class="fa-solid fa-gear"></i></button>
+          <li>
+            <button
+              type="button"
+              class="dropdown-item"
+              data-bs-toggle="modal"
+              data-bs-target="#helpModal"
+            >
+              Help
+            </button>
+          </li>
 
-        <!-- User dropdown -->
-        <div class="dropdown">
-          <button class="icon-btn dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="User">
-            <i class="fa-regular fa-user fa-lg"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-            <li><a class="dropdown-item" href="#">Account Settings</a></li>
-            <li><a class="dropdown-item" href="#">Help</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
-          </ul>
-        </div>
+          <li><hr class="dropdown-divider" /></li>
+
+          <li>
+            <button
+              type="button"
+              class="dropdown-item text-danger"
+              id="logoutBtn"
+            >
+              Logout
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
-  </header>
+  </div>
+</header>
 
-  <div class="app-shell">
+<!-- =======================
+     NOTIFICATIONS PANEL
+======================= -->
+<div
+  class="offcanvas offcanvas-end"
+  tabindex="-1"
+  id="notificationsPanel"
+>
+  <div class="offcanvas-header">
+    <h5>Notifications</h5>
+    <button class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <ul class="list-group list-group-flush small">
+      <li class="list-group-item">
+        🐖 New swine record added
+        <div class="text-muted small">2 minutes ago</div>
+      </li>
+      <li class="list-group-item">
+        🔔 Heat report submitted
+        <div class="text-muted small">1 hour ago</div>
+      </li>
+      <li class="list-group-item">
+        👤 Profile updated
+        <div class="text-muted small">Yesterday</div>
+      </li>
+    </ul>
+
+    <div class="text-center mt-3">
+      <button class="btn btn-outline-secondary btn-sm" disabled>
+        View all (Coming Soon)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =======================
+     SETTINGS PANEL
+======================= -->
+<div
+  class="offcanvas offcanvas-end"
+  tabindex="-1"
+  id="settingsPanel"
+>
+  <div class="offcanvas-header">
+    <h5>Settings</h5>
+    <button class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+
+  <div class="offcanvas-body small">
+    <form>
+
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="darkModeToggle">
+        <label class="form-check-label" for="darkModeToggle">
+          Dark Mode
+        </label>
+      </div>
+
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="emailNotifToggle" checked>
+        <label class="form-check-label" for="emailNotifToggle">
+          Email Notifications
+        </label>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Language</label>
+        <select class="form-select form-select-sm">
+          <option selected>English</option>
+          <option>Filipino</option>
+          <option>Spanish</option>
+        </select>
+      </div>
+
+      <button class="btn btn-outline-primary btn-sm w-100" disabled>
+        Save Changes (Coming Soon)
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- =======================
+     ACCOUNT SETTINGS MODAL
+======================= -->
+<div
+  class="modal fade"
+  id="accountSettingsModal"
+  tabindex="-1"
+>
+  <div class="modal-dialog modal-dialog-end modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Account Settings</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <p><strong>Name:</strong> <%= user?.name || "—" %></p>
+        <p><strong>Email:</strong> <%= user?.email || "—" %></p>
+        <p><strong>Role:</strong> <%= user?.role || "—" %></p>
+
+        <button class="btn btn-outline-primary w-100 mt-3" disabled>
+          Change Password (Coming Soon)
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =======================
+     HELP MODAL
+======================= -->
+<div
+  class="modal fade"
+  id="helpModal"
+  tabindex="-1"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Help</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <ul class="small">
+          <li>Use the sidebar to navigate modules.</li>
+          <li>Your session expires after inactivity.</li>
+          <li>Contact admin for account issues.</li>
+        </ul>
+
+        <p class="small mt-2 text-muted">
+          Support: support@breedit.local
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- App shell -->
+<div class="app-shell">
