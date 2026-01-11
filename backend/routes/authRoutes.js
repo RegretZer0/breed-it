@@ -15,7 +15,10 @@ function generateToken(user) {
       id: user._id.toString(),
       role: user.role,
       email: user.email,
-      name: user.fullName || user.name || "User",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
+      managerId: user.managerId || null,
     },
     JWT_SECRET,
     { expiresIn: "1d" }
@@ -39,11 +42,11 @@ router.post("/login", async (req, res) => {
     let role;
 
     if (user) {
-      role = user.role; // use DB role for User (including system_admin)
+      role = user.role;
     } else {
       // If not found, check Farmers collection
       user = await Farmer.findOne({ email });
-      role = "farmer"; // farmers always have 'farmer' role
+      role = "farmer";
     }
 
     if (!user) {
@@ -69,23 +72,18 @@ router.post("/login", async (req, res) => {
         });
       }
 
-      // ✅ store the correct role from DB
+      // ✅ Store user info with first_name & last_name
       req.session.user = {
         id: user._id.toString(),
         role,
         email: user.email,
-        name: user.fullName || user.name || "User",
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
         managerId: user.managerId || null,
       };
 
-      const token = generateToken({
-        _id: user._id,
-        role,
-        email: user.email,
-        fullName: user.fullName,
-        name: user.name,
-        managerId: user.managerId || null, // include managerId in JWT
-      });
+      const token = generateToken(user);
 
       res.json({
         success: true,
@@ -153,13 +151,13 @@ router.get("/me", (req, res) => {
 
 // Register Farm Manager
 router.post("/register", async (req, res) => {
-  const { fullName, address, contact_info, email, password } = req.body;
+  const { first_name, last_name, address, contact_info, email, password } = req.body;
 
   try {
-    if (!fullName || !email || !password) {
+    if (!first_name || !last_name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Full name, email, and password are required",
+        message: "First name, last name, email, and password are required",
       });
     }
 
@@ -173,7 +171,8 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
-      fullName,
+      first_name,
+      last_name,
       address,
       contact_info,
       email,
@@ -194,7 +193,8 @@ router.post("/register", async (req, res) => {
 // Register Farmer
 router.post("/register-farmer", async (req, res) => {
   const {
-    name,
+    first_name,
+    last_name,
     address,
     contact_no,
     email,
@@ -205,10 +205,10 @@ router.post("/register-farmer", async (req, res) => {
   } = req.body;
 
   try {
-    if (!name || !email || !password || !managerId) {
+    if (!first_name || !last_name || !email || !password || !managerId) {
       return res.status(400).json({
         success: false,
-        message: "Name, email, password, and managerId are required",
+        message: "First name, last name, email, password, and managerId are required",
       });
     }
 
@@ -237,7 +237,8 @@ router.post("/register-farmer", async (req, res) => {
     const farmer_id = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
     const farmer = await Farmer.create({
-      name,
+      first_name,
+      last_name,
       address,
       contact_no,
       email,
@@ -264,15 +265,9 @@ router.get("/farmers/:managerId", async (req, res) => {
   try {
     const managerId = req.params.managerId;
 
-    console.log("=== FETCH FARMERS DEBUG ===");
-    console.log("Requested managerId:", managerId);
-
     const farmers = await Farmer.find({
       $or: [{ registered_by: managerId }, { user_id: managerId }],
     }).select("-password -__v");
-
-    console.log("Farmers found:", farmers.length);
-    console.log("Farmers data:", farmers);
 
     res.json({ success: true, farmers });
   } catch (error) {
@@ -280,6 +275,7 @@ router.get("/farmers/:managerId", async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
 
 // Update Farmer
 router.put("/update-farmer/:farmerId", async (req, res) => {
@@ -292,7 +288,16 @@ router.put("/update-farmer/:farmerId", async (req, res) => {
       });
     }
 
-    Object.assign(farmer, req.body);
+    // Only update fields that exist in the body
+    const updateFields = {};
+    if (req.body.first_name) updateFields.first_name = req.body.first_name;
+    if (req.body.last_name) updateFields.last_name = req.body.last_name;
+    if (req.body.address) updateFields.address = req.body.address;
+    if (req.body.contact_no) updateFields.contact_no = req.body.contact_no;
+    if (req.body.num_of_pens !== undefined) updateFields.num_of_pens = req.body.num_of_pens;
+    if (req.body.pen_capacity !== undefined) updateFields.pen_capacity = req.body.pen_capacity;
+
+    Object.assign(farmer, updateFields);
     await farmer.save();
 
     res.json({
@@ -305,10 +310,12 @@ router.put("/update-farmer/:farmerId", async (req, res) => {
   }
 });
 
+
 // Register Encoder
 router.post("/register-encoder", async (req, res) => {
   const {
-    fullName,
+    first_name,
+    last_name,
     address,
     contact_info,
     email,
@@ -317,10 +324,10 @@ router.post("/register-encoder", async (req, res) => {
   } = req.body;
 
   try {
-    if (!fullName || !email || !password || !managerId) {
+    if (!first_name || !last_name || !email || !password || !managerId) {
       return res.status(400).json({
         success: false,
-        message: "Full name, email, password, and managerId are required",
+        message: "First name, last name, email, password, and managerId are required",
       });
     }
 
@@ -342,14 +349,15 @@ router.post("/register-encoder", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const encoder = await User.create({
-      fullName,
+      first_name,
+      last_name,
       address,
       contact_info,
       email,
       password: hashedPassword,
       role: "encoder",
       managerId,
-      status: "active"
+      status: "active",
     });
 
     res.status(201).json({

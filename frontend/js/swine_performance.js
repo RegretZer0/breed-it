@@ -25,6 +25,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const generateID = (prefix = "R") =>
     `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+  // ❗ Safety check (same pattern as manage_swine.js)
+  if (!managerId) {
+    console.error("No managerId resolved for user:", user);
+    alert("Your account is not linked to a farm manager.");
+    return;
+  }
+
   // Fetch Swines
   const fetchSwines = async () => {
     try {

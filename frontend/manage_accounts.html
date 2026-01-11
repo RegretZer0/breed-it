@@ -47,7 +47,10 @@
     <!-- 📝 REGISTER ACCOUNT -->
     <h3>Register New Account</h3>
     <form id="registerFarmerForm">
-      <input type="text" id="name" placeholder="Full Name" required />
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="first_name" placeholder="First Name" required />
+        <input type="text" id="last_name" placeholder="Last Name" required />
+      </div>
       <input type="text" id="address" placeholder="Address" />
       <input type="text" id="contact_no" placeholder="Contact Number" />
       <input type="email" id="email" placeholder="Email" required />
@@ -79,7 +82,10 @@
     <form id="editFarmerForm">
       <h3>Edit Account</h3>
 
-      <input type="text" id="editName" placeholder="Full Name" required />
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="editFirstName" placeholder="First Name" required />
+        <input type="text" id="editLastName" placeholder="Last Name" required />
+      </div>
       <input type="text" id="editAddress" placeholder="Address" />
       <input type="text" id="editContact" placeholder="Contact Number" />
 

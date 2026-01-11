@@ -83,7 +83,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       data.farmers.forEach((farmer) => {
         const option = document.createElement("option");
         option.value = farmer._id;
-        option.textContent = farmer.name || farmer.fullName || "Unnamed Farmer";
+        option.textContent =
+          `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim() ||
+          "Unnamed Farmer";
         farmerSelect.appendChild(option);
       });
     } catch (err) {
