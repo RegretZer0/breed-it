@@ -11,6 +11,8 @@ const farmerSchema = new mongoose.Schema({
   num_of_pens: { type: Number, default: 0 },
   pen_capacity: { type: Number, default: 0 },
 
+  role: { type: String, default: "farmer", immutable: true },
+
   // Links farmer to a user account
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
