@@ -30,14 +30,10 @@ html, body {
   line-height: var(--base-line-height);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* background: #f8f9fb; */
   color: var(--text-dark);
   -webkit-text-size-adjust: 100%;
 }
 
-/* Make interactive elements obvious and keyboard accessible
-   We avoid removing all button backgrounds here; keep neutral defaults
-   and let specific classes (.btn-*) define appearance. */
 button, [role="button"], a {
   cursor: pointer;
   color: inherit;
@@ -45,7 +41,7 @@ button, [role="button"], a {
   background: transparent;
 }
 
-/* Accessibility: prefer using :focus-visible for keyboard focus */
+/* Accessibility focus */
 :focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
@@ -56,29 +52,21 @@ button, [role="button"], a {
   border-radius: 6px;
 }
 
-/* Honor reduced motion */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
 
-/* ========== Form card wrapper (converted to admin style tokens) ========== */
-/* .page-padding {
-  padding: var(--gutter);
-} */
-
-/* Card that matches the admin look */
+/* ========== Form card wrapper ========== */
 .form-card{
   background: var(--bg);
   border-radius: var(--radius);
   border: 1px solid var(--card-border);
-  box-shadow: none;
   padding: 0;
   width: 100%;
-  margin: 0;
   margin-top: 18px;
 }
 
-/* Header */
 .form-header{
   padding: 18px 20px;
   background: var(--bg);
@@ -88,15 +76,12 @@ button, [role="button"], a {
   font-size: 20px;
   font-weight: 700;
   color: var(--text-dark);
-  letter-spacing: 0.2px;
 }
 
-/* card body padding */
 .form-card .card-body{
   padding: 18px;
 }
 
-/* small subheading text */
 .subheading{
   font-size: 12px;
   font-weight: 600;
@@ -104,49 +89,52 @@ button, [role="button"], a {
   margin-bottom: 10px;
 }
 
-/* ========== Grid layout: match admin spacing & responsive rules ========== */
-/* We'll use CSS Grid with responsive fallback */
+/* ========== Grid layout (UPDATED) ========== */
 .grid-form{
   display:grid;
-  grid-template-columns: 1fr 180px 140px 1fr; /* desktop */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px 22px;
   align-items: start;
   width: 100%;
-  box-sizing: border-box;
 }
 
 /* Field styling */
-.field{ display:flex; flex-direction:column; }
+.field{
+  display:flex;
+  flex-direction:column;
+}
 .field label{
   font-size:12px;
   font-weight:600;
   margin-bottom:8px;
   color: var(--text-dark);
 }
+
 .field input,
 .field select,
 .field textarea {
-  -webkit-appearance: none;
-  -moz-appearance: none;
   appearance: none;
-  box-sizing: border-box;
   height:38px;
   padding:8px 12px;
   border-radius: 8px;
   border:1px solid var(--card-border);
   font-size:13px;
-  color:#333;
-  outline:none;
   background: #fff;
   transition: border-color .12s ease, box-shadow .12s ease;
 }
-.field textarea { height:auto; min-height:96px; padding-top:10px; padding-bottom:10px; }
 
-/* placeholder */
+.field textarea {
+  height:auto;
+  min-height:96px;
+  padding-top:10px;
+}
+
 .field input::placeholder,
-.field textarea::placeholder { color:#bfbfbf; font-size:13px; }
+.field textarea::placeholder {
+  color:#bfbfbf;
+  font-size:13px;
+}
 
-/* input focus - subtle shadow and slightly darker border */
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -154,86 +142,79 @@ button, [role="button"], a {
   box-shadow: 0 6px 18px rgba(16,24,40,0.04);
 }
 
-/* ensure selects render the same height across browsers */
-.field select { height:38px; }
+/* ========== Address width fix ========== */
+.field.address {
+  grid-column: span 2;
+}
 
-/* size modifiers to match the original */
-.field.small{ width:100%; }
-.field.tiny{ width:100%; }
-
-/* ========== Buttons row - span full width like admin cards ========== */
-/* Buttons row - placed after fields; span full width */
+/* ========== Buttons ========== */
 .buttons{
   grid-column: 1 / -1;
   display:flex;
   justify-content:flex-end;
   gap:14px;
   margin-top:12px;
-  align-items:center;
 }
 
-/* CLEAR button style (outlined, pink/red text) */
 .btn-clear{
   border:1px solid rgba(255,99,115,0.85);
   color:rgba(255,99,115,0.95);
-  background:transparent;
   padding:10px 18px;
   border-radius:8px;
   font-weight:700;
   letter-spacing:0.6px;
-  cursor:pointer;
-  transition: transform .06s ease, box-shadow .08s ease;
 }
-.btn-clear:active { transform: translateY(1px); }
 
-/* SAVE button style (green filled) */
 .btn-save{
   background: var(--accent-green);
-  border:none;
   color:white;
   padding:10px 18px;
   border-radius:8px;
   font-weight:700;
-  cursor:pointer;
+  border:none;
   box-shadow: 0 6px 18px rgba(16,24,40,0.04);
-  transition: transform .06s ease, box-shadow .08s ease;
 }
-.btn-save:active { transform: translateY(1px); }
 
-/* Disabled state helper */
 .btn-save[disabled]{
   opacity: 0.65;
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
 }
 
-.form-hero { max-width:100%; height:auto; display:block; margin: 0 auto 12px; }
-.form-hero-bg {
-  width:100%;
-  height:240px;
-  background-image: url("/mnt/data/be0502f5-103e-4b1c-a0a8-871ffa1a180e.png");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  border-radius: 8px;
-  box-sizing: border-box;
-  margin-bottom: 12px;
-}
-
-/* ========== Utilities & small helpers ========== */
-.text-muted { color: var(--muted-text); }
-.full-width { width: 100%; }
-
+/* ========== Responsive ========== */
 @media (max-width: 1100px){
-  .grid-form { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-form{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .field.address {
+    grid-column: span 3;
+  }
 }
+
 @media (max-width: 800px){
-  .grid-form { grid-template-columns: 1fr 1fr; }
-  .buttons { justify-content: flex-start; }
+  .grid-form{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .field.address {
+    grid-column: span 2;
+  }
+  .buttons {
+    justify-content: flex-start;
+  }
 }
+
 @media (max-width: 520px){
-  .grid-form { grid-template-columns: 1fr; }
-  .buttons { flex-direction: row; justify-content:flex-start; gap:10px; }
-  .form-header h2 { font-size: 18px; }
+  .grid-form{
+    grid-template-columns: 1fr;
+  }
+  .field.address {
+    grid-column: span 1;
+  }
+  .buttons{
+    flex-direction: row;
+    gap:10px;
+  }
+  .form-header h2 {
+    font-size: 18px;
+  }
 }

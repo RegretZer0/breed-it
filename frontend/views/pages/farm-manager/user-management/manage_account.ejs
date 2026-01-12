@@ -2,12 +2,12 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<!-- Main content -->
 <main class="main-content">
   <div class="container-fluid">
 
-    <%- include("../../../partials/farm-manager/farmer_panel.ejs") %>
+    <%- include("../../../partials/farm-manager/farmer_panel") %>
 
+    <!-- ================= MAIN HEADER ================= -->
     <div class="outer-card">
       <div class="header-row">
         <h1>MANAGE ACCOUNT</h1>
@@ -15,12 +15,12 @@
 
       <div class="inner-card">
 
-        <!-- Stats -->
+        <!-- ===== FARMER STATS ===== -->
         <div class="stats-row mb-3">
           <div class="stat">
             <div class="stat-left">
               <div class="stat-label">Total Farmers</div>
-              <div class="stat-value">130</div>
+              <div class="stat-value" id="totalFarmers">0</div>
             </div>
             <div class="stat-icon amber">
               <i class="fa-solid fa-user"></i>
@@ -30,7 +30,7 @@
           <div class="stat">
             <div class="stat-left">
               <div class="stat-label">Active</div>
-              <div class="stat-value">30</div>
+              <div class="stat-value" id="activeFarmers">0</div>
             </div>
             <div class="stat-icon green">
               <i class="fa-solid fa-user-check"></i>
@@ -40,7 +40,7 @@
           <div class="stat">
             <div class="stat-left">
               <div class="stat-label">Inactive</div>
-              <div class="stat-value">30</div>
+              <div class="stat-value" id="inactiveFarmers">0</div>
             </div>
             <div class="stat-icon red">
               <i class="fa-solid fa-user-xmark"></i>
@@ -48,90 +48,213 @@
           </div>
         </div>
 
-        <!-- ======= FILTERS ROW ======= -->
+        <!-- ===== ENCODER STATS ===== -->
+        <div class="stats-row mb-3">
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Total Encoders</div>
+              <div class="stat-value" id="totalEncoders">0</div>
+            </div>
+            <div class="stat-icon blue">
+              <i class="fa-solid fa-user-pen"></i>
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Active Encoders</div>
+              <div class="stat-value" id="activeEncoders">0</div>
+            </div>
+            <div class="stat-icon green">
+              <i class="fa-solid fa-user-check"></i>
+            </div>
+          </div>
+
+          <div class="stat">
+            <div class="stat-left">
+              <div class="stat-label">Inactive Encoders</div>
+              <div class="stat-value" id="inactiveEncoders">0</div>
+            </div>
+            <div class="stat-icon red">
+              <i class="fa-solid fa-user-xmark"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== FILTER CONTROLS ===== -->
         <div class="card page-card mb-3">
           <div class="card-body">
-            <form id="filtersForm" class="row g-2 align-items-center">
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm" name="location">
-                  <option>Location</option>
+            <form id="accountFiltersForm" class="row g-2 align-items-end">
+
+              <div class="col-md-3">
+                <label class="form-label small">Account Type</label>
+                <select id="filterAccountType" class="form-select form-select-sm">
+                  <option value="" disabled selected>Select type</option>
+                  <option value="all">All</option>
+                  <option value="farmer">Farmer</option>
+                  <option value="encoder">Encoder</option>
                 </select>
               </div>
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm" name="pigStatus">
-                  <option>Pig Status</option>
+              <div class="col-md-4">
+                <label class="form-label small">Location / Address</label>
+                <input id="filterLocation" class="form-control form-control-sm" />
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label small">Account Status</label>
+                <select id="filterStatus" class="form-select form-select-sm">
+                  <option value="" disabled selected>Select status</option>
+                  <option value="all">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
                 </select>
               </div>
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm" name="sex">
-                  <option>Sex</option>
-                </select>
+              <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-sm btn-success">Apply</button>
               </div>
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm" name="phase">
-                  <option>Phase</option>
-                </select>
+              <div class="col-md-2 d-grid">
+                <button type="button" id="resetFiltersBtn" class="btn btn-sm btn-outline-secondary">
+                  Reset
+                </button>
               </div>
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm" name="typeOfPig">
-                  <option>Type of Pig</option>
-                </select>
-              </div>
-
-              <div class="col-auto col-md-auto">
-                <input type="date" class="form-control form-control-sm" name="dateFrom" />
-              </div>
-
-              <div class="col-auto text-center d-none d-md-flex align-items-center justify-content-center px-1">
-                <span class="to-dash">— TO —</span>
-              </div>
-
-              <div class="col-auto col-md-auto">
-                <input type="date" class="form-control form-control-sm" name="dateTo"/>
-              </div>
-
-              <div class="col-auto col-md">
-                <input type="text" class="form-control form-control-sm" name="tag" placeholder="Search by tag number" />
-              </div>
-
-              <div class="col-auto">
-                <button class="btn btn-success btn-sm search-btn" type="submit">Search</button>
-              </div>
             </form>
           </div>
         </div>
-        <!-- ======= END FILTERS ROW ======= -->
 
+        <!-- ===== FILTERED RESULTS ===== -->
+        <div id="filteredSection" class="table-wrap mt-3 d-none">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>NAME</th>
+                <th>ADDRESS</th>
+                <th>CONTACT</th>
+                <th>PENS</th>
+                <th>CAPACITY</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="filteredTbody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= RECENTLY ADDED ================= -->
+    <div class="outer-card mt-4">
+      <div class="header-row">
+        <h2>Recently Added</h2>
+      </div>
+
+      <div class="inner-card">
         <div class="table-wrap">
           <table class="table table-sm mb-0">
             <thead>
               <tr>
                 <th>ID</th>
                 <th>NAME</th>
-                <th>SEX</th>
-                <th>MUNICIPALITY</th>
+                <th>ROLE</th>
                 <th>ADDRESS</th>
-                <th>CONTACT INFO</th>
-                <th>PRODUCTION TYPE</th>
-                <th>FARM SIZE (m²/ha)</th>
-                <th>PEN COUNT</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="recentTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= ACCOUNT LIST ================= -->
+    <div class="outer-card mt-4">
+      <div class="header-row">
+        <h2>Account List</h2>
+      </div>
+
+      <div class="inner-card">
+        <div class="table-wrap">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>NAME</th>
+                <th>ADDRESS</th>
+                <th>CONTACT</th>
+                <th>PENS</th>
                 <th>CAPACITY</th>
-                <th>ACCOUNT STATUS</th>
+                <th>STATUS</th>
                 <th>ACTION</th>
               </tr>
             </thead>
-
-            <tbody id="farmersTbody">
-              <!-- JS will populate rows -->
-            </tbody>
+            <tbody id="farmersTbody"></tbody>
           </table>
         </div>
-
       </div>
     </div>
+
+  </div>
+</main>
+
+<!-- ================= EDIT MODAL ================= -->
+<div id="editModal" class="edit-modal d-none">
+  <form id="editFarmerForm" class="edit-form">
+
+    <!-- Close X -->
+    <button type="button" id="closeModalX" class="modal-close-btn">&times;</button>
+
+    <h5>Edit Account</h5>
+
+    <p class="small text-muted mb-2">
+      Account Type: <strong id="editRoleLabel"></strong>
+    </p>
+
+    <div class="row g-2">
+      <div class="col">
+        <label class="form-label small">First Name</label>
+        <input id="editFirstName" class="form-control form-control-sm" required />
+      </div>
+      <div class="col">
+        <label class="form-label small">Last Name</label>
+        <input id="editLastName" class="form-control form-control-sm" required />
+      </div>
+    </div>
+
+    <label class="form-label small mt-2">Address</label>
+    <input id="editAddress" class="form-control form-control-sm" />
+
+    <label class="form-label small mt-2">Contact Number</label>
+    <input id="editContact" class="form-control form-control-sm" />
+
+    <label class="form-label small mt-2">Account Status</label>
+    <select id="editStatus" class="form-select form-select-sm">
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+
+    <div id="farmerOnlyFields" class="mt-2">
+      <label class="form-label small">Number of Pens</label>
+      <input id="editPens" type="number" class="form-control form-control-sm mb-2" />
+
+      <label class="form-label small">Pen Capacity</label>
+      <input id="editCapacity" type="number" class="form-control form-control-sm" />
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <button type="button" id="closeModal" class="btn btn-sm btn-secondary">
+        Cancel
+      </button>
+      <button type="submit" class="btn btn-sm btn-primary">
+        Update
+      </button>
+    </div>
+
+  </form>
+</div>
 
 <%- include("../../../partials/farm-manager/footer") %>

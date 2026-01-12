@@ -2,115 +2,198 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<!-- Main content -->
-<main class="main-content"> 
+<main class="main-content">
   <div class="container-fluid">
     <%- include("../../../partials/farm-manager/farmer_panel.ejs") %>
 
+    <section class="card form-card">
+      <header class="form-header">
+        <h2>CREATE AN ACCOUNT</h2>
+      </header>
 
-      <section class="card form-card">
-        <header class="form-header">
-          <h2>CREATE AN ACCOUNT</h2>
-        </header>
+      <div class="card-body">
 
-        <div class="card-body">
-          <div class="subheading">User Information</div>
-
-          <form id="createAccountForm" class="grid-form" autocomplete="off">
-
-            <!-- Row 1 -->
-            <div class="field">
-              <label>Name</label>
-              <input type="text" required />
-            </div>
-
-            <div class="field small">
-            <label>Sex</label>
-            <select required>
-                <option value="" disabled selected hidden>Select Gender</option>
-                <option>Male</option>
-                <option>Female</option>
-              </select>
-            </div>
-
-            <div class="field small">
-            <label>Municipal</label>
-            <select required>
-                <option value="" disabled selected hidden>Select Municipal</option>
-                <option>Boac</option>
-                <option>Gasan</option>
-                <option>Buenavista</option>
-                <option>Torrijos</option>
-                <option>Santa Cruz</option>
-                <option>Mogpog</option>
-            </select>
-            </div>
-
-
-            <div class="field">
-              <label>Address</label>
-              <input type="text" required />
-            </div>
-
-            <!-- Row 2 -->
-            <div class="field">
-              <label>Contact Info</label>
-              <input type="text" required>
-            </div>
-
-            <div class="field small">
-            <label>Production Type</label>
-            <select required>
-                <option value="" disabled selected hidden>Select Production Type</option>
-                <option>Breeder</option>
-                <option>Fatener</option>
-                <option>Both</option>
-              </select>
-            </div>
-
-            <div class="field tiny">
-              <label>Farm Size (m²/ha)</label>
-              <input type="number" placeholder="Farm Size" required />
-            </div>
-
-            <div class="field tiny">
-              <label>Pen Count</label>
-              <input type="number" required />
-            </div>
-
-            <div class="field tiny">
-              <label>Capacity</label>
-              <input type="number" required />
-            </div>
-
-            <!-- Row 3 -->
-            <div class="field">
-              <label>Training Attended (if any)</label>
-              <input type="text" placeholder="Training Attended" />
-            </div>
-
-            <div class="field">
-              <label>Password</label>
-              <input type="password" required />
-            </div>
-
-            <div class="field small">
-              <label>Membership Date</label>
-              <input type="text" />
-            </div>
-
-            <!-- Buttons -->
-            <div class="buttons">
-              <button type="reset" class="btn btn-clear">CLEAR</button>
-              <button type="submit" class="btn btn-save">SAVE</button>
-            </div>
-
-          </form>
+        <!-- Account Type -->
+        <div class="subheading">Account Type</div>
+        <div class="mb-4" style="max-width: 320px;">
+          <label class="form-label">Account Type</label>
+          <select id="accountType" class="form-select">
+            <option value="farmer" selected>Farmer</option>
+            <option value="encoder">Encoder</option>
+          </select>
         </div>
-      </section>
 
+        <div class="subheading">User Information</div>
+        
+        <!-- FORM FEEDBACK -->
+          <div
+            id="formAlert"
+            class="alert d-none mt-3"
+            role="alert"
+          ></div>
 
-  </div> <!-- container-fluid -->
+        <form id="createAccountForm" class="grid-form" autocomplete="off">
+
+          <!-- Names -->
+          <div class="field">
+            <label>First Name</label>
+            <input type="text" id="first_name" required />
+          </div>
+
+          <div class="field">
+            <label>Last Name</label>
+            <input type="text" id="last_name" required />
+          </div>
+
+          <!-- Address -->
+          <div class="field">
+            <label>Address</label>
+            <input type="text" id="address" required />
+          </div>
+
+          <!-- Contact -->
+          <div class="field">
+            <label>Contact Info</label>
+            <input type="text" id="contact_info" required />
+          </div>
+
+          <!-- Email -->
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="email" required />
+          </div>
+
+          <!-- Password -->
+          <div class="field">
+            <label>Password</label>
+            <input type="password" id="password" required />
+          </div>
+
+          <!-- FARMER-ONLY -->
+          <div class="field small farmer-only">
+            <label>Production Type</label>
+            <select id="production_type">
+              <option value="" disabled selected hidden>Select Production Type</option>
+              <option>Breeder</option>
+              <option>Fatener</option>
+              <option>Both</option>
+            </select>
+          </div>
+
+          <div class="field tiny farmer-only">
+            <label>Pen Count</label>
+            <input type="number" id="num_of_pens" min="0" />
+          </div>
+
+          <div class="field tiny farmer-only">
+            <label>Pen Capacity</label>
+            <input type="number" id="pen_capacity" min="0" />
+          </div>
+
+          <div class="field small farmer-only">
+            <label>Membership Date</label>
+            <input type="date" id="membership_date" readonly disabled />
+          </div>
+
+          <!-- Buttons -->
+          <div class="buttons">
+            <button type="reset" class="btn btn-clear">CLEAR</button>
+            <button type="submit" class="btn btn-save">SAVE</button>
+          </div>
+
+        </form>
+      </div>
+    </section>
+  </div>
 </main>
+
+<!-- CONFIRMATION MODAL -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Account Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <p class="text-muted mb-3">
+          Please review the details below before creating the account.
+        </p>
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <strong>Account Type:</strong>
+            <div id="preview_account_type"></div>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Name:</strong>
+            <div id="preview_name"></div>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Email:</strong>
+            <div id="preview_email"></div>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Contact Info:</strong>
+            <div id="preview_contact"></div>
+          </div>
+
+          <div class="col-12">
+            <strong>Address:</strong>
+            <div id="preview_address"></div>
+          </div>
+
+          <!-- FARMER ONLY -->
+          <div class="col-md-4 farmer-preview">
+            <strong>Production Type:</strong>
+            <div id="preview_production"></div>
+          </div>
+
+          <div class="col-md-4 farmer-preview">
+            <strong>Pen Count:</strong>
+            <div id="preview_pens"></div>
+          </div>
+
+          <div class="col-md-4 farmer-preview">
+            <strong>Pen Capacity:</strong>
+            <div id="preview_capacity"></div>
+          </div>
+
+          <div class="col-md-6 farmer-preview">
+            <strong>Membership Date:</strong>
+            <div id="preview_membership"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >
+          Back
+        </button>
+
+        <button
+          type="button"
+          id="confirmSubmitBtn"
+          class="btn btn-success"
+        >
+          Confirm & Create
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 <%- include("../../../partials/farm-manager/footer") %>

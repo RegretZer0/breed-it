@@ -2,121 +2,113 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-    <!-- Main content -->
-    <main class="main-content">
-      <div class="container-fluid">
-        <!-- Header card with tabs -->
-        <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
-        <!-- Filters row -->
-        <div class="card page-card mb-3">
-          <div class="card-body">
-            <form id="filtersForm" class="row g-2 align-items-center">
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm">
-                  <option>Location</option>
-                </select>
-              </div>
+<!-- Main content -->
+<main class="main-content">
+  <div class="container-fluid">
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm">
-                  <option>Pig Status</option>
-                </select>
-              </div>
+    <!-- Header card with tabs -->
+    <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm">
-                  <option>Sex</option>
-                </select>
-              </div>
+    <!-- Filters row -->
+    <div class="card page-card mb-3">
+      <div class="card-body">
+        <form id="filtersForm" class="row g-2 align-items-center">
 
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm">
-                  <option>Phase</option>
-                </select>
-              </div>
-
-              <div class="col-auto col-md">
-                <select class="form-select form-select-sm">
-                  <option>Type of Pig</option>
-                </select>
-              </div>
-
-              <div class="col-auto col-md">
-                <input type="date" class="form-control form-control-sm" />
-              </div>
-
-              <div class="col-auto text-center">— TO —</div>
-
-              <div class="col-auto col-md">
-                <input type="date" class="form-control form-control-sm"/>
-              </div>
-
-              <div class="col-auto col-md">
-                <input type="text" class="form-control form-control-sm" placeholder="Search by tag number" />
-              </div>
-
-              <div class="col-auto">
-                <button class="btn btn-success btn-sm search-btn">Search</button>
-              </div>
-            </form>
+          <div class="col-auto col-md">
+            <select class="form-select form-select-sm">
+              <option>Location</option>
+            </select>
           </div>
-        </div>
 
-        <!-- Table card -->
-        <div class="card page-card">
-          <div class="card-body p-0">
-            <div class="table-responsive custom-table-wrap">
-              <table class="table table-borderless mb-0">
-                <thead class="table-head">
-                  <tr>
-                    <th>YEAR</th>
-                    <th>TYPE</th>
-                    <th>TAG(ID)</th>
-                    <th>SEX</th>
-                    <th>COLOR</th>
-                    <th>BIRTH DATE</th>
-                    <th>AGE</th>
-                    <th>PIG STATUS</th>
-                    <th>CURRENT PHASE</th>
-                    <th>FARROWING DATE</th>
-                    <th>PIGLET COUNT</th>
-                    <th>PIGLET (ALIVE)</th>
-                    <th>PIGLET (STILLBORN)</th>
-                    <th>WEANING COUNT</th>
-                    <th>WEANING DATE</th>
-                    <th>ACTION</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>2024</td>
-                    <td>SOW</td>
-                    <td>E-0021</td>
-                    <td>F</td>
-                    <td>BLK</td>
-                    <td>11/15/24</td>
-                    <td>0Y - 9M -14D</td>
-                    <td>ALIVE</td>
-                    <td>LACTATING</td>
-                    <td>08/10/25</td>
-                    <td>8</td>
-                    <td>7</td>
-                    <td>1</td>
-                    <td>7</td>
-                    <td>09/05/25</td>
-                    <td><button class="btn btn-outline-primary btn-sm">VIEW</button></td>
-                  </tr>
-
-                  <tr class="empty-row">
-                    <td colspan="16"></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="col-auto col-md">
+            <select class="form-select form-select-sm">
+              <option>Pig Status</option>
+            </select>
           </div>
+
+          <div class="col-auto col-md">
+            <select class="form-select form-select-sm">
+              <option>Sex</option>
+            </select>
+          </div>
+
+          <div class="col-auto col-md">
+            <select class="form-select form-select-sm">
+              <option>Phase</option>
+            </select>
+          </div>
+
+          <div class="col-auto col-md">
+            <select class="form-select form-select-sm">
+              <option>Type of Pig</option>
+            </select>
+          </div>
+
+          <div class="col-auto col-md">
+            <input type="date" class="form-control form-control-sm" />
+          </div>
+
+          <div class="col-auto text-center">— TO —</div>
+
+          <div class="col-auto col-md">
+            <input type="date" class="form-control form-control-sm"/>
+          </div>
+
+          <div class="col-auto col-md">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              placeholder="Search by tag number"
+            />
+          </div>
+
+          <div class="col-auto">
+            <button class="btn btn-success btn-sm search-btn">
+              Search
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- Table card -->
+    <div class="card page-card">
+      <div class="card-body p-0">
+        <div class="table-responsive custom-table-wrap">
+          <table class="table table-borderless mb-0">
+
+            <!-- UPDATED TABLE HEADERS -->
+            <thead class="table-head">
+              <tr>
+                <th>YEAR</th>
+                <th>TAG (ID)</th>
+                <th>SEX</th>
+                <th>COLOR</th>
+                <th>BREED</th>
+                <th>BIRTH DATE</th>
+                <th>AGE</th>
+                <th>STATUS</th>
+                <th>BATCH</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+
+            <!-- UPDATED TABLE BODY -->
+            <tbody id="swineTableBody">
+              <tr>
+                <td colspan="10" class="text-center text-muted">
+                  Loading swine records...
+                </td>
+              </tr>
+            </tbody>
+
+          </table>
         </div>
       </div>
-    </main>
-  </div>
+    </div>
 
-  <%- include("../../../partials/farm-manager/footer") %>
+  </div>
+</main>
+
+<%- include("../../../partials/farm-manager/footer") %>

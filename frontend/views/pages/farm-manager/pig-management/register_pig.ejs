@@ -2,7 +2,6 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<!-- Main content -->
 <main class="main-content">
   <div class="container-fluid">
 
@@ -14,147 +13,140 @@
 
         <h4 class="mb-4 fw-bold">REGISTER A PIG</h4>
 
-        <!-- 🔴 REQUIRED: form ID for JS -->
         <form id="registerSwineForm">
 
-        <!-- Farmer Identification -->
-        <h6 class="section-title">Farmer Identification</h6>
-
-        <div class="row g-3 mb-4">
-          <div class="col-md-4">
-            <label class="form-label">Farmer</label>
-            <!-- JS needs farmerSelect -->
-            <input type="text" class="form-control" id="farmerSelect" placeholder="Juan Dela Cruz">
+          <!-- FARMER -->
+          <h6 class="section-title">Farmer Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Farmer</label>
+              <!-- MUST be a select (linked to farmer_id) -->
+                <select id="farmerSelect" class="form-select" required>
+                  <option value="">Select Farmer</option>
+                </select>
+            </div>
           </div>
 
-          <div class="col-md-2 d-flex align-items-end">
-            <button class="btn btn-save w-100" type="button">Select</button>
+          <!-- PIG IDENTIFICATION -->
+          <h6 class="section-title">Pig Identification</h6>
+          <div class="row g-3 mb-4">
+
+          <div class="col-md-3">
+            <label class="form-label">TAG (Swine ID)</label>
+            <input
+              type="text"
+              class="form-control"
+              id="swine_id"
+              readonly
+            />
           </div>
 
           <div class="col-md-3">
-            <label class="form-label">Municipal</label>
-            <select class="form-select">
-              <option value="" selected disabled>Municipal</option>
-              <option value="boac">Boac</option>
-              <option value="gasan">Gasan</option>
-              <option value="buenavista">Buenavista</option>
-              <option value="torrijos">Torrijos</option>
-              <option value="santa_cruz">Santa Cruz</option>
-              <option value="mogpog">Mogpog</option>
-            </select>
+            <label class="form-label">Batch</label>
+            <input
+              type="text"
+              class="form-control"
+              id="batch"
+              placeholder="e.g. A"
+              required
+            />
           </div>
 
-          <div class="col-md-3">
-            <label class="form-label">Farm Size (m²/ha)</label>
-            <input type="text" class="form-control" placeholder="Farm Size">
+
+            <div class="col-md-3">
+              <label class="form-label">Breed</label>
+              <select class="form-select" id="breed">
+                <option value="" disabled selected>Select Breed</option>
+                <option>Native</option>
+                <option>Large White</option>
+                <option>Landrace</option>
+                <option>Duroc</option>
+                <option>Pietrain</option>
+                <option>Berkshire</option>
+                <option>Crossbred</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Sex</label>
+              <select class="form-select" id="sex" required>
+                <option value="" disabled selected>Select Sex</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Color</label>
+              <select class="form-select" id="color">
+                <option value="" disabled selected>Select Color</option>
+                <option>Black</option>
+                <option>White</option>
+                <option>Pink</option>
+                <option>Brown</option>
+                <option>Red</option>
+                <option>Mixed</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Birth Date</label>
+              <input type="date" class="form-control" id="birth_date" />
+            </div>
+
           </div>
 
-          <div class="col-md-3">
-            <label class="form-label">Pen Count</label>
-            <input type="number" class="form-control" placeholder="Pen Count">
+          <!-- LINEAGE & STATUS -->
+          <h6 class="section-title">Lineage & Status</h6>
+          <div class="row g-3 mb-4">
+
+            <div class="col-md-3">
+              <label class="form-label">Sire ID</label>
+              <input type="text" class="form-control" id="sire_id" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Dam ID</label>
+              <input type="text" class="form-control" id="dam_id" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Health Status</label>
+              <select class="form-select" id="status">
+                <option>Healthy</option>
+                <option>Sick</option>
+                <option>Deceased</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Inventory Status</label>
+              <select class="form-select" id="inventory_status">
+                <option>In Stock</option>
+                <option>Sold</option>
+                <option>Transferred</option>
+              </select>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Date of Transfer</label>
+              <input type="date" class="form-control" id="date_transfer" />
+            </div>
+
           </div>
 
-          <div class="col-md-3">
-            <label class="form-label">Pig Count</label>
-            <input type="number" class="form-control" placeholder="Pig Count">
+          <p id="swineMessage" class="small"></p>
+
+          <!-- ACTIONS -->
+          <div class="d-flex justify-content-end gap-3">
+            <button type="reset" class="btn btn-clear px-4">CLEAR</button>
+            <button type="submit" class="btn btn-save px-4">SAVE</button>
           </div>
-        </div>
-
-        <!-- Physical Information -->
-        <h6 class="section-title">Physical Information</h6>
-
-        <div class="row g-3 mb-4">
-          <div class="col-md-3">
-            <label class="form-label">TAG (ID)</label>
-            <input type="text" class="form-control" id="batch" value="E02129">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Breed</label>
-            <select class="form-select" id="breed">
-              <option value="" selected disabled>Select Breed</option>
-              <option value="native">Native (Local)</option>
-              <option value="large_white">Large White</option>
-              <option value="landrace">Landrace</option>
-              <option value="duroc">Duroc</option>
-              <option value="pietrain">Pietrain</option>
-              <option value="berkshire">Berkshire</option>
-              <option value="crossbred">Crossbred</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Sex</label>
-            <select class="form-select" id="sex">
-              <option value="" selected disabled>Sex</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Color</label>
-            <select class="form-select" id="color">
-              <option value="" selected disabled>Select Color</option>
-              <option value="black">Black</option>
-              <option value="white">White</option>
-              <option value="pink">Pink</option>
-              <option value="brown">Brown</option>
-              <option value="red">Red</option>
-              <option value="black_white">Black & White</option>
-              <option value="white_black">White with Black Spots</option>
-              <option value="mixed">Mixed</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Weight (Kg)</label>
-            <input type="number" class="form-control" placeholder="Weight">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Date of Birth</label>
-            <input type="date" class="form-control" id="birth_date">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Purpose</label>
-            <select class="form-select" id="purpose">
-              <option value="" disabled selected>Select Purpose</option>
-              <option value="fattening">Fattening</option>
-              <option value="breeding">Breeding</option>
-              <option value="slaughter">Slaughter</option>
-              <option value="sale">For Sale</option>
-              <option value="research">Research</option>
-            </select>
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Current Status</label>
-            <select class="form-select" id="status">
-              <option value="alive" selected>Alive</option>
-              <option value="sold">Sold</option>
-              <option value="slaughtered">Slaughtered</option>
-              <option value="dead">Dead</option>
-              <option value="missing">Missing</option>
-              <option value="quarantined">Quarantined</option>
-            </select>
-          </div>
-        </div>
-
-        <p id="swineMessage"></p>
-
-        <!-- Actions -->
-        <div class="d-flex justify-content-end gap-3">
-          <button type="button" class="btn btn-clear px-4">CLEAR</button>
-          <button type="submit" class="btn btn-save px-4">SAVE</button>
-        </div>
 
         </form>
 
       </div>
     </div>
-
   </div>
 </main>
 
