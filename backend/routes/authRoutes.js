@@ -299,7 +299,11 @@ router.get("/farmers/:managerId", async (req, res) => {
     const managerId = req.params.managerId;
 
     const farmers = await Farmer.find({
-      $or: [{ registered_by: managerId }, { user_id: managerId }],
+      $or: [
+        { registered_by: managerId },
+        { user_id: managerId },
+        { managerId: managerId } // 🔹 include this
+      ],
     }).select("-password -__v");
 
     res.json({ success: true, farmers });
@@ -346,22 +350,6 @@ router.put("/farmer/update", attachUser, async (req, res) => {
     });
   } catch (error) {
     console.error("Update farmer error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-//=====================
-// GET ALL FARMERS FOR MANAGER (unchanged)
-//=====================
-router.get("/farmers/:managerId", async (req, res) => {
-  try {
-    const managerId = req.params.managerId;
-
-    const farmers = await Farmer.find({ managerId }).select("-password -__v");
-
-    res.json({ success: true, farmers });
-  } catch (error) {
-    console.error("Fetch farmers error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
