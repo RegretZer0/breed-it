@@ -4,6 +4,7 @@ const router = express.Router();
 const SwinePerformance = require("../models/SwinePerformance");
 const AIRecord = require("../models/AIRecord");
 const Swine = require("../models/Swine");
+const Farmer = require("../models/UserFarmer"); // Add this
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -17,7 +18,12 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     // ----------------------
     // Fetch all swines for this manager
     // ----------------------
-    const allSwines = await Swine.find({ manager_id: managerId });
+    const allSwines = await Swine.find({
+      $or: [
+        { registered_by: managerId }, 
+        { farmer_id: { $in: (await Farmer.find({ registered_by: managerId })).map(f => f._id) } }
+      ]
+    });
     console.log("Total swines for manager:", allSwines.length);
 
     // ----------------------
@@ -49,20 +55,15 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
       }
 
       let legScore = 0.5;
-        if (p.legConformation) {
-          switch (p.legConformation.toLowerCase()) {
-            case "straight": 
-              legScore = 1; 
-              break;
-            case "slightly bent": 
-              legScore = 0.6; 
-              break;
-            case "bent": 
-            default:
-              legScore = 0.4; 
-              break;
-          }
+      if (p.legConformation) {
+        switch (p.legConformation.toLowerCase()) {
+          case "straight": legScore = 1; break;
+          case "slightly bent": legScore = 0.6; break;
+          case "bent":
+          default:
+            legScore = 0.4; break;
         }
+      }
 
       let hoofScore = 0.5;
       if (p.hoofCondition) {
@@ -121,10 +122,11 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     performance.forEach(p => {
       if (!p.swine_id) return;
       const swineID = p.swine_id.swine_id;
-      const birthDate = p.swine_id.birthDate ? new Date(p.swine_id.birthDate) : null;
 
+      // ✅ Use correct birth_date field
+      const birthDate = p.swine_id.birth_date ? new Date(p.swine_id.birth_date) : null;
       const ageInMonths = birthDate ? (now - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
-      swineAges[swineID] = Math.min(ageInMonths, 24); // cap at 24 months
+      swineAges[swineID] = Math.min(ageInMonths, 24);
 
       const piglets = p.noOfPiglets || p.no_of_piglets || 0;
 
@@ -140,7 +142,7 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     allSwines.forEach(s => {
       if (!offspringBySwine[s.swine_id]) offspringBySwine[s.swine_id] = { total: 0, firstYear: 0 };
       if (!swineAges[s.swine_id]) {
-        const birthDate = s.birthDate ? new Date(s.birthDate) : null;
+        const birthDate = s.birth_date ? new Date(s.birth_date) : null;
         const ageInMonths = birthDate ? (now - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
         swineAges[s.swine_id] = Math.min(ageInMonths, 24);
       }
@@ -149,9 +151,9 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     const maxPiglets = Math.max(...Object.values(offspringBySwine).map(o => o.total), 1);
 
     const reproductionScores = Object.entries(offspringBySwine).map(([swineID, data]) => {
-      const ageFactor = Math.min(swineAges[swineID] / 24, 1); // 0–24 months normalized
-      const pigletFactor = data.total / maxPiglets; // relative to max in system
-      const score = Math.min(ageFactor * pigletFactor, 1); // capped at 1
+      const ageFactor = Math.min(swineAges[swineID] / 24, 1);
+      const pigletFactor = data.total / maxPiglets;
+      const score = Math.min(ageFactor * pigletFactor, 1);
 
       return {
         swine_id: swineID,

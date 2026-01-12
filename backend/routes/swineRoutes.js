@@ -49,7 +49,11 @@ router.post(
 
       const farmer = await Farmer.findOne({
         _id: farmer_id,
-        registered_by: managerId,
+        $or: [
+          { managerId: managerId },
+          { registered_by: managerId },
+          { user_id: managerId } // optional if legacy
+        ]
       });
 
       if (!farmer) {
@@ -234,7 +238,12 @@ router.get(
       const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
       const farmerIds = farmers.map((f) => f._id);
 
-      const swine = await Swine.find({ farmer_id: { $in: farmerIds } })
+      const swine = await Swine.find({
+        $or: [
+          { farmer_id: { $in: farmerIds } },
+          { registered_by: managerId }
+        ]
+      })
         .populate("farmer_id", "first_name last_name")
         .lean();
 
