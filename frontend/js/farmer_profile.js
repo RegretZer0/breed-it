@@ -2,11 +2,10 @@
 import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect the page: only farmers
+  // Protect the page
   await authGuard("farmer");
 
   const token = localStorage.getItem("token");
-  const farmerId = localStorage.getItem("userId"); // Using _id
   const profileMessage = document.getElementById("profileMessage");
 
   // Elements
@@ -19,8 +18,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const penCapacityEl = document.getElementById("penCapacity");
 
   try {
-    const res = await fetch(`http://localhost:5000/api/farmer/profile/${farmerId}`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch("http://localhost:5000/api/auth/farmer/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     });
 
     if (!res.ok) throw new Error(`Server returned ${res.status}`);
@@ -50,15 +50,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     profileMessage.style.color = "red";
   }
 
-  // Back to dashboard
+  // Back button
   const backBtn = document.getElementById("backBtn");
   backBtn?.addEventListener("click", () => {
-    const role = localStorage.getItem("role");
-    if (role === "farmer") window.location.href = "farmer_dashboard.html";
-    else window.location.href = "login.html";
+    window.location.href = "farmer_dashboard.html";
   });
 
-  // Logout handler
+  // Logout
   const logoutBtn = document.getElementById("logoutBtn");
   logoutBtn?.addEventListener("click", async () => {
     try {

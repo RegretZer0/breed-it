@@ -17,7 +17,7 @@ const farmerSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
   // The admin who registered this farmer
-  registered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  managerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Farmer", farmerSchema);

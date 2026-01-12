@@ -7,6 +7,7 @@ const { JWT_SECRET } = require("../config/jwt");
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
+const attachUser = require("../middleware/attachUser");
 
 // JWT helper
 function generateToken(user) {
@@ -190,65 +191,95 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Register Farmer
-router.post("/register-farmer", async (req, res) => {
-  const {
+
+// =====================
+// Register Farm Manager
+// =====================
+router.post("/register", async (req, res) => {
+  const { first_name, last_name, address, contact_info, email, password } = req.body;
+
+  if (await User.findOne({ email })) {
+    return res.status(400).json({ success: false, message: "Email already registered" });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await User.create({
     first_name,
     last_name,
     address,
-    contact_no,
+    contact_info,
     email,
-    password,
-    num_of_pens,
-    pen_capacity,
-    managerId,
-  } = req.body;
+    password: hashedPassword,
+    role: "farm_manager",
+  });
 
+  res.status(201).json({ success: true, message: "Farm Manager registered", user });
+});
+
+//=====================
+// REGISTER FARMER
+//=====================
+router.post("/register-farmer", async (req, res) => {
   try {
-    if (!first_name || !last_name || !email || !password || !managerId) {
-      return res.status(400).json({
-        success: false,
-        message: "First name, last name, email, password, and managerId are required",
-      });
+    const {
+      first_name,
+      last_name,
+      address,
+      contact_no,
+      email,
+      password,
+      managerId,
+      num_of_pens = 0,
+      pen_capacity = 0,
+    } = req.body;
+
+    if (!email || !password || !managerId) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
     const manager = await User.findById(managerId);
     if (!manager || manager.role !== "farm_manager") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Farm Manager ID",
-      });
+      return res.status(400).json({ success: false, message: "Invalid manager" });
     }
 
-    if (await Farmer.findOne({ email })) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
+    // Prevent duplicates
+    if (await User.findOne({ email }) || await Farmer.findOne({ email })) {
+      return res.status(400).json({ success: false, message: "Email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 1️⃣ Create USER (for authentication)
+    const user = await User.create({
+      first_name,
+      last_name,
+      email,
+      password: hashedPassword,
+      role: "farmer",
+      managerId,
+    });
+
+    // 2️⃣ Generate farmer_id
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
     const nextNum = lastFarmer
       ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
       : 1;
+    const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
-    const farmer_id = `Farmer-${String(nextNum).padStart(5, "0")}`;
-
+    // 3️⃣ Create FARMER profile
     const farmer = await Farmer.create({
+      user_id: user._id,
+      farmer_id: farmerId,
       first_name,
       last_name,
       address,
       contact_no,
       email,
       password: hashedPassword,
-      farmer_id,
-      role: "farmer",
-      num_of_pens: num_of_pens || 0,
-      pen_capacity: pen_capacity || 0,
-      registered_by: managerId,
-      user_id: managerId,
+      managerId,
+      num_of_pens,
+      pen_capacity,
     });
 
     res.status(201).json({
@@ -257,6 +288,7 @@ router.post("/register-farmer", async (req, res) => {
       farmer,
     });
   } catch (error) {
+    console.error("Register farmer error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -277,26 +309,32 @@ router.get("/farmers/:managerId", async (req, res) => {
   }
 });
 
+//=====================
+// GET FARMER PROFILE (new route using attachUser)
+//=====================
+router.get("/farmer/profile", attachUser, async (req, res) => {
+  if (req.currentUser.role !== "farmer") {
+    return res.status(403).json({ success: false, message: "Access denied" });
+  }
+  res.json({ success: true, farmer: req.currentUser });
+});
 
-// Update Farmer
-router.put("/update-farmer/:farmerId", async (req, res) => {
+//=====================
+// UPDATE FARMER (use attachUser)
+//=====================
+router.put("/farmer/update", attachUser, async (req, res) => {
   try {
-    const farmer = await Farmer.findOne({ farmer_id: req.params.farmerId });
-    if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        message: "Farmer not found",
-      });
+    if (req.currentUser.role !== "farmer") {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
 
-    // Only update fields that exist in the body
+    const farmer = req.currentUser;
+
+    // Only update allowed fields
     const updateFields = {};
-    if (req.body.first_name) updateFields.first_name = req.body.first_name;
-    if (req.body.last_name) updateFields.last_name = req.body.last_name;
-    if (req.body.address) updateFields.address = req.body.address;
-    if (req.body.contact_no) updateFields.contact_no = req.body.contact_no;
-    if (req.body.num_of_pens !== undefined) updateFields.num_of_pens = req.body.num_of_pens;
-    if (req.body.pen_capacity !== undefined) updateFields.pen_capacity = req.body.pen_capacity;
+    ["first_name", "last_name", "address", "contact_no", "num_of_pens", "pen_capacity"].forEach(field => {
+      if (req.body[field] !== undefined) updateFields[field] = req.body[field];
+    });
 
     Object.assign(farmer, updateFields);
     await farmer.save();
@@ -307,10 +345,26 @@ router.put("/update-farmer/:farmerId", async (req, res) => {
       farmer,
     });
   } catch (error) {
+    console.error("Update farmer error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
+//=====================
+// GET ALL FARMERS FOR MANAGER (unchanged)
+//=====================
+router.get("/farmers/:managerId", async (req, res) => {
+  try {
+    const managerId = req.params.managerId;
+
+    const farmers = await Farmer.find({ managerId }).select("-password -__v");
+
+    res.json({ success: true, farmers });
+  } catch (error) {
+    console.error("Fetch farmers error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Register Encoder
 router.post("/register-encoder", async (req, res) => {

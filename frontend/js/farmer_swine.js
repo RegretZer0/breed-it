@@ -5,23 +5,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page: only farmers
   await authGuard("farmer");
 
-  const userId = localStorage.getItem("userId");
-  const role = "farmer";
   const token = localStorage.getItem("token");
-
   const swineTableBody = document.querySelector("#swineTableBody");
   const loadingMessage = document.querySelector("#loadingMessage");
 
   try {
     loadingMessage.textContent = "Loading swine list...";
+    console.log(token);
 
-    const response = await fetch(`http://localhost:5000/api/swine?userId=${userId}&role=${role}`, {
+    // ✅ CALL the correct endpoint (no /farmer)
+    const response = await fetch(`http://localhost:5000/api/swine/farmer`, {
       headers: {
         "Authorization": `Bearer ${token}`,
       },
+      credentials: "include",
     });
 
-    const data = await response.json();
+    // 🔒 Safe parsing
+    const text = await response.text();
+    console.log("Raw server response:", text); // for debugging
+    const data = JSON.parse(text);
 
     if (!response.ok || !data.success) {
       loadingMessage.textContent = data.message || "Failed to fetch swine.";

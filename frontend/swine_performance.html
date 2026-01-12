@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Swine Performance Management</title>
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .ranking-table {
+      margin-top: 20px;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .ranking-table th, .ranking-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .top-1 { background-color: gold; font-weight: bold; }
+    .top-2 { background-color: silver; font-weight: bold; }
+    .top-3 { background-color: #cd7f32; font-weight: bold; } /* bronze */
+    .report-box {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #aaa;
+      min-height: 40px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -16,16 +37,47 @@
     </button>
     <div id="reportOutput" class="report-box"></div>
 
+    <!-- Rankings Section -->
+    <div class="rankings-section">
+      <h3>Performance Ranking</h3>
+      <table id="performanceRankingTable" class="ranking-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Swine ID</th>
+            <th>Name</th>
+            <th>Performance Score</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Compatibility Ranking</h3>
+      <table id="compatibilityRankingTable" class="ranking-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Swine ID</th>
+            <th>Max Compatibility Score</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
     <!-- Section: Add/Update Swine Performance -->
     <div class="form-section">
       <h3>Add / Update Performance</h3>
       <form id="performanceForm">
-
         <label for="swineSelect">Swine:</label>
         <select id="swineSelect" name="swine_id" required></select>
 
         <label for="parentType">Parent Type:</label>
-        <input type="text" id="parentType" name="parentType" required />
+        <select id="parentType" name="parentType" required>
+          <option value="">Select Parent Type</option>
+          <option value="Sow">Sow</option>
+          <option value="Boar">Boar</option>
+        </select>
 
         <label for="recordDate">Record Date:</label>
         <input type="date" id="recordDate" name="recordDate" />
@@ -43,19 +95,40 @@
         <input type="text" id="color" name="color" />
 
         <label for="teethCount">Teeth Count:</label>
-        <input type="number" id="teethCount" name="teethCount" />
+        <input type="number" id="teethCount" name="teethCount" min="0" />
 
         <label for="teethAlignment">Teeth Alignment:</label>
-        <input type="text" id="teethAlignment" name="teethAlignment" />
+        <select id="teethAlignment" name="teethAlignment">
+          <option value="">Select Teeth Alignment</option>
+          <option value="Straight">Straight</option>
+          <option value="Minor Issue">Minor Issue</option>
+          <option value="Misaligned">Misaligned</option>
+        </select>
 
         <label for="legConformation">Leg Conformation:</label>
-        <input type="text" id="legConformation" name="legConformation" />
+        <select id="legConformation" name="legConformation" required>
+          <option value="">Select</option>
+          <option value="straight">Straight</option>
+          <option value="slightly bent">Slightly Bent</option>
+          <option value="bent">Bent</option>
+        </select>
 
         <label for="hoofCondition">Hoof Condition:</label>
-        <input type="text" id="hoofCondition" name="hoofCondition" />
+        <select id="hoofCondition" name="hoofCondition">
+          <option value="">Select Hoof Condition</option>
+          <option value="Healthy">Healthy</option>
+          <option value="Minor Crack">Minor Crack</option>
+          <option value="Damaged">Damaged</option>
+        </select>
 
         <label for="bodySymmetryAndMuscling">Body Symmetry & Muscling:</label>
-        <input type="text" id="bodySymmetryAndMuscling" name="bodySymmetryAndMuscling" />
+        <select id="bodySymmetryAndMuscling" name="bodySymmetryAndMuscling">
+          <option value="">Select Symmetry & Muscling</option>
+          <option value="Excellent">Excellent</option>
+          <option value="Good">Good</option>
+          <option value="Fair">Fair</option>
+          <option value="Poor">Poor</option>
+        </select>
 
         <label for="noOfPiglets">No. of Piglets:</label>
         <input type="number" id="noOfPiglets" name="noOfPiglets" />
