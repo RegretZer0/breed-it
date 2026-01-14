@@ -57,12 +57,17 @@ export async function authGuard(requiredRole = null) {
     }
 
     // Role check
-    if (allowedRoles.length > 0 && !allowedRoles.includes(data.user.role)) {
-      console.warn(`[authGuard] Access denied. Allowed roles: ${allowedRoles.join(", ")}, actual role: ${data.user.role}`);
-      localStorage.clear();
-      alert("Access denied. Redirecting to login...");
-      window.location.href = "login.html";
-      return null;
+    if (allowedRoles.length > 0) {
+      const normalizedUserRole = (data.user.role || "").toLowerCase().trim();
+      const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase().trim());
+
+      if (!normalizedAllowedRoles.includes(normalizedUserRole)) {
+        console.warn(`[authGuard] Access denied. Allowed roles: ${normalizedAllowedRoles.join(", ")}, actual role: ${normalizedUserRole}`);
+        localStorage.clear();
+        alert("Access denied. Redirecting to login...");
+        window.location.href = "login.html";
+        return null;
+      }
     }
 
     // Success

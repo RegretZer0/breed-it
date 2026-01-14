@@ -8,7 +8,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const adminId = localStorage.getItem("userId");
   const BASE_URL = "http://localhost:5000";
 
-  const accountsList = document.getElementById("farmersList"); // reuse list
+  if (!adminId) {
+    alert("Manager ID missing. Please log in again.");
+    return;
+  }
+
+  const accountsList = document.getElementById("farmersList"); 
   const editModal = document.getElementById("editModal");
   const editForm = document.getElementById("editFarmerForm");
   const registerForm = document.getElementById("registerFarmerForm");
@@ -18,7 +23,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentRole = roleSelect.value;
 
   // ROLE SWITCH
-
   roleSelect.addEventListener("change", () => {
     currentRole = roleSelect.value;
     toggleFarmerFields();
@@ -32,12 +36,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // FETCH ACCOUNTS
-
   async function fetchAccounts() {
     try {
       const endpoint =
         currentRole === "farmer"
-          ? `/api/auth/farmers/${adminId}`
+          ? `/api/auth/farmers/${adminId}` // manager fetching all farmers
           : `/api/auth/encoders/${adminId}`;
 
       const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -61,8 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // RENDER
-
+  // RENDER ACCOUNTS
   function renderAccounts(accounts) {
     accountsList.innerHTML = "";
 
@@ -84,8 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <button class="edit-btn">Edit</button>
       `;
 
-      li.querySelector(".edit-btn")
-        .addEventListener("click", () => openEditModal(acc));
+      li.querySelector(".edit-btn").addEventListener("click", () => openEditModal(acc));
 
       accountsList.appendChild(li);
     });
@@ -99,16 +100,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_info: document.getElementById("contact_no").value.trim(),
+      contact_no: document.getElementById("contact_no").value.trim(),
       email: document.getElementById("email").value.trim(),
       password: document.getElementById("password").value,
       managerId: adminId
     };
 
     if (currentRole === "farmer") {
-      payload.num_of_pens = Number(document.getElementById("num_of_pens").value);
-      payload.pen_capacity = Number(document.getElementById("pen_capacity").value);
+      payload.num_of_pens = Number(document.getElementById("num_of_pens").value) || 0;
+      payload.pen_capacity = Number(document.getElementById("pen_capacity").value) || 0;
     }
+
+    console.log("Register payload:", payload);
 
     const endpoint =
       currentRole === "farmer"
@@ -125,7 +128,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      console.log("Raw register response:", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error("Server returned non-JSON response");
+      }
 
       if (res.ok && data.success) {
         messageEl.style.color = "green";
@@ -142,13 +153,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // EDIT
-
+  // EDIT MODAL
   function openEditModal(acc) {
     document.getElementById("editFirstName").value = acc.first_name || "";
     document.getElementById("editLastName").value = acc.last_name || "";
     document.getElementById("editAddress").value = acc.address || "";
-    document.getElementById("editContact").value = acc.contact_info || "";
+    document.getElementById("editContact").value = acc.contact_no || "";
 
     if (currentRole === "farmer") {
       document.getElementById("editPens").value = acc.num_of_pens || 0;
@@ -159,6 +169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     editModal.style.display = "flex";
   }
 
+  // UPDATE FARMER/ENCODER
   editForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -166,9 +177,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       first_name: document.getElementById("editFirstName").value.trim(),
       last_name: document.getElementById("editLastName").value.trim(),
       address: document.getElementById("editAddress").value.trim(),
-      contact_info: document.getElementById("editContact").value.trim()
+      contact_no: document.getElementById("editContact").value.trim()
     };
-
 
     if (currentRole === "farmer") {
       payload.num_of_pens = Number(document.getElementById("editPens").value);
@@ -177,7 +187,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const endpoint =
       currentRole === "farmer"
-        ? `/api/auth/update-farmer/${editForm.dataset.id}`
+        ? `/api/auth/farmer/update`  // ✅ use attachUser route
         : `/api/auth/update-encoder/${editForm.dataset.id}`;
 
     const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -200,13 +210,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // CLOSE MODAL
-
   document.getElementById("closeModal").addEventListener("click", () => {
     editModal.style.display = "none";
   });
 
   // INIT
-
   toggleFarmerFields();
   fetchAccounts();
 });

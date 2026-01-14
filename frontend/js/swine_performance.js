@@ -1,9 +1,9 @@
 import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect page: allow farm_managers AND encoders
-  const user = await authGuard(["farm_manager", "encoder"]); // ✅ get authenticated user
-  if (!user) return; // stop execution if not logged in or access denied
+  // 🔐 Protect page
+  const user = await authGuard(["farm_manager", "encoder"]);
+  if (!user) return;
 
   const performanceForm = document.getElementById("performanceForm");
   const aiForm = document.getElementById("aiForm");
@@ -18,21 +18,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   let editingPerformanceId = null;
   let editingAIId = null;
 
-  // ✅ Use returned user info to determine managerId
+  // Determine managerId based on user role
   const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-  const token = localStorage.getItem("token"); // 🔐 for API requests
+  const token = localStorage.getItem("token");
 
   const generateID = (prefix = "R") =>
     `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // ❗ Safety check (same pattern as manage_swine.js)
   if (!managerId) {
     console.error("No managerId resolved for user:", user);
     alert("Your account is not linked to a farm manager.");
     return;
   }
 
+  // ----------------------
   // Fetch Swines
+  // ----------------------
   const fetchSwines = async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/swine/all?managerId=${encodeURIComponent(managerId)}`, {
@@ -57,7 +58,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  // ----------------------
   // Fetch Performance Records
+  // ----------------------
   const fetchPerformanceRecords = async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/swine-records/performance/all?managerId=${encodeURIComponent(managerId)}`, {
@@ -93,7 +96,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  // ----------------------
   // Fetch AI Records
+  // ----------------------
   const fetchAIRecords = async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/swine-records/ai/all?managerId=${encodeURIComponent(managerId)}`, {
@@ -119,61 +124,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  // Performance Form Submit
-  performanceForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const formData = Object.fromEntries(new FormData(performanceForm).entries());
-    const payload = {
-      swine_id: formData.swine_id || formData.swineSelect || formData.swineId,
-      parentType: formData.parent_type || formData.parentType,
-      recordDate: formData.recordDate,
-      weight: formData.weight,
-      bodyLength: formData.body_length || formData.bodyLength,
-      heartGirth: formData.heart_girth || formData.heartGirth,
-      color: formData.color,
-      teethCount: formData.teeth_count || formData.teethCount,
-      teethAlignment: formData.teeth_alignment || formData.teethAlignment,
-      legConformation: formData.leg_conformation || formData.legConformation,
-      hoofCondition: formData.hoof_condition || formData.hoofCondition,
-      bodySymmetryAndMuscling: formData.body_symmetry_and_muscling || formData.bodySymmetryAndMuscling,
-      noOfPiglets: formData.no_of_piglets || formData.noOfPiglets,
-      managerId: managerId,
-    };
-
-    if (!editingPerformanceId) {
-      payload.reproductionId = generateID("R");
-      await savePerformance(payload);
-    } else {
-      await updatePerformance(editingPerformanceId, payload);
+  // ----------------------
+  // Save / Update Functions
+  // ----------------------
+  const savePerformance = async (payload) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/swine-records/performance/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to save performance");
+      fetchPerformanceRecords();
+    } catch (err) {
+      console.error("Error saving performance:", err);
+      alert("Error saving performance: " + err.message);
     }
+  };
 
-    performanceForm.reset();
-    editingPerformanceId = null;
-  });
-
-  // AI Form Submit
-  aiForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const formData = Object.fromEntries(new FormData(aiForm).entries());
-    const payload = {
-      swine_id: formData.swine_id || formData.female_swine_id || formData.swineSelect,
-      male_swine_id: formData.male_swine_id || formData.maleSwineSelect,
-      insemination_date: formData.insemination_date || formData.inseminationDate,
-      managerId: managerId,
-    };
-
-    if (!editingAIId) {
-      payload.insemination_id = generateID("AI");
-      await saveAIRecord(payload);
-    } else {
-      await updateAIRecord(editingAIId, payload);
+  const updatePerformance = async (id, payload) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/swine-records/performance/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to update performance");
+      fetchPerformanceRecords();
+    } catch (err) {
+      console.error("Error updating performance:", err);
+      alert("Error updating performance: " + err.message);
     }
+  };
 
-    aiForm.reset();
-    editingAIId = null;
-  });
+  const saveAIRecord = async (payload) => {
+    try {
+      const res = await fetch("http://localhost:5000/api/swine-records/ai/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to save AI record");
+      fetchAIRecords();
+    } catch (err) {
+      console.error("Error saving AI record:", err);
+      alert("Error saving AI record: " + err.message);
+    }
+  };
 
+  const updateAIRecord = async (id, payload) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/swine-records/ai/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to update AI record");
+      fetchAIRecords();
+    } catch (err) {
+      console.error("Error updating AI record:", err);
+      alert("Error updating AI record: " + err.message);
+    }
+  };
+
+  // ----------------------
   // Edit Functions
+  // ----------------------
   window.editPerformance = async (id) => {
     try {
       const res = await fetch(`http://localhost:5000/api/swine-records/performance/${id}?managerId=${encodeURIComponent(managerId)}`);
@@ -183,17 +207,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const r = data.record;
       editingPerformanceId = id;
       swineSelect.value = r.swine_id?._id || "";
-      performanceForm.parent_type.value = r.parentType || r.parent_type || "";
+      performanceForm.parentType.value = r.parentType || r.parent_type || "";
+      performanceForm.recordDate.value = r.recordDate || "";
       performanceForm.weight.value = r.weight || "";
-      performanceForm.body_length.value = r.bodyLength || r.body_length || "";
-      performanceForm.heart_girth.value = r.heartGirth || r.heart_girth || "";
+      performanceForm.bodyLength.value = r.bodyLength || r.body_length || "";
+      performanceForm.heartGirth.value = r.heartGirth || r.heart_girth || "";
       performanceForm.color.value = r.color || "";
-      performanceForm.teeth_count.value = r.teethCount || "";
-      performanceForm.teeth_alignment.value = r.teethAlignment || "";
-      performanceForm.leg_conformation.value = r.legConformation || "";
-      performanceForm.hoof_condition.value = r.hoofCondition || "";
-      performanceForm.body_symmetry_and_muscling.value = r.bodySymmetryAndMuscling || "";
-      performanceForm.no_of_piglets.value = r.noOfPiglets || r.no_of_piglets || "";
+      performanceForm.teethCount.value = r.teethCount || r.teeth_count || "";
+      performanceForm.teethAlignment.value = r.teethAlignment || r.teeth_alignment || "";
+      performanceForm.legConformation.value = r.legConformation || r.leg_conformation || "";
+      performanceForm.hoofCondition.value = r.hoofCondition || r.hoof_condition || "";
+      performanceForm.bodySymmetryAndMuscling.value = r.bodySymmetryAndMuscling || r.body_symmetry_and_muscling || "";
+      performanceForm.noOfPiglets.value = r.noOfPiglets || r.no_of_piglets || "";
     } catch (err) {
       console.error(err);
     }
@@ -215,7 +240,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  // ----------------------
+  // Generate Breeding Analytics Report
+  // ----------------------
+  const generateReportBtn = document.getElementById("generateReportBtn");
+  const reportOutput = document.getElementById("reportOutput");
+
+  generateReportBtn.addEventListener("click", async () => {
+    try {
+      reportOutput.innerHTML = "Generating report...";
+      const res = await fetch("http://localhost:5000/api/breeding/report", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      let html = "<h4>Performance Scores</h4><ul>";
+      data.performance_scores.forEach(p => {
+        html += `<li>${p.swine_id}: ${p.performance_score}</li>`;
+      });
+      html += "</ul>";
+
+      html += "<h4>Reproduction Scores</h4><ul>";
+      data.reproduction_scores.forEach(r => {
+        html += `<li>${r.swine_id}: ${r.reproduction_score} (Piglets: ${r.total_piglets}, Age: ${r.age_months}m)</li>`;
+      });
+      html += "</ul>";
+
+      html += "<h4>Compatibility Scores</h4><ul>";
+      data.compatibility_scores.forEach(c => {
+        html += `<li>${c.female} + ${c.male}: ${c.compatibility_score}</li>`;
+      });
+      html += "</ul>";
+
+      html += "<h4>Ranking by Performance</h4><ol>";
+      data.ranking_performance.forEach(r => {
+        html += `<li>${r.swine_id} - ${r.performance_score}</li>`;
+      });
+      html += "</ol>";
+
+      html += "<h4>Ranking by Compatibility</h4><ol>";
+      data.ranking_compatibility.forEach(r => {
+        html += `<li>${r.female} + ${r.male}: ${r.compatibility_score}</li>`;
+      });
+      html += "</ol>";
+
+      reportOutput.innerHTML = html;
+    } catch (err) {
+      console.error("Error generating report:", err);
+      reportOutput.innerHTML = `<span style="color:red;">Error: ${err.message}</span>`;
+    }
+  });
+
+  // ----------------------
   // Initial Load
+  // ----------------------
   await fetchSwines();
   await fetchPerformanceRecords();
   await fetchAIRecords();

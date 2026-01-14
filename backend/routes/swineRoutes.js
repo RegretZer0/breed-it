@@ -52,7 +52,11 @@ router.post(
 
       const farmer = await Farmer.findOne({
         _id: farmer_id,
-        registered_by: managerId,
+        $or: [
+          { managerId: managerId },
+          { registered_by: managerId },
+          { user_id: managerId } // optional if legacy
+        ]
       });
 
       if (!farmer) {
@@ -129,20 +133,17 @@ router.get(
       if (user.role === "farm_manager") {
         const farmers = await Farmer.find({ registered_by: user.id });
         swine = await Swine.find({
-          farmer_id: {
-            $in: farmers.map((f) => mongoose.Types.ObjectId(f._id)),
-          },
+          farmer_id: { $in: farmers.map((f) => mongoose.Types.ObjectId(f._id)) },
         }).populate("farmer_id", "first_name last_name");
       } else if (user.role === "encoder") {
         const farmers = await Farmer.find({
           registered_by: user.managerId,
         });
         swine = await Swine.find({
-          farmer_id: {
-            $in: farmers.map((f) => mongoose.Types.ObjectId(f._id)),
-          },
+          farmer_id: { $in: farmers.map((f) => mongoose.Types.ObjectId(f._id)) },
         }).populate("farmer_id", "first_name last_name");
       } else if (user.role === "farmer") {
+        // ✅ Farmer uses farmerProfileId
         swine = await Swine.find({
           farmer_id: mongoose.Types.ObjectId(user.farmerProfileId),
         }).populate("farmer_id", "first_name last_name");
@@ -285,7 +286,10 @@ router.get(
       const farmerIds = farmers.map((f) => f._id);
 
       const swine = await Swine.find({
-        farmer_id: { $in: farmerIds },
+        $or: [
+          { farmer_id: { $in: farmerIds } },
+          { registered_by: managerId }
+        ]
       })
         .populate("farmer_id", "first_name last_name")
         .lean();
@@ -298,6 +302,56 @@ router.get(
         message: "Server error",
         error: err.message,
       });
+    }
+  }
+);
+
+// ----------------------
+// Get swine assigned to the logged-in farmer
+// ----------------------
+router.get(
+  "/farmer",
+  requireSessionAndToken,
+  allowRoles("farmer"),
+  async (req, res) => {
+    try {
+      const user = req.user;
+
+      if (!user.farmerProfileId) {
+        return res.status(400).json({
+          success: false,
+          message: "Farmer profile not linked",
+        });
+      }
+
+      const swine = await Swine.find({
+        farmer_id: new mongoose.Types.ObjectId(user.farmerProfileId),
+      })
+        .populate("farmer_id", "first_name last_name")
+        .lean();
+
+      const swineData = swine.map((s) => ({
+        _id: s._id,
+        swine_id: s.swine_id,
+        batch: s.batch,
+        sex: s.sex,
+        breed: s.breed,
+        status: s.status,
+        color: s.color,
+        inventory_status: s.inventory_status,
+        date_transfer: s.date_transfer,
+        date_registered: s.date_registered,
+        sire_id: s.sire_id,
+        dam_id: s.dam_id,
+        farmer_name: s.farmer_id
+          ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}`.trim()
+          : "N/A",
+      }));
+
+      res.json({ success: true, swine: swineData });
+    } catch (err) {
+      console.error("[SWINE FETCH FOR FARMER ERROR]:", err);
+      res.status(500).json({ success: false, message: "Server error", error: err.message });
     }
   }
 );

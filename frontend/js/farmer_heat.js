@@ -14,9 +14,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- LOAD FARMER'S SWINE ----------------
   try {
-    const res = await fetch(`http://localhost:5000/api/swine?userId=${userId}&role=farmer`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(`http://localhost:5000/api/swine/farmer`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include"
     });
+
     const data = await res.json();
     if (!data.success) throw new Error(data.message || "Failed to fetch swine");
 

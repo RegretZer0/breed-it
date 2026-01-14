@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel.js");
+const Farmer = require("../models/UserFarmer"); 
 
 // 🔐 Require BOTH session + token
 async function requireSessionAndToken(req, res, next) {
@@ -42,19 +43,28 @@ async function requireSessionAndToken(req, res, next) {
     const user = await User.findById(decoded.id).lean();
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(401).json({ success: false, message: "User not found" });
     }
+
+    // 🔑 Attach farmerProfileId if farmer
+    let farmerProfileId = null;
+    if (user.role === "farmer") {
+      const farmerProfile = await Farmer.findOne({ user_id: user._id }).lean();
+      if (!farmerProfile) {
+        return res.status(401).json({ success: false, message: "Farmer profile missing" });
+      }
+      farmerProfileId = farmerProfile._id.toString();
+    }
+
 
     // ✅ 6) Attach COMPLETE user object
     req.user = {
       id: user._id.toString(),
       role: user.role,
       email: user.email,
-      name: user.fullName,
+      name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
       managerId: user.managerId ? user.managerId.toString() : null,
+      farmerProfileId,
     };
 
     next();
