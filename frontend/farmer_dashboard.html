@@ -9,6 +9,9 @@
   <div class="container">
     <h2>Welcome, Farmer!</h2>
 
+    <!-- Notifications area (optional UI placeholder) -->
+    <div id="notificationContainer"></div>
+
     <button id="viewSwineBtn">View Swine</button>
     <button id="heatReportBtn">Report Swine in Heat</button>
     <button id="profileBtn">View Profile</button>
@@ -16,6 +19,10 @@
     <button id="logoutBtn">Logout</button>
   </div>
 
+  <!-- Notifications MUST load first (shared logic) -->
+  <script type="module" src="./js/notifications.js"></script>
+
+  <!-- Farmer dashboard logic -->
   <script type="module" src="./js/farmer_dashboard.js"></script>
 </body>
 </html>

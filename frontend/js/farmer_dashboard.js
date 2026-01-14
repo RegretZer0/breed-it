@@ -1,12 +1,16 @@
-// farmer_dashboard.js
 import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+import { initNotifications } from "./notifications.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page
-  await authGuard("farmer"); // only farmers
+  const user = await authGuard("farmer"); // only farmers
+  if (!user) return; // authGuard will redirect if not authenticated
 
-  const farmerId = localStorage.getItem("userId");
+  const farmerId = user.id; // safer than reading localStorage
   const token = localStorage.getItem("token");
+
+  // ----- Notifications Setup -----
+  initNotifications(farmerId); // centralized notification logic
 
   // View Swine
   const viewSwineBtn = document.getElementById("viewSwineBtn");
@@ -37,7 +41,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
-        // 🔒 Optionally notify backend of logout
         await fetch("http://localhost:5000/api/auth/logout", {
           method: "POST",
           credentials: "include",
@@ -45,12 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
-        // Clear local storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("role");
-        localStorage.removeItem("user");
-
+        localStorage.clear(); // clear all user info
         window.location.href = "login.html";
       }
     });
