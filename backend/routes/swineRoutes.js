@@ -15,10 +15,11 @@ router.post(
   requireSessionAndToken,
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
+    // Standardized destructuring to match the payload from manage_swine.js
     const {
-      farmer_id, sex, color, breed, birthDate, health_status,
-      sireId, damId, dateTransfer, batch,
-      ageStage, weight, bodyLength, heartGirth, teethCount,
+      farmer_id, sex, color, breed, birth_date, health_status,
+      sire_id, dam_id, date_transfer, batch,
+      age_stage, weight, bodyLength, heartGirth, teethCount,
       legConformation, deformities, teatCount
     } = req.body;
 
@@ -41,10 +42,12 @@ router.post(
 
       if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
 
+      // Auto-generate Swine ID based on Batch
       const lastSwine = await Swine.find({ batch }).sort({ _id: -1 }).limit(1);
       let nextNumber = 1;
       if (lastSwine.length && lastSwine[0].swine_id) {
-        const lastNum = parseInt(lastSwine[0].swine_id.split("-")[1]);
+        const parts = lastSwine[0].swine_id.split("-");
+        const lastNum = parseInt(parts[parts.length - 1]);
         if (!isNaN(lastNum)) nextNumber = lastNum + 1;
       }
       const swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
@@ -52,7 +55,7 @@ router.post(
       let initialStatus;
       let initialPerfStage;
 
-      if (ageStage === "piglet") {
+      if (age_stage === "piglet") {
         initialStatus = "1st Selection Ongoing";
         initialPerfStage = "1st Stage Selection"; 
       } else {
@@ -68,13 +71,13 @@ router.post(
         sex,
         color,
         breed,
-        birth_date: birthDate,
+        birth_date: birth_date,
         health_status: health_status || "Healthy",
-        sire_id: sireId,
-        dam_id: damId,
-        age_stage: ageStage || "piglet",
+        sire_id: sire_id,
+        dam_id: dam_id,
+        age_stage: age_stage || "piglet",
         current_status: initialStatus,
-        date_transfer: dateTransfer,
+        date_transfer: date_transfer,
         
         performance_records: [{
           stage: initialPerfStage,
@@ -84,7 +87,7 @@ router.post(
           heart_girth: heartGirth,
           teeth_count: teethCount,
           leg_conformation: legConformation,
-          teat_count: teatCount,
+          teat_count: teatCount, // Assigned to teat_count to match Swine.js Schema
           deformities: Array.isArray(deformities) ? deformities : ["None"],
           recorded_by: user.id
         }]
@@ -288,7 +291,7 @@ router.get("/males", requireSessionAndToken, allowRoles("farm_manager", "encoder
         { managerId: managerId },
         { manager_id: managerId }
       ]
-    }).select("_id swine_id breed health_status"); // Added _id here!
+    }).select("_id swine_id breed health_status");
 
     res.json({ success: true, males });
   } catch (err) {

@@ -16,10 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportFarmer = document.getElementById("reportFarmer");
   const reportSigns = document.getElementById("reportSigns");
   const reportProbability = document.getElementById("reportProbability");
-  
-  // UPDATED: Container for multiple media
   const mediaGallery = document.getElementById("mediaGallery"); 
-  
   const searchInput = document.getElementById("searchInput");
 
   const approveBtn = document.getElementById("approveBtn");
@@ -81,6 +78,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reports.forEach(r => {
       const row = document.createElement("tr");
+      // FIXED: Use r.swine_id.current_status to match your model
+      const currentStatus = r.swine_id?.current_status || "Unknown";
+      
       row.innerHTML = `
         <td>${r.swine_id?.swine_id || "Unknown"}</td>
         <td>${r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "Unknown"}</td>
@@ -88,7 +88,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td style="font-weight:bold; color: ${r.heat_probability > 70 ? '#2ecc71' : '#e67e22'}">
           ${r.heat_probability !== null ? r.heat_probability + '%' : 'N/A'}
         </td>
-        <td style="text-transform: capitalize;">${r.status.replace(/_/g, ' ')}</td>
+        <td style="text-transform: capitalize;">
+            <span class="status-badge">${r.status.replace(/_/g, ' ')}</span><br>
+            <small style="color: #666;">(Swine: ${currentStatus})</small>
+        </td>
         <td>${getDaysLeft(r.next_heat_check)}</td>
         <td>${getDaysLeft(r.expected_farrowing)}</td>
         <td><button class="btn-view" data-id="${r._id}">View</button></td>
@@ -104,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // ---------------- VIEW REPORT DETAILS (UPDATED FOR MULTIPLE MEDIA) ----------------
+  // ---------------- VIEW REPORT DETAILS ----------------
   function viewReport(reportId) {
     const r = allReports.find(report => report._id === reportId);
     if (!r) {
@@ -113,23 +116,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     currentReportId = reportId;
-    
-    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+    // FIXED: Showing current_status in details for immediate verification
+    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"} 
+                             <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">
+                               Status: ${r.swine_id?.current_status || "N/A"}
+                             </span>`;
     reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
     reportSigns.innerHTML = `<strong>Signs:</strong> ${r.signs?.join(", ") || "None"}`;
     reportProbability.innerHTML = `<strong>System Prediction:</strong> ${r.heat_probability !== null ? r.heat_probability + '%' : 'N/A'}`;
 
-    // --- UPDATED MEDIA GALLERY LOGIC ---
-    mediaGallery.innerHTML = ""; // Clear old previews
-    
-    // Ensure we are working with an array (handles both old string and new array formats)
+    mediaGallery.innerHTML = ""; 
     const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : [r.evidence_url];
 
     if (evidences.length > 0 && evidences[0]) {
       evidences.forEach(url => {
-        // Detect if it's a video (Base64 data URL contains the mimetype)
         const isVideo = url.includes("video/") || url.match(/\.(mp4|mov|webm)$/i);
-        
         const mediaWrapper = document.createElement("div");
         mediaWrapper.style.marginBottom = "10px";
 
@@ -147,7 +148,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           img.style.width = "100%";
           img.style.borderRadius = "8px";
           img.style.cursor = "pointer";
-          // Simple click-to-open in new tab for "full view"
           img.onclick = () => {
             const win = window.open();
             win.document.write(`<img src="${url}" style="max-width:100%;">`);
@@ -162,7 +162,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reportDetails.style.display = "block";
 
-    // Button visibility logic
+    // Logic for button visibility based on Report Status
     approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
     confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
     confirmPregnancyBtn.style.display = r.status === "waiting_heat_check" ? "inline-block" : "none";
@@ -195,8 +195,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res.ok) throw new Error(data.message || "Action failed");
       
       alert(successMsg);
-      await loadReports();
+      
+      // Close details and refresh table
       reportDetails.style.display = "none";
+      await loadReports(); 
     } catch (err) { 
       console.error("Action Error:", err);
       alert("Error: " + err.message); 
@@ -204,7 +206,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   // ---------------- LISTENERS ----------------
-  approveBtn.addEventListener("click", () => handleAction("approve", "Report approved!"));
+  approveBtn.addEventListener("click", () => {
+    handleAction("approve", "Report approved! Swine is now 'In-Heat'.");
+  });
 
   confirmAIBtn.addEventListener("click", async () => {
     try {
@@ -215,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       
       if (!data.success || !data.males?.length) {
-        alert("No male swine found for your farm. Please register a Boar first.");
+        alert("No boars found. Please register a Boar first.");
         return;
       }
 
@@ -225,7 +229,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       aiConfirmModal.style.display = "block";
     } catch (err) {
-      console.error("Male fetch error:", err);
       alert("Failed to fetch boar list.");
     }
   });
@@ -233,18 +236,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   submitAIBtn.addEventListener("click", () => {
     const selectedObjectId = boarSelect.value; 
     if (selectedObjectId) {
-      handleAction("confirm-ai", "AI Confirmed!", { maleSwineId: selectedObjectId });
+      handleAction("confirm-ai", "AI Confirmed! Swine moved to 'Awaiting Recheck'.", { maleSwineId: selectedObjectId });
       aiConfirmModal.style.display = "none";
     } else {
       alert("Please select a boar.");
     }
   });
 
-  confirmPregnancyBtn.addEventListener("click", () => handleAction("confirm-pregnancy", "Pregnancy confirmed!"));
+  confirmPregnancyBtn.addEventListener("click", () => {
+    handleAction("confirm-pregnancy", "Pregnancy confirmed! Swine is now 'Pregnant'.");
+  });
   
   followUpBtn.addEventListener("click", () => {
-    if(confirm("Swine is still in heat? This will reset the AI cycle.")) {
-      handleAction("still-heat", "Cycle reset.");
+    if(confirm("Is the swine showing heat signs again? This will reset the status to 'In-Heat'.")) {
+      handleAction("still-heat", "Cycle reset to In-Heat.");
     }
   });
 
@@ -277,7 +282,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (searchInput) {
     searchInput.addEventListener("input", (e) => {
-      const term = e.target.value.toLowerCase();
+      const term = e.target.value.toLowerCase();  
       renderTable(allReports.filter(r => r.swine_id?.swine_id.toLowerCase().includes(term)));
     });
   }
