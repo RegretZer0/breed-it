@@ -5,7 +5,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
-const MongoStore = require("connect-mongo").default;
+const MongoStore = require("connect-mongo").default; // Fixed .default issue for newer versions
+const initHeatCron = require("./utils/cronJobs"); // 🛠️ Added Cron Job Import
 
 const adminRoutes = require("./routes/adminRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
@@ -15,12 +16,10 @@ if (!process.env.MONGO_URI) {
   console.error("❌ ERROR: MONGO_URI missing in .env");
   process.exit(1);
 }
-
 if (!process.env.JWT_SECRET) {
   console.error("❌ ERROR: JWT_SECRET missing in .env");
   process.exit(1);
 }
-
 if (!process.env.SESSION_SECRET) {
   console.error("❌ ERROR: SESSION_SECRET missing in .env");
   process.exit(1);
@@ -43,23 +42,27 @@ app.use(express.urlencoded({ extended: true }));
 
 // STATIC FILES
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(express.static(path.join(__dirname, "public"))); // <-- add this
+app.use(express.static(path.join(__dirname, "public")));
 
 // MONGODB CONNECTION
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
-  .then(() => console.log("✅ MongoDB Connected"))
+  .then(() => {
+    console.log("✅ MongoDB Connected");
+    // 🛠️ Initialize Cron Jobs once the database is connected
+    initHeatCron();
+    console.log("⏲️ Heat Observation Cron Job Initialized");
+  })
   .catch((err) => {
     console.error("❌ MongoDB Connection Failed:", err);
     process.exit(1);
   });
 
-
 // SESSION CONFIG (MongoDB)
 app.use(
   session({
     name: "breedit.sid",
-    secret: process.env.SESSION_SECRET, // ✅ enforced
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {

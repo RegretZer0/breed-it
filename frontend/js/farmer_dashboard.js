@@ -2,15 +2,66 @@ import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
 import { initNotifications } from "./notifications.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+  const BACKEND_URL = "http://localhost:5000";
+  
   // 🔐 Protect the page
   const user = await authGuard("farmer"); // only farmers
   if (!user) return; // authGuard will redirect if not authenticated
 
-  const farmerId = user.id; // safer than reading localStorage
+  const farmerId = user.id; 
   const token = localStorage.getItem("token");
 
   // ----- Notifications Setup -----
-  initNotifications(farmerId); // centralized notification logic
+  initNotifications(farmerId); 
+
+  // ----- CALENDAR INITIALIZATION -----
+  const calendarEl = document.getElementById('calendar');
+  if (calendarEl) {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,listWeek'
+      },
+      // Fetching events filtered for THIS specific farmer
+      events: async function(info, successCallback, failureCallback) {
+        try {
+          // We pass the farmerId as a query parameter so the backend can filter
+          const response = await fetch(`${BACKEND_URL}/api/heat/calendar-events?farmerId=${farmerId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          const data = await response.json();
+          if (data.success) {
+            successCallback(data.events);
+          } else {
+            console.error("Calendar fetch error:", data.message);
+            failureCallback(data.message);
+          }
+        } catch (error) {
+          console.error("Fetch error for calendar:", error);
+          failureCallback(error);
+        }
+      },
+      eventDidMount: (info) => {
+        const type = info.event.extendedProps.type;
+        const typeLabel = type === 'farrowing' ? 'Farrowing Due' : 'Heat Re-check';
+        info.el.title = `${info.event.title} - ${typeLabel}`;
+      },
+      eventClick: (info) => {
+        // Farmers can click to go straight to the reporting page for that swine
+        const swineId = info.event.title.split(':')[1]?.trim().split(' ')[0];
+        window.location.href = `report_heat.html?swineId=${swineId}`;
+      }
+    });
+
+    calendar.render();
+  }
 
   // View Swine
   const viewSwineBtn = document.getElementById("viewSwineBtn");
@@ -41,14 +92,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
-        await fetch("http://localhost:5000/api/auth/logout", {
+        await fetch(`${BACKEND_URL}/api/auth/logout`, {
           method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
           credentials: "include",
         });
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
-        localStorage.clear(); // clear all user info
+        localStorage.clear(); 
         window.location.href = "login.html";
       }
     });

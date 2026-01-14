@@ -5,41 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Encoder Dashboard</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+  <style>
+    /* Basic layout for the calendar */
+    #calendar {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      color: #333; /* Ensures text is visible if style.css has dark theme defaults */
+    }
+    
+    .dashboard-actions {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .button {
+      min-width: 180px;
+    }
+  </style>
 </head>
 <body>
   <div class="dashboard-container">
     <h2>Welcome, <span id="encoderName">Encoder</span></h2>
 
-    <!-- Section: Links to Manage Swine -->
-    <div style="margin: 20px 0;">
+    <div class="dashboard-actions">
       <a href="manage_swine.html">
         <button class="button">Manage Swine</button>
       </a>
-    </div>
 
-    <!-- Section: Link to Heat Reports -->
-    <div style="margin: 20px 0;">
       <a href="admin_heat_reports.html">
         <button class="button" style="background-color: #5aa9e6;">View Heat Reports</button>
       </a>
-    </div>
 
-    <!-- Section: Link to Swine Performance -->
-    <div style="margin: 20px 0;">
       <a href="swine_performance.html">
         <button class="button" style="background-color: #6aa84f;">Swine Performance</button>
       </a>
     </div>
 
-    <!-- Logout -->
-    <div style="margin-top: 40px;">
+    <hr style="border: 0; border-top: 1px solid #ddd; margin: 40px 0;">
+
+    <div id="calendar-container">
+      <h3 style="text-align: center;">Farm Schedule (Heat Checks & Farrowing)</h3>
+      <div id="calendar"></div>
+    </div>
+
+    <div style="margin-top: 40px; text-align: center;">
       <button id="logoutBtn" class="button" style="background-color: #f44336;">
         Logout
       </button>
     </div>
   </div>
 
-  <!-- Connect JS -->
   <script type="module" src="./js/encoder_dashboard.js"></script>
 </body>
 </html>

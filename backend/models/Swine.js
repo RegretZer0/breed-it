@@ -15,22 +15,25 @@ const swineSchema = new mongoose.Schema({
   current_status: {
     type: String,
     enum: [
-      // Piglet / Growth Path
+      // Piglet / Growth Path (From Flowchart)
       "1st Selection Ongoing",     
       "Monitoring (Day 1-30)",     
       "Weaned",                    
       "2nd Selection Ongoing",     
       "Monitoring (3 Months)",     
       
-      // Adult / Reproductive Path
-      "Open",                      
-      "In-Heat",                   
+      // Adult / Reproductive Path (Synchronized with Heat Logic)
+      "Open",                      // Not currently in a cycle
+      "In-Heat",                   // Heat Report Approved
+      "Awaiting Recheck",          // AI Service Done (23-day countdown)
       "Bred",                      
-      "Pregnant",                  
-      "Lactating",                 
+      "Pregnant",                  // Passed 23-day recheck (115-day countdown)
+      "Farrowing",                 // Active farrowing process
+      "Lactating",                 // Nursing piglets
       
       // Exit Path
       "Market-Ready",              
+      "Weight Limit (15-25kg)",    // Specific node from flowchart
       "Culled/Sold"                
     ],
     default: "1st Selection Ongoing"
@@ -72,7 +75,6 @@ const swineSchema = new mongoose.Schema({
   }],
 
   // ------------------- Medical & Health Tracking -------------------
-  // Captures "injections" (Iron, Vaccines) and treatments
   medical_records: [{
     treatment_type: { 
       type: String, 
@@ -98,7 +100,6 @@ const swineSchema = new mongoose.Schema({
     teeth_count: { type: Number },
     teeth_alignment: { type: String },
     leg_conformation: { type: String },
-    // Teat count is vital for female selection (Morphological)
     teat_count: { type: Number }, 
     deformities: { type: [String], default: ["None"] },
     passed_selection: { type: Boolean, default: true },

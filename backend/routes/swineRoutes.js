@@ -274,28 +274,26 @@ router.get(
 );
 
 // ----------------------
-// Get only male swine
+// Get only male swine 
 // ----------------------
-router.get(
-  "/males",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
-    try {
-      const user = req.user;
-      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-      const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
-      const farmerIds = farmers.map((f) => new mongoose.Types.ObjectId(f._id));
+router.get("/males", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+  try {
+    const user = req.user;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-      const males = await Swine.find({ sex: "Male", farmer_id: { $in: farmerIds } })
-        .populate("farmer_id", "first_name last_name")
-        .lean();
+    const males = await Swine.find({ 
+      sex: "Male",
+      $or: [
+        { registered_by: managerId },
+        { managerId: managerId },
+        { manager_id: managerId }
+      ]
+    }).select("_id swine_id breed health_status"); // Added _id here!
 
-      res.json({ success: true, males });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
+    res.json({ success: true, males });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching male swine" });
   }
-);
+});
 
 module.exports = router;

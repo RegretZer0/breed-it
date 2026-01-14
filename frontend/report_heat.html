@@ -6,95 +6,136 @@
   <title>Report Swine in Heat</title>
   <link rel="stylesheet" href="/css/styles.css" />
   <style>
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    button {
-      padding: 5px 10px;
-      background-color: #5aa9e6;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #498ac7;
-    }
-    .countdown {
-      font-weight: bold;
-      color: #333;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    #reportMessage {
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
+    .container { max-width: 1000px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    
+    /* Form Styling */
+    form { background: #fefefe; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 30px; }
+    .signs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+    .signs-grid label { display: flex; align-items: center; cursor: pointer; font-size: 0.95em; }
+    .signs-grid input { margin-right: 10px; width: 18px; height: 18px; }
+
+    /* Media Preview Styling */
+    #mediaPreview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
       margin-top: 10px;
-      font-weight: bold;
     }
+    .preview-item {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    /* Table Styling */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+    th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+    th { background-color: #5aa9e6; color: white; }
+    tr:nth-child(even) { background-color: #fafafa; }
+
+    /* Buttons */
+    .btn-back { background-color: #6c757d; margin-bottom: 15px; border: none; padding: 8px 15px; color: white; border-radius: 4px; cursor: pointer; }
+    .btn-submit { background-color: #28a745; border: none; color: white; border-radius: 4px; width: 100%; padding: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer; }
+    .btn-submit:hover { background-color: #218838; }
+    .btn-logout { background-color: #dc3545; border: none; color: white; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+    .btn-followup { background-color: #e67e22; border: none; padding: 8px 12px; color: white; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    
+    /* Status & Countdowns */
+    .timer { font-family: monospace; font-weight: bold; color: #d35400; }
+
+    #reportMessage { margin-top: 10px; font-weight: bold; text-align: center; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Report Swine in Heat</h2>
+    <h2>🐷 Heat & Ovulation Reporting</h2>
 
-    <!-- Back button -->
-    <button onclick="window.location.href='farmer_dashboard.html'">
+    <button class="btn-back" onclick="window.location.href='farmer_dashboard.html'">
       ← Back to Dashboard
     </button>
 
-    <!-- Form -->
     <form id="heatReportForm">
-      <label for="swineSelect">Select Swine:</label><br>
-      <select id="swineSelect" required></select><br><br>
+      <h3 style="margin-top:0;">Submit New Heat Sign</h3>
+      
+      <label for="swineSelect" style="font-weight:bold;">Select Swine ID:</label>
+      <select id="swineSelect" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc;" required>
+        <option value="">Loading your swine...</option>
+      </select>
 
-      <label>Signs of Heat:</label><br>
-      <input type="checkbox" name="signs" value="Red/Swollen Vulva"> Red/Swollen Vulva<br>
-      <input type="checkbox" name="signs" value="Restlessness"> Restlessness<br>
-      <input type="checkbox" name="signs" value="Frequent Mounting"> Frequent Mounting<br>
-      <input type="checkbox" name="signs" value="Clear Mucus"> Clear Mucus<br>
-      <input type="checkbox" name="signs" value="Other"> Other<br><br>
+      <p style="font-weight:bold; margin-bottom: 5px; margin-top: 20px;">Observed Signs (Select all that apply):</p>
+      <div class="signs-grid">
+        <label><input type="checkbox" name="signs" value="Reddened Vulva"> Reddened Vulva</label>
+        <label><input type="checkbox" name="signs" value="Swollen Vulva"> Swollen Vulva</label>
+        <label><input type="checkbox" name="signs" value="Mucous Discharge"> Mucous Discharge</label>
+        <label><input type="checkbox" name="signs" value="Seeking the Boar"> Seeking the Boar</label>
+        <label><input type="checkbox" name="signs" value="Perked/Twitching Ears"> Perked/Twitching Ears</label>
+        <label><input type="checkbox" name="signs" value="Standing Reflex"> <b>Standing Reflex</b> (Crucial)</label>
+        <label><input type="checkbox" name="signs" value="Back Pressure Test"> <b>Back Pressure Test</b></label>
+      </div>
 
-      <label for="evidence">Upload Video/Photo:</label><br>
-      <input type="file" id="evidence" accept="video/*,image/*" required><br><br>
+      <label for="evidence" style="font-weight:bold;">Upload Evidence (Multiple Photos/Videos):</label>
+      <input type="file" id="evidence" name="evidence" accept="video/*,image/*" style="display:block; margin: 10px 0;" multiple required>
+      <small style="color: #666;">Provide clear evidence of behavioral signs or vulva status. You can select up to 5 files.</small>
+      
+      <div id="mediaPreview"></div>
 
-      <button type="submit">Submit Report</button>
+      <button type="submit" class="btn-submit" style="margin-top: 20px;">Submit Report to Manager</button>
       <p id="reportMessage"></p>
     </form>
 
-    <!-- ---------------- FARMER'S HEAT REPORTS TABLE ---------------- -->
-    <h3>Your Heat Reports</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Swine ID</th>
-          <th>Farmer</th>
-          <th>Date Reported</th>
-          <th>Status</th>
-          <th>Countdowns</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="reportsTableBody">
-        <tr><td colspan="6">Loading reports...</td></tr>
-      </tbody>
-    </table>
+    <h3>Your Recent Reports & Cycles</h3>
+    
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Swine ID</th>
+            <th>Report Date</th>
+            <th>Status</th>
+            <th>Next Check</th>
+            <th>Expected Farrowing</th>
+            <th>Required Action</th>
+          </tr>
+        </thead>
+        <tbody id="reportsTableBody">
+          <tr><td colspan="6" style="text-align:center;">Checking for active reports...</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-    <!-- Optional logout button -->
-    <button id="logoutBtn" style="margin-top: 20px;">Logout</button>
+    <button id="logoutBtn" class="btn-logout">Logout</button>
   </div>
+
+  <script>
+    const evidenceInput = document.getElementById('evidence');
+    const mediaPreview = document.getElementById('mediaPreview');
+
+    evidenceInput.addEventListener('change', function() {
+      mediaPreview.innerHTML = ''; // Clear previous previews
+      const files = Array.from(this.files);
+      
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          let element;
+          if (file.type.startsWith('image/')) {
+            element = document.createElement('img');
+            element.src = e.target.result;
+          } else if (file.type.startsWith('video/')) {
+            element = document.createElement('video');
+            element.src = e.target.result;
+            element.muted = true;
+          }
+          element.classList.add('preview-item');
+          mediaPreview.appendChild(element);
+        }
+        reader.readAsDataURL(file);
+      });
+    });
+  </script>
 
   <script type="module" src="/js/farmer_heat.js"></script>
 </body>
