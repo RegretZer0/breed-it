@@ -89,8 +89,8 @@ router.get(
   requireFarmer,
   (req, res) => {
     res.render("pages/farmer/report", {
-      page_title: "Reports",
-      current_section: "reports",
+      page_title: "Report",
+      current_section: "report",
       current_page: "report",
     });
   }

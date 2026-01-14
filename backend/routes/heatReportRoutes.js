@@ -31,98 +31,101 @@ router.post(
   "/add",
   requireSessionAndToken,
   allowRoles("farm_manager", "encoder", "farmer"),
-  upload.single("evidence"),
+  upload.array("evidence", 11), // ✅ MULTI FILE SUPPORT
   async (req, res) => {
     try {
-      const { swineId, signs, farmerId } = req.body;
-      const file = req.file;
+      const { swineId, farmerId } = req.body;
 
-      if (!swineId || !signs || !file || !farmerId) {
+      // ✅ SAFE signs parsing
+      let signs = [];
+      if (req.body.signs) {
+        try {
+          signs = JSON.parse(req.body.signs);
+        } catch {
+          signs = [];
+        }
+      }
+
+      // ✅ EVIDENCE VALIDATION (CORRECT)
+      if (!req.files || req.files.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "All fields are required"
+          message: "At least one image or video is required"
         });
       }
 
       // ---------------- FIND FARMER PROFILE ----------------
       const farmer = await Farmer.findOne({ user_id: farmerId });
       if (!farmer) {
-        return res.status(404).json({ success: false, message: "Farmer not found" });
+        return res.status(404).json({
+          success: false,
+          message: "Farmer not found"
+        });
       }
 
       const user = req.user;
 
       // ---------------- ROLE-BASED ACCESS ----------------
       if (
-        (user.role === "farm_manager" && farmer.managerId.toString() !== user.id) ||
-        (user.role === "encoder" && farmer.managerId.toString() !== user.managerId) ||
-        (user.role === "farmer" && farmer.user_id.toString() !== user.id)
+        (user.role === "farm_manager" &&
+          farmer.managerId.toString() !== user.id) ||
+        (user.role === "encoder" &&
+          farmer.managerId.toString() !== user.managerId) ||
+        (user.role === "farmer" &&
+          farmer.user_id.toString() !== user.id)
       ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
+        return res.status(403).json({
+          success: false,
+          message: "Access denied"
+        });
       }
 
-      // ---------------- FIND SWINE ----------------
-      const swine = await Swine.findOne({ swine_id: swineId });
-      if (!swine) {
-        return res.status(404).json({ success: false, message: "Swine not found" });
+      // ---------------- FIND SWINE (OPTIONAL) ----------------
+      let swine = null;
+      if (swineId) {
+        swine = await Swine.findOne({ swine_id: swineId });
+        if (!swine) {
+          return res.status(404).json({
+            success: false,
+            message: "Swine not found"
+          });
+        }
       }
 
-      // ---------------- CREATE HEAT REPORT ----------------
+      // ---------------- SAVE EVIDENCE URLS ----------------
+      const evidenceUrls = req.files.map(
+        f => `/uploads/${f.filename}`
+      );
+
+      // ---------------- CREATE REPORT ----------------
       const newReport = new HeatReport({
-        swine_id: swine._id,
+        swine_id: swine ? swine._id : null,
         farmer_id: farmer._id,
         manager_id: farmer.managerId,
-        signs: Array.isArray(signs) ? signs : JSON.parse(signs),
-        evidence_url: `/uploads/${file.filename}`,
+        signs,
+        evidence_urls: evidenceUrls, // ✅ ARRAY
         status: "pending"
       });
 
       await newReport.save();
 
-      // =====================================================
-      // 🔔 CREATE NOTIFICATIONS (SERVER-SIDE)
-      // =====================================================
-
-      // Find farm manager (AUTH user)
-      const farmManager = await UserModel.findOne({
-        _id: farmer.managerId,
-        role: "farm_manager"
-      });
-
-      // Find encoders under this manager
-      const encoders = await UserModel.find({
-        manager_id: farmer.managerId,
-        role: "encoder"
-      });
-
-      const recipients = [
-        ...(farmManager ? [farmManager._id] : []),
-        ...encoders.map(e => e._id)
-      ];
-
-      if (recipients.length > 0) {
-        const notifications = recipients.map(user_id => ({
-          user_id,
-          title: "New Heat / Ovulation Report",
-          message: `Farmer ${farmer.first_name} ${farmer.last_name} submitted a heat report for swine ${swine.swine_id}.`,
-          type: "info"
-        }));
-
-        await Notification.insertMany(notifications);
-      }
-
       // ---------------- RESPONSE ----------------
       res.status(201).json({
         success: true,
-        message: "Heat report submitted and notifications sent",
+        message: "Heat report submitted successfully",
         report: newReport
       });
+
     } catch (err) {
       console.error("Heat report error:", err);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
     }
   }
 );
+
 
 /* ======================================================
    GET ALL HEAT REPORTS FOR MANAGER / ENCODER

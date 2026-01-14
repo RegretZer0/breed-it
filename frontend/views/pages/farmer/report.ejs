@@ -1,6 +1,7 @@
 <%- include("../../partials/farmer/farmer_nav") %>
+
 <div class="app-root">
-<!-- CONTENT -->
+  <!-- CONTENT -->
   <main class="report-container">
     <h2 class="page-title">REPORT</h2>
 
@@ -15,14 +16,14 @@
       <div class="filters">
         <div class="filter">
           <label>Report Status</label>
-            <select id="statusFilter">
-              <option value="Recent">Recent</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
+          <select id="statusFilter">
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="waiting_heat_check">Waiting Heat Check</option>
+            <option value="pregnant">Pregnant</option>
+            <option value="rejected">Rejected</option>
+          </select>
         </div>
-
 
         <div class="filter">
           <label>Date</label>
@@ -36,127 +37,199 @@
           </select>
         </div>
 
-
         <button class="chat-btn" id="searchBtn">
           <i class="fa-solid fa-magnifying-glass"></i> SEARCH
         </button>
-        <button class="chat-btn outline" id="clearFilterBtn">
-          CLEAR
-        </button>
+        <button class="chat-btn outline" id="clearFilterBtn">CLEAR</button>
       </div>
 
-    <!-- ================= FILTERED RESULTS ================= -->
-    <section id="filteredSection" style="display:none;">
-      <h4 class="section-title">Filtered Results</h4>
-      <div id="filteredLogsContainer"></div>
+      <!-- FILTERED RESULTS -->
+      <section id="filteredSection" style="display:none;">
+        <h4 class="section-title">Filtered Results</h4>
+        <div id="filteredLogsContainer"></div>
+      </section>
+
+      <!-- RECENT LOGS -->
+      <h4 class="section-title">Recent Logs</h4>
+      <div id="logsContainer">
+        <div class="spinner"></div>
+      </div>
     </section>
 
-    <!-- ================= RECENT LOGS ================= -->
-    <h4 class="section-title">Recent Logs</h4>
-          <div id="logsContainer">
-            <div class="spinner"></div>
+    <!-- ================= REPORT DETAILS MODAL ================= -->
+    <div id="reportModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3>Report Details</h3>
+        <div id="modalBody">
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= CREATE REPORT ================= -->
+    <section id="createSection" class="hidden">
+      <form id="heatReportForm" class="form-card">
+        
+     <div class="form-section">
+      <h4>General Information</h4>
+        <div class="form-row">
+          <div>
+            <label>Report ID</label>
+            <input type="text" id="reportId" readonly />
           </div>
 
-    </section>
-
-
-  <!-- ================= REPORT DETAILS MODAL ================= -->
-  <div id="reportModal" class="modal hidden">
-    <div class="modal-content">
-      <span class="close-modal">&times;</span>
-      <h3>Report Details</h3>
-      <div id="modalBody">
-        <p>Loading...</p>
-      </div>
-    </div>
-  </div>
-
-
-<!-- ================= CREATE REPORT ================= -->
-<section id="createSection" class="hidden">
-  <form id="heatReportForm" class="form-card">
-    <h4>Information</h4>
-
-    <div class="form-row">
-      <div>
-        <label>Report ID</label>
-        <input type="text" id="reportId" readonly />
+          <div>
+            <label>Select Pig</label>
+            <select id="swineSelect" required>
+              <option value="">Select pig</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div>
-        <label>Select Pig</label>
-        <select id="swineSelect" required>
-          <option value="">Select pig</option>
+        <!-- ================= HEALTH ================= -->
+        <div class="form-section">
+        <h4>Health & Feeding</h4>
+        <label>Health Concerns</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="healthConcerns" value="coughing"> Coughing</label>
+          <label><input type="checkbox" name="healthConcerns" value="fever"> Fever</label>
+          <label><input type="checkbox" name="healthConcerns" value="injury"> Injury</label>
+          <label><input type="checkbox" name="healthConcerns" value="diarrhea"> Diarrhea</label>
+          <label><input type="checkbox" name="healthConcerns" value="lameness"> Lameness</label>
+          <label><input type="checkbox" name="healthConcerns" value="skin_lesions"> Skin Lesions</label>
+        </div>
+
+        <small class="hint-text">Select all that apply</small>
+
+
+        <label>Feeding & Growth Status</label>
+        <select id="feedingStatus">
+          <option value="">Normal</option>
+          <option value="poor_appetite">Poor Appetite</option>
+          <option value="weight_loss">Weight Loss</option>
         </select>
-      </div>
-    </div>
+        </div>
 
-    <label>Health Concerns</label>
-    <select id="healthConcern">
-      <option value="">Select</option>
-      <option value="coughing">Coughing</option>
-      <option value="fever">Fever</option>
-      <option value="injury">Injury</option>
-      <option value="diarrhea">Diarrhea</option>
-    </select>
+        <!-- ================= ESTRUS DETECTION ================= -->
+         <div class="form-section">
+        <h4>Reproductive Observation (Estrus Detection)</h4>
 
-    <label>Feeding and Growth</label>
-    <select id="feedingStatus">
-      <option value="">Select</option>
-      <option value="normal">Normal</option>
-      <option value="poor_appetite">Poor Appetite</option>
-      <option value="weight_loss">Weight Loss</option>
-    </select>
+        <label>Observed Reproductive Signs</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="reproductiveSigns" value="reddened_vulva"> Reddened Vulva</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="swollen_vulva"> Swollen Vulva</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="mucous_discharge"> Mucous Discharge</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="seeking_boar"> Seeking the Boar</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="perked_ears"> Perked / Twitching Ears</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="standing_reflex"> Standing Reflex</label>
+          <label><input type="checkbox" name="reproductiveSigns" value="back_pressure_positive"> Back Pressure Test (Positive)</label>
+        </div>
 
-    <label>Reproductive Signs</label>
-    <select id="reproductiveSigns">
-      <option value="">Select</option>
-      <option value="in_heat">In Heat</option>
-      <option value="not_in_heat">Not in Heat</option>
-      <option value="pregnant">Pregnant</option>
-    </select>
+        <small class="hint-text">Select all that apply</small>
+        </div>
 
-    <label>Vaccination and Medication</label>
-    <select id="medicationStatus">
-      <option value="">Select</option>
-      <option value="up_to_date">Up to date</option>
-      <option value="needs_medication">Needs Medication</option>
-    </select>
+        <!-- ================= BREEDING ACTION ================= -->
+        <div class="form-section">
+        <h4>Breeding Decision</h4>
 
-    <label>Pig Status</label>
-    <select id="pigStatus">
-      <option value="">Select</option>
-      <option value="healthy">Healthy</option>
-      <option value="sick">Sick</option>
-      <option value="under_observation">Under Observation</option>
-    </select>
+        <label>Breeding Action Taken</label>
+        <select id="breedingAction">
+          <option value="">Select</option>
+          <option value="artificial_insemination">Artificial Insemination</option>
+          <option value="natural_mating">Natural Mating</option>
+          <option value="observation_only">Observation Only</option>
+        </select>
+        </div>
 
-    <label>Other Concerns / Remarks</label>
-    <textarea id="remarks" placeholder="Type your concerns here"></textarea>
+        <!-- ================= PREGNANCY & FARROWING ================= -->
+        <div class="form-section">
+        <h4>Pregnancy & Farrowing</h4>
 
-    <!-- UPLOAD -->
-    <label>Upload Image / Video</label>
-    <div class="upload-box">
-      <input
-        type="file"
-        id="evidence"
-        accept="image/*,video/*"
-        hidden
-      />
-      <button type="button" class="upload-btn" id="uploadBtn">
-        <i class="fa-solid fa-plus"></i>
-      </button>
-      <div id="previewContainer"></div>
-    </div>
+        <label>Current Reproductive Status</label>
+        <select id="pregnancyStatus">
+          <option value="">Select</option>
+          <option value="open">Open / Not Pregnant</option>
+          <option value="suspected_pregnant">Suspected Pregnant</option>
+          <option value="confirmed_pregnant">Confirmed Pregnant</option>
+          <option value="farrowed">Farrowed</option>
+        </select>
 
-    <!-- ACTIONS -->
-    <div class="form-actions">
-      <button type="button" class="cancel-btn" id="cancelCreate">CANCEL</button>
-      <button type="submit" class="send-btn">SEND</button>
-    </div>
+        <label>Piglet Outcome (If Farrowed)</label>
+        <div class="form-row">
+          <input type="number" id="totalPiglets" placeholder="Total Piglets Born" min="0">
+          <input type="number" id="femalePiglets" placeholder="Female Piglets" min="0">
+          <input type="number" id="malePiglets" placeholder="Male Piglets" min="0">
+          <input type="number" id="pigletMortality" placeholder="Mortality Count" min="0">
+        </div>
+        </div>
 
-    <p id="reportMessage"></p>
-  </form>
-</section>
+        <!-- ================= SELECTION & GROWTH ================= -->
+        <div class="form-section">
+        <h4>Growth & Selection Monitoring</h4>
 
-  <%- include("../../partials/farmer/farmer_footer") %>
+        <label>Growth Performance</label>
+        <select id="growthPerformance">
+          <option value="">Select</option>
+          <option value="excellent">Excellent</option>
+          <option value="average">Average</option>
+          <option value="poor">Poor</option>
+        </select>
+
+        <label>Observed Deformities</label>
+        <select id="deformities">
+          <option value="">Select</option>
+          <option value="none">None</option>
+          <option value="minor">Minor</option>
+          <option value="major">Major</option>
+        </select>
+
+        <label>Current Weight (kg)</label>
+        <input type="number" id="currentWeight" min="0" step="0.1" placeholder="e.g. 18.5">
+        </div>
+
+        <!-- ================= MEDICATION ================= -->
+        <div class="form-section">
+        <h4>Vaccination & Medication</h4>
+
+        <label>Medication Status</label>
+        <select id="medicationStatus">
+          <option value="">Select</option>
+          <option value="up_to_date">Up to Date</option>
+          <option value="needs_medication">Needs Medication</option>
+        </select>
+        </div>
+        <!-- ================= REMARKS ================= -->
+        <label>Other Concerns / Remarks</label>
+        <textarea id="remarks" placeholder="Additional observations or notes"></textarea>
+
+        <!-- ================= UPLOAD ================= -->
+        <label>Upload Image / Video</label>
+        <div class="upload-box">
+          <input
+              type="file"
+              id="evidence"
+              accept="image/*,video/*"
+              multiple
+              hidden
+            />
+          <button type="button" class="upload-btn" id="uploadBtn">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <div id="previewContainer"></div>
+        </div>
+
+        <!-- ================= ACTIONS ================= -->
+        <div class="form-actions">
+          <button type="button" class="cancel-btn" id="cancelCreate">CANCEL</button>
+          <button type="submit" class="send-btn">SEND</button>
+        </div>
+
+        <p id="reportMessage"></p>
+      </form>
+    </section>
+  </main>
+</div>
+
+<%- include("../../partials/farmer/farmer_footer") %>

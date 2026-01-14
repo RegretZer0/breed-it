@@ -6,7 +6,7 @@ const heatReportSchema = new mongoose.Schema(
     swine_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Swine",
-      required: true
+      default: null
     },
 
     farmer_id: {
@@ -30,7 +30,7 @@ const heatReportSchema = new mongoose.Schema(
       }
     ],
 
-    evidence_url: {
+    evidence_urls: {
       type: String,
       required: true
     },

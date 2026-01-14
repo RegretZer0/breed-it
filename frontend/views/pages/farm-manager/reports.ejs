@@ -2,4 +2,51 @@
 <%- include("../../partials/farm-manager/navbar") %>
 <%- include("../../partials/farm-manager/sidepanel") %>
 
-<%- include("../partials/footer") %>
+    <main class="fm-content">
+  <h2>Heat & Breeding Reports</h2>
+
+  <table class="reports-table">
+    <thead>
+      <tr>
+        <th>Swine ID</th>
+        <th>Farmer</th>
+        <th>Date Reported</th>
+        <th>Probability</th>
+        <th>Status</th>
+        <th>Next Heat</th>
+        <th>Expected Farrowing</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="reportsTableBody">
+      <tr>
+        <td colspan="8">Loading reports...</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- REPORT DETAILS -->
+  <div id="reportDetails" class="report-details" style="display:none;">
+    <h3>Report Details</h3>
+
+    <p id="reportSwine"></p>
+    <p id="reportFarmer"></p>
+    <p id="reportSigns"></p>
+    <p id="reportProbability"></p>
+    <p id="reportCalendar"></p>
+
+    <video id="reportVideo" controls style="display:none;"></video>
+    <img id="reportImage" style="display:none;" />
+
+    <div class="report-actions">
+      <button id="approveBtn" style="display:none;">Approve</button>
+      <button id="confirmAIBtn" style="display:none;">Confirm AI</button>
+      <button id="confirmPregnancyBtn" style="display:none;">Confirm Pregnancy</button>
+      <button onclick="document.getElementById('reportDetails').style.display='none'">
+        Close
+      </button>
+    </div>
+  </div>
+</main>
+
+<%- include("../../partials/farm-manager/footer") %>
