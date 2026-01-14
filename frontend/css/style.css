@@ -135,3 +135,12 @@ table th {
     background: white;
     color: black;
 }
+
+.status-badge {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: bold;
+}

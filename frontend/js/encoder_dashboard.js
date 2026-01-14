@@ -2,10 +2,8 @@ import { authGuard } from "./authGuard.js";
 import { initNotifications } from "./notifications.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const messageEl = document.createElement("p");
-  messageEl.style.color = "red";
-  messageEl.style.fontWeight = "bold";
-  document.body.prepend(messageEl);
+  const BACKEND_URL = "http://localhost:5000";
+  const token = localStorage.getItem("token");
 
   // Check if user is authenticated and is an encoder
   const user = await authGuard("encoder");
@@ -16,7 +14,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (welcome) welcome.textContent = `Welcome, ${user.name || "Encoder"}`;
 
   // ----- Notifications Setup -----
-  initNotifications(user.id); // handles bell, dropdown, fetching, marking as read
+  initNotifications(user.id);
+
+  // ----- CALENDAR INITIALIZATION -----
+  const calendarEl = document.getElementById('calendar');
+  if (calendarEl) {
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,listWeek'
+      },
+      // Fetching events from the backend
+      events: async function(info, successCallback, failureCallback) {
+        try {
+          const response = await fetch(`${BACKEND_URL}/api/heat/calendar-events`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          const data = await response.json();
+          if (data.success) {
+            // These events now include the farmer name in the title from the backend
+            successCallback(data.events);
+          } else {
+            console.error("Backend returned error for calendar:", data.message);
+            failureCallback(data.message);
+          }
+        } catch (error) {
+          console.error("Fetch error for calendar:", error);
+          failureCallback(error);
+        }
+      },
+      eventDidMount: (info) => {
+        const type = info.event.extendedProps.type;
+        const typeLabel = type === 'farrowing' ? 'Scheduled Farrowing' : '23-Day Recheck';
+        // Tooltip shows "🔍 Heat Check: A-0001 (Farmer Name) - 23-Day Recheck"
+        info.el.title = `${info.event.title} - ${typeLabel}`;
+      },
+      eventClick: (info) => {
+        const reportId = info.event.id;
+        // Redirect encoder to the heat reports management page
+        window.location.href = `encoder_heat_reports.html?reportId=${reportId}`;
+      }
+    });
+
+    calendar.render();
+  }
 
   // ----- Logout handler -----
   const logoutBtn = document.getElementById("logoutBtn");
@@ -25,8 +73,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       e.preventDefault();
 
       try {
-        await fetch("http://localhost:5000/api/auth/logout", {
+        await fetch(`${BACKEND_URL}/api/auth/logout`, {
           method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
           credentials: "include",
         });
 

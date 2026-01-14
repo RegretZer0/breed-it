@@ -3,108 +3,159 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Heat Reports Dashboard</title>
+  <title>Reproductive Analytics - Admin Dashboard</title>
+  <link rel="stylesheet" href="/css/styles.css" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
+    :root {
+      --primary: #2c3e50;
+      --success: #2ecc71;
+      --info: #3498db;
+      --warning: #f39c12;
+      --light: #f4f7f6;
     }
 
-    h2 {
-      margin-top: 40px;
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      margin: 0; 
+      padding: 20px; 
+      background-color: var(--light); 
+      color: #333; 
     }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
+    .header-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 30px;
     }
 
+    .btn-back {
+      padding: 10px 20px;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Chart Grid Layout */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 25px;
+      margin-top: 20px;
+    }
+
+    .chart-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      border-top: 4px solid var(--info);
+    }
+
+    .chart-card h3 {
+      margin-top: 0;
+      color: var(--primary);
+      font-size: 1.1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    canvas {
+      max-width: 100%;
+      height: auto !important;
+    }
+
+    /* Simple Table for Summary Data */
+    .summary-table-container {
+      margin-top: 40px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
     th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
       text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #eee;
     }
 
     th {
-      background-color: #f2f2f2;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
     }
 
-    button {
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-
-    #reportDetails {
-      border: 1px solid #ccc;
-      padding: 15px;
-      background-color: #fafafa;
-      max-width: 600px;
-      margin-top: 20px;
-      display: none;
-    }
-
-    #reportDetails video,
-    #reportDetails img {
-      display: block;
-      margin-top: 10px;
-      max-width: 100%;
-    }
-
-    .chart-container {
-      width: 100%;
-      max-width: 800px;
-      margin-bottom: 40px;
+    .indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
     }
   </style>
 </head>
 <body>
-  <h1>Admin Heat Reports Dashboard</h1>
 
-  <!-- HEAT REPORTS TABLE -->
-  <h2>All Heat Reports</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Swine ID</th>
-        <th>Farmer</th>
-        <th>Date Reported</th>
-        <th>Probability</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="reportsTableBody"></tbody>
-  </table>
-
-  <!-- REPORT DETAILS MODAL -->
-  <div id="reportDetails">
-    <h3>Report Details</h3>
-    <p id="reportSwine"></p>
-    <p id="reportFarmer"></p>
-    <p id="reportSigns"></p>
-    <p id="reportProbability"></p>
-    <video id="reportVideo" controls style="display:none;"></video>
-    <img id="reportImage" style="display:none;" />
-    <button id="confirmAIBtn">Confirm Artificial Insemination</button>
-    <button onclick="document.getElementById('reportDetails').style.display='none';">Close</button>
+  <div class="header-box">
+    <h1>📊 Heat & Breeding Analytics</h1>
+    <a href="admin_heat_report.html" class="btn-back">← Back to Management</a>
   </div>
 
-  <!-- CHARTS SECTION -->
-  <h2>Heat Reports Analytics</h2>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>📈 Heat Detection Trends (Current Year)</h3>
+      <canvas id="monthlyReportsChart"></canvas>
+    </div>
 
-  <div class="chart-container">
-    <h3>Monthly Reports (Current Year)</h3>
-    <canvas id="monthlyReportsChart" width="400" height="200"></canvas>
+    <div class="chart-card">
+      <h3>📋 Lifecycle Status Distribution</h3>
+      <canvas id="statusReportsChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>👩‍🌾 Reports per Farmer</h3>
+      <canvas id="farmerActivityChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>🎯 System Confidence Levels</h3>
+      <canvas id="probabilityChart"></canvas>
+    </div>
   </div>
 
-  <div class="chart-container">
-    <h3>Reports Status</h3>
-    <canvas id="statusReportsChart" width="400" height="200"></canvas>
+  <div class="summary-table-container">
+    <h3>Quick Insights Summary</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Total Count</th>
+          <th>Health Status</th>
+        </tr>
+      </thead>
+      <tbody id="insightSummaryBody">
+        <tr><td colspan="3">Calculating insights...</td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" src="/js/admin_heat_reports.js"></script>
+  
   <script type="module" src="/js/admin_heat_charts.js"></script>
+
 </body>
 </html>

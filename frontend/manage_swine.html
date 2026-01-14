@@ -5,68 +5,254 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manage Swine</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .form-section {
+      border-top: 1px solid #ddd;
+      margin-top: 20px;
+      padding-top: 15px;
+    }
+    .full-width {
+      grid-column: span 2;
+    }
+    /* Multi-select Checklist Styles */
+    .checklist-box {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #f9f9f9;
+    }
+    .checklist-box h5 {
+      margin: 10px 0 5px 0;
+      font-size: 0.85em;
+      text-transform: uppercase;
+      color: #666;
+      border-bottom: 1px solid #eee;
+    }
+    .checklist-box label {
+      display: block;
+      font-weight: normal;
+      padding: 3px 0;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+    .checklist-box input {
+      margin-right: 8px;
+    }
+    /* Grouping for conditional fields */
+    #teatCountGroup {
+      background: #fff9e6;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px dashed #ffd966;
+      margin-top: 10px;
+    }
+
+    /* Table & Modal UI Styling */
+    .table-container {
+      margin-top: 30px;
+      overflow-x: auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9em;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th { background: #f8f9fa; color: #333; }
+    .status-badge {
+      background: #e1f5fe;
+      color: #0288d1;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .view-btn {
+      background: #4a90e2;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8em;
+    }
+    .view-btn:hover { background: #357abd; }
+
+    /* Modal Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.6);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 5% auto;
+      padding: 25px;
+      width: 90%;
+      max-width: 1000px;
+      max-height: 80vh;
+      overflow-y: auto;
+      border-radius: 10px;
+    }
+    .close-modal {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .modal-section { margin-top: 20px; }
+    .modal-section h4 { border-bottom: 2px solid #eee; padding-bottom: 5px; }
+  </style>
 </head>
 <body>
   <div class="dashboard-container">
     <h2>Manage Swine</h2>
 
-    <!-- Section: Add New Swine -->
     <div class="form-container">
-      <h3>Add New Swine</h3>
+      <h3>Add New Swine (Registration & 1st Stage Selection)</h3>
       <form id="registerSwineForm">
-        <!-- Farmer Dropdown -->
-        <label for="farmerSelect">Farmer:</label>
-        <select id="farmerSelect" required>
-          <option value="">Loading farmers...</option>
-        </select>
+        <div class="form-grid">
+          <div class="form-col">
+            <label for="farmerSelect">Farmer:</label>
+            <select id="farmerSelect" required>
+              <option value="">Loading farmers...</option>
+            </select>
 
-        <!-- Batch Input -->
-        <label for="batch">Batch:</label>
-        <input type="text" id="batch" placeholder="e.g., A" required />
+            <label for="batch">Batch:</label>
+            <input type="text" id="batch" placeholder="e.g., BATCH-2026" required />
 
-        <!-- Sex Dropdown -->
-        <label for="sex">Sex:</label>
-        <select id="sex" required>
-          <option value="">Select Sex</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
+            <label for="sex">Sex:</label>
+            <select id="sex" required>
+              <option value="">Select Sex</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
 
-        <label for="color">Color:</label>
-        <input type="text" id="color" placeholder="Color" />
+            <label for="ageStage">Age Stage:</label>
+            <select id="ageStage" required>
+              <option value="">Select Age Stage</option>
+              <option value="piglet">Piglet</option>
+              <option value="adult">Adult</option>
+            </select>
 
-        <label for="breed">Breed:</label>
-        <input type="text" id="breed" placeholder="Breed" />
+            <div id="teatCountGroup" style="display: none;">
+              <label for="teatCount">Teat Count (Morphological):</label>
+              <input type="number" id="teatCount" placeholder="Total number of teats" />
+            </div>
+          </div>
 
-        <label for="birth_date">Birth Date:</label>
-        <input type="date" id="birth_date" />
+          <div class="form-col">
+            <label for="color">Color:</label>
+            <input type="text" id="color" placeholder="e.g., White, Spotted" />
 
-        <label for="status">Status:</label>
-        <input type="text" id="status" placeholder="e.g., Healthy, Sick" />
+            <label for="breed">Breed:</label>
+            <input type="text" id="breed" placeholder="e.g., Landrace" />
 
-        <label for="sire_id">Sire ID:</label>
-        <input type="text" id="sire_id" placeholder="Sire ID" />
+            <label for="birth_date">Birth Date:</label>
+            <input type="date" id="birth_date" />
 
-        <label for="dam_id">Dam ID:</label>
-        <input type="text" id="dam_id" placeholder="Dam ID" />
+            <label for="health_status">Health Status:</label>
+            <select id="health_status">
+              <option value="Healthy" selected>Healthy</option>
+              <option value="Sick">Sick</option>
+              <option value="Deceased (Before Weaning)">Deceased (Before Weaning)</option>
+              <option value="Deceased">Deceased</option>
+            </select>
+          </div>
 
-        <label for="inventory_status">Inventory Status:</label>
-        <input type="text" id="inventory_status" placeholder="e.g., In Stock, Sold" />
+          <div class="full-width form-section">
+            <h4>Initial Measurements & Lineage</h4>
+          </div>
 
-        <label for="date_transfer">Date of Transfer:</label>
-        <input type="date" id="date_transfer" />
+          <div class="form-col">
+            <label for="weight">Weight (kg):</label>
+            <input type="number" id="weight" step="0.01" placeholder="0.00" required />
 
-        <button type="submit">Add Swine</button>
+            <label for="bodyLength">Body Length (cm):</label>
+            <input type="number" id="bodyLength" placeholder="cm" />
+
+            <label for="heartGirth">Heart Girth (cm):</label>
+            <input type="number" id="heartGirth" placeholder="cm" />
+
+            <label for="teethCount">Teeth Count:</label>
+            <input type="number" id="teethCount" placeholder="Count" />
+
+            <label for="sire_id">Sire ID (Father):</label>
+            <input type="text" id="sire_id" />
+
+            <label for="dam_id">Dam ID (Mother):</label>
+            <input type="text" id="dam_id" />
+          </div>
+
+          <div class="form-col">
+            <label>Deformities:</label>
+            <div class="checklist-box" id="deformityChecklist">
+              <h5>Musculoskeletal</h5>
+              <label><input type="checkbox" value="Splayleg"> Splayleg</label>
+              <label><input type="checkbox" value="Bent Legs"> Bent Legs</label>
+              <h5>Abdominal</h5>
+              <label><input type="checkbox" value="Scrotal Hernia"> Scrotal Hernia</label>
+              <label><input type="checkbox" value="Umbilical Hernia"> Umbilical Hernia</label>
+              <label><input type="checkbox" value="Atresia Ani"> Atresia Ani</label>
+              <h5>Other</h5>
+              <label><input type="checkbox" value="Cleft Palate"> Cleft Palate</label>
+            </div>
+
+            <label style="margin-top: 15px;">Initial Medical Records (Injections):</label>
+            <div class="checklist-box" id="medicalChecklist">
+              <label><input type="checkbox" value="Iron Injection"> Iron Injection</label>
+              <label><input type="checkbox" value="Vaccination"> Vaccination</label>
+              <label><input type="checkbox" value="Deworming"> Deworming</label>
+              <label><input type="checkbox" value="Vitamin"> Vitamin Boost</label>
+            </div>
+          </div>
+
+          <div class="full-width form-section">
+            <label for="date_transfer">Date of Transfer (if applicable):</label>
+            <input type="date" id="date_transfer" />
+          </div>
+        </div>
+
+        <button type="submit" style="margin-top: 20px; width: 100%; padding: 12px; font-weight: bold;">Register Swine</button>
         <p id="swineMessage" class="message"></p>
       </form>
     </div>
 
-    <!-- Section: List Swine -->
-    <div class="list-container">
-      <h3>Swine List</h3>
-      <ul id="swineList">
-        <li>Loading swine...</li>
-      </ul>
+    <div class="table-container">
+      <h3>Swine Master List</h3>
+      <table id="swineTable">
+        <thead>
+          <tr>
+            <th>ID & Details</th>
+            <th>Farmer</th>
+            <th>Breed & Age</th>
+            <th>Status</th>
+            <th>Lineage</th>
+            <th>Reproduction</th>
+            <th>Latest Perf.</th>
+          </tr>
+        </thead>
+        <tbody id="swineTableBody">
+          <tr><td colspan="7">Loading swine records...</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div style="margin-top: 40px;">
@@ -74,7 +260,47 @@
     </div>
   </div>
 
-  <!-- Link to external JS -->
+  <div id="swineModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2 id="modalSwineId">Swine History</h2>
+      
+      <div class="modal-section">
+        <h4>Reproductive Cycles (Farrowing History)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Cycle #</th>
+              <th>AI Date</th>
+              <th>Farrow Date</th>
+              <th>Total Born</th>
+              <th>Live</th>
+              <th>Mortality</th>
+            </tr>
+          </thead>
+          <tbody id="reproductiveHistoryBody"></tbody>
+        </table>
+      </div>
+
+      <div class="modal-section">
+        <h4>Performance & Selection Timeline</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Date</th>
+              <th>Weight</th>
+              <th>Size (LxG)</th>
+              <th>Teats</th>
+              <th>Deformities</th>
+            </tr>
+          </thead>
+          <tbody id="performanceTimelineBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/manage_swine.js"></script>
 </body>
 </html>

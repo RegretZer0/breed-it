@@ -4,25 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Farmer Dashboard - BreedIT</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+  <style>
+    #calendar {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 15px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      color: #333;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+    }
+
+    h3 {
+      margin-top: 40px;
+      color: #2c3e50;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>Welcome, Farmer!</h2>
 
-    <!-- Notifications area (optional UI placeholder) -->
     <div id="notificationContainer"></div>
 
-    <button id="viewSwineBtn">View Swine</button>
-    <button id="heatReportBtn">Report Swine in Heat</button>
-    <button id="profileBtn">View Profile</button>
+    <div class="button-group">
+      <button id="viewSwineBtn" class="button">View Swine</button>
+      <button id="heatReportBtn" class="button" style="background-color: #5aa9e6;">Report Swine in Heat</button>
+      <button id="profileBtn" class="button" style="background-color: #6aa84f;">View Profile</button>
+    </div>
 
-    <button id="logoutBtn">Logout</button>
+    <h3>Your Schedule (Heat Checks & Farrowing)</h3>
+    <div id="calendar"></div>
+
+    <div style="margin-top: 40px;">
+      <button id="logoutBtn" class="button" style="background-color: #f44336;">Logout</button>
+    </div>
   </div>
 
-  <!-- Notifications MUST load first (shared logic) -->
-  <script type="module" src="./js/notifications.js"></script>
-
-  <!-- Farmer dashboard logic -->
   <script type="module" src="./js/farmer_dashboard.js"></script>
 </body>
 </html>

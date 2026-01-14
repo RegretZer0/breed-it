@@ -1,7 +1,7 @@
 import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Protect page: farm managers OR encoders
+  // 🔐 Protect page: Allow farm managers OR encoders
   const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
 
@@ -10,30 +10,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- DETERMINE MANAGER ID ----------------
   let managerId = null;
-
   try {
     if (role === "farm_manager") {
       managerId = user.id;
-    }
-
-    if (role === "encoder") {
-      if (user.managerId) {
-        managerId = user.managerId;
-      } else {
-        const res = await fetch(
-          `http://localhost:5000/api/auth/encoders/single/${user.id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "include",
-          }
-        );
-
+    } else if (role === "encoder") {
+      managerId = user.managerId || null;
+      if (!managerId) {
+        const res = await fetch(`http://localhost:5000/api/auth/encoders/single/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
         const data = await res.json();
-        if (!res.ok || !data.success || !data.encoder) {
-          throw new Error("Encoder profile not found");
-        }
-
-        managerId = data.encoder.managerId;
+        managerId = data.encoder?.managerId;
       }
     }
   } catch (err) {
@@ -41,192 +29,255 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  console.log("Current user role:", role);
-  console.log("Manager ID determined:", managerId);
-
-  if (!managerId) {
-    console.error("Manager ID is missing — cannot load farmers or swine");
-    return;
-  }
-
   // ---------------- DOM ELEMENTS ----------------
-  const swineList = document.getElementById("swineList");
   const registerForm = document.getElementById("registerSwineForm");
   const swineMessage = document.getElementById("swineMessage");
   const farmerSelect = document.getElementById("farmerSelect");
+  const swineTableBody = document.getElementById("swineTableBody");
+  
   const sexSelect = document.getElementById("sex");
-  const batchInput = document.getElementById("batch");
+  const ageStageSelect = document.getElementById("ageStage");
+  const teatCountGroup = document.getElementById("teatCountGroup");
+  const deformityChecklist = document.getElementById("deformityChecklist");
+  const medicalChecklist = document.getElementById("medicalChecklist");
+
+  // Modal Elements
+  const modal = document.getElementById("swineModal");
+  const closeModal = document.querySelector(".close-modal");
+
+  // ---------------- UI LOGIC: CONDITIONAL TEAT COUNT ----------------
+  const toggleTeatField = () => {
+    if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
+      teatCountGroup.style.display = "block";
+    } else {
+      teatCountGroup.style.display = "none";
+      const teatInput = document.getElementById("teatCount");
+      if(teatInput) teatInput.value = "";
+    }
+  };
+
+  sexSelect.addEventListener("change", toggleTeatField);
+  ageStageSelect.addEventListener("change", toggleTeatField);
 
   // ---------------- FETCH FARMERS ----------------
   async function loadFarmers() {
     try {
-      console.log("Loading farmers for managerId:", managerId);
-
-      const res = await fetch(
-        `http://localhost:5000/api/auth/farmers/${managerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }
-      );
-
-      const data = await res.json();
-      console.log("Farmers received:", data);
-
-      farmerSelect.innerHTML = `<option value="">Select Farmer</option>`;
-
-      if (!data.success || !data.farmers?.length) {
-        farmerSelect.innerHTML += `<option>No farmers available</option>`;
-        return;
-      }
-
-      data.farmers.forEach((farmer) => {
-        const option = document.createElement("option");
-        option.value = farmer._id;
-        option.textContent =
-          `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim() ||
-          "Unnamed Farmer";
-        farmerSelect.appendChild(option);
+      const res = await fetch(`http://localhost:5000/api/auth/farmers/${managerId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
+      const data = await res.json();
+      farmerSelect.innerHTML = `<option value="">Select Farmer</option>`;
+      if (data.success && data.farmers) {
+        data.farmers.forEach((f) => {
+          const opt = document.createElement("option");
+          opt.value = f._id;
+          opt.textContent = `${f.first_name} ${f.last_name}`.trim();
+          farmerSelect.appendChild(opt);
+        });
+      }
     } catch (err) {
       console.error("Error loading farmers:", err);
-      farmerSelect.innerHTML = `<option>Error loading farmers</option>`;
     }
   }
 
-  // ---------------- FETCH SWINE (MANAGER/ENCODER SCOPED) ----------------
+  // ---------------- FETCH SWINE (DETAILED MASTER LIST) ----------------
   async function fetchSwine() {
     try {
-      console.log("Loading swine (session scoped)");
-
-      // ✅ Backend should populate farmer_id
       const res = await fetch(`http://localhost:5000/api/swine/all`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
-
       const data = await res.json();
-      console.log("Swine data received:", data);
+      swineTableBody.innerHTML = "";
 
-      swineList.innerHTML = `<li>Loading...</li>`;
-
-      if (!res.ok || !data.success || !data.swine?.length) {
-        swineList.innerHTML = "<li>No swine registered yet</li>";
-        return;
-      }
-
-      swineList.innerHTML = "";
-      data.swine.forEach((sw) => {
-        // ✅ If populated, sw.farmer_id will have first_name & last_name
-        const farmerName =
-          sw.farmer_id && sw.farmer_id.first_name
-            ? `${sw.farmer_id.first_name} ${sw.farmer_id.last_name}`.trim()
+      if (data.success && data.swine?.length > 0) {
+        data.swine.reverse().forEach((sw) => {
+          // 1. Correct Farmer Name Handling
+          const farmerName = sw.farmer_id 
+            ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() 
             : "N/A";
 
-        const li = document.createElement("li");
-        li.textContent = `SwineID: ${sw.swine_id}, Batch: ${sw.batch}, Farmer: ${farmerName}, Sex: ${sw.sex}, Breed: ${sw.breed || "N/A"}, Status: ${sw.status || "N/A"}`;
-        swineList.appendChild(li);
-      });
+          // 2. Safe Performance Access
+          const perfArray = sw.performance_records || [];
+          const latestPerf = perfArray.length > 0 ? perfArray[perfArray.length - 1] : {};
+
+          // 3. Reproductive Calculations (Totals)
+          const cycles = sw.breeding_cycles || [];
+          const totalPiglets = cycles.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0);
+          const totalMortality = cycles.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0);
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+              <strong>${sw.swine_id || 'N/A'}</strong><br>
+              <small>Batch: ${sw.batch || 'N/A'}</small><br>
+              <button class="view-btn" data-id="${sw.swine_id}">View History</button>
+            </td>
+            <td>${farmerName}</td>
+            <td>
+              Sex: ${sw.sex || 'N/A'}<br>
+              Breed: ${sw.breed || 'N/A'}<br>
+              Age: ${sw.age_stage || 'N/A'}
+            </td>
+            <td>
+              Status: <span class="status-badge">${sw.current_status || 'N/A'}</span><br>
+              Health: <strong style="color: ${sw.health_status === 'Healthy' ? '#2ecc71' : '#e74c3c'};">${sw.health_status || 'Healthy'}</strong>
+            </td>
+            <td>
+              S: ${sw.sire_id || 'N/A'}<br>
+              D: ${sw.dam_id || 'N/A'}
+            </td>
+            <td>
+              Piglets: ${totalPiglets}<br>
+              Mortality: ${totalMortality}
+            </td>
+            <td>
+              Wt: ${latestPerf.weight || '--'} kg<br>
+              L: ${latestPerf.body_length || '--'} cm
+            </td>
+          `;
+          swineTableBody.appendChild(tr);
+        });
+      } else {
+        swineTableBody.innerHTML = "<tr><td colspan='7'>No swine registered yet.</td></tr>";
+      }
     } catch (err) {
-      console.error("Error loading swine:", err);
-      swineList.innerHTML = "<li>Error loading swine</li>";
+      console.error("Error loading swine list:", err);
+      swineTableBody.innerHTML = "<tr><td colspan='7'>Error loading records.</td></tr>";
     }
   }
+
+  // ---------------- MODAL LOGIC: VIEW DETAILS ----------------
+  const openSwineModal = async (swineId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/swine/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const sw = data.swine.find(s => s.swine_id === swineId);
+
+      if (!sw) return;
+
+      document.getElementById("modalSwineId").textContent = `Detailed Record: ${sw.swine_id}`;
+
+      // 1. Populate Reproductive History
+      const reproBody = document.getElementById("reproductiveHistoryBody");
+      const cycles = sw.breeding_cycles || [];
+      reproBody.innerHTML = cycles.length ? "" : "<tr><td colspan='6'>No reproductive cycles found.</td></tr>";
+      
+      cycles.forEach(cycle => {
+        const total = cycle.farrowing_results?.total_piglets || 0;
+        const mort = cycle.farrowing_results?.mortality_count || 0;
+        reproBody.innerHTML += `
+          <tr>
+            <td>${cycle.cycle_number || 'N/A'}</td>
+            <td>${cycle.ai_service_date ? new Date(cycle.ai_service_date).toLocaleDateString() : 'N/A'}</td>
+            <td>${cycle.actual_farrowing_date ? new Date(cycle.actual_farrowing_date).toLocaleDateString() : 'N/A'}</td>
+            <td>${total}</td>
+            <td>${total - mort}</td>
+            <td>${mort}</td>
+          </tr>`;
+      });
+
+      // 2. Populate Performance Timeline
+      const perfBody = document.getElementById("performanceTimelineBody");
+      const records = sw.performance_records || [];
+      perfBody.innerHTML = records.length ? "" : "<tr><td colspan='6'>No performance records found.</td></tr>";
+      
+      records.forEach(perf => {
+        perfBody.innerHTML += `
+          <tr>
+            <td>${perf.stage || 'Routine'}</td>
+            <td>${perf.record_date ? new Date(perf.record_date).toLocaleDateString() : 'N/A'}</td>
+            <td>${perf.weight || '--'} kg</td>
+            <td>${perf.body_length || '--'}x${perf.heart_girth || '--'} cm</td>
+            <td>${perf.teat_count || 'N/A'}</td>
+            <td>${(perf.deformities && perf.deformities.length > 0) ? perf.deformities.join(", ") : 'None'}</td>
+          </tr>`;
+      });
+
+      modal.style.display = "block";
+    } catch (err) {
+      console.error("Error fetching modal data:", err);
+    }
+  };
+
+  // Delegate clicks to the "View History" buttons
+  swineTableBody.addEventListener("click", (e) => {
+    if (e.target.classList.contains("view-btn")) {
+      openSwineModal(e.target.dataset.id);
+    }
+  });
+
+  if (closeModal) closeModal.onclick = () => modal.style.display = "none";
+  window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
   // ---------------- REGISTER NEW SWINE ----------------
   if (registerForm) {
     registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      if (!farmerSelect.value || !sexSelect.value || !batchInput.value.trim()) {
-        swineMessage.style.color = "red";
-        swineMessage.textContent = "All required fields must be filled";
-        return;
-      }
+      const selectedDeformities = Array.from(deformityChecklist.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+      const selectedMedical = Array.from(medicalChecklist.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
 
       const payload = {
         farmer_id: farmerSelect.value,
+        batch: document.getElementById("batch").value.trim(),
         sex: sexSelect.value,
+        ageStage: ageStageSelect.value,
         color: document.getElementById("color").value.trim(),
         breed: document.getElementById("breed").value.trim(),
         birthDate: document.getElementById("birth_date").value,
-        status: document.getElementById("status").value.trim(),
+        health_status: document.getElementById("health_status").value,
         sireId: document.getElementById("sire_id").value.trim(),
         damId: document.getElementById("dam_id").value.trim(),
-        inventoryStatus: document.getElementById("inventory_status").value.trim(),
+        weight: document.getElementById("weight").value,
+        bodyLength: document.getElementById("bodyLength").value,
+        heartGirth: document.getElementById("heartGirth").value,
+        teethCount: document.getElementById("teethCount").value,
+        teatCount: document.getElementById("teatCount").value || null,
+        deformities: selectedDeformities.length > 0 ? selectedDeformities : ["None"],
+        medical_initial: selectedMedical,
         dateTransfer: document.getElementById("date_transfer").value,
-        batch: batchInput.value.trim(),
-        managerId,
+        managerId
       };
 
       try {
         const res = await fetch("http://localhost:5000/api/swine/add", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           credentials: "include",
           body: JSON.stringify(payload),
         });
 
         const data = await res.json();
-
-        if (res.ok && data.success) {
-          swineMessage.style.color = "green";
-          swineMessage.textContent = "Swine added successfully!";
+        if (data.success) {
+          swineMessage.className = "message success";
+          swineMessage.textContent = `Successfully added ${data.swine.swine_id}!`;
           registerForm.reset();
-          fetchSwine(); // refresh list
+          toggleTeatField();
+          registerForm.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+          fetchSwine(); 
         } else {
-          swineMessage.style.color = "red";
-          swineMessage.textContent = data.message || "Failed to add swine";
+          swineMessage.className = "message error";
+          swineMessage.textContent = data.message || "Registration failed.";
         }
       } catch (err) {
-        console.error("Error adding swine:", err);
-        swineMessage.style.color = "red";
-        swineMessage.textContent = "Server error";
+        swineMessage.textContent = "Server connection error.";
       }
     });
   }
 
-  // ---------------- BACK TO DASHBOARD ----------------
+  // ---------------- NAVIGATION ----------------
   const backBtn = document.getElementById("backDashboardBtn");
   if (backBtn) {
-    backBtn.addEventListener("click", async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return (window.location.href = "login.html");
-
-      try {
-        const res = await fetch("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        });
-
-        const data = await res.json();
-        console.log("Back button /me response:", data);
-
-        if (!res.ok || !data.success || !data.user) {
-          localStorage.clear();
-          return (window.location.href = "login.html");
-        }
-
-        const userRole = data.user.role;
-
-        if (userRole === "system_admin" || userRole === "farm_manager") {
-          window.location.href = "admin_dashboard.html";
-        } else if (userRole === "encoder") {
-          window.location.href = "encoder_dashboard.html";
-        } else {
-          window.location.href = "login.html";
-        }
-      } catch (err) {
-        console.error("Back to dashboard redirect failed:", err);
-        window.location.href = "login.html";
-      }
+    backBtn.addEventListener("click", () => {
+      window.location.href = (role === "encoder") ? "encoder_dashboard.html" : "admin_dashboard.html";
     });
   }
 
-  // ---------------- INITIAL LOAD ----------------
   await loadFarmers();
   await fetchSwine();
+  toggleTeatField();
 });
