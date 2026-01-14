@@ -1,6 +1,26 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
-  const managerId = localStorage.getItem("userId");
+
+  if (!token) {
+    console.error("No token found");
+    return;
+  }
+
+  // 🔐 Get logged-in user
+  const meRes = await fetch("/api/auth/me", {
+    credentials: "include",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!meRes.ok) {
+    console.error("Failed to fetch /me");
+    return;
+  }
+
+  const meData = await meRes.json();
+  const managerId = meData.user.id;
 
   const form = document.getElementById("createAccountForm");
   const accountTypeSelect = document.getElementById("accountType");
@@ -57,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
   toggleFarmerFields();
 
   /* =========================
-     SAFE PREVIEW HELPERS
+     PREVIEW HELPERS
   ========================= */
   function setText(id, value) {
     const el = document.getElementById(id);
@@ -68,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("preview_account_type", accountType.toUpperCase());
     setText("preview_name", `${payload.first_name} ${payload.last_name}`);
     setText("preview_email", payload.email);
-    setText("preview_contact", payload.contact_info);
+    setText("preview_contact", payload.contact_no);
     setText("preview_address", payload.address);
 
     document.querySelectorAll(".farmer-preview").forEach(el => {
@@ -88,8 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================= */
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-
-    hideAlert(); // optional but nice 👍
+    hideAlert();
 
     const accountType = accountTypeSelect.value;
 
@@ -97,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_info: document.getElementById("contact_info").value.trim(),
+      contact_no: document.getElementById("contact_info").value.trim(),
       email: document.getElementById("email").value.trim(),
       password: document.getElementById("password").value,
       managerId,
@@ -160,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         showAlert(
           "success",
-          "✅ Account created successfully! The account has been added to the system."
+          "✅ Account created successfully!"
         );
 
         form.reset();
@@ -171,10 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pendingEndpoint = null;
 
       } catch (err) {
-        showAlert(
-          "danger",
-          `❌ Failed to create account. ${err.message}`
-        );
+        showAlert("danger", `❌ ${err.message}`);
       }
     });
 });

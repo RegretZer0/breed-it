@@ -57,7 +57,7 @@
       <h4>Edit Profile</h4>
 
       <label>Name</label>
-      <input type="text" id="editName" />
+      <input type="text" id="editName" disabled />
 
       <label>Contact Number</label>
       <input type="text" id="editContact_no" />
@@ -75,5 +75,28 @@
     </section>
   </main>
 </div>
+
+<!-- PREVIEW MODAL -->
+<div id="previewModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Confirm Profile Changes</h3>
+
+    <div class="modal-preview">
+      <p><strong>Name:</strong> <span id="previewName"></span></p>
+      <p><strong>Contact:</strong> <span id="previewContact"></span></p>
+      <p><strong>Email:</strong> <span id="previewEmail"></span></p>
+      <p><strong>Address:</strong> <span id="previewAddress"></span></p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="previewCancel" class="cancel-btn">CANCEL</button>
+      <button id="previewConfirm" class="save-btn">CONFIRM</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/farmer/profile.js"></script>
+<%- include("../../partials/farmer/farmer_footer") %>
+
 
 <%- include("../../partials/farmer/farmer_footer") %>

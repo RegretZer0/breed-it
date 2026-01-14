@@ -26,8 +26,25 @@ function requireFarmer(req, res, next) {
   next();
 }
 
+// ======================================================
+// Require login for API routes (JSON response)
+// ======================================================
+function requireApiLogin(req, res, next) {
+  if (!req.session || !req.session.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authenticated",
+    });
+  }
+
+  // normalize like auth middleware
+  req.user = req.session.user;
+  next();
+}
+
 module.exports = {
   requireLogin,
+  requireApiLogin, // 👈 ADDED
   requireFarmManager,
   requireFarmer,
 };

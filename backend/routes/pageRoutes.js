@@ -49,6 +49,7 @@ router.get(
       page_title: "Farmer Dashboard",
       current_section: "dashboard",
       current_page: "farmer_dashboard",
+      user: req.session.user,
     });
   }
 );

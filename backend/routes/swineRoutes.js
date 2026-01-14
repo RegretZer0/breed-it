@@ -142,12 +142,27 @@ router.get(
         swine = await Swine.find({
           farmer_id: { $in: farmers.map((f) => mongoose.Types.ObjectId(f._id)) },
         }).populate("farmer_id", "first_name last_name");
-      } else if (user.role === "farmer") {
-        // ✅ Farmer uses farmerProfileId
-        swine = await Swine.find({
-          farmer_id: mongoose.Types.ObjectId(user.farmerProfileId),
-        }).populate("farmer_id", "first_name last_name");
-      }
+        } else if (user.role === "farmer") {
+          // ✅ FIX: derive farmer profile
+          const farmer = await Farmer.findOne({
+            $or: [
+              { user_id: new mongoose.Types.ObjectId(user.id) },
+              { email: user.email },
+            ],
+          }).select("_id");
+
+          if (!farmer) {
+            return res.status(404).json({
+              success: false,
+              message: "Farmer profile not found",
+            });
+          }
+
+          swine = await Swine.find({
+            farmer_id: farmer._id,
+          }).populate("farmer_id", "first_name last_name");
+        }
+
 
       const swineData = swine.map((s) => ({
         _id: s._id,
@@ -307,54 +322,59 @@ router.get(
 );
 
 // ----------------------
-// Get swine assigned to the logged-in farmer
+// Get swine assigned to the logged-in farmer (FINAL FIX)
 // ----------------------
+const { requireApiLogin } = require("../middleware/pageAuth.middleware");
+
 router.get(
   "/farmer",
-  requireSessionAndToken,
+  requireApiLogin,
   allowRoles("farmer"),
   async (req, res) => {
     try {
       const user = req.user;
+      const userId = user.id || user._id;
 
-      if (!user.farmerProfileId) {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
         return res.status(400).json({
           success: false,
-          message: "Farmer profile not linked",
+          message: "Invalid session user ID",
+        });
+      }
+
+      const farmer = await Farmer.findOne({
+        $or: [
+          { user_id: new mongoose.Types.ObjectId(userId) },
+          { email: user.email },
+        ],
+      }).select("_id");
+
+      if (!farmer) {
+        return res.status(404).json({
+          success: false,
+          message: "Farmer profile not found",
         });
       }
 
       const swine = await Swine.find({
-        farmer_id: new mongoose.Types.ObjectId(user.farmerProfileId),
-      })
-        .populate("farmer_id", "first_name last_name")
-        .lean();
+        farmer_id: farmer._id,
+      }).lean();
 
-      const swineData = swine.map((s) => ({
-        _id: s._id,
-        swine_id: s.swine_id,
-        batch: s.batch,
-        sex: s.sex,
-        breed: s.breed,
-        status: s.status,
-        color: s.color,
-        inventory_status: s.inventory_status,
-        date_transfer: s.date_transfer,
-        date_registered: s.date_registered,
-        sire_id: s.sire_id,
-        dam_id: s.dam_id,
-        farmer_name: s.farmer_id
-          ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}`.trim()
-          : "N/A",
-      }));
-
-      res.json({ success: true, swine: swineData });
+      return res.json({
+        success: true,
+        swine,
+      });
     } catch (err) {
       console.error("[SWINE FETCH FOR FARMER ERROR]:", err);
-      res.status(500).json({ success: false, message: "Server error", error: err.message });
+      return res.status(500).json({
+        success: false,
+        message: "Server error",
+        error: err.message,
+      });
     }
   }
 );
+
 
 // ----------------------
 // Get only male swine

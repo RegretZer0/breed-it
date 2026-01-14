@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const token = localStorage.getItem("token");
-  const managerId = localStorage.getItem("userId");
+  // const managerId = localStorage.getItem("userId");
 
   const tbody = document.getElementById("farmersTbody");
 
@@ -46,34 +46,63 @@ document.addEventListener("DOMContentLoaded", () => {
   let encoders = [];
   let currentAccount = null;
 
+
+  let managerId = null;
+
+async function resolveManagerId() {
+  const res = await fetch("/api/auth/me", { credentials: "include" });
+  const data = await res.json();
+
+  if (!data.success) {
+    throw new Error("Not authenticated");
+  }
+
+  managerId =
+    data.user.role === "farm_manager"
+      ? data.user.id
+      : data.user.managerId;
+}
+
+  
   /* =========================
      FETCH DATA
   ========================= */
   async function fetchAllAccounts() {
     try {
+      if (!managerId) {
+        await resolveManagerId();
+      }
+
       const [fRes, eRes] = await Promise.all([
-        fetch(`/api/auth/farmers/${managerId}`, {
+        fetch(`/api/auth/farmers`, {
           headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         }),
-        fetch(`/api/auth/encoders/${managerId}`, {
+        fetch(`/api/auth/encoders`, {
           headers: { Authorization: `Bearer ${token}` },
-        }),
+          credentials: "include",
+        })
+
       ]);
 
       const fData = await fRes.json();
       const eData = await eRes.json();
 
-      farmers = fData.success ? fData.farmers : [];
-      encoders = eData.success ? eData.encoders : [];
+      if (!fData.success) throw new Error("Failed to fetch farmers");
+      if (!eData.success) throw new Error("Failed to fetch encoders");
+
+      farmers = fData.farmers;
+      encoders = eData.encoders;
 
       updateStats();
       renderTableTo(tbody, [...farmers, ...encoders]);
       renderRecentAccounts();
     } catch (err) {
-      console.error(err);
-      tbody.innerHTML = `<tr><td colspan="8">Server error</td></tr>`;
+      console.error("FETCH ACCOUNTS ERROR:", err);
+      tbody.innerHTML = `<tr><td colspan="9">Server error</td></tr>`;
     }
   }
+
 
   /* =========================
      UPDATE STATS (RESTORED)
@@ -99,20 +128,24 @@ document.addEventListener("DOMContentLoaded", () => {
     tbodyEl.innerHTML = "";
 
     if (!data.length) {
-      tbodyEl.innerHTML = `<tr><td colspan="8">No results found</td></tr>`;
+      tbodyEl.innerHTML = `<tr><td colspan="9">No results found</td></tr>`;
       return;
     }
 
     data.forEach(acc => {
+      const isFarmer = !!acc.farmer_id;
+      const role = isFarmer ? "Farmer" : "Encoder";
+
       const tr = document.createElement("tr");
 
       tr.innerHTML = `
         <td>${acc.farmer_id || acc._id}</td>
         <td>${acc.first_name} ${acc.last_name}</td>
+        <td>${role}</td>
         <td>${acc.address || "-"}</td>
         <td>${acc.contact_no || acc.contact_info || "-"}</td>
-        <td>${acc.num_of_pens ?? "-"}</td>
-        <td>${acc.pen_capacity ?? "-"}</td>
+        <td>${isFarmer ? acc.num_of_pens ?? "-" : "-"}</td>
+        <td>${isFarmer ? acc.pen_capacity ?? "-" : "-"}</td>
         <td>${acc.status || "active"}</td>
         <td>
           <button class="btn btn-sm btn-outline-primary">Edit</button>
@@ -126,6 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tbodyEl.appendChild(tr);
     });
   }
+
 
   /* =========================
      APPLY FILTERS

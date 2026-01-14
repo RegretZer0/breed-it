@@ -7,9 +7,14 @@ const { JWT_SECRET } = require("../config/jwt");
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
-const attachUser = require("../middleware/attachUser");
 
-// JWT helper
+const attachUser = require("../middleware/attachUser");
+const { requireSessionAndToken } = require("../middleware/authMiddleware");
+const { allowRoles } = require("../middleware/roleMiddleware");
+
+/* ======================
+   JWT HELPER
+====================== */
 function generateToken(user) {
   return jwt.sign(
     {
@@ -26,26 +31,17 @@ function generateToken(user) {
   );
 }
 
-// Login with Session + JWT
+/* ======================
+   LOGIN
+====================== */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    // Try to find user in Users collection first
     let user = await User.findOne({ email });
-    let role;
+    let role = user?.role;
 
-    if (user) {
-      role = user.role;
-    } else {
-      // If not found, check Farmers collection
+    if (!user) {
       user = await Farmer.findOne({ email });
       role = "farmer";
     }
@@ -65,15 +61,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    req.session.regenerate((err) => {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          message: "Session error",
-        });
-      }
-
-      // ✅ Store user info with first_name & last_name
+    req.session.regenerate(() => {
       req.session.user = {
         id: user._id.toString(),
         role,
@@ -84,14 +72,12 @@ router.post("/login", async (req, res) => {
         managerId: user.managerId || null,
       };
 
-      const token = generateToken(user);
-
       res.json({
         success: true,
         message: "Login successful",
         user: req.session.user,
         role,
-        token,
+        token: generateToken(user),
       });
     });
   } catch (error) {
@@ -100,7 +86,9 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Logout
+/* ======================
+   LOGOUT
+====================== */
 router.post("/logout", (req, res) => {
   req.session?.destroy(() => {
     res.clearCookie("connect.sid");
@@ -108,12 +96,10 @@ router.post("/logout", (req, res) => {
   });
 });
 
-// Get current user
+/* ======================
+   GET CURRENT USER
+====================== */
 router.get("/me", (req, res) => {
-  console.log("=== /me DEBUG ===");
-  console.log("Session:", req.session?.user);
-  console.log("Auth header:", req.headers.authorization);
-
   if (req.session?.user) {
     return res.json({
       success: true,
@@ -134,15 +120,12 @@ router.get("/me", (req, res) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    console.log("Decoded JWT:", decoded);
-
     res.json({
       success: true,
       source: "jwt",
       user: decoded,
     });
   } catch (err) {
-    console.error("JWT error:", err);
     res.status(401).json({
       success: false,
       reason: "INVALID_TOKEN",
@@ -150,7 +133,10 @@ router.get("/me", (req, res) => {
   }
 });
 
-// Register Farm Manager
+/* ======================
+   REGISTER FARM MANAGER
+   (SINGLE ROUTE – DUPLICATE REMOVED)
+====================== */
 router.post("/register", async (req, res) => {
   const { first_name, last_name, address, contact_info, email, password } = req.body;
 
@@ -158,7 +144,7 @@ router.post("/register", async (req, res) => {
     if (!first_name || !last_name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "First name, last name, email, and password are required",
+        message: "Missing required fields",
       });
     }
 
@@ -169,117 +155,79 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await User.create({
+    const user = await User.create({
       first_name,
       last_name,
       address,
       contact_info,
       email,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
       role: "farm_manager",
     });
 
     res.status(201).json({
       success: true,
       message: "Farm Manager registered successfully",
-      user: newUser,
+      user,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-
-// =====================
-// Register Farm Manager
-// =====================
-router.post("/register", async (req, res) => {
-  const { first_name, last_name, address, contact_info, email, password } = req.body;
-
-  if (await User.findOne({ email })) {
-    return res.status(400).json({ success: false, message: "Email already registered" });
-  }
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  const user = await User.create({
-    first_name,
-    last_name,
-    address,
-    contact_info,
-    email,
-    password: hashedPassword,
-    role: "farm_manager",
-  });
-
-  res.status(201).json({ success: true, message: "Farm Manager registered", user });
-});
-
-//=====================
-// REGISTER FARMER
-//=====================
+/* ======================
+   REGISTER FARMER (FIXED)
+====================== */
 router.post("/register-farmer", async (req, res) => {
   try {
     const {
       first_name,
       last_name,
       address,
-      contact_no,
+      contact_info,
       email,
       password,
       managerId,
       num_of_pens = 0,
       pen_capacity = 0,
+      production_type,
+      membership_date,
     } = req.body;
 
     if (!email || !password || !managerId) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
     }
 
-    const manager = await User.findById(managerId);
-    if (!manager || manager.role !== "farm_manager") {
-      return res.status(400).json({ success: false, message: "Invalid manager" });
+    if (await Farmer.findOne({ email })) {
+      return res.status(400).json({
+        success: false,
+        message: "Farmer already exists",
+      });
     }
 
-    // Prevent duplicates
-    if (await User.findOne({ email }) || await Farmer.findOne({ email })) {
-      return res.status(400).json({ success: false, message: "Email already exists" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 1️⃣ Create USER (for authentication)
-    const user = await User.create({
-      first_name,
-      last_name,
-      email,
-      password: hashedPassword,
-      role: "farmer",
-      managerId,
-    });
-
-    // 2️⃣ Generate farmer_id
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
     const nextNum = lastFarmer
       ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
       : 1;
+
     const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
-    // 3️⃣ Create FARMER profile
     const farmer = await Farmer.create({
-      user_id: user._id,
       farmer_id: farmerId,
       first_name,
       last_name,
       address,
-      contact_no,
+      contact_no: contact_info, // ✅ FIX
       email,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
       managerId,
       num_of_pens,
       pen_capacity,
+      production_type,
+      membership_date,
     });
 
     res.status(201).json({
@@ -289,72 +237,124 @@ router.post("/register-farmer", async (req, res) => {
     });
   } catch (error) {
     console.error("Register farmer error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
-// Get farmers by manager
-router.get("/farmers/:managerId", async (req, res) => {
-  try {
-    const managerId = req.params.managerId;
+/* ======================
+   GET FARMERS (NO PARAM)
+   ✅ MATCHES FRONTEND
+====================== */
+router.get(
+  "/farmers",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const user = req.user;
+      const managerId =
+        user.role === "farm_manager" ? user.id : user.managerId;
 
-    const farmers = await Farmer.find({
-      $or: [
-        { registered_by: managerId },
-        { user_id: managerId },
-        { managerId: managerId } // 🔹 include this
-      ],
-    }).select("-password -__v");
+      const farmers = await Farmer.find({ managerId });
 
-    res.json({ success: true, farmers });
-  } catch (error) {
-    console.error("Fetch farmers error:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-//=====================
-// GET FARMER PROFILE (new route using attachUser)
-//=====================
-router.get("/farmer/profile", attachUser, async (req, res) => {
-  if (req.currentUser.role !== "farmer") {
-    return res.status(403).json({ success: false, message: "Access denied" });
-  }
-  res.json({ success: true, farmer: req.currentUser });
-});
-
-//=====================
-// UPDATE FARMER (use attachUser)
-//=====================
-router.put("/farmer/update", attachUser, async (req, res) => {
-  try {
-    if (req.currentUser.role !== "farmer") {
-      return res.status(403).json({ success: false, message: "Access denied" });
+      res.json({ success: true, farmers });
+    } catch (err) {
+      console.error("Fetch farmers error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
     }
-
-    const farmer = req.currentUser;
-
-    // Only update allowed fields
-    const updateFields = {};
-    ["first_name", "last_name", "address", "contact_no", "num_of_pens", "pen_capacity"].forEach(field => {
-      if (req.body[field] !== undefined) updateFields[field] = req.body[field];
-    });
-
-    Object.assign(farmer, updateFields);
-    await farmer.save();
-
-    res.json({
-      success: true,
-      message: "Farmer updated successfully",
-      farmer,
-    });
-  } catch (error) {
-    console.error("Update farmer error:", error);
-    res.status(500).json({ success: false, message: error.message });
   }
-});
+);
 
-// Register Encoder
+/* ======================
+   GET FARMERS (LEGACY PARAM ROUTE)
+   ⚠️ KEPT FOR BACKWARD COMPAT
+====================== */
+router.get(
+  "/farmers/:managerId",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const paramManagerId = req.params.managerId;
+      const user = req.user;
+
+      const managerId =
+        user.role === "farm_manager"
+          ? user.id
+          : user.managerId;
+
+      if (paramManagerId !== managerId) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized manager access",
+        });
+      }
+
+      const farmers = await Farmer.find({ managerId });
+
+      res.json({ success: true, farmers });
+    } catch (error) {
+      console.error("Fetch farmers error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
+    }
+  }
+);
+
+/* ======================
+   UPDATE FARMER
+   ✅ MATCHES FRONTEND
+====================== */
+router.put(
+  "/update-farmer/:farmerId",
+  requireSessionAndToken,
+  allowRoles("farm_manager"),
+  async (req, res) => {
+    try {
+      const farmer = await Farmer.findOne({
+        farmer_id: req.params.farmerId,
+        managerId: req.user.id,
+      });
+
+      if (!farmer) {
+        return res.status(404).json({
+          success: false,
+          message: "Farmer not found",
+        });
+      }
+
+      [
+        "first_name",
+        "last_name",
+        "address",
+        "contact_no",
+        "num_of_pens",
+        "pen_capacity",
+        "status",
+      ].forEach((field) => {
+        if (req.body[field] !== undefined) {
+          farmer[field] = req.body[field];
+        }
+      });
+
+      await farmer.save();
+
+      res.json({ success: true, farmer });
+    } catch (err) {
+      console.error("Update farmer error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+/* ======================
+   REGISTER ENCODER
+====================== */
 router.post("/register-encoder", async (req, res) => {
   const {
     first_name,
@@ -363,14 +363,14 @@ router.post("/register-encoder", async (req, res) => {
     contact_info,
     email,
     password,
-    managerId
+    managerId,
   } = req.body;
 
   try {
     if (!first_name || !last_name || !email || !password || !managerId) {
       return res.status(400).json({
         success: false,
-        message: "First name, last name, email, password, and managerId are required",
+        message: "Missing required fields",
       });
     }
 
@@ -389,15 +389,13 @@ router.post("/register-encoder", async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const encoder = await User.create({
       first_name,
       last_name,
       address,
       contact_info,
       email,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
       role: "encoder",
       managerId,
       status: "active",
@@ -414,21 +412,32 @@ router.post("/register-encoder", async (req, res) => {
   }
 });
 
-// Get encoders by manager
-router.get("/encoders/:managerId", async (req, res) => {
-  try {
-    const encoders = await User.find({
-      role: "encoder",
-      managerId: req.params.managerId
-    }).select("-password -__v");
+/* ======================
+   GET ENCODERS
+   ✅ PROTECTED + MATCHES FRONTEND
+====================== */
+router.get(
+  "/encoders",
+  requireSessionAndToken,
+  allowRoles("farm_manager"),
+  async (req, res) => {
+    try {
+      const encoders = await User.find({
+        role: "encoder",
+        managerId: req.user.id,
+      }).select("-password -__v");
 
-    res.json({ success: true, encoders });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+      res.json({ success: true, encoders });
+    } catch (error) {
+      console.error("Fetch encoders error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
   }
-});
+);
 
-// Update Encoder
+/* ======================
+   UPDATE ENCODER
+====================== */
 router.put("/update-encoder/:id", async (req, res) => {
   try {
     const encoder = await User.findById(req.params.id);
@@ -452,10 +461,16 @@ router.put("/update-encoder/:id", async (req, res) => {
   }
 });
 
-// Get single encoder by ID
+/* ======================
+   GET SINGLE ENCODER
+====================== */
 router.get("/encoders/single/:id", async (req, res) => {
   try {
-    const encoder = await User.findOne({ _id: req.params.id, role: "encoder" }).select("-password -__v");
+    const encoder = await User.findOne({
+      _id: req.params.id,
+      role: "encoder",
+    }).select("-password -__v");
+
     if (!encoder) {
       return res.status(404).json({
         success: false,
@@ -463,15 +478,11 @@ router.get("/encoders/single/:id", async (req, res) => {
       });
     }
 
-    res.json({
-      success: true,
-      encoder, // ✅ frontend expects .encoder.managerId
-    });
+    res.json({ success: true, encoder });
   } catch (error) {
     console.error("Fetch single encoder error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
-
 
 module.exports = router;
