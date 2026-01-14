@@ -13,7 +13,8 @@ const notificationSchema = new mongoose.Schema({
     enum: ["info", "alert", "success", "error"],
     default: "info"
   },
-  is_read: { type: Boolean, default: false },
+  // Track which users have read this notification
+  read_by: [{ type: mongoose.Schema.Types.ObjectId, ref: "UserModel" }],
   created_at: { type: Date, default: Date.now },
   expires_at: { type: Date }
 });
