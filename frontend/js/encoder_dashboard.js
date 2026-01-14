@@ -1,4 +1,5 @@
 import { authGuard } from "./authGuard.js";
+import { initNotifications } from "./notifications.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   const messageEl = document.createElement("p");
@@ -14,7 +15,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const welcome = document.querySelector(".dashboard-container h2");
   if (welcome) welcome.textContent = `Welcome, ${user.name || "Encoder"}`;
 
-  // Logout handler
+  // ----- Notifications Setup -----
+  initNotifications(user.id); // handles bell, dropdown, fetching, marking as read
+
+  // ----- Logout handler -----
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async (e) => {
@@ -28,7 +32,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Clear frontend auth
         localStorage.clear();
-
         window.location.href = "login.html";
       } catch (err) {
         console.error("Logout error:", err);
@@ -36,5 +39,4 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
 });

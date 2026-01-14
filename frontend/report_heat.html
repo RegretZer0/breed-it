@@ -5,16 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Report Swine in Heat</title>
   <link rel="stylesheet" href="/css/styles.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    button {
+      padding: 5px 10px;
+      background-color: #5aa9e6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #498ac7;
+    }
+    .countdown {
+      font-weight: bold;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #reportMessage {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>Report Swine in Heat</h2>
 
     <!-- Back button -->
-    <button 
-      style="margin-bottom: 15px; padding: 10px 20px; background-color: #5aa9e6; color: white; border: none; border-radius: 5px; cursor: pointer;"
-      onclick="window.location.href='farmer_dashboard.html'"
-    >
+    <button onclick="window.location.href='farmer_dashboard.html'">
       ← Back to Dashboard
     </button>
 
@@ -36,6 +73,27 @@
       <button type="submit">Submit Report</button>
       <p id="reportMessage"></p>
     </form>
+
+    <!-- ---------------- FARMER'S HEAT REPORTS TABLE ---------------- -->
+    <h3>Your Heat Reports</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Swine ID</th>
+          <th>Farmer</th>
+          <th>Date Reported</th>
+          <th>Status</th>
+          <th>Countdowns</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="reportsTableBody">
+        <tr><td colspan="6">Loading reports...</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Optional logout button -->
+    <button id="logoutBtn" style="margin-top: 20px;">Logout</button>
   </div>
 
   <script type="module" src="/js/farmer_heat.js"></script>

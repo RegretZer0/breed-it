@@ -10,6 +10,20 @@
   <div class="dashboard-container">
     <h2>Welcome, Admin</h2>
 
+    <!-- Add this in your dashboard header -->
+    <div style="position: relative; float: right; margin-right: 20px;">
+      <button id="notifBell" style="position: relative; background: none; border: none; cursor: pointer; font-size: 20px;">
+        🔔
+        <span id="notifCount" 
+              style="position: absolute; top: -5px; right: -10px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; display: none;">0</span>
+      </button>
+
+      <div id="notifDropdown" 
+          style="display: none; position: absolute; right: 0; top: 30px; width: 300px; max-height: 400px; overflow-y: auto; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1000;">
+        <ul id="notifList" style="list-style: none; padding: 10px; margin: 0;"></ul>
+      </div>
+    </div>
+    
     <!-- Section: Links to Manage Accounts -->
     <div style="margin: 20px 0;">
       <a href="manage_accounts.html">

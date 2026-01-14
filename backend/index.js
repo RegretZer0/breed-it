@@ -8,6 +8,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 
 const adminRoutes = require("./routes/adminRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // ENV VALIDATION (FAIL FAST)
 if (!process.env.MONGO_URI) {
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // STATIC FILES
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(express.static(path.join(__dirname, "public"))); // <-- add this
 
 // MONGODB CONNECTION
 mongoose
@@ -89,6 +91,7 @@ app.use("/api/swine-records", require("./routes/swinePerformanceRoutes"));
 app.use("/api/breeding", require("./routes/breedingRoutes"));
 app.use("/api/farmer", require("./routes/farmerRoutes"));
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // HEALTH CHECK
 app.get("/", (req, res) => {
