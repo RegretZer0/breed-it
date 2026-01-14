@@ -14,41 +14,24 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 router.post(
   "/",
   requireSessionAndToken,
-  allowRoles("farmer", "farm_manager", "encoder", "admin"),
+  allowRoles("farm_manager", "encoder", "admin"),
   async (req, res) => {
     try {
-      const { farmerName, title, message, type, expires_at } = req.body;
+      const { user_id, title, message, type, expires_at } = req.body;
 
-      if (!farmerName || !title || !message) {
-        return res.status(400).json({ success: false, message: "Missing required fields" });
+      if (!user_id || !title || !message) {
+        return res.status(400).json({ success: false, message: "Missing fields" });
       }
 
-      // ---------------- Find the farmer ----------------
-      const farmer = await UserFarmer.findOne({ full_name: farmerName });
-      if (!farmer) return res.status(404).json({ success: false, message: "Farmer not found" });
-
-      // ---------------- Find the farm manager ----------------
-      const farmManager = await UserModel.findOne({ _id: farmer.manager_id, role: "farm_manager" });
-      if (!farmManager) return res.status(404).json({ success: false, message: "Farm manager not found" });
-
-      // ---------------- Find encoders under this farm manager ----------------
-      const encoders = await UserModel.find({ manager_id: farmManager._id, role: "encoder" });
-
-      // ---------------- Build recipient list ----------------
-      const recipients = [farmManager._id, ...encoders.map(e => e._id)];
-
-      // ---------------- Create notifications for all recipients ----------------
-      const notifications = recipients.map(user_id => ({
+      const notification = await Notification.create({
         user_id,
         title,
         message,
-        type: type || "info",
+        type,
         expires_at
-      }));
+      });
 
-      await Notification.insertMany(notifications);
-
-      res.status(201).json({ success: true, message: "Notifications sent", notifications });
+      res.status(201).json({ success: true, notification });
     } catch (err) {
       console.error("Create notification error:", err);
       res.status(500).json({ success: false, message: "Server error" });

@@ -7,6 +7,9 @@ const mongoose = require("mongoose");
 const HeatReport = require("../models/HeatReports");
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
+const Notification = require("../models/Notification");
+const UserModel = require("../models/UserModel");
+
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -35,9 +38,13 @@ router.post(
       const file = req.file;
 
       if (!swineId || !signs || !file || !farmerId) {
-        return res.status(400).json({ success: false, message: "All fields are required" });
+        return res.status(400).json({
+          success: false,
+          message: "All fields are required"
+        });
       }
 
+      // ---------------- FIND FARMER PROFILE ----------------
       const farmer = await Farmer.findOne({ user_id: farmerId });
       if (!farmer) {
         return res.status(404).json({ success: false, message: "Farmer not found" });
@@ -45,7 +52,7 @@ router.post(
 
       const user = req.user;
 
-      // 🔐 Role-based access
+      // ---------------- ROLE-BASED ACCESS ----------------
       if (
         (user.role === "farm_manager" && farmer.managerId.toString() !== user.id) ||
         (user.role === "encoder" && farmer.managerId.toString() !== user.managerId) ||
@@ -54,15 +61,17 @@ router.post(
         return res.status(403).json({ success: false, message: "Access denied" });
       }
 
+      // ---------------- FIND SWINE ----------------
       const swine = await Swine.findOne({ swine_id: swineId });
       if (!swine) {
         return res.status(404).json({ success: false, message: "Swine not found" });
       }
 
+      // ---------------- CREATE HEAT REPORT ----------------
       const newReport = new HeatReport({
         swine_id: swine._id,
         farmer_id: farmer._id,
-        manager_id: farmer.managerId, // ✅ FIX: always save manager_id
+        manager_id: farmer.managerId,
         signs: Array.isArray(signs) ? signs : JSON.parse(signs),
         evidence_url: `/uploads/${file.filename}`,
         status: "pending"
@@ -70,9 +79,42 @@ router.post(
 
       await newReport.save();
 
+      // =====================================================
+      // 🔔 CREATE NOTIFICATIONS (SERVER-SIDE)
+      // =====================================================
+
+      // Find farm manager (AUTH user)
+      const farmManager = await UserModel.findOne({
+        _id: farmer.managerId,
+        role: "farm_manager"
+      });
+
+      // Find encoders under this manager
+      const encoders = await UserModel.find({
+        manager_id: farmer.managerId,
+        role: "encoder"
+      });
+
+      const recipients = [
+        ...(farmManager ? [farmManager._id] : []),
+        ...encoders.map(e => e._id)
+      ];
+
+      if (recipients.length > 0) {
+        const notifications = recipients.map(user_id => ({
+          user_id,
+          title: "New Heat / Ovulation Report",
+          message: `Farmer ${farmer.first_name} ${farmer.last_name} submitted a heat report for swine ${swine.swine_id}.`,
+          type: "info"
+        }));
+
+        await Notification.insertMany(notifications);
+      }
+
+      // ---------------- RESPONSE ----------------
       res.status(201).json({
         success: true,
-        message: "Heat report submitted",
+        message: "Heat report submitted and notifications sent",
         report: newReport
       });
     } catch (err) {
@@ -228,6 +270,7 @@ router.post(
       if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
       const user = req.user;
+      const swine = await Swine.findById(report.swine_id);
 
       // Ensure only the assigned manager can approve
       if (user.role === "farm_manager" && report.manager_id?.toString() !== user.id) {
@@ -238,17 +281,28 @@ router.post(
       }
 
       // Update the report status
-      report.status = "accepted";           // mark as approved
-      report.approved_at = new Date();      // timestamp for approval
-      report.manager_id = report.manager_id || user.id; // ensure manager_id is set
-      report.ai_confirmed = false;          // reset AI confirmation
-      report.next_heat_check = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000); // next check 23 days later
-
-      // Optionally, set the next AI step immediately
+      report.status = "accepted";
+      report.approved_at = new Date();
+      report.manager_id = report.manager_id || user.id;
       report.ai_confirmed = false;
-      report.next_heat_check = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000); // 23 days later
+      report.next_heat_check = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000);
 
       await report.save();
+
+      // ---------------- NOTIFY FARMER ----------------
+      try {
+        const farmer = await Farmer.findById(report.farmer_id);
+        if (farmer) {
+          await Notification.create({
+            user_id: farmer.user_id,
+            title: "Heat Report Approved",
+            message: `Your heat report for swine ${swine.swine_id} has been approved. Next heat check is scheduled in 23 days.`,
+            type: "success"
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to send notification:", notifErr);
+      }
 
       res.json({ success: true, message: "Heat report approved", report });
     } catch (err) {
@@ -270,12 +324,30 @@ router.post(
       const report = await HeatReport.findById(req.params.id);
       if (!report) return res.status(404).json({ success: false });
 
+      const swine = await Swine.findById(report.swine_id);
+
       report.status = "waiting_heat_check";
       report.ai_confirmed = true;
       report.ai_confirmed_at = new Date();
-      report.next_heat_check = new Date(Date.now() + 23 * 86400000);
+      report.next_heat_check = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000);
 
       await report.save();
+
+      // ---------------- NOTIFY FARMER ----------------
+      try {
+        const farmer = await Farmer.findById(report.farmer_id);
+        if (farmer) {
+          await Notification.create({
+            user_id: farmer.user_id,
+            title: "Artificial Insemination Confirmed",
+            message: `Artificial insemination has been confirmed for swine ${swine?.swine_id || "Unknown"}. The next heat check is scheduled in 23 days.`,
+            type: "info"
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to send notification:", notifErr);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Confirm AI error:", err);
@@ -296,11 +368,29 @@ router.post(
       const report = await HeatReport.findById(req.params.id);
       if (!report) return res.status(404).json({ success: false });
 
+      const swine = await Swine.findById(report.swine_id);
+
       report.status = "pregnant";
       report.pregnancy_confirmed_at = new Date();
-      report.expected_farrowing = new Date(Date.now() + 115 * 86400000);
+      report.expected_farrowing = new Date(Date.now() + 115 * 24 * 60 * 60 * 1000);
 
       await report.save();
+
+      // ---------------- NOTIFY FARMER ----------------
+      try {
+        const farmer = await Farmer.findById(report.farmer_id);
+        if (farmer) {
+          await Notification.create({
+            user_id: farmer.user_id,
+            title: "Pregnancy Confirmed",
+            message: `Pregnancy has been confirmed for swine ${swine?.swine_id || "Unknown"}. Expected farrowing is scheduled in approximately 114–115 days.`,
+            type: "success"
+          });
+        }
+      } catch (notifErr) {
+        console.error("Failed to send notification:", notifErr);
+      }
+
       res.json({ success: true });
     } catch (err) {
       console.error("Confirm pregnancy error:", err);

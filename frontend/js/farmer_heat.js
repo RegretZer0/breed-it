@@ -81,25 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         reportMessage.style.color = "green";
         reportMessage.textContent = "Heat report submitted successfully!";
         reportForm.reset();
-        await loadReports(); // refresh reports after submission
-
-        // ---------------- SEND NOTIFICATIONS ----------------
-        try {
-          const farmerFullName = `${user.first_name} ${user.last_name}`; // <-- updated to full name
-
-          await fetchWithAuth("http://localhost:5000/api/notifications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              farmerName: farmerFullName, // <-- send full name instead of userId
-              title: "New Heat/Ovulation Report",
-              message: `Farmer ${farmerFullName} submitted a new heat/ovulation report for swine ${selectedSwine}.`,
-              type: "info"
-            })
-          });
-        } catch (notifErr) {
-          console.error("Error sending notification:", notifErr);
-        }
+        await loadReports(); // refresh reports after submission  
       } else {
         reportMessage.style.color = "red";
         reportMessage.textContent = data.message || "Failed to submit report";
