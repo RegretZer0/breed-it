@@ -5,14 +5,36 @@
 
   <p id="loadingMessage">Loading pigs...</p>
 
-  <div id="pigList" class="pig-list"></div>
+  <!-- Pig Cards List -->
+  <div id="pigList">
+    <!-- 
+      Pig cards will be injected here by mypigs.js
+      Expected structure per card:
+      - Image + Tag
+      - Summary info (Age, Breed, Status, Location)
+      - View Details button
+    -->
+  </div>
 </div>
 
-<!-- DETAILS MODAL -->
+<!-- =========================
+     PIG DETAILS MODAL
+========================= -->
 <div id="pigModal" class="modal hidden">
   <div class="modal-content">
     <span id="closeModal">&times;</span>
-    <div id="modalBody"></div>
+
+    <!-- Full pig details injected dynamically -->
+    <div id="modalBody">
+      <!-- 
+        Full data example:
+        - Tag / Breed / Sex
+        - Health & Pipeline Status
+        - Performance records
+        - Medical history
+        - Registration info
+      -->
+    </div>
   </div>
 </div>
 
