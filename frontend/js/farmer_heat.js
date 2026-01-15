@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportForm = document.getElementById("heatReportForm");
   const reportMessage = document.getElementById("reportMessage");
   const reportsTableBody = document.getElementById("reportsTableBody");
+  const submitBtn = reportForm.querySelector(".btn-submit");
 
   // ---------------- FETCH HELPER WITH SESSION CHECK ----------------
   async function fetchWithAuth(url, options = {}) {
@@ -45,24 +46,75 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ---------------- LOAD FARMER'S SWINE ----------------
-  try {
-    const res = await fetchWithAuth(`${BACKEND_URL}/api/swine/farmer`);
-    if (res) {
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to fetch swine");
+  // ---------------- UPDATE STATS ----------------
+  async function updateStats(swineList) {
+    const stats = {
+      open: 0,
+      pregnant: 0,
+      farrowing: 0
+    };
 
-      swineSelect.innerHTML = '<option value="">-- Select Swine --</option>';
-      data.swine.forEach(sw => {
-        const option = document.createElement("option");
-        option.value = sw.swine_id;
-        option.textContent = `${sw.swine_id} - ${sw.breed}`;
-        swineSelect.appendChild(option);
-      });
+    const today = new Date();
+
+    swineList.forEach(sw => {
+      let status = (sw.current_status || "Open").toLowerCase();
+      
+      if (status === "pregnant" && sw.expected_farrowing) {
+        if (today >= new Date(sw.expected_farrowing)) {
+          status = "farrowing";
+        }
+      }
+
+      if (status === "open") stats.open++;
+      if (status === "pregnant") stats.pregnant++;
+      if (status === "farrowing" || status === "lactating") stats.farrowing++;
+    });
+
+    const openEl = document.getElementById("countOpen");
+    const pregEl = document.getElementById("countPregnant");
+    const farrEl = document.getElementById("countFarrowing");
+
+    if (openEl) openEl.textContent = stats.open;
+    if (pregEl) pregEl.textContent = stats.pregnant;
+    if (farrEl) farrEl.textContent = stats.farrowing;
+  }
+
+  // ---------------- LOAD DATA INITIALLY ----------------
+  async function refreshSwineData() {
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/swine/farmer`);
+      if (res) {
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Failed to fetch swine");
+
+        updateStats(data.swine);
+
+        swineSelect.innerHTML = '<option value="">-- Select Swine --</option>';
+
+        const eligibleSows = data.swine.filter(sw => 
+          sw.age_stage?.toLowerCase() === "adult" && 
+          sw.sex?.toLowerCase() === "female" && 
+          (sw.current_status?.toLowerCase() === "open" || !sw.current_status)
+        );
+
+        if (eligibleSows.length === 0) {
+          const opt = document.createElement("option");
+          opt.textContent = "No eligible sows (Open/Adult) available";
+          opt.disabled = true;
+          swineSelect.appendChild(opt);
+        } else {
+          eligibleSows.forEach(sw => {
+            const option = document.createElement("option");
+            option.value = sw.swine_id;
+            option.textContent = `${sw.swine_id} - ${sw.breed} (${sw.current_status})`;
+            swineSelect.appendChild(option);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error loading swine:", err);
+      if (swineSelect) swineSelect.innerHTML = "<option value=''>Error loading swine</option>";
     }
-  } catch (err) {
-    console.error("Error loading swine:", err);
-    if (swineSelect) swineSelect.innerHTML = "<option value=''>Error loading swine</option>";
   }
 
   // ---------------- HANDLE FORM SUBMISSION ----------------
@@ -72,7 +124,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedSwine = swineSelect.value;
     const signs = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map(cb => cb.value);
     
-    // UPDATED: Get multiple files from the input
     const evidenceInput = document.getElementById("evidence");
     const files = evidenceInput.files;
 
@@ -82,23 +133,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    // Prepare Multipart Form Data
     const formData = new FormData();
     formData.append("swineId", selectedSwine);
     formData.append("signs", JSON.stringify(signs));
     formData.append("farmerId", userId);
 
-    // UPDATED: Append each file to the "evidence" field (must match upload.array("evidence"))
     for (let i = 0; i < files.length; i++) {
       formData.append("evidence", files[i]);
     }
 
     try {
+      // Disable UI during upload
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Uploading...";
       reportMessage.style.color = "blue";
-      reportMessage.textContent = "Submitting report and uploading media...";
+      reportMessage.textContent = `Uploading ${files.length} file(s). Please wait...`;
       
       const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/add`, {
         method: "POST",
-        body: formData
+        body: formData 
       });
       
       if (!res) return;
@@ -108,7 +162,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         reportMessage.style.color = "green";
         reportMessage.textContent = "Heat report submitted successfully!";
         reportForm.reset();
+        
+        // Clear media previews and badge
+        document.getElementById('mediaPreview').innerHTML = '';
+        const badge = document.getElementById('fileCountBadge');
+        if (badge) badge.style.display = 'none';
+
+        // Refresh table and stats
         await loadReports(); 
+        await refreshSwineData();
       } else {
         reportMessage.style.color = "red";
         reportMessage.textContent = data.message || "Failed to submit report";
@@ -116,7 +178,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) {
       console.error("Error submitting report:", err);
       reportMessage.style.color = "red";
-      reportMessage.textContent = "Server error occurred.";
+      reportMessage.textContent = "Server error occurred during upload.";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Report to Manager";
     }
   });
 
@@ -130,9 +195,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
 
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    return `${days}d ${hours}h ${minutes}m`;
   }
 
   // ---------------- LOAD FARMER'S HEAT REPORTS ----------------
@@ -145,13 +209,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       reportsTableBody.innerHTML = "";
 
       if (!data.success || !data.reports?.length) {
-        reportsTableBody.innerHTML = "<tr><td colspan='6'>No reports found</td></tr>";
+        reportsTableBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No reports found</td></tr>";
         return;
       }
 
       data.reports.forEach(r => {
         const swineCode = r.swine_id?.swine_id || "Unknown";
-        const dateReported = new Date(r.createdAt).toLocaleDateString(); // Use createdAt for more accuracy
+        const dateReported = new Date(r.createdAt).toLocaleDateString(); 
         const status = r.status || "pending";
 
         const row = document.createElement("tr");
@@ -178,11 +242,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       updateCountdowns();
       clearInterval(window.heatCountdownInterval);
-      window.heatCountdownInterval = setInterval(updateCountdowns, 1000);
+      window.heatCountdownInterval = setInterval(updateCountdowns, 10000); // 10s refresh is enough for minutes
 
     } catch (err) {
       console.error("Error fetching heat reports:", err);
-      reportsTableBody.innerHTML = `<tr><td colspan='6' style="color:red;">Error: ${err.message}</td></tr>`;
+      reportsTableBody.innerHTML = `<tr><td colspan='6' style="color:red; text-align:center;">Error: ${err.message}</td></tr>`;
     }
   }
 
@@ -211,15 +275,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
-      alert("Heat re-emergence reported. The cycle has been reset to 'Approved' for new AI service.");
+      alert("Heat re-emergence reported. The cycle has been reset.");
       await loadReports();
+      await refreshSwineData();
     } catch (err) {
       alert("Failed to submit follow-up: " + err.message);
       console.error(err);
     }
   };
 
-  // ---------------- LOGOUT BUTTON ----------------
+  // ---------------- LOGOUT ----------------
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
@@ -234,5 +299,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Initial Load
+  await refreshSwineData();
   await loadReports();
 });

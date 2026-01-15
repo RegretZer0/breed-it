@@ -54,6 +54,34 @@
       margin-top: 10px;
     }
 
+    /* 🔍 Filter Bar Styling */
+    .filter-container {
+      display: flex;
+      gap: 15px;
+      background: #f1f3f5;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      align-items: center;
+      border: 1px solid #e9ecef;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .filter-group label {
+      font-size: 0.8em;
+      font-weight: bold;
+      color: #495057;
+      margin-bottom: 5px;
+    }
+    .filter-group input {
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+
     /* Table & Modal UI Styling */
     .table-container {
       margin-top: 30px;
@@ -75,22 +103,21 @@
     }
     th { background: #f8f9fa; color: #333; }
     .status-badge {
-      background: #e1f5fe;
-      color: #0288d1;
       padding: 3px 8px;
       border-radius: 12px;
       font-size: 0.8em;
       font-weight: bold;
     }
-    .view-btn {
-      background: #4a90e2;
-      color: white;
+    .view-btn, .edit-btn {
       border: none;
       padding: 6px 10px;
       border-radius: 4px;
       cursor: pointer;
       font-size: 0.8em;
+      margin-right: 5px;
     }
+    .view-btn { background: #4a90e2; color: white; }
+    .edit-btn { background: #f39c12; color: white; }
     .view-btn:hover { background: #357abd; }
 
     /* Modal Styling */
@@ -105,9 +132,9 @@
       background-color: #fff;
       margin: 5% auto;
       padding: 25px;
-      width: 90%;
-      max-width: 1000px;
-      max-height: 80vh;
+      width: 95%;
+      max-width: 1100px;
+      max-height: 85vh;
       overflow-y: auto;
       border-radius: 10px;
     }
@@ -119,6 +146,15 @@
     }
     .modal-section { margin-top: 20px; }
     .modal-section h4 { border-bottom: 2px solid #eee; padding-bottom: 5px; }
+    
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -215,7 +251,7 @@
               <label><input type="checkbox" value="Cleft Palate"> Cleft Palate</label>
             </div>
 
-            <label style="margin-top: 15px;">Initial Medical Records (Injections):</label>
+            <label style="margin-top: 15px;">Initial Medical Records:</label>
             <div class="checklist-box" id="medicalChecklist">
               <label><input type="checkbox" value="Iron Injection"> Iron Injection</label>
               <label><input type="checkbox" value="Vaccination"> Vaccination</label>
@@ -230,13 +266,27 @@
           </div>
         </div>
 
-        <button type="submit" style="margin-top: 20px; width: 100%; padding: 12px; font-weight: bold;">Register Swine</button>
+        <button type="submit" style="margin-top: 20px; width: 100%; padding: 12px; font-weight: bold; cursor: pointer;">Register Swine</button>
         <p id="swineMessage" class="message"></p>
       </form>
     </div>
 
     <div class="table-container">
       <h3>Swine Master List</h3>
+
+      <div class="filter-container">
+        <div class="filter-group">
+          <label for="filterBatch">Filter by Batch:</label>
+          <input type="text" id="filterBatch" placeholder="Search batch name..." />
+        </div>
+        <div class="filter-group">
+          <label for="filterFarmer">Filter by Farmer:</label>
+          <select id="filterFarmer">
+              <option value="">All Farmers</option>
+          </select>
+        </div>
+      </div>
+
       <table id="swineTable">
         <thead>
           <tr>

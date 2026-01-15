@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs"); // Added for file reading/deletion
+const fs = require("fs"); 
 const mongoose = require("mongoose");
 
 const HeatReport = require("../models/HeatReports");
@@ -18,12 +18,22 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 /* ======================================================
     MULTER CONFIG
 ====================================================== */
+// Ensure uploads directory exists
+const uploadDir = "uploads/";
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname))
+    cb(null, Date.now() + "-" + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
 });
-const upload = multer({ storage });
+
+const upload = multer({ 
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit per file
+});
 
 /* ======================================================
     PROBABILITY HELPER
@@ -46,39 +56,38 @@ const calculateProbability = (signs) => {
 };
 
 /* ======================================================
-    ADD NEW HEAT REPORT (Updated for Multiple Base64 Media)
+    ADD NEW HEAT REPORT
 ====================================================== */
 router.post(
   "/add",
   requireSessionAndToken,
   allowRoles("farm_manager", "encoder", "farmer"),
-  upload.array("evidence", 5), // Changed to .array to support up to 5 files
+  upload.array("evidence", 5), // Matches the name="evidence" in HTML and allows up to 5 files
   async (req, res) => {
     try {
       const { swineId, signs, farmerId } = req.body;
-      const files = req.files; // Access multiple files
+      const files = req.files;
 
       if (!swineId || !signs || !files || files.length === 0 || !farmerId) {
-        return res.status(400).json({ success: false, message: "All fields are required" });
+        return res.status(400).json({ success: false, message: "Swine ID, signs, and evidence are required" });
       }
 
       const farmer = await Farmer.findOne({ user_id: farmerId });
       const swine = await Swine.findOne({ swine_id: swineId });
 
-      if (!farmer || !swine) return res.status(404).json({ success: false, message: "Farmer or Swine not found" });
+      if (!farmer || !swine) {
+        return res.status(404).json({ success: false, message: "Farmer or Swine not found" });
+      }
 
-      // --- CONVERT MULTIPLE FILES TO BASE64 ARRAY ---
+      // Convert all uploaded files to Base64 strings for storage
       const evidenceData = files.map(file => {
         const filePath = path.join(__dirname, "../", file.path);
         const fileBuffer = fs.readFileSync(filePath);
         const base64String = fileBuffer.toString("base64");
-        
-        // Construct the Data URL (e.g., data:image/jpeg;base64,...)
         const dataUrl = `data:${file.mimetype};base64,${base64String}`;
         
-        // Clean up: delete the temporary file from 'uploads/'
-        fs.unlinkSync(filePath);
-        
+        // Clean up temporary file from disk
+        fs.unlinkSync(filePath); 
         return dataUrl;
       });
 
@@ -91,13 +100,14 @@ router.post(
         signs: parsedSigns,
         standing_reflex: parsedSigns.includes("Standing Reflex"),
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
-        evidence_url: evidenceData, // This is now an array of Base64 strings
+        evidence_url: evidenceData, // This is now an array of strings
         heat_probability: calculateProbability(parsedSigns),
         status: "pending"
       });
 
       await newReport.save();
 
+      // Notify Manager and Encoders
       const recipients = await UserModel.find({
         $or: [{ _id: farmer.managerId }, { manager_id: farmer.managerId, role: "encoder" }]
       });
@@ -106,7 +116,7 @@ router.post(
         const notifications = recipients.map(u => ({
           user_id: u._id,
           title: "New Heat Report",
-          message: `Farmer ${farmer.first_name} submitted report for Swine ${swine.swine_id}.`,
+          message: `Farmer ${farmer.first_name} submitted a heat report for Swine ${swine.swine_id}.`,
           type: "info"
         }));
         await Notification.insertMany(notifications);
@@ -122,14 +132,14 @@ router.post(
 
 
 /* ======================================================
-    GET ALL HEAT REPORTS (Admin/Encoder)
+    GET ALL HEAT REPORTS
 ====================================================== */
 router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     const reports = await HeatReport.find({ manager_id: managerId })
-      .populate("swine_id", "swine_id breed status")
+      .populate("swine_id", "swine_id breed current_status")
       .populate("farmer_id", "first_name last_name farmer_id")
       .sort({ createdAt: -1 });
     res.json({ success: true, reports });
@@ -149,7 +159,7 @@ router.get("/farmer/:userId", requireSessionAndToken, allowRoles("farmer", "farm
     const queryId = farmer ? farmer._id : userId;
 
     const reports = await HeatReport.find({ farmer_id: queryId })
-      .populate("swine_id", "swine_id breed status")
+      .populate("swine_id", "swine_id breed current_status")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, reports });
@@ -175,26 +185,17 @@ router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
 
     if (farmerId) {
       const farmerDoc = await Farmer.findOne({ user_id: farmerId });
-      if (farmerDoc) {
-        query.farmer_id = farmerDoc._id;
-      }
+      if (farmerDoc) query.farmer_id = farmerDoc._id;
     }
 
     const reports = await HeatReport.find(query)
       .populate("swine_id", "swine_id")
-      .populate({
-        path: "farmer_id",
-        model: "Farmer",
-        select: "first_name last_name"
-      });
+      .populate("farmer_id", "first_name last_name");
 
     const events = [];
 
     reports.forEach(r => {
-      let farmerName = "N/A";
-      if (r.farmer_id && typeof r.farmer_id === 'object') {
-          farmerName = `${r.farmer_id.first_name} ${r.farmer_id.last_name}`;
-      }
+      let farmerName = r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "N/A";
 
       if (r.status === "waiting_heat_check" && r.next_heat_check) {
         events.push({
@@ -241,8 +242,9 @@ router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "
     report.approved_by = req.user.id;
     await report.save();
 
-    await Swine.findByIdAndUpdate(report.swine_id, { status: "In-Heat" });
-    res.json({ success: true, message: "Report approved." });
+    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
+    
+    res.json({ success: true, message: "Report approved. Swine status updated to In-Heat." });
   } catch (err) {
     console.error("Approve Error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -290,10 +292,10 @@ router.post(
 
       await report.save({ session });
 
-      await Swine.findByIdAndUpdate(report.swine_id._id, { status: "Awaiting Recheck" }, { session });
+      await Swine.findByIdAndUpdate(report.swine_id._id, { current_status: "Awaiting Recheck" }, { session });
 
       await session.commitTransaction();
-      res.json({ success: true, message: "AI Record created. 23-day countdown started." });
+      res.json({ success: true, message: "AI Record created. Swine status updated." });
     } catch (err) {
       await session.abortTransaction();
       console.error("AI Confirmation Error:", err);
@@ -328,8 +330,9 @@ router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farm_m
         farrowing_date: report.expected_farrowing
     });
 
-    await Swine.findByIdAndUpdate(report.swine_id, { status: "Pregnant" });
-    res.json({ success: true, message: "Pregnancy confirmed." });
+    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "Pregnant" });
+
+    res.json({ success: true, message: "Pregnancy confirmed. Swine status updated." });
   } catch (err) {
     console.error("Pregnancy Confirmation Error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -337,7 +340,7 @@ router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farm_m
 });
 
 /* ======================================================
-    STILL IN HEAT
+    STILL IN HEAT (Reset Cycle)
 ====================================================== */
 router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
@@ -354,8 +357,9 @@ router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "far
         status: "Failed" 
     });
 
-    await Swine.findByIdAndUpdate(report.swine_id, { status: "In-Heat" });
-    res.json({ success: true, message: "Cycle reset due to heat re-emergence." });
+    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
+
+    res.json({ success: true, message: "Cycle reset. Swine status returned to In-Heat." });
   } catch (err) {
     console.error("Still-Heat Error:", err);
     res.status(500).json({ success: false, message: err.message });
