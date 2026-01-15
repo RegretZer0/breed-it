@@ -5,149 +5,201 @@
 <main class="main-content">
   <div class="container-fluid">
 
-    <!-- Header card with tabs -->
     <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
 
     <div class="card pig-card">
       <div class="card-body">
 
-        <h4 class="mb-4 fw-bold">REGISTER A PIG</h4>
+        <h4 class="mb-4 fw-bold">REGISTER A NATIVE PIG</h4>
 
         <form id="registerSwineForm">
 
           <!-- FARMER -->
           <h6 class="section-title">Farmer Information</h6>
-          <div class="row g-3 mb-4">
+          <div class="row mb-4">
             <div class="col-md-6">
               <label class="form-label">Farmer</label>
-              <!-- MUST be a select (linked to farmer_id) -->
-                <select id="farmerSelect" class="form-select" required>
-                  <option value="">Select Farmer</option>
-                </select>
+              <select id="farmerSelect" class="form-select" required>
+                <option value="">Loading farmers...</option>
+              </select>
             </div>
           </div>
 
-          <!-- PIG IDENTIFICATION -->
-          <h6 class="section-title">Pig Identification</h6>
+          <!-- BASIC INFO -->
+          <h6 class="section-title">Pig Information</h6>
           <div class="row g-3 mb-4">
 
-          <div class="col-md-3">
-            <label class="form-label">TAG (Swine ID)</label>
-            <input
-              type="text"
-              class="form-control"
-              id="swine_id"
-              readonly
-            />
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label">Batch</label>
-            <input
-              type="text"
-              class="form-control"
-              id="batch"
-              placeholder="e.g. A"
-              required
-            />
-          </div>
-
-
             <div class="col-md-3">
-              <label class="form-label">Breed</label>
-              <select class="form-select" id="breed">
-                <option value="" disabled selected>Select Breed</option>
-                <option>Native</option>
-                <option>Large White</option>
-                <option>Landrace</option>
-                <option>Duroc</option>
-                <option>Pietrain</option>
-                <option>Berkshire</option>
-                <option>Crossbred</option>
-              </select>
+              <label class="form-label">Batch</label>
+              <input type="text" id="batch" class="form-control" required />
             </div>
 
             <div class="col-md-3">
               <label class="form-label">Sex</label>
-              <select class="form-select" id="sex" required>
-                <option value="" disabled selected>Select Sex</option>
+              <select id="sex" class="form-select" required>
+                <option value="">Select Sex</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
               </select>
             </div>
 
             <div class="col-md-3">
+              <label class="form-label">Age Stage</label>
+              <select id="ageStage" class="form-select" required>
+                <option value="">Select Stage</option>
+                <option value="piglet">Piglet</option>
+                <option value="adult">Adult</option>
+              </select>
+            </div>
+
+            <div class="col-md-3 d-none" id="teatCountGroup">
+              <label class="form-label">Teat Count (Adult Female)</label>
+              <input type="number" id="teatCount" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Breed</label>
+              <input
+                type="text"
+                id="breed"
+                class="form-control"
+                value="Native"
+                readonly
+              />
+            </div>
+
+            <div class="col-md-3">
               <label class="form-label">Color</label>
-              <select class="form-select" id="color">
-                <option value="" disabled selected>Select Color</option>
+              <select id="color" class="form-select" required>
+                <option value="">Select Color</option>
                 <option>Black</option>
-                <option>White</option>
-                <option>Pink</option>
+                <option>Black with White Markings</option>
                 <option>Brown</option>
-                <option>Red</option>
-                <option>Mixed</option>
+                <option>Reddish Brown</option>
+                <option>Spotted (Black & White)</option>
+                <option>Gray</option>
               </select>
             </div>
 
             <div class="col-md-3">
               <label class="form-label">Birth Date</label>
-              <input type="date" class="form-control" id="birth_date" />
-            </div>
-
-          </div>
-
-          <!-- LINEAGE & STATUS -->
-          <h6 class="section-title">Lineage & Status</h6>
-          <div class="row g-3 mb-4">
-
-            <div class="col-md-3">
-              <label class="form-label">Sire ID</label>
-              <input type="text" class="form-control" id="sire_id" />
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">Dam ID</label>
-              <input type="text" class="form-control" id="dam_id" />
+              <input type="date" id="birth_date" class="form-control" />
             </div>
 
             <div class="col-md-3">
               <label class="form-label">Health Status</label>
-              <select class="form-select" id="status">
-                <option>Healthy</option>
-                <option>Sick</option>
-                <option>Deceased</option>
+              <select id="health_status" class="form-select">
+                <option value="Healthy">Healthy</option>
+                <option value="Sick">Sick</option>
+                <option value="Deceased (Before Weaning)">Deceased (Before Weaning)</option>
+                <option value="Deceased">Deceased</option>
               </select>
             </div>
 
+          </div>
+
+          <!-- MEASUREMENTS -->
+          <h6 class="section-title">Initial Measurements & Lineage</h6>
+          <div class="row g-3 mb-4">
+
             <div class="col-md-3">
-              <label class="form-label">Inventory Status</label>
-              <select class="form-select" id="inventory_status">
-                <option>In Stock</option>
-                <option>Sold</option>
-                <option>Transferred</option>
-              </select>
+              <label class="form-label">Weight (kg)</label>
+              <input type="number" id="weight" step="0.01" class="form-control" required />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label">Date of Transfer</label>
-              <input type="date" class="form-control" id="date_transfer" />
+              <label class="form-label">Body Length (cm)</label>
+              <input type="number" id="bodyLength" class="form-control" />
             </div>
 
+            <div class="col-md-3">
+              <label class="form-label">Heart Girth (cm)</label>
+              <input type="number" id="heartGirth" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Teeth Count</label>
+              <input type="number" id="teethCount" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Sire ID</label>
+              <input type="text" id="sire_id" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Dam ID</label>
+              <input type="text" id="dam_id" class="form-control" />
+            </div>
+
+          </div>
+
+          <!-- DEFORMITIES -->
+          <h6 class="section-title">Observed Deformities</h6>
+          <div id="deformityChecklist" class="mb-4">
+            <label><input type="checkbox" value="Splayleg"> Splayleg</label>
+            <label><input type="checkbox" value="Bent Legs"> Bent Legs</label>
+            <label><input type="checkbox" value="Scrotal Hernia"> Scrotal Hernia</label>
+            <label><input type="checkbox" value="Umbilical Hernia"> Umbilical Hernia</label>
+            <label><input type="checkbox" value="Atresia Ani"> Atresia Ani</label>
+            <label><input type="checkbox" value="Cleft Palate"> Cleft Palate</label>
+          </div>
+
+          <!-- MEDICAL -->
+          <h6 class="section-title">Initial Medical Records</h6>
+          <div id="medicalChecklist" class="mb-4">
+            <label><input type="checkbox" value="Iron Injection"> Iron Injection</label>
+            <label><input type="checkbox" value="Vaccination"> Vaccination</label>
+            <label><input type="checkbox" value="Deworming"> Deworming</label>
+            <label><input type="checkbox" value="Vitamin"> Vitamin Boost</label>
           </div>
 
           <p id="swineMessage" class="small"></p>
 
-          <!-- ACTIONS -->
-          <div class="d-flex justify-content-end gap-3">
-            <button type="reset" class="btn btn-clear px-4">CLEAR</button>
-            <button type="submit" class="btn btn-save px-4">SAVE</button>
-          </div>
+            <div class="d-flex justify-content-end gap-3">
+              <button type="reset" class="btn btn-clear px-4">
+                CLEAR
+              </button>
+              <button type="button" id="openPreviewBtn" class="btn btn-save px-4">
+                SAVE
+              </button>
+            </div>
 
         </form>
-
       </div>
     </div>
   </div>
+      <!-- PREVIEW MODAL -->
+      <div class="modal fade" id="previewSwineModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+          <div class="modal-content">
+
+            <div class="modal-header">
+              <h5 class="modal-title">Confirm Pig Registration</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+              <p class="mb-3 text-muted">
+                Please confirm that all the information provided below is correct.
+              </p>
+
+              <div id="previewContent" class="preview-content"></div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-clear" data-bs-dismiss="modal">
+                Back
+              </button>
+              <button type="button" id="confirmSaveBtn" class="btn btn-save">
+                Confirm & Register
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
 </main>
 
 <%- include("../../../partials/farm-manager/footer") %>

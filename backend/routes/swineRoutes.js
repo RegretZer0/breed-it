@@ -183,32 +183,67 @@ router.put(
     const updates = req.body;
 
     try {
-      const swine = await Swine.findOne({ swine_id: swineId });
-      if (!swine)
-        return res
-          .status(404)
-          .json({ success: false, message: "Swine not found" });
+      if (!mongoose.Types.ObjectId.isValid(swineId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid swine ID"
+        });
+      }
 
-      if (user.role === "farmer" && swine.farmer_id.toString() !== user.farmerProfileId)
-        return res.status(403).json({ success: false, message: "Access denied" });
+      const swine = await Swine.findById(swineId);
+
+      if (!swine) {
+        return res.status(404).json({
+          success: false,
+          message: "Swine not found"
+        });
+      }
+
+      // Farmer-level access control
+      if (
+        user.role === "farmer" &&
+        swine.farmer_id.toString() !== user.farmerProfileId
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied"
+        });
+      }
 
       const allowedFields = [
-        "sex", "color", "breed", "birth_date", "health_status", 
-        "sire_id", "dam_id", "date_transfer", 
-        "batch", "age_stage", "current_status"
+        "sex",
+        "color",
+        "breed",
+        "birth_date",
+        "health_status",
+        "sire_id",
+        "dam_id",
+        "date_transfer",
+        "batch",
+        "age_stage",
+        "current_status"
       ];
 
-      allowedFields.forEach((field) => {
+      allowedFields.forEach(field => {
         if (updates[field] !== undefined) {
           swine[field] = updates[field];
         }
       });
 
       await swine.save();
-      res.json({ success: true, message: "Swine updated successfully", swine });
+
+      res.json({
+        success: true,
+        message: "Swine updated successfully",
+        swine
+      });
+
     } catch (error) {
       console.error("[UPDATE SWINE ERROR]:", error);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
     }
   }
 );

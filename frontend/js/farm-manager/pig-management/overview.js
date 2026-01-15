@@ -1,22 +1,27 @@
-import { authGuard } from "./authGuard.js";
+import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // Protect page: farm managers OR encoders
+  // ================= AUTH =================
   const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
 
   const token = localStorage.getItem("token");
   const role = user.role;
 
-  // ---------------- DETERMINE MANAGER ID ----------------
+  // ================= STATE =================
   let managerId = null;
+  let farmers = [];
+  let selectedFarmerId = null;
+  let allSwine = [];
+  let currentPig = null;
+  let originalPig = null;
 
+
+  // ================= RESOLVE MANAGER =================
   try {
     if (role === "farm_manager") {
       managerId = user.id;
-    }
-
-    if (role === "encoder") {
+    } else if (role === "encoder") {
       if (user.managerId) {
         managerId = user.managerId;
       } else {
@@ -29,32 +34,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         );
 
         const data = await res.json();
-        if (!res.ok || !data.success || !data.encoder) {
-          throw new Error("Encoder profile not found");
-        }
-
+        if (!res.ok || !data.success) throw new Error();
         managerId = data.encoder.managerId;
       }
     }
   } catch (err) {
-    console.error("Failed to determine managerId:", err);
+    console.error("Failed to resolve managerId", err);
     return;
   }
 
-  if (!managerId) {
-    console.error("Manager ID is missing — cannot load swine");
-    return;
-  }
+  if (!managerId) return;
 
-  // ---------------- DOM ELEMENTS ----------------
+  // ================= DOM =================
   const swineTableBody = document.getElementById("swineTableBody");
-  const farmerSelect = document.getElementById("farmerSelect");
-  const sexSelect = document.getElementById("sex");
-  const batchInput = document.getElementById("batch");
+  const filtersForm = document.getElementById("filtersForm");
 
-  /* =========================
-     AGE CALCULATION HELPER
-  ========================= */
+  const filterStatus = document.getElementById("filterStatus");
+  const filterSex = document.getElementById("filterSex");
+  const filterTag = document.getElementById("filterTag");
+
+  // ================= HELPERS =================
   function calculateAge(birthDate) {
     if (!birthDate) return "—";
 
@@ -65,64 +64,146 @@ document.addEventListener("DOMContentLoaded", async () => {
     let months = today.getMonth() - birth.getMonth();
     let days = today.getDate() - birth.getDate();
 
-    if (days < 0) {
-      months--;
-      days += 30;
-    }
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
+    if (days < 0) { months--; days += 30; }
+    if (months < 0) { years--; months += 12; }
 
     return `${years}Y ${months}M ${days}D`;
   }
 
-  // ---------------- FETCH FARMERS ----------------
-  async function loadFarmers() {
-    if (!farmerSelect) return;
+  // ================= FARMER DROPDOWN =================
+  function renderFarmerDropdown(list) {
+    const wrap = document.getElementById("farmerOptions");
+    wrap.innerHTML = "";
 
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/auth/farmers/${managerId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include",
-        }
-      );
-
-      const data = await res.json();
-
-      farmerSelect.innerHTML = `<option value="">Select Farmer</option>`;
-
-      if (!data.success || !data.farmers?.length) {
-        farmerSelect.innerHTML += `<option>No farmers available</option>`;
-        return;
-      }
-
-      data.farmers.forEach((farmer) => {
-        const option = document.createElement("option");
-        option.value = farmer._id;
-        option.textContent =
-          `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim() ||
-          "Unnamed Farmer";
-        farmerSelect.appendChild(option);
-      });
-    } catch (err) {
-      console.error("Error loading farmers:", err);
-      farmerSelect.innerHTML = `<option>Error loading farmers</option>`;
+    if (!list.length) {
+      wrap.innerHTML = `<div class="text-muted small">No farmers found</div>`;
+      return;
     }
+
+    list.forEach(f => {
+      const div = document.createElement("div");
+      div.className = "dropdown-item small";
+      div.textContent = `${f.first_name} ${f.last_name}`.trim();
+      div.onclick = () => {
+        selectedFarmerId = f._id;
+        document.getElementById("farmerDropdownBtn").textContent =
+          `${f.first_name} ${f.last_name}`.trim();
+      };
+      wrap.appendChild(div);
+    });
   }
 
-  // ---------------- FETCH SWINE (TABLE RENDER) ----------------
-  async function fetchSwine() {
+  document.getElementById("farmerSearch").addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    renderFarmerDropdown(
+      farmers.filter(f =>
+        `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
+      )
+    );
+  });
+
+  // ================= TABLE RENDER =================
+  function renderTable(list) {
+    swineTableBody.innerHTML = "";
+
+    if (!list.length) {
+      swineTableBody.innerHTML = `
+        <tr>
+          <td colspan="10" class="text-center text-muted">
+            No swine records found
+          </td>
+        </tr>`;
+      return;
+    }
+
+    list.forEach(sw => {
+      const birthYear = sw.birth_date
+        ? new Date(sw.birth_date).getFullYear()
+        : "—";
+
+      swineTableBody.innerHTML += `
+        <tr>
+          <td>${birthYear}</td>
+          <td>${sw.swine_id || "—"}</td>
+          <td>${sw.sex || "—"}</td>
+          <td>${sw.color || "—"}</td>
+          <td>${sw.breed || "—"}</td>
+          <td>${sw.birth_date ? new Date(sw.birth_date).toLocaleDateString() : "—"}</td>
+          <td>${calculateAge(sw.birth_date)}</td>
+          <td>${sw.current_status || sw.status || "—"}</td>
+          <td>${sw.batch || "—"}</td>
+          <td>
+            <button
+              class="btn btn-outline-primary btn-sm view-btn"
+              data-id="${sw._id}">
+              View
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  // ================= FILTER PREVIEW =================
+  function renderFilterPreview(list) {
+    const wrap = document.getElementById("filterResultWrap");
+    const body = document.getElementById("filterResultBody");
+
+    body.innerHTML = "";
+
+    if (!list.length) {
+      body.innerHTML = `
+        <tr>
+          <td colspan="4" class="text-center text-muted">
+            No matching records
+          </td>
+        </tr>`;
+      wrap.classList.remove("d-none");
+      return;
+    }
+
+    list.slice(0, 5).forEach(sw => {
+      body.innerHTML += `
+        <tr>
+          <td>${sw.swine_id}</td>
+          <td>${sw.farmer_id?.first_name || "—"}</td>
+          <td>${sw.current_status || sw.status}</td>
+          <td>${sw.batch || "—"}</td>
+        </tr>
+      `;
+    });
+
+    wrap.classList.remove("d-none");
+  }
+
+  // ================= LOAD FARMERS =================
+  async function loadFarmers() {
+    const res = await fetch(
+      `http://localhost:5000/api/auth/farmers/${managerId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      }
+    );
+
+    const data = await res.json();
+    if (!res.ok || !data.success) return [];
+
+    farmers = data.farmers;
+    renderFarmerDropdown(farmers);
+
+    return farmers.map(f => f._id.toString());
+  }
+
+  // ================= LOAD SWINE =================
+  async function loadSwine(farmerIds) {
     try {
       swineTableBody.innerHTML = `
         <tr>
           <td colspan="10" class="text-center text-muted">
-            Loading swine...
+            Loading swine records...
           </td>
-        </tr>
-      `;
+        </tr>`;
 
       const res = await fetch("http://localhost:5000/api/swine/all", {
         headers: { Authorization: `Bearer ${token}` },
@@ -130,61 +211,124 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       const data = await res.json();
+      if (!res.ok || !data.success) throw new Error();
 
-      if (!res.ok || !data.success || !data.swine?.length) {
-        swineTableBody.innerHTML = `
-          <tr>
-            <td colspan="10" class="text-center text-muted">
-              No swine records found
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      swineTableBody.innerHTML = "";
-
-      data.swine.forEach((sw) => {
-        const birthYear = sw.birth_date
-          ? new Date(sw.birth_date).getFullYear()
-          : "—";
-
-        const age = calculateAge(sw.birth_date);
-
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${birthYear}</td>
-          <td>${sw.swine_id}</td>
-          <td>${sw.sex || "—"}</td>
-          <td>${sw.color || "—"}</td>
-          <td>${sw.breed || "—"}</td>
-          <td>${sw.birth_date ? new Date(sw.birth_date).toLocaleDateString() : "—"}</td>
-          <td>${age}</td>
-          <td>${sw.status || "—"}</td>
-          <td>${sw.batch || "—"}</td>
-          <td>
-            <button class="btn btn-outline-primary btn-sm">
-              View
-            </button>
-          </td>
-        `;
-
-        swineTableBody.appendChild(row);
+      allSwine = data.swine.filter(sw => {
+        const fid =
+          typeof sw.farmer_id === "object"
+            ? sw.farmer_id._id
+            : sw.farmer_id;
+        return farmerIds.includes(fid?.toString());
       });
+
+      renderTable(allSwine);
+
+      document.querySelectorAll(".view-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const pig = allSwine.find(p => p._id === btn.dataset.id);
+          if (pig) openPigModal(pig);
+        });
+      });
+
+      window.openPigModal = function (pig) {
+      currentPig = pig;
+      originalPig = JSON.parse(JSON.stringify(pig));
+
+      pigTag.value = pig.swine_id;
+      pigSex.value = pig.sex || "";
+      pigColor.value = pig.color || "";
+      pigBreed.value = pig.breed || "";
+      pigBirthDate.value = pig.birth_date ? pig.birth_date.split("T")[0] : "";
+      pigStatus.value = pig.current_status || pig.status || "";
+      pigBatch.value = pig.batch || "";
+
+      setEditMode(false);
+      new bootstrap.Modal(pigModal).show();
+    };
+
+    function setEditMode(editing) {
+      ["pigSex","pigColor","pigBreed","pigBirthDate","pigStatus","pigBatch"]
+        .forEach(id => document.getElementById(id).disabled = !editing);
+
+      editPigBtn.classList.toggle("d-none", editing);
+      savePigBtn.classList.toggle("d-none", !editing);
+      cancelEditBtn.classList.toggle("d-none", !editing);
+    }
+
+    editPigBtn.onclick = () => setEditMode(true);
+
+    cancelEditBtn.onclick = () => {
+      openPigModal(originalPig);
+    };
+
+    savePigBtn.onclick = () => {
+      new bootstrap.Modal(confirmSaveModal).show();
+    };
+
+
+
     } catch (err) {
-      console.error("Error loading swine:", err);
+      console.error("Swine load failed", err);
       swineTableBody.innerHTML = `
         <tr>
-          <td colspan="10" class="text-center text-danger">
+          <td colspan="10" class="text-danger text-center">
             Failed to load swine data
           </td>
-        </tr>
-      `;
+        </tr>`;
     }
   }
 
-  // ---------------- INITIAL LOAD ----------------
-  await loadFarmers(); // OK even if overview-only
-  await fetchSwine();
+  // ================= FILTER SUBMIT =================
+  filtersForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const status = filterStatus.value;
+    const sex = filterSex.value;
+    const tag = filterTag.value.toLowerCase();
+
+    let filtered = [...allSwine];
+
+    if (selectedFarmerId) {
+      filtered = filtered.filter(sw => {
+        const fid =
+          typeof sw.farmer_id === "object"
+            ? sw.farmer_id._id
+            : sw.farmer_id;
+        return fid === selectedFarmerId;
+      });
+    }
+
+    if (status) {
+      filtered = filtered.filter(sw =>
+        (sw.current_status || sw.status) === status
+      );
+    }
+
+    if (sex) {
+      filtered = filtered.filter(sw => sw.sex === sex);
+    }
+
+    if (tag) {
+      filtered = filtered.filter(sw =>
+        sw.swine_id?.toLowerCase().includes(tag)
+      );
+    }
+
+    renderFilterPreview(filtered);
+  });
+
+  // ================= RESET =================
+  document.getElementById("resetFilters").addEventListener("click", () => {
+    selectedFarmerId = null;
+
+    filtersForm.reset();
+    document.getElementById("farmerDropdownBtn").textContent = "Select Farmer";
+    document.getElementById("filterResultWrap").classList.add("d-none");
+
+    renderTable(allSwine);
+  });
+
+  // ================= INIT =================
+  const farmerIds = await loadFarmers();
+  await loadSwine(farmerIds);
 });

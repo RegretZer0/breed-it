@@ -1,51 +1,186 @@
-.pig-card {
-    border-radius: 10px;
-    border: 1px solid #ddd;
+/* ============================= */
+/* FORM GRID IMPROVEMENTS */
+/* ============================= */
+
+.pig-card .row {
+  align-items: flex-start;
 }
 
+/* Ensure consistent spacing between sections */
 .section-title {
-    font-weight: 600;
-    margin-bottom: 15px;
+  margin-top: 25px;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #333;
 }
 
+/* Improve label spacing */
 .form-label {
-    font-size: 0.9rem;
-    font-weight: 500;
+  margin-bottom: 4px;
 }
 
-input,
-select {
-    border-radius: 6px;
+/* Inputs consistent height */
+input.form-control,
+select.form-select {
+  min-height: 42px;
 }
 
 /* ============================= */
-/* CUSTOM BUTTON COLORS */
+/* CHECKBOX GROUPS (Deformities & Medical) */
 /* ============================= */
 
-/* SAVE & SELECT */
+#deformityChecklist,
+#medicalChecklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+  padding: 10px 5px;
+}
+
+#deformityChecklist label,
+#medicalChecklist label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#deformityChecklist input[type="checkbox"],
+#medicalChecklist input[type="checkbox"] {
+  margin: 0;
+}
+
+/* ============================= */
+/* TEAT COUNT VISUAL ALIGNMENT */
+/* ============================= */
+
+#teatCountGroup {
+  transition: all 0.2s ease;
+}
+
+/* When visible, align like other inputs */
+#teatCountGroup:not(.d-none) {
+  display: block;
+}
+
+/* ============================= */
+/* FORM FOOTER */
+/* ============================= */
+
+#swineMessage {
+  margin-top: 10px;
+  font-weight: 500;
+}
+
 .btn-save {
-    background-color: #17c14f;
-    border-color: #17c14f;
-    color: #fff;
+  min-width: 160px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ============================= */
+/* PRIMARY ACTION: SAVE / CONFIRM */
+/* ============================= */
+
+.btn-save {
+  background-color: #17c14f;      /* Green */
+  border-color: #17c14f;
+  color: #fff;
 }
 
 .btn-save:hover,
 .btn-save:focus {
-    background-color: #13a944;
-    border-color: #13a944;
-    color: #fff;
+  background-color: #13a944;
+  border-color: #13a944;
+  color: #fff;
 }
 
-/* CLEAR */
+/* ============================= */
+/* SECONDARY ACTION: CLEAR / BACK */
+/* ============================= */
+
 .btn-clear {
-    background-color: rgba(255, 99, 115, 0.85);
-    border-color: rgba(255, 99, 115, 0.85);
-    color: #fff;
+  background-color: #ff6373;      /* Soft Red */
+  border-color: #ff6373;
+  color: #fff;
 }
 
 .btn-clear:hover,
 .btn-clear:focus {
-    background-color: rgba(255, 99, 115, 1);
-    border-color: rgba(255, 99, 115, 1);
-    color: #fff;
+  background-color: #e55362;
+  border-color: #e55362;
+  color: #fff;
+}
+
+/* ============================= */
+/* MODAL BUTTON ALIGNMENT */
+/* ============================= */
+
+.modal-footer .btn {
+  min-width: 130px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: 6px;
+}
+
+/* ============================= */
+/* DISABLED STATES */
+/* ============================= */
+
+.btn-save:disabled,
+.btn-clear:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* ============================= */
+/* PREVIEW MODAL */
+/* ============================= */
+
+.preview-content {
+  font-size: 0.9rem;
+}
+
+.preview-content .preview-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.preview-content .preview-row span:first-child {
+  font-weight: 500;
+  color: #444;
+}
+
+.preview-content .preview-row span:last-child {
+  color: #000;
+}
+
+.preview-section {
+  margin-top: 15px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #222;
+}
+
+
+/* ============================= */
+/* RESPONSIVE FIXES */
+/* ============================= */
+
+@media (max-width: 768px) {
+  #deformityChecklist,
+  #medicalChecklist {
+    gap: 10px;
+  }
+
+  .btn-save {
+    width: 100%;
+  }
 }

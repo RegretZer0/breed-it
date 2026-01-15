@@ -1,16 +1,41 @@
-/* ROOT */
-:root {
-  --primary: #1e7f43;
-  --info: #17a2b8;
-  --success: #28a745;
-  --warning: #f4a62a;
-  --danger: #ff6b6b;
-  --border: #e6e9ef;
- 
+/* =========== Root tokens =========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
 
+  --accent-green: #17c14f;
+  --stat-orange: #ff9a1f;
+  --stat-blue: #1ea7ff;
+  --stat-green: #43c572;
+  --stat-red: #f55b66;
+  --stat-blue2: #1543ff;
+  --stat-teal: #12c0a4;
+  --stat-brown: #b67c1a;
+  --stat-purple: #b14cf0;
+
+  /* sizing */
   --gutter: 18px;
   --radius: 8px;
- }
+}
+/* =========== Global reset / basics =========== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family-system);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--bg);
+  color: var(--text-dark);
+  -webkit-text-size-adjust: 100%;
+}
+
 /* =========== Shell layout (topbar & sidebar removed) =========== */
 .app-shell{
   display: flex;
@@ -45,15 +70,9 @@
   font-size: 20px;
 }
 
-
-/* STATS */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
-}
-
-.stat-card {
+/* Stats grid: each stat card */
+.stat-card{
+  background: var(--bg);
   border-radius: var(--radius);
   padding: 18px;
   border: 1px solid #f0f0f0;
@@ -64,110 +83,70 @@
   gap: 12px;
   align-items: center;
 }
+.stat-label{
+  font-size: 14px;
+  color: var(--muted-text);
+  margin-bottom: 6px;
+}
+.stat-number{
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--text-dark);
+}
 
-.stat-icon {
+/* colored circular icon */
+.stat-icon{
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   color: #fff;
+  font-size: 18px;
+  flex: 0 0 44px;
 }
+.stat-icon.orange{ background: var(--stat-orange); }
+.stat-icon.blue{ background: var(--stat-blue); }
+.stat-icon.green{ background: var(--stat-green); }
+.stat-icon.red{ background: var(--stat-red); }
 
-.stat-label {
-  font-size: .8rem;
-  color: #666;
-}
-
-.stat-value {
-  font-size: 1.6rem;
-  font-weight: 700;
-}
-
-/* TOOLBAR */
-.utility-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .75rem;
-  margin: 1.5rem 0;
-  justify-content: space-between;
-}
-
-.utility-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: 8px;
-}
-
-/* BUTTONS */
-.btn {
-  padding: .6rem .9rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  font-size: .85rem;
-}
-
-.btn.primary { background: var(--primary); color: #fff; }
-.btn.info { background: var(--info); color: #fff; }
-.btn.success { background: var(--success); color: #fff; }
-.btn.outline { background: #fff; border: 1px solid var(--border); }
-
-/* TABLE */
-.table-wrapper {
-  overflow-x: auto;
-}
-
-table {
+.reports-table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 15px;
 }
 
-th, td {
-  padding: .75rem;
-  border-bottom: 1px solid var(--border);
-  font-size: .85rem;
+.reports-table th,
+.reports-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
 }
 
-/* MODALS */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  display: none;
-  place-items: center;
-  z-index: 999;
+.reports-table th {
+  background: #f5f5f5;
 }
 
-.modal-box {
-  background: #fff;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 420px;
-  padding: 1.5rem;
+.reports-table button {
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 1rem;
+.report-details {
+  margin-top: 25px;
+  border: 1px solid #ccc;
+  padding: 15px;
+  background: #fafafa;
+  max-width: 700px;
 }
 
-/* MOBILE */
-@media (max-width: 600px) {
-  .utility-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.report-details video,
+.report-details img {
+  margin-top: 10px;
+  max-width: 100%;
+}
 
-  .btn {
-    justify-content: center;
-    width: 100%;
-  }
+.report-actions button {
+  margin-right: 10px;
+  margin-top: 10px;
 }
