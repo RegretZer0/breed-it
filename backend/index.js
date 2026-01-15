@@ -10,6 +10,7 @@ const initHeatCron = require("./utils/cronJobs"); // 🛠️ Added Cron Job Impo
 
 const adminRoutes = require("./routes/adminRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const analyticsRoutes = require("./routes/analyticsRoute");
 
 // ENV VALIDATION (FAIL FAST)
 if (!process.env.MONGO_URI) {
@@ -95,6 +96,7 @@ app.use("/api/breeding", require("./routes/breedingRoutes"));
 app.use("/api/farmer", require("./routes/farmerRoutes"));
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // HEALTH CHECK
 app.get("/", (req, res) => {
