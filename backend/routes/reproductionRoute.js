@@ -1,0 +1,250 @@
+const express = require("express");
+const router = express.Router();
+const mongoose = require("mongoose");
+
+// --- MODELS ---
+const AIRecord = require("../models/AIRecord");
+const Swine = require("../models/Swine");
+const User = require("../models/UserModel"); 
+const Farmer = require("../models/UserFarmer"); 
+const HeatReport = require("../models/HeatReports"); 
+
+const { requireSessionAndToken } = require("../middleware/authMiddleware");
+
+// Helper to format names consistently across different collections
+const formatName = (userObj) => {
+    if (!userObj) return null;
+    return `${userObj.first_name || userObj.full_name || ''} ${userObj.last_name || ''}`.trim();
+};
+
+// ---------------------------------------------------------
+// 1. FETCH AI HISTORY (Ownership-Aware)
+// ---------------------------------------------------------
+router.get("/ai-history", requireSessionAndToken, async (req, res) => {
+    try {
+        const { id: userId, role, farmerProfileId, managerId } = req.user;
+        let query = {};
+
+        if (role === "farmer") {
+            if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+            query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
+        } else {
+            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
+            const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
+            const farmerIds = managedFarmers.map(f => f._id);
+            
+            query = {
+                $or: [
+                    { farmer_id: { $in: farmerIds } },
+                    { registered_by: effectiveManagerId }
+                ]
+            };
+        }
+
+        const records = await AIRecord.find(query)
+            .populate("swine_id", "swine_id") 
+            .populate("male_swine_id", "swine_id") 
+            .populate({
+                path: "farmer_id",
+                model: "Farmer", 
+                select: "first_name last_name"
+            })
+            .lean();
+
+        const formatted = await Promise.all(records.map(async (r) => {
+            let name = "Unknown Farmer";
+
+            if (r.farmer_id) {
+                name = formatName(r.farmer_id);
+            } else {
+                const rawRecord = await AIRecord.findById(r._id).select("farmer_id");
+                if (rawRecord && rawRecord.farmer_id) {
+                    const manager = await User.findById(rawRecord.farmer_id).select("full_name first_name last_name");
+                    if (manager) {
+                        name = formatName(manager) + " (Manager)";
+                    }
+                }
+            }
+
+            return {
+                farmer_name: name,
+                sow_tag: r.swine_id?.swine_id || "N/A",
+                boar_tag: r.male_swine_id?.swine_id || "N/A",
+                date: r.insemination_date
+            };
+        }));
+
+        res.json({ success: true, data: formatted });
+    } catch (err) {
+        console.error("AI History Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 2. FETCH PERFORMANCE ANALYTICS (Ownership-Aware)
+// ---------------------------------------------------------
+router.get("/performance-analytics", requireSessionAndToken, async (req, res) => {
+    try {
+        const { id: userId, role, farmerProfileId, managerId } = req.user;
+        let query = {};
+
+        if (role === "farmer") {
+            if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+            query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
+        } else {
+            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
+            const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
+            const farmerIds = managedFarmers.map(f => f._id);
+            
+            query = {
+                $or: [
+                    { farmer_id: { $in: farmerIds } },
+                    { registered_by: effectiveManagerId }
+                ]
+            };
+        }
+
+        const swines = await Swine.find(query)
+            .populate({
+                path: "farmer_id",
+                model: "Farmer",
+                select: "first_name last_name"
+            })
+            .lean();
+
+        let morphologyRecords = [];
+        let deformityMonitoring = [];
+
+        swines.forEach(swine => {
+            const displayFarmerName = formatName(swine.farmer_id) || "Unknown User";
+
+            if (swine.performance_records && swine.performance_records.length > 0) {
+                swine.performance_records.forEach(perf => {
+                    let cleanTeeth = perf.teeth_count ?? '0';
+                    if (perf.teeth_alignment && 
+                        perf.teeth_alignment.toLowerCase() !== 'n/a' && 
+                        perf.teeth_alignment.trim() !== '') {
+                        cleanTeeth += ` (${perf.teeth_alignment})`;
+                    }
+
+                    morphologyRecords.push({
+                        farmer_name: displayFarmerName,
+                        swine_tag: swine.swine_id,
+                        swine_sex: swine.sex || "Unknown", 
+                        morphology: {
+                            stage: perf.stage || "Routine",
+                            date: perf.record_date,
+                            weight: perf.weight ?? 0,
+                            body_length: perf.body_length ?? 0,
+                            heart_girth: perf.heart_girth ?? 0,
+                            teat_count: perf.teat_count ?? null,
+                            teeth: cleanTeeth 
+                        }
+                    });
+
+                    if (perf.deformities && perf.deformities.length > 0) {
+                        const realDeformities = perf.deformities.filter(d => 
+                            d && d.toLowerCase() !== "none"
+                        );
+                        if (realDeformities.length > 0) {
+                            deformityMonitoring.push({
+                                farmer_name: displayFarmerName,
+                                swine_tag: swine.swine_id,
+                                deformity_types: realDeformities.join(", "),
+                                date_detected: perf.record_date
+                            });
+                        }
+                    }
+                });
+            }
+        });
+
+        res.json({ success: true, morphology: morphologyRecords, deformities: deformityMonitoring });
+    } catch (err) {
+        console.error("Performance Analytics Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 3. SELECTION PROCESS CANDIDATES (Ownership-Aware)
+// ---------------------------------------------------------
+router.get("/selection-candidates", requireSessionAndToken, async (req, res) => {
+    try {
+        const { id: userId, role, farmerProfileId, managerId } = req.user;
+        let query = { current_status: { $in: ["1st Selection Ongoing", "2nd Selection Ongoing"] } };
+
+        if (role === "farmer") {
+            if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+            query.farmer_id = new mongoose.Types.ObjectId(farmerProfileId);
+        } else {
+            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
+            const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
+            const farmerIds = managedFarmers.map(f => f._id);
+            
+            query.$or = [
+                { farmer_id: { $in: farmerIds } },
+                { registered_by: effectiveManagerId }
+            ];
+        }
+
+        const candidates = await Swine.find(query)
+            .populate({
+                path: "farmer_id",
+                model: "Farmer",
+                select: "first_name last_name"
+            })
+            .lean();
+
+        const formatted = candidates.map(c => {
+            const latestPerf = c.performance_records[c.performance_records.length - 1];
+            return {
+                id: c._id,
+                swine_tag: c.swine_id,
+                farmer_name: formatName(c.farmer_id) || "Unknown Farmer",
+                current_stage: c.current_status,
+                can_promote: latestPerf ? latestPerf.passed_selection : false,
+                recommendation: (latestPerf && latestPerf.passed_selection) ? "Retain for Breeding" : "Mark for Sale"
+            };
+        });
+
+        res.json({ success: true, data: formatted });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 4. PROCESS SELECTION (Approve/Cull)
+// ---------------------------------------------------------
+router.put("/process-selection", requireSessionAndToken, async (req, res) => {
+    try {
+        const { swineId, isApproved } = req.body;
+        const { role, farmerProfileId } = req.user;
+        
+        const swine = await Swine.findById(swineId);
+        if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+
+        // Security check for farmers
+        if (role === "farmer" && swine.farmer_id.toString() !== farmerProfileId.toString()) {
+            return res.status(403).json({ success: false, message: "Access denied: Not your swine" });
+        }
+
+        let newStatus = "";
+        if (isApproved) {
+            newStatus = swine.current_status === "1st Selection Ongoing" ? "2nd Selection Ongoing" : "Active Breeder";
+        } else {
+            newStatus = "Marked for Sale";
+        }
+
+        swine.current_status = newStatus;
+        await swine.save();
+
+        res.json({ success: true, message: `Swine updated to ${newStatus}` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+module.exports = router;

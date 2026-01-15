@@ -21,10 +21,18 @@
     
     .button-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
       justify-content: center;
-      margin-top: 20px;
+      margin: 25px auto;
+      max-width: 1000px;
+    }
+
+    /* Standardizing button widths for a cleaner grid feel */
+    .button-group .button {
+      min-width: 180px;
+      flex: 1 1 auto;
+      max-width: 220px;
     }
 
     .container {
@@ -35,20 +43,38 @@
     h3 {
       margin-top: 40px;
       color: #2c3e50;
+      font-weight: 600;
+    }
+    
+    .section-divider {
+      border: 0;
+      border-top: 1px solid #eee;
+      margin: 40px 0 20px 0;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Welcome, Farmer!</h2>
+    <header>
+        <h2 style="font-size: 2.2rem; margin-bottom: 10px;">Welcome, Farmer!</h2>
+        <p style="color: #666;">Monitor your herd's productivity and growth.</p>
+    </header>
 
     <div id="notificationContainer"></div>
 
     <div class="button-group">
-      <button id="viewSwineBtn" class="button">View Swine</button>
+      <button id="viewSwineBtn" class="button">View My Swine</button>
+      
       <button id="heatReportBtn" class="button" style="background-color: #5aa9e6;">Report Swine in Heat</button>
+      
+      <button id="reproManageBtn" class="button" style="background-color: #9b59b6;">Reproduction & Growth</button>
+      
+      <button id="analyticsBtn" class="button" style="background-color: #27ae60;">Breeding Analytics</button>
+      
       <button id="profileBtn" class="button" style="background-color: #6aa84f;">View Profile</button>
     </div>
+
+    <hr class="section-divider">
 
     <h3>Your Schedule (Heat Checks & Farrowing)</h3>
     <div id="calendar"></div>

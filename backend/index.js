@@ -10,6 +10,7 @@ const initHeatCron = require("./utils/cronJobs"); // 🛠️ Added Cron Job Impo
 
 const adminRoutes = require("./routes/adminRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const reproductionRoute = require("./routes/reproductionRoute");
 const analyticsRoutes = require("./routes/analyticsRoute");
 
 // ENV VALIDATION (FAIL FAST)
@@ -96,6 +97,7 @@ app.use("/api/breeding", require("./routes/breedingRoutes"));
 app.use("/api/farmer", require("./routes/farmerRoutes"));
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/reproduction", reproductionRoute);
 app.use("/api/analytics", analyticsRoutes);
 
 // HEALTH CHECK
