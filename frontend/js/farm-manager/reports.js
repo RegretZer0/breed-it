@@ -1,260 +1,288 @@
-// farm-manager/reports.js
-import { authGuard } from "./authGuard.js"; // 🔐 import authGuard
+// admin_heat_reports.js
+import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  /* =========================
-     AUTHENTICATION
-  ========================= */
+  // ---------------- AUTHENTICATION ----------------
   const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
 
   const token = localStorage.getItem("token");
   const BACKEND_URL = "http://localhost:5000";
 
-  /* =========================
-     DOM ELEMENTS
-  ========================= */
+  // ---------------- DOM ELEMENTS ----------------
   const tableBody = document.getElementById("reportsTableBody");
-
   const reportDetails = document.getElementById("reportDetails");
   const reportSwine = document.getElementById("reportSwine");
   const reportFarmer = document.getElementById("reportFarmer");
   const reportSigns = document.getElementById("reportSigns");
   const reportProbability = document.getElementById("reportProbability");
-  const reportCalendar = document.getElementById("reportCalendar");
-
-  const reportVideo = document.getElementById("reportVideo");
-  const reportImage = document.getElementById("reportImage");
+  
+  // UPDATED: Container for multiple media
+  const mediaGallery = document.getElementById("mediaGallery"); 
+  
+  const searchInput = document.getElementById("searchInput");
 
   const approveBtn = document.getElementById("approveBtn");
   const confirmAIBtn = document.getElementById("confirmAIBtn");
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
+  const followUpBtn = document.getElementById("followUpBtn");
+
+  const addMaleForm = document.getElementById("addMaleForm");
+  const maleModal = document.getElementById("addMaleModal");
+
+  const aiConfirmModal = document.getElementById("aiConfirmModal");
+  const boarSelect = document.getElementById("boarSelect");
+  const submitAIBtn = document.getElementById("submitAI");
 
   let currentReportId = null;
+  let allReports = [];
 
-  /* =========================
-     HELPERS
-  ========================= */
+  // ---------------- HELPER: CALCULATE DAYS LEFT ----------------
   function getDaysLeft(targetDate) {
     if (!targetDate) return "-";
     const now = new Date();
     const target = new Date(targetDate);
     const diffMs = target - now;
-    return diffMs > 0
-      ? Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + " days"
-      : "0 days";
+    if (diffMs <= 0) return "Due/Overdue";
+    return `${Math.ceil(diffMs / (1000 * 60 * 60 * 24))} days`;
   }
 
-  const statusMap = {
-    pending: "Pending Review",
-    accepted: "Accepted",
-    waiting_heat_check: "Waiting (23 days)",
-    pregnant: "Pregnant"
-  };
-
-  /* =========================
-     LOAD REPORTS TABLE
-  ========================= */
+  // ---------------- FETCH HEAT REPORTS ----------------
   async function loadReports() {
     try {
       const res = await fetch(`${BACKEND_URL}/api/heat/all`, {
         headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
+        credentials: "include",
       });
 
-      const data = await res.json();
-      tableBody.innerHTML = "";
-
-      if (!res.ok || !data.success || !data.reports?.length) {
-        tableBody.innerHTML =
-          "<tr><td colspan='8'>No reports found</td></tr>";
+      if (res.status === 401 || res.status === 403) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "login.html";
         return;
       }
 
-      data.reports.forEach(r => {
-        const swineId = r.swine_code || "Unknown";
-        const farmerName = r.farmer_name || "Unknown";
-        const dateReported = new Date(r.date_reported).toLocaleString();
-        const probability =
-          r.heat_probability !== null ? `${r.heat_probability}%` : "N/A";
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error("Failed to load reports");
 
-        const status = statusMap[r.status] || r.status;
-
-        const nextHeatLeft = getDaysLeft(r.next_heat_check);
-        const farrowingLeft = getDaysLeft(r.expected_farrowing);
-
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${swineId}</td>
-          <td>${farmerName}</td>
-          <td>${dateReported}</td>
-          <td>${probability}</td>
-          <td>${status}</td>
-          <td>${nextHeatLeft}</td>
-          <td>${farrowingLeft}</td>
-          <td>
-            <button onclick="viewReport('${r._id}')">View</button>
-          </td>
-        `;
-
-        tableBody.appendChild(row);
-      });
+      allReports = data.reports;
+      renderTable(allReports);
     } catch (err) {
-      console.error("Error fetching reports:", err);
-      tableBody.innerHTML =
-        "<tr><td colspan='8'>Failed to load reports</td></tr>";
+      console.error("Fetch Error:", err);
+      tableBody.innerHTML = "<tr><td colspan='8'>Error connecting to server</td></tr>";
     }
   }
 
-  /* =========================
-     VIEW REPORT DETAILS
-  ========================= */
-  window.viewReport = async reportId => {
-    try {
-      currentReportId = reportId;
+  function renderTable(reports) {
+    tableBody.innerHTML = "";
+    if (!reports.length) {
+      tableBody.innerHTML = "<tr><td colspan='8'>No reports found</td></tr>";
+      return;
+    }
 
-      const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
+    reports.forEach(r => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${r.swine_id?.swine_id || "Unknown"}</td>
+        <td>${r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "Unknown"}</td>
+        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+        <td style="font-weight:bold; color: ${r.heat_probability > 70 ? '#2ecc71' : '#e67e22'}">
+          ${r.heat_probability !== null ? r.heat_probability + '%' : 'N/A'}
+        </td>
+        <td style="text-transform: capitalize;">${r.status.replace(/_/g, ' ')}</td>
+        <td>${getDaysLeft(r.next_heat_check)}</td>
+        <td>${getDaysLeft(r.expected_farrowing)}</td>
+        <td><button class="btn-view" data-id="${r._id}">View</button></td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    document.querySelectorAll(".btn-view").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const reportId = e.target.getAttribute("data-id");
+        viewReport(reportId);
       });
+    });
+  }
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+  // ---------------- VIEW REPORT DETAILS (UPDATED FOR MULTIPLE MEDIA) ----------------
+  function viewReport(reportId) {
+    const r = allReports.find(report => report._id === reportId);
+    if (!r) {
+      alert("Report details not found.");
+      return;
+    }
 
-      const r = data.report;
+    currentReportId = reportId;
+    
+    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+    reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
+    reportSigns.innerHTML = `<strong>Signs:</strong> ${r.signs?.join(", ") || "None"}`;
+    reportProbability.innerHTML = `<strong>System Prediction:</strong> ${r.heat_probability !== null ? r.heat_probability + '%' : 'N/A'}`;
 
-      const swineInfo = r.swine_id
-        ? `${r.swine_id.swine_id} (${r.swine_id.breed || "N/A"}, ${
-            r.swine_id.sex || "N/A"
-          })`
-        : "Unknown";
+    // --- UPDATED MEDIA GALLERY LOGIC ---
+    mediaGallery.innerHTML = ""; // Clear old previews
+    
+    // Ensure we are working with an array (handles both old string and new array formats)
+    const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : [r.evidence_url];
 
-      const farmerName = r.farmer_id
-        ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}`
-        : "Unknown";
+    if (evidences.length > 0 && evidences[0]) {
+      evidences.forEach(url => {
+        // Detect if it's a video (Base64 data URL contains the mimetype)
+        const isVideo = url.includes("video/") || url.match(/\.(mp4|mov|webm)$/i);
+        
+        const mediaWrapper = document.createElement("div");
+        mediaWrapper.style.marginBottom = "10px";
 
-      const signs = r.signs?.join(", ") || "None";
-      const probability =
-        r.heat_probability !== null ? `${r.heat_probability}%` : "N/A";
-
-      reportSwine.textContent = `Swine: ${swineInfo}`;
-      reportFarmer.textContent = `Farmer: ${farmerName}`;
-      reportSigns.textContent = `Signs: ${signs}`;
-      reportProbability.textContent = `Probability: ${probability}`;
-
-      // Calendar info
-      let calendarText = "";
-      if (r.next_heat_check) {
-        calendarText = `Next heat check: ${new Date(
-          r.next_heat_check
-        ).toLocaleDateString()}`;
-      }
-      if (r.expected_farrowing) {
-        calendarText = `Expected farrowing: ${new Date(
-          r.expected_farrowing
-        ).toLocaleDateString()}`;
-      }
-      reportCalendar.textContent = calendarText;
-
-      // Evidence (image / video)
-      if (r.evidence_url) {
-        const fullUrl = `${BACKEND_URL}${r.evidence_url}`;
-        if (fullUrl.endsWith(".mp4") || fullUrl.endsWith(".mov")) {
-          reportVideo.src = fullUrl;
-          reportVideo.style.display = "block";
-          reportImage.style.display = "none";
+        if (isVideo) {
+          const video = document.createElement("video");
+          video.src = url;
+          video.controls = true;
+          video.style.width = "100%";
+          video.style.maxHeight = "300px";
+          video.style.borderRadius = "8px";
+          mediaWrapper.appendChild(video);
         } else {
-          reportImage.src = fullUrl;
-          reportImage.style.display = "block";
-          reportVideo.style.display = "none";
+          const img = document.createElement("img");
+          img.src = url;
+          img.style.width = "100%";
+          img.style.borderRadius = "8px";
+          img.style.cursor = "pointer";
+          // Simple click-to-open in new tab for "full view"
+          img.onclick = () => {
+            const win = window.open();
+            win.document.write(`<img src="${url}" style="max-width:100%;">`);
+          };
+          mediaWrapper.appendChild(img);
         }
-      } else {
-        reportVideo.style.display = "none";
-        reportImage.style.display = "none";
+        mediaGallery.appendChild(mediaWrapper);
+      });
+    } else {
+      mediaGallery.innerHTML = "<p style='color:#888;'>No evidence provided.</p>";
+    }
+
+    reportDetails.style.display = "block";
+
+    // Button visibility logic
+    approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
+    confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
+    confirmPregnancyBtn.style.display = r.status === "waiting_heat_check" ? "inline-block" : "none";
+    followUpBtn.style.display = r.status === "waiting_heat_check" ? "inline-block" : "none";
+  }
+
+  // ---------------- ACTION HANDLER ----------------
+  const handleAction = async (endpoint, successMsg, extraData = {}) => {
+    if (!currentReportId) return;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat/${currentReportId}/${endpoint}`, {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${token}`, 
+          "Content-Type": "application/json" 
+        },
+        credentials: "include",
+        body: JSON.stringify(extraData)
+      });
+      
+      const data = await res.json();
+      
+      if (res.status === 401 || res.status === 403) {
+        alert("Session expired. Please log in again.");
+        window.location.href = "login.html";
+        return;
       }
-
-      reportDetails.style.display = "block";
-
-      // Action buttons
-      approveBtn.style.display =
-        r.status === "pending" ? "inline-block" : "none";
-
-      confirmAIBtn.style.display =
-        r.status === "accepted" ? "inline-block" : "none";
-
-      confirmPregnancyBtn.style.display =
-        r.status === "waiting_heat_check" ? "inline-block" : "none";
-    } catch (err) {
-      console.error("Error loading report details:", err);
-      alert("Failed to load report details");
+      
+      if (!res.ok) throw new Error(data.message || "Action failed");
+      
+      alert(successMsg);
+      await loadReports();
+      reportDetails.style.display = "none";
+    } catch (err) { 
+      console.error("Action Error:", err);
+      alert("Error: " + err.message); 
     }
   };
 
-  /* =========================
-     ACTIONS
-  ========================= */
-  approveBtn.addEventListener("click", async () => {
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/heat/${currentReportId}/approve`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include"
-        }
-      );
-
-      if (!res.ok) throw new Error();
-      alert("Report approved");
-      await viewReport(currentReportId);
-      await loadReports();
-    } catch {
-      alert("Failed to approve report");
-    }
-  });
+  // ---------------- LISTENERS ----------------
+  approveBtn.addEventListener("click", () => handleAction("approve", "Report approved!"));
 
   confirmAIBtn.addEventListener("click", async () => {
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/heat/${currentReportId}/confirm-ai`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include"
-        }
-      );
+      const res = await fetch(`${BACKEND_URL}/api/swine/males`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include"
+      });
+      const data = await res.json();
+      
+      if (!data.success || !data.males?.length) {
+        alert("No male swine found for your farm. Please register a Boar first.");
+        return;
+      }
 
-      if (!res.ok) throw new Error();
-      alert("AI confirmed");
-      await viewReport(currentReportId);
-      await loadReports();
-    } catch {
-      alert("Failed to confirm AI");
+      boarSelect.innerHTML = data.males.map(m => 
+        `<option value="${m._id}">${m.swine_id} (${m.breed})</option>`
+      ).join("");
+
+      aiConfirmModal.style.display = "block";
+    } catch (err) {
+      console.error("Male fetch error:", err);
+      alert("Failed to fetch boar list.");
     }
   });
 
-  confirmPregnancyBtn.addEventListener("click", async () => {
-    try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/heat/${currentReportId}/confirm-pregnancy`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          credentials: "include"
-        }
-      );
-
-      if (!res.ok) throw new Error();
-      alert("Pregnancy confirmed");
-      await viewReport(currentReportId);
-      await loadReports();
-    } catch {
-      alert("Failed to confirm pregnancy");
+  submitAIBtn.addEventListener("click", () => {
+    const selectedObjectId = boarSelect.value; 
+    if (selectedObjectId) {
+      handleAction("confirm-ai", "AI Confirmed!", { maleSwineId: selectedObjectId });
+      aiConfirmModal.style.display = "none";
+    } else {
+      alert("Please select a boar.");
     }
   });
 
-  /* =========================
-     INIT
-  ========================= */
+  confirmPregnancyBtn.addEventListener("click", () => handleAction("confirm-pregnancy", "Pregnancy confirmed!"));
+  
+  followUpBtn.addEventListener("click", () => {
+    if(confirm("Swine is still in heat? This will reset the AI cycle.")) {
+      handleAction("still-heat", "Cycle reset.");
+    }
+  });
+
+  if (addMaleForm) {
+    addMaleForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
+        swine_id: document.getElementById("mSwineId").value,
+        breed: document.getElementById("mBreed").value,
+        sex: "Male",
+        batch: "BOAR" 
+      };
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/swine/add`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          alert("Male added.");
+          maleModal.style.display = 'none';
+          addMaleForm.reset();
+        }
+      } catch (err) {
+        console.error("Add male error:", err);
+      }
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      const term = e.target.value.toLowerCase();
+      renderTable(allReports.filter(r => r.swine_id?.swine_id.toLowerCase().includes(term)));
+    });
+  }
+
   await loadReports();
+
+  
 });
