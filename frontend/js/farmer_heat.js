@@ -107,25 +107,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         const rawStatus = (r.status || "pending").toLowerCase().trim().replace(/\s+/g, '_');
         const displayStatus = (r.status || "pending").replace(/_/g, ' ');
 
-        const allowedStatuses = ["waiting_heat_check", "awaiting_recheck", "awaiting_re-check"];
+        // Logic Update: 'approved' means waiting for Day 3 AI. 'under_observation' means waiting for 21-day heat check.
+        const allowedStatuses = ["waiting_heat_check", "under_observation", "approved"];
         
-        // Logical check: Is this report active?
         const isCompleted = rawStatus === "completed" || rawStatus === "pregnant";
+        const isRejected = rawStatus === "rejected"; 
+        const isProcessed = rawStatus !== "pending" && !isRejected;
+        
+        const updateDateFormatted = new Date(r.updatedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+        const rejectionText = r.rejection_message || r.reason || "";
 
         const heatCheckDate = r.next_heat_check ? new Date(r.next_heat_check) : null;
         const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
         
-        const isReadyForPregnancy = heatCheckDate && now >= heatCheckDate;
+        // Update: Pregnancy confirmation button should only be active if status is under_observation AND date has passed.
+        const isReadyForPregnancy = (rawStatus === "under_observation") && heatCheckDate && (now >= heatCheckDate);
 
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${swineDisplay}</td>
           <td>${dateReported}</td>
-          <td style="text-transform: capitalize; font-weight: bold; color: #2c3e50;">${displayStatus}</td>
           <td>
-            ${(!isCompleted && heatCheckDate) ? `
+            <div style="text-transform: capitalize; font-weight: bold; color: ${isRejected ? '#e74c3c' : isProcessed ? '#27ae60' : '#2c3e50'};">
+              ${displayStatus === 'approved' ? 'AI Scheduled' : displayStatus}
+            </div>
+            
+            ${isProcessed ? `
+              <div style="margin-top: 4px; font-size: 0.75em; color: #27ae60; opacity: 0.8;">
+                Update: ${updateDateFormatted}
+              </div>
+            ` : ''}
+
+            ${isRejected && rejectionText ? `
+              <div class="rejection-note" style="margin-top: 8px; padding: 8px; background: #fff5f5; border: 1px solid #feb2b2; border-radius: 4px; font-size: 0.8em; color: #c53030; line-height: 1.4;">
+                <strong>Reason:</strong><br>
+                "${rejectionText}"
+              </div>
+            ` : ''}
+          </td>
+          <td>
+            ${(!isCompleted && !isRejected && heatCheckDate) ? `
               <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
-                  <b>Target:</b> ${heatCheckDate.toLocaleDateString()}
+                  <b>${rawStatus === 'approved' ? 'AI Date' : 'Check Date'}:</b> ${heatCheckDate.toLocaleDateString()}
               </div>
               <span class="next-heat" data-date="${r.next_heat_check || ''}">-</span>
             ` : '-'}
@@ -141,10 +164,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>
             ${allowedStatuses.includes(rawStatus) ? 
               `<div style="display:flex; flex-direction:column; gap:8px; width: 100%;">
+                
+                ${rawStatus !== 'approved' ? `
                 <button class="btn-followup" 
                    style="background-color: #f39c12 !important; color: white !important; border: none; padding: 8px; border-radius: 4px; cursor: pointer; width: 100%; display: block;"
-                   onclick="submitFollowUp('${r._id}')">Re-Insemination</button>
+                   onclick="submitFollowUp('${r._id}')">Back in Heat</button>
+                ` : '<span style="color:#3498db; font-size:0.8em;">Waiting for Admin to Confirm AI</span>'}
                 
+                ${rawStatus === "under_observation" ? `
                 <button class="btn-pregnant" 
                   ${!isReadyForPregnancy ? 'disabled' : ''} 
                   style="${!isReadyForPregnancy 
@@ -153,23 +180,23 @@ document.addEventListener("DOMContentLoaded", async () => {
                   title="${!isReadyForPregnancy ? 'Wait for 21-day heat re-check' : 'Confirm Pregnancy'}"
                   onclick="confirmPregnancy('${r._id}')">
                   Confirm Pregnant
-                </button>
+                </button>` : ''}
               </div>` : 
-              `<span style="color: #888; font-size: 0.8em;">No Action Needed</span>`}
+              (isRejected ? `<span style="color: #e74c3c; font-size: 0.8em; font-weight:bold;">Report Denied</span>` : `<span style="color: #888; font-size: 0.8em;">No Action Needed</span>`)}
           </td>
         `;
         reportsTableBody.appendChild(row);
       });
 
       updateCountdowns();
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error("Load Reports Error:", err); }
   }
 
   // ---------------- HELPERS ----------------
   function formatCountdown(targetDate) {
     if (!targetDate) return "N/A";
     const diffMs = new Date(targetDate) - new Date();
-    if (diffMs <= 0) return "Check Due";
+    if (diffMs <= 0) return "Ready/Due";
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -222,6 +249,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    if (!swineSelect.value) {
+        alert("Please select a Swine ID.");
+        return;
+    }
+
     const formData = new FormData();
     formData.append("swineId", swineSelect.value);
     formData.append("farmerId", userId);
@@ -236,8 +268,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         reportMessage.style.color = "green";
         reportMessage.textContent = "Heat report submitted!";
         reportForm.reset();
+        document.getElementById("mediaPreview").innerHTML = "";
+        document.getElementById("fileCountBadge").style.display = "none";
+        
         await loadReports();
         await refreshSwineData();
+      } else {
+          const data = await res.json();
+          alert("Error: " + (data.message || "Submission failed"));
       }
     } catch (err) { console.error(err); }
     submitBtn.disabled = false;
@@ -252,12 +290,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   refreshSwineData();
   loadReports();
   
-  // Update UI every 1 second for the ticking countdown effect
   setInterval(() => {
     updateCountdowns();
   }, 1000);
 
-  // Refresh data from server every 60 seconds
   setInterval(() => {
     loadReports(); 
   }, 60000);

@@ -15,33 +15,17 @@ const swineSchema = new mongoose.Schema({
   current_status: {
     type: String,
     enum: [
-      // Piglet / Growth Path (From Flowchart)
-      "1st Selection Ongoing",     
-      "Monitoring (Day 1-30)",     
-      "Weaned",                    
-      "2nd Selection Ongoing",     
-      "Monitoring (3 Months)",     
-      
-      // Adult / Reproductive Path (Synchronized with Heat Logic)
-      "Open",                      // Not currently in a cycle
-      "In-Heat",                   // Heat Report Approved
-      "Awaiting Recheck",          // AI Service Done (23-day countdown)
-      "Bred",                      
-      "Pregnant",                  // Passed 23-day recheck (115-day countdown)
-      "Farrowing",                 // Active farrowing process
-      "Lactating",                 // Nursing piglets
-      
-      // Exit Path
-      "Market-Ready",              
-      "Weight Limit (15-25kg)",    // Specific node from flowchart
-      "Culled/Sold"                
+      "1st Selection Ongoing", "Monitoring (Day 1-30)", "Weaned",
+      "2nd Selection Ongoing", "Monitoring (3 Months)", "Open",
+      "In-Heat", "Under Observation", "Bred", "Pregnant",
+      "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold"
     ],
     default: "1st Selection Ongoing"
   },
 
   age_stage: { 
     type: String, 
-    enum: ["piglet", "adult"], 
+    enum: ["piglet", "growing", "adult"], // Added 'growing' to match your HTML select
     required: true, 
     default: "piglet" 
   },
@@ -53,19 +37,28 @@ const swineSchema = new mongoose.Schema({
   },
 
   // ------------------- Lineage -------------------
+  // String for IDs, but could also store names for External Boars
   sire_id: { type: String }, 
   dam_id: { type: String },  
 
-  // ------------------- Reproductive Cycles -------------------
+  // ------------------- Reproductive Cycles (For Females) -------------------
   breeding_cycles: [{
     cycle_number: { type: Number },
-    estrus_date: { type: Date },
-    ai_service_date: { type: Date },
+    heat_report_id: { type: mongoose.Schema.Types.ObjectId, ref: "HeatReport" },
+    ai_record_id: { type: mongoose.Schema.Types.ObjectId, ref: "AIRecord" },
+    
+    // Dates synced from HeatReport/AIRecord logic
+    estrus_date: { type: Date },           // Set when Heat Report is Approved
+    ai_service_date: { type: Date },       // Set when AI is Confirmed
+    
     pregnancy_check_date: { type: Date }, 
     is_pregnant: { type: Boolean, default: false },
     expected_farrowing_date: { type: Date },
     actual_farrowing_date: { type: Date },
     
+    // The sire used in this specific cycle (links to AIRecord's male_swine_id)
+    cycle_sire_id: { type: String },
+
     farrowing_results: {
       total_piglets: { type: Number, default: 0 },
       male_count: { type: Number, default: 0 },
@@ -78,7 +71,7 @@ const swineSchema = new mongoose.Schema({
   medical_records: [{
     treatment_type: { 
       type: String, 
-      enum: ["Vaccination", "Iron Injection", "Deworming", "Antibiotic", "Vitamin", "Other"] 
+      enum: ["Vaccination", "Iron Injection", "Tail Docking", "Ear Notching", "Castration", "Deworming", "Antibiotic", "Vitamin", "Other"] 
     },
     medicine_name: { type: String },
     dosage: { type: String },
@@ -87,19 +80,18 @@ const swineSchema = new mongoose.Schema({
     administered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],
 
-  // ------------------- Growth & Selection (Stages 1 & 2) -------------------
+  // ------------------- Growth & Selection -------------------
   performance_records: [{
     stage: { 
       type: String, 
-      enum: ["1st Stage Selection", "2nd Stage Selection", "Market Check", "Routine"] 
+      enum: ["Registration", "1st Stage Selection", "2nd Stage Selection", "Market Check", "Routine"] 
     },
     record_date: { type: Date, default: Date.now },
     weight: { type: Number },
     body_length: { type: Number },
     heart_girth: { type: Number },
     teeth_count: { type: Number },
-    teeth_alignment: { type: String },
-    leg_conformation: { type: String },
+    leg_conformation: { type: String, default: "Normal" },
     teat_count: { type: Number }, 
     deformities: { type: [String], default: ["None"] },
     passed_selection: { type: Boolean, default: true },
@@ -107,18 +99,35 @@ const swineSchema = new mongoose.Schema({
   }],
 
   // ------------------- Metadata -------------------
+  is_external_boar: { type: Boolean, default: false }, // Tag for semen-source only boars
   date_transfer: { type: Date },
   date_registered: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
 
 // ------------------- Logic / Helpers -------------------
 
 /**
- * Middleware: Automatically calculate Expected Farrowing Date 
+ * Virtual: Fetch all piglets born to this dam
+ * This allows you to check offspring without manually updating counts every time
+ */
+swineSchema.virtual('offspring', {
+  ref: 'Swine',
+  localField: 'swine_id',
+  foreignField: 'dam_id'
+});
+
+/**
+ * Middleware: Automatically calculate Expected Farrowing Date (114 Days)
  */
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
+    
+    // Auto-calculate expected farrowing date if AI date exists
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
       const gestationDays = 114;
       const farrowDate = new Date(latestCycle.ai_service_date);

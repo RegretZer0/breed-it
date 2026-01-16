@@ -16,8 +16,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ----- CALENDAR INITIALIZATION -----
   const calendarEl = document.getElementById('calendar');
+  let calendar;
+
   if (calendarEl) {
-    const calendar = new FullCalendar.Calendar(calendarEl, {
+    calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
       height: 'auto',
       headerToolbar: {
@@ -49,19 +51,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       },
       eventDidMount: (info) => {
-        const type = info.event.extendedProps.type;
-        const typeLabel = type === 'farrowing' ? 'Farrowing Due' : 'Heat Re-check';
+        // Updated logic to show correct labels for farmers
+        let typeLabel = 'Event';
+        const title = info.event.title.toLowerCase();
+
+        if (title.includes('ai due')) {
+          typeLabel = 'Insemination Day';
+        } else if (title.includes('heat re-check')) {
+          typeLabel = 'Check for Heat Signs';
+        } else if (title.includes('farrowing')) {
+          typeLabel = 'Expected Farrowing';
+        }
+
         info.el.title = `${info.event.title} - ${typeLabel}`;
+
+        // Ensure background colors (Blue, Orange, Green) are applied
+        if (info.event.backgroundColor) {
+          info.el.style.backgroundColor = info.event.backgroundColor;
+          info.el.style.borderColor = info.event.backgroundColor;
+        }
       },
       eventClick: (info) => {
         // Farmers can click to go straight to the reporting page for that swine
-        const swineId = info.event.title.split(':')[1]?.trim().split(' ')[0];
-        window.location.href = `report_heat.html?swineId=${swineId}`;
+        // We look for the swine ID which is usually in the title format "🔍 Heat Check: A-0001"
+        const titleParts = info.event.title.split(':');
+        if (titleParts.length > 1) {
+          const swineId = titleParts[1].trim().split(' ')[0];
+          window.location.href = `report_heat.html?swineId=${swineId}`;
+        } else {
+          window.location.href = `report_heat.html`;
+        }
       }
     });
 
     calendar.render();
   }
+
+  // Auto-refresh calendar when the farmer switches back to this tab
+  window.addEventListener('focus', () => {
+    if (calendar) calendar.refetchEvents();
+  });
 
   // --- BUTTON NAVIGATION LOGIC ---
 
@@ -81,7 +110,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Reproduction & Growth (NEW)
+  // Reproduction & Growth
   const reproManageBtn = document.getElementById("reproManageBtn");
   if (reproManageBtn) {
     reproManageBtn.addEventListener("click", () => {
@@ -89,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Breeding Analytics (NEW)
+  // Breeding Analytics
   const analyticsBtn = document.getElementById("analyticsBtn");
   if (analyticsBtn) {
     analyticsBtn.addEventListener("click", () => {

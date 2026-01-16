@@ -21,7 +21,7 @@ const heatReportSchema = new mongoose.Schema(
       required: false 
     },
 
-    // ---------------- HEAT DETAILS (FLOWCHART SIGNS) ----------------
+    // ---------------- HEAT DETAILS ----------------
     signs: [
       {
         type: String,
@@ -38,7 +38,6 @@ const heatReportSchema = new mongoose.Schema(
       }
     ],
 
-    // Specific decision nodes extracted for easier querying
     standing_reflex: {
       type: Boolean,
       default: false
@@ -58,6 +57,7 @@ const heatReportSchema = new mongoose.Schema(
       default: null
     },
 
+    // ---------------- APPROVAL/REJECTION DETAILS ----------------
     approved_at: { 
       type: Date, 
       default: null 
@@ -67,9 +67,21 @@ const heatReportSchema = new mongoose.Schema(
       ref: "User", 
       default: null 
     },
-    admin_notes: {
+    
+    // Fields for Rejection
+    rejection_reason: {
       type: String,
-      default: ""
+      default: null
+    },
+    rejected_at: {
+      type: Date,
+      default: null
+    },
+
+    // Inside your HeatReportSchema
+    rejection_message: { 
+        type: String, 
+        default: "" 
     },
 
     // ---------------- WORKFLOW STATUS ----------------
@@ -80,9 +92,10 @@ const heatReportSchema = new mongoose.Schema(
         "approved",           // Manager confirmed (In-Heat)
         "rejected",           // Manager denied
         "ai_service",         // Artificial Insemination performed
-        "waiting_heat_check", // 23-day observation period
-        "pregnant",           // Passed 23-day check (115-day countdown)
+        "under_observation", // 23-day observation period
+        "pregnant",           // Passed 23-day check
         "farrowing_ready",    // Ready for farrowing
+        "farrowed",           // Successfully farrowed
         "completed"           // Cycle ended
       ],
       default: "pending"

@@ -80,24 +80,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const handleExternalToggle = () => {
     if (externalCheckbox.checked) {
-      // Lock fields for External Boar
       farmerGroup.style.opacity = "0.5";
       farmerSelect.disabled = true;
       farmerSelect.value = ""; 
-      
       sexSelect.value = "Male";
       sexSelect.disabled = true;
-      
       ageStageSelect.value = "adult";
       ageStageSelect.disabled = true;
-      
       breedInput.value = "Native";
       breedInput.readOnly = true;
-
       batchInput.placeholder = "Enter Semen Batch / Source ID";
       batchInput.readOnly = false;
     } else {
-      // Restore fields
       farmerGroup.style.opacity = "1";
       farmerSelect.disabled = false;
       sexSelect.disabled = false;
@@ -195,7 +189,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       const data = await res.json();
       if (data.success) {
-        // Handle historical and active boars
         if (data.historicalBoars?.length > 0) {
           const histGroup = document.createElement("optgroup");
           histGroup.label = "Previously Used (History)";
@@ -245,6 +238,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c" };
       const statusColor = statusColors[sw.current_status] || "#7f8c8d";
 
+      // DYNAMIC CALCULATION: Count offspring by matching current swine_id as parent
+      const offspringCount = allSwine.filter(child => 
+        child.dam_id === sw.swine_id || child.sire_id === sw.swine_id
+      ).length;
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><strong>${sw.swine_id}</strong><br><small>Batch: ${sw.batch}</small><br>
@@ -255,7 +253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>Status: <span class="status-badge" style="background:${statusColor};color:white;padding:2px 8px;border-radius:4px;">${sw.current_status || 'Open'}</span><br>
           Health: <strong style="color:${sw.health_status === 'Healthy' ? '#2ecc71' : '#e74c3c'};">${sw.health_status}</strong></td>
         <td>S: ${sw.sire_id || 'N/A'}<br>D: ${sw.dam_id || 'N/A'}</td>
-        <td>Piglets: ${sw.total_piglets_count || 0}<br>Mortality: ${sw.total_mortality_count || 0}</td>
+        <td>Piglets: <strong>${offspringCount}</strong><br>Mortality: ${sw.total_mortality_count || 0}</td>
         <td>Wt: ${latestPerf.weight || '--'} kg<br>L: ${latestPerf.body_length || '--'} cm</td>
       `;
       swineTableBody.appendChild(tr);
@@ -286,7 +284,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineMessage.className = "message info";
     registerForm.scrollIntoView({ behavior: 'smooth' });
 
-    // Set External Toggle based on lack of farmer
     externalCheckbox.checked = !swine.farmer_id;
     handleExternalToggle();
 
