@@ -1,7 +1,7 @@
 const cron = require("node-cron");
 const HeatReport = require("../models/HeatReports");
 const Swine = require("../models/Swine");
-const Notification = require("../models/Notification");
+const Notification = require("../models/Notifications");
 
 /**
  * Updates Swine statuses based on the heat report cycle and biological timelines.

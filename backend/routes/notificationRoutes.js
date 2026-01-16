@@ -2,10 +2,14 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 
-const Notification = require("../models/Notification");
+const Notification = require("../models/Notifications");
 const UserModel = require("../models/UserModel"); // Managers & encoders
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
+
+console.log("Notification typeof:", typeof Notification);
+console.log("Notification keys:", Object.keys(Notification || {}));
+
 
 /*======================================================
    AUTO NOTIFY FARM MANAGER & ENCODERS

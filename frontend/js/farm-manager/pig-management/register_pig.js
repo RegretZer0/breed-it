@@ -18,6 +18,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ageStageSelect = document.getElementById("ageStage");
   const teatGroup = document.getElementById("teatCountGroup");
 
+  const externalCheckbox = document.getElementById("isExternalBoar");
+  const dateTransferInput = document.getElementById("date_transfer");
+
+  const damSelect = document.getElementById("dam_id");
+  const sireSelect = document.getElementById("sire_id");
+
   const deformityChecklist = document.getElementById("deformityChecklist");
   const medicalChecklist = document.getElementById("medicalChecklist");
 
@@ -39,6 +45,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   sexSelect.addEventListener("change", toggleTeatField);
   ageStageSelect.addEventListener("change", toggleTeatField);
+
+  // ================= EXTERNAL BOAR LOGIC =================
+  function handleExternalBoarToggle() {
+    if (externalCheckbox.checked) {
+      farmerSelect.value = "";
+      farmerSelect.disabled = true;
+
+      sexSelect.value = "Male";
+      sexSelect.disabled = true;
+
+      ageStageSelect.value = "adult";
+      ageStageSelect.disabled = true;
+
+      document.getElementById("breed").value = "Native";
+      document.getElementById("breed").readOnly = true;
+    } else {
+      farmerSelect.disabled = false;
+      sexSelect.disabled = false;
+      ageStageSelect.disabled = false;
+      document.getElementById("breed").readOnly = false;
+    }
+
+    toggleTeatField();
+  }
+
+  externalCheckbox.addEventListener("change", handleExternalBoarToggle);
 
   // ================= LOAD FARMERS =================
   async function loadFarmers() {
@@ -64,27 +96,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ================= BUILD PAYLOAD =================
-  function buildPayload() {
-    const deformities = Array.from(
-      deformityChecklist.querySelectorAll("input:checked")
-    ).map(cb => cb.value);
+  // ================= LOAD PARENTAGE (DAM → SIRE) =================
+  farmerSelect.addEventListener("change", async () => {
+    damSelect.innerHTML = '<option value="">-- Select Sow --</option>';
+    sireSelect.innerHTML = '<option value="">-- Select Boar --</option>';
 
-    const medical = Array.from(
-      medicalChecklist.querySelectorAll("input:checked")
-    ).map(cb => cb.value);
+    if (!farmerSelect.value) return;
+
+    const res = await fetch(
+      `/api/swine/all?farmer_id=${farmerSelect.value}&sex=Female&age_stage=adult`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    const data = await res.json();
+    if (data.success) {
+      data.swine.forEach(sow => {
+        damSelect.add(new Option(sow.swine_id, sow.swine_id));
+      });
+    }
+  });
+
+  // ================= BUILD PAYLOAD (CRITICAL) =================
+  function buildPayload() {
+    const deformities = [...deformityChecklist.querySelectorAll("input:checked")]
+      .map(i => i.value);
+
+    const medical = [...medicalChecklist.querySelectorAll("input:checked")]
+      .map(i => i.value);
 
     return {
-      farmer_id: farmerSelect.value,
+      farmer_id: externalCheckbox.checked ? null : farmerSelect.value,
       batch: document.getElementById("batch").value.trim(),
       sex: sexSelect.value,
       age_stage: ageStageSelect.value,
-      breed: "Native",
+      breed: document.getElementById("breed").value,
       color: document.getElementById("color").value,
       birth_date: document.getElementById("birth_date").value,
+      date_transfer:
+        dateTransferInput.value ||
+        new Date().toISOString().split("T")[0],
       health_status: document.getElementById("health_status").value,
-      sire_id: document.getElementById("sire_id").value.trim(),
-      dam_id: document.getElementById("dam_id").value.trim(),
+      sire_id: sireSelect.value || null,
+      dam_id: damSelect.value || null,
       weight: document.getElementById("weight").value,
       bodyLength: document.getElementById("bodyLength").value,
       heartGirth: document.getElementById("heartGirth").value,
@@ -102,6 +155,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       farmerSelect.options[farmerSelect.selectedIndex]?.text || "—";
 
     const previewRows = [
+      ["External Boar", externalCheckbox.checked ? "Yes" : "No"],
+      ["Date Registered", payload.date_transfer],
       ["Farmer", farmerName],
       ["Batch", payload.batch],
       ["Sex", payload.sex],
@@ -115,8 +170,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       ["Heart Girth (cm)", payload.heartGirth || "—"],
       ["Teeth Count", payload.teethCount || "—"],
       ["Teat Count", payload.teatCount || "—"],
-      ["Sire ID", payload.sire_id || "—"],
       ["Dam ID", payload.dam_id || "—"],
+      ["Sire ID", payload.sire_id || "—"],
       ["Deformities", payload.deformities.join(", ")],
       ["Medical Records", payload.medical_initial.join(", ") || "—"]
     ];
@@ -140,7 +195,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     pendingPayload = buildPayload();
 
     if (
-      !pendingPayload.farmer_id ||
       !pendingPayload.batch ||
       !pendingPayload.sex ||
       !pendingPayload.age_stage
@@ -184,6 +238,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       form.reset();
       pendingPayload = null;
       toggleTeatField();
+      handleExternalBoarToggle();
 
     } catch (err) {
       messageEl.textContent = err.message || "Registration failed";
@@ -194,4 +249,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ================= INIT =================
   await loadFarmers();
   toggleTeatField();
+  handleExternalBoarToggle();
 });

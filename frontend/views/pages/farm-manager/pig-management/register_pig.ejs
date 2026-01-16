@@ -14,9 +14,20 @@
 
         <form id="registerSwineForm">
 
+          <!-- EXTERNAL BOAR -->
+          <div class="mb-3">
+            <label class="d-flex align-items-center gap-2 fw-bold text-warning">
+              <input type="checkbox" id="isExternalBoar" />
+              Register as External Boar (Semen Source Only)
+            </label>
+            <small class="text-muted ms-4">
+              Locks Sex to Male, Age to Adult, Breed to Native, and skips Farmer selection.
+            </small>
+          </div>
+
           <!-- FARMER -->
           <h6 class="section-title">Farmer Information</h6>
-          <div class="row mb-4">
+          <div class="row mb-4" id="farmerGroup">
             <div class="col-md-6">
               <label class="form-label">Farmer</label>
               <select id="farmerSelect" class="form-select" required>
@@ -48,7 +59,8 @@
               <select id="ageStage" class="form-select" required>
                 <option value="">Select Stage</option>
                 <option value="piglet">Piglet</option>
-                <option value="adult">Adult</option>
+                <option value="growing">Growing / Finishing</option>
+                <option value="adult">Adult (Breeder)</option>
               </select>
             </div>
 
@@ -84,6 +96,11 @@
             <div class="col-md-3">
               <label class="form-label">Birth Date</label>
               <input type="date" id="birth_date" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Date Registered / Transferred</label>
+              <input type="date" id="date_transfer" class="form-control" />
             </div>
 
             <div class="col-md-3">
@@ -123,13 +140,17 @@
             </div>
 
             <div class="col-md-3">
-              <label class="form-label">Sire ID</label>
-              <input type="text" id="sire_id" class="form-control" />
+              <label class="form-label">Dam (Mother)</label>
+              <select id="dam_id" class="form-select">
+                <option value="">-- Select Sow --</option>
+              </select>
             </div>
 
             <div class="col-md-3">
-              <label class="form-label">Dam ID</label>
-              <input type="text" id="dam_id" class="form-control" />
+              <label class="form-label">Sire (Father)</label>
+              <select id="sire_id" class="form-select">
+                <option value="">-- Select Boar --</option>
+              </select>
             </div>
 
           </div>
@@ -156,49 +177,50 @@
 
           <p id="swineMessage" class="small"></p>
 
-            <div class="d-flex justify-content-end gap-3">
-              <button type="reset" class="btn btn-clear px-4">
-                CLEAR
-              </button>
-              <button type="button" id="openPreviewBtn" class="btn btn-save px-4">
-                SAVE
-              </button>
-            </div>
+          <div class="d-flex justify-content-end gap-3">
+            <button type="reset" class="btn btn-clear px-4">
+              CLEAR
+            </button>
+            <button type="button" id="openPreviewBtn" class="btn btn-save px-4">
+              SAVE
+            </button>
+          </div>
 
         </form>
       </div>
     </div>
   </div>
-      <!-- PREVIEW MODAL -->
-      <div class="modal fade" id="previewSwineModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-          <div class="modal-content">
 
-            <div class="modal-header">
-              <h5 class="modal-title">Confirm Pig Registration</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
+  <!-- PREVIEW MODAL -->
+  <div class="modal fade" id="previewSwineModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
 
-            <div class="modal-body">
-              <p class="mb-3 text-muted">
-                Please confirm that all the information provided below is correct.
-              </p>
-
-              <div id="previewContent" class="preview-content"></div>
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-clear" data-bs-dismiss="modal">
-                Back
-              </button>
-              <button type="button" id="confirmSaveBtn" class="btn btn-save">
-                Confirm & Register
-              </button>
-            </div>
-
-          </div>
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Pig Registration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+
+        <div class="modal-body">
+          <p class="mb-3 text-muted">
+            Please confirm that all the information provided below is correct.
+          </p>
+
+          <div id="previewContent" class="preview-content"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-clear" data-bs-dismiss="modal">
+            Back
+          </button>
+          <button type="button" id="confirmSaveBtn" class="btn btn-save">
+            Confirm & Register
+          </button>
+        </div>
+
       </div>
+    </div>
+  </div>
 
 </main>
 

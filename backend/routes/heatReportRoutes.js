@@ -8,7 +8,7 @@ const mongoose = require("mongoose");
 const HeatReport = require("../models/HeatReports");
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
-const Notification = require("../models/Notification");
+const Notification = require("../models/Notifications");
 const UserModel = require("../models/UserModel");
 const AIRecord = require("../models/AIRecord");
 
