@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const filterStatus = document.getElementById("filterStatus");
   const filterSex = document.getElementById("filterSex");
+  const filterType = document.getElementById("filterType");
   const filterTag = document.getElementById("filterTag");
 
   // ================= HELPERS =================
@@ -69,6 +70,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     return `${years}Y ${months}M ${days}D`;
   }
+
+    // ================= MODAL CLEANUP (ANTI-FREEZE) =================
+    pigModal.addEventListener("hidden.bs.modal", () => {
+      document.body.classList.remove("modal-open");
+      document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+    });
+
+
+    // ================= MODAL FORCE CLOSE (FIX FREEZE) =================
+    function forceCloseModal(modalEl) {
+      const instance = bootstrap.Modal.getInstance(modalEl);
+      if (instance) instance.hide();
+
+      // Hard cleanup (Bootstrap bug safeguard)
+      document.body.classList.remove("modal-open");
+      document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+    }
+
+    // ================= UI FEEDBACK (TOAST) =================
+    function showToast(message, type = "success") {
+      const toast = document.createElement("div");
+
+      toast.className = `
+        alert alert-${type === "success" ? "success" : "danger"}
+        position-fixed top-0 end-0 m-3 shadow
+      `;
+      toast.style.zIndex = 2000;
+      toast.textContent = message;
+
+      document.body.appendChild(toast);
+
+      setTimeout(() => toast.remove(), 3000);
+    }
+
 
   // ================= FARMER DROPDOWN =================
   function renderFarmerDropdown(list) {
@@ -109,10 +144,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!list.length) {
       swineTableBody.innerHTML = `
         <tr>
-          <td colspan="10" class="text-center text-muted">
+          <td colspan="11" class="text-center text-muted">
             No swine records found
           </td>
-        </tr>`;
+        </tr>
+      `;
       return;
     }
 
@@ -130,6 +166,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${sw.breed || "—"}</td>
           <td>${sw.birth_date ? new Date(sw.birth_date).toLocaleDateString() : "—"}</td>
           <td>${calculateAge(sw.birth_date)}</td>
+
+          <!-- FARMER / MASTER -->
+          <td>${sw.farmer_name || "ADMIN / MASTER"}</td>
+
           <td>${sw.current_status || sw.status || "—"}</td>
           <td>${sw.batch || "—"}</td>
           <td>
@@ -144,6 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+
   // ================= FILTER PREVIEW =================
   function renderFilterPreview(list) {
     const wrap = document.getElementById("filterResultWrap");
@@ -154,10 +195,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!list.length) {
       body.innerHTML = `
         <tr>
-          <td colspan="4" class="text-center text-muted">
+          <td colspan="5" class="text-center text-muted">
             No matching records
           </td>
-        </tr>`;
+        </tr>
+      `;
       wrap.classList.remove("d-none");
       return;
     }
@@ -166,15 +208,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       body.innerHTML += `
         <tr>
           <td>${sw.swine_id}</td>
-          <td>${sw.farmer_id?.first_name || "—"}</td>
-          <td>${sw.current_status || sw.status}</td>
+          <td>${sw.farmer_name || "ADMIN / MASTER"}</td>
+          <td>${sw.current_status || sw.status || "—"}</td>
           <td>${sw.batch || "—"}</td>
+          <td>
+            <button
+              class="btn btn-outline-primary btn-sm filter-view-btn"
+              data-id="${sw._id}">
+              View
+            </button>
+          </td>
         </tr>
       `;
     });
 
     wrap.classList.remove("d-none");
+
+    // Attach click handlers AFTER rendering
+    body.querySelectorAll(".filter-view-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const pig = allSwine.find(p => p._id === btn.dataset.id);
+        if (pig) {
+          openPigModal(pig);
+        }
+      });
+    });
   }
+
 
   // ================= LOAD FARMERS =================
   async function loadFarmers() {
@@ -213,13 +273,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error();
 
-      allSwine = data.swine.filter(sw => {
-        const fid =
-          typeof sw.farmer_id === "object"
-            ? sw.farmer_id._id
-            : sw.farmer_id;
-        return farmerIds.includes(fid?.toString());
-      });
+      allSwine = data.swine;
 
       renderTable(allSwine);
 
@@ -258,11 +312,78 @@ document.addEventListener("DOMContentLoaded", async () => {
     editPigBtn.onclick = () => setEditMode(true);
 
     cancelEditBtn.onclick = () => {
-      openPigModal(originalPig);
+      // Restore original values
+      pigTag.value = originalPig.swine_id || "";
+      pigSex.value = originalPig.sex || "";
+      pigColor.value = originalPig.color || "";
+      pigBreed.value = originalPig.breed || "";
+      pigBirthDate.value = originalPig.birth_date
+        ? originalPig.birth_date.split("T")[0]
+        : "";
+      pigStatus.value = originalPig.current_status || originalPig.status || "";
+      pigBatch.value = originalPig.batch || "";
+
+      // Exit edit mode WITHOUT reopening modal
+      setEditMode(false);
     };
 
-    savePigBtn.onclick = () => {
-      new bootstrap.Modal(confirmSaveModal).show();
+
+    savePigBtn.onclick = async () => {
+      try {
+        savePigBtn.disabled = true;
+        savePigBtn.textContent = "Saving...";
+
+        const payload = {
+          sex: pigSex.value,
+          color: pigColor.value,
+          breed: pigBreed.value,
+          health_status: "Healthy"
+        };
+
+        if (pigStatus.value && pigStatus.value.trim() !== "") {
+          payload.current_status = pigStatus.value;
+        }
+
+        if (pigBirthDate.value) {
+          payload.birth_date = pigBirthDate.value;
+        }
+
+        if (pigBatch.value && pigBatch.value.trim() !== "") {
+          payload.batch = pigBatch.value.trim();
+        }
+
+        const res = await fetch(
+          `http://localhost:5000/api/swine/update/${currentPig.swine_id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`
+            },
+            credentials: "include",
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Update failed");
+        }
+
+        Object.assign(currentPig, payload);
+        renderTable(allSwine);
+        setEditMode(false);
+
+        forceCloseModal(pigModal);
+        showToast("Changes saved successfully ✔");
+
+      } catch (err) {
+        console.error("Save failed:", err);
+        showToast(err.message || "Failed to save changes", "error");
+      } finally {
+        savePigBtn.disabled = false;
+        savePigBtn.textContent = "Save";
+      }
     };
 
 
@@ -290,11 +411,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (selectedFarmerId) {
       filtered = filtered.filter(sw => {
+        // Exclude Master / Admin swine when a farmer is selected
+        if (!sw.farmer_id) return false;
+
         const fid =
           typeof sw.farmer_id === "object"
             ? sw.farmer_id._id
             : sw.farmer_id;
-        return fid === selectedFarmerId;
+
+        return fid?.toString() === selectedFarmerId.toString();
       });
     }
 
@@ -308,6 +433,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       filtered = filtered.filter(sw => sw.sex === sex);
     }
 
+        const type = filterType.value;
+
+    if (type) {
+      filtered = filtered.filter(sw => {
+        switch (type) {
+          case "piglet":
+            return sw.age_stage === "piglet";
+
+          case "sow":
+            return sw.sex === "Female" && sw.age_stage === "adult";
+
+          case "boar":
+            return sw.sex === "Male" && sw.age_stage === "adult" && !sw.is_external_boar;
+
+          case "master":
+            return sw.is_external_boar === true;
+
+          default:
+            return true;
+        }
+      });
+    }
+
+
     if (tag) {
       filtered = filtered.filter(sw =>
         sw.swine_id?.toLowerCase().includes(tag)
@@ -320,6 +469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ================= RESET =================
   document.getElementById("resetFilters").addEventListener("click", () => {
     selectedFarmerId = null;
+    filterType.value = "";
 
     filtersForm.reset();
     document.getElementById("farmerDropdownBtn").textContent = "Select Farmer";
