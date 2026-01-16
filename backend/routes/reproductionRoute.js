@@ -14,61 +14,69 @@ const { requireSessionAndToken } = require("../middleware/authMiddleware");
 // Helper to format names consistently across different collections
 const formatName = (userObj) => {
     if (!userObj) return null;
-    return `${userObj.first_name || userObj.full_name || ''} ${userObj.last_name || ''}`.trim();
+    const first = userObj.first_name || userObj.full_name || '';
+    const last = userObj.last_name || '';
+    return `${first} ${last}`.trim();
 };
 
 // ---------------------------------------------------------
-// 1. FETCH AI HISTORY (Ownership-Aware)
+// 1. FETCH AI HISTORY (Updated for Manager-Centric Logic)
 // ---------------------------------------------------------
 router.get("/ai-history", requireSessionAndToken, async (req, res) => {
     try {
         const { id: userId, role, farmerProfileId, managerId } = req.user;
         let query = {};
 
+        /**
+         * LOGIC UPDATE:
+         * Your AIRecord model uses 'manager_id' to link to the farm owner.
+         * We query based on role to ensure the right records load.
+         */
         if (role === "farmer") {
+            // Farmers see records specifically linked to their profile
             if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
             query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
         } else {
-            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
-            const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
-            const farmerIds = managedFarmers.map(f => f._id);
+            // Managers see records where they are the 'manager_id'
+            // Encoders see records where their supervisor is the 'manager_id'
+            const targetManagerId = (role === "farm_manager" || role === "admin") ? userId : managerId;
             
-            query = {
-                $or: [
-                    { farmer_id: { $in: farmerIds } },
-                    { registered_by: effectiveManagerId }
-                ]
-            };
+            if (!targetManagerId) {
+                return res.status(400).json({ success: false, message: "Farm context not found" });
+            }
+
+            query = { manager_id: new mongoose.Types.ObjectId(targetManagerId) };
         }
 
         const records = await AIRecord.find(query)
             .populate("swine_id", "swine_id") 
             .populate("male_swine_id", "swine_id") 
-            .populate({
-                path: "farmer_id",
-                model: "Farmer", 
-                select: "first_name last_name"
-            })
+            .sort({ insemination_date: -1 })
             .lean();
 
         const formatted = await Promise.all(records.map(async (r) => {
             let name = "Unknown Farmer";
 
-            if (r.farmer_id) {
-                name = formatName(r.farmer_id);
-            } else {
-                const rawRecord = await AIRecord.findById(r._id).select("farmer_id");
-                if (rawRecord && rawRecord.farmer_id) {
-                    const manager = await User.findById(rawRecord.farmer_id).select("full_name first_name last_name");
-                    if (manager) {
-                        name = formatName(manager) + " (Manager)";
-                    }
-                }
+            /**
+             * TRIPLE-CHECK NAME RESOLUTION:
+             * 1. Try finding in Farmer collection
+             * 2. Try finding in User collection (Managers/Admin)
+             * 3. Fallback to the 'farmer_name' snapshot in the AIRecord model
+             */
+            let farmerInfo = await Farmer.findById(r.farmer_id).select("first_name last_name");
+            if (!farmerInfo) {
+                farmerInfo = await User.findById(r.farmer_id).select("full_name first_name last_name");
+            }
+
+            if (farmerInfo) {
+                name = formatName(farmerInfo);
+            } else if (r.farmer_name) {
+                name = r.farmer_name;
             }
 
             return {
                 farmer_name: name,
-                sow_tag: r.swine_id?.swine_id || "N/A",
+                sow_tag: r.swine_id?.swine_id || r.swine_code || "N/A",
                 boar_tag: r.male_swine_id?.swine_id || "N/A",
                 date: r.insemination_date
             };
@@ -93,7 +101,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
             if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
             query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
         } else {
-            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
+            const effectiveManagerId = (role === "farm_manager" || role === "admin") ? userId : managerId;
             const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
             const farmerIds = managedFarmers.map(f => f._id);
             
@@ -129,6 +137,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
                     }
 
                     morphologyRecords.push({
+                        farmer_id: swine.farmer_id,
                         farmer_name: displayFarmerName,
                         swine_tag: swine.swine_id,
                         swine_sex: swine.sex || "Unknown", 
@@ -149,6 +158,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
                         );
                         if (realDeformities.length > 0) {
                             deformityMonitoring.push({
+                                farmer_id: swine.farmer_id,
                                 farmer_name: displayFarmerName,
                                 swine_tag: swine.swine_id,
                                 deformity_types: realDeformities.join(", "),
@@ -179,7 +189,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
             if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
             query.farmer_id = new mongoose.Types.ObjectId(farmerProfileId);
         } else {
-            const effectiveManagerId = role === "farm_manager" ? userId : managerId;
+            const effectiveManagerId = (role === "farm_manager" || role === "admin") ? userId : managerId;
             const managedFarmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
             const farmerIds = managedFarmers.map(f => f._id);
             
@@ -202,6 +212,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
             return {
                 id: c._id,
                 swine_tag: c.swine_id,
+                farmer_id: c.farmer_id,
                 farmer_name: formatName(c.farmer_id) || "Unknown Farmer",
                 current_stage: c.current_status,
                 can_promote: latestPerf ? latestPerf.passed_selection : false,
@@ -226,7 +237,6 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
         const swine = await Swine.findById(swineId);
         if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-        // Security check for farmers
         if (role === "farmer" && swine.farmer_id.toString() !== farmerProfileId.toString()) {
             return res.status(403).json({ success: false, message: "Access denied: Not your swine" });
         }
