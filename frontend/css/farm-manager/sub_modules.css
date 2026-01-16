@@ -111,6 +111,32 @@ button, [role="button"], a {
   padding-top: 0; /* topbar sits above the shell */
 }
 
+/* notification */
+#notificationHistoryModal {
+  z-index: 2000;
+}
+
+
+/* =========================
+   Fix sidebar when offcanvas is open
+========================= */
+
+/* When any Bootstrap offcanvas is open */
+body.offcanvas-open .sidebar {
+  pointer-events: none;     /* disable interaction */
+  filter: grayscale(0.2);   /* subtle visual deactivation */
+}
+
+/* Ensure offcanvas sits above sidebar */
+.offcanvas {
+  z-index: 1200;
+}
+
+.offcanvas-backdrop {
+  z-index: 1150;
+}
+
+
 /* =========== Sidebar =========== */
 .sidebar{
   width: var(--sidebar-width);

@@ -128,16 +128,16 @@ router.get(
   }
 );
 
-// Breed Analysis
+// Swine Analysis
 router.get(
-  "/farm-manager/breed-analysis",
+  "/farm-manager/swine-analysis",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/breed_analysis", {
-      page_title: "Breed Analysis",
+    res.render("pages/farm-manager/swine_analysis", {
+      page_title: "Swine Analysis",
       current_section: "analysis",
-      current_page: "breed_analysis",
+      current_page: "swine_analysis",
     });
   }
 );

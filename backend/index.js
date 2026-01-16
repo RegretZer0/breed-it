@@ -147,6 +147,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reproduction", reproductionRoute);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
+
 
 /* =========================
    HEALTH CHECK

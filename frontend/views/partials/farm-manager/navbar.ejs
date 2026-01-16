@@ -112,33 +112,75 @@
   id="notificationsPanel"
 >
   <div class="offcanvas-header">
-    <h5>Notifications</h5>
+    <h5>Recent Notifications</h5>
     <button class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
 
   <div class="offcanvas-body">
-    <ul class="list-group list-group-flush small">
-      <li class="list-group-item">
-        🐖 New swine record added
-        <div class="text-muted small">2 minutes ago</div>
-      </li>
-      <li class="list-group-item">
-        🔔 Heat report submitted
-        <div class="text-muted small">1 hour ago</div>
-      </li>
-      <li class="list-group-item">
-        👤 Profile updated
-        <div class="text-muted small">Yesterday</div>
-      </li>
+    <ul class="list-group list-group-flush small" id="notificationsList">
+      <!-- JS will inject here -->
     </ul>
 
+
     <div class="text-center mt-3">
-      <button class="btn btn-outline-secondary btn-sm" disabled>
-        View all (Coming Soon)
-      </button>
+     <button class="btn btn-outline-secondary btn-sm" id="viewAllNotificationsBtn">View all</button>
     </div>
   </div>
 </div>
+
+<!-- =======================
+     NOTIFICATION HISTORY MODAL
+======================= -->
+<div
+  class="modal fade"
+  id="notificationHistoryModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Notification History</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Filters -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <select class="form-select form-select-sm w-auto" id="notifFilterType">
+            <option value="">All Types</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="alert">Alert</option>
+            <option value="error">Error</option>
+          </select>
+
+          <select class="form-select form-select-sm w-auto" id="notifFilterTime">
+            <option value="">All Time</option>
+            <option value="24h">Last 24 hours</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+        </div>
+
+        <!-- Notification list -->
+        <ul
+          class="list-group list-group-flush"
+          id="notificationHistoryList"
+        >
+          <li class="list-group-item text-muted">
+            Loading notifications…
+          </li>
+        </ul>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 <!-- =======================
      SETTINGS PANEL

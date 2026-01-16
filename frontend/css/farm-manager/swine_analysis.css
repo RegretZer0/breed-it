@@ -1,0 +1,344 @@
+/* =========================================
+   ROOT TOKENS
+========================================= */
+:root {
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-green: #17c14f;
+
+  --stat-orange: #ff9a1f;
+  --stat-blue: #1ea7ff;
+  --stat-green: #43c572;
+  --stat-red: #f55b66;
+  --stat-blue2: #1543ff;
+  --stat-teal: #12c0a4;
+  --stat-brown: #b67c1a;
+  --stat-purple: #b14cf0;
+
+  /* sizing */
+  --gutter: 18px;
+  --radius: 10px;
+
+  /* typography */
+  --font-family-system: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --base-font-size: 15px;
+  --base-line-height: 1.55;
+}
+
+/* =========================================
+   GLOBAL RESET / BASICS
+========================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family-system);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  background: var(--bg);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* =========================================
+   APP LAYOUT
+========================================= */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  padding: var(--gutter);
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* =========================================
+   CONTAINER
+========================================= */
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 0;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.page-title,
+.header-actions h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.btn-back {
+  background: var(--muted-border);
+  color: var(--text-dark);
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.2s ease;
+}
+
+.btn-back:hover {
+  background: #dedede;
+}
+
+/* =========================================
+   CARDS
+========================================= */
+.card,
+.page-card {
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 22px;
+}
+
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted-text);
+}
+
+/* =========================================
+   TABLE (MOBILE FIRST)
+========================================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+  font-size: 0.9rem;
+}
+
+thead {
+  display: none;
+}
+
+tr {
+  display: block;
+  border-bottom: 1px solid var(--muted-border);
+  padding: 10px 0;
+}
+
+td {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+td::before {
+  content: attr(data-label);
+  font-weight: 600;
+  color: var(--muted-text);
+}
+
+/* Desktop table */
+@media (min-width: 768px) {
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    display: table-row;
+    padding: 0;
+  }
+
+  th,
+  td {
+    display: table-cell;
+    padding: 12px;
+    border-bottom: 1px solid var(--muted-border);
+  }
+
+  td::before {
+    display: none;
+  }
+}
+
+/* =========================================
+   SCORE BAR
+========================================= */
+.score-bar {
+  height: 12px;
+  background: var(--muted-border);
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 140px;
+}
+
+.score-fill {
+  height: 100%;
+  background: var(--stat-green);
+  transition: width 0.4s ease;
+}
+
+/* =========================================
+   BADGES
+========================================= */
+.badge-female,
+.badge-male {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-female {
+  background: #ffe6f0;
+  color: #b82b6b;
+}
+
+.badge-male {
+  background: #e6f1ff;
+  color: #1b5fcc;
+}
+
+/* =========================================
+   BREEDING PAIR SELECT
+========================================= */
+.pair-select {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+select {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--muted-border);
+  font-size: 0.95rem;
+  background: var(--bg);
+}
+
+.pair-symbol {
+  display: none;
+}
+
+/* Desktop pairing */
+@media (min-width: 768px) {
+  .pair-select {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .pair-symbol {
+    display: block;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--muted-text);
+    padding-bottom: 10px;
+  }
+}
+
+/* =========================================
+   BUTTONS
+========================================= */
+.btn-submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--stat-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+
+.btn-submit:hover {
+  background: var(--stat-blue2);
+}
+
+.btn-submit:active {
+  transform: scale(0.98);
+}
+
+.btn-submit:disabled {
+  background: var(--muted-border);
+  cursor: not-allowed;
+}
+
+/* =========================================
+   MATCH RESULT
+========================================= */
+.match-box {
+  margin-top: 20px;
+  padding: 20px;
+  border: 2px dashed var(--stat-blue);
+  border-radius: var(--radius);
+  background: #f4faff;
+  text-align: center;
+  display: none;
+}
+
+#matchScore {
+  font-size: 2.2rem;
+  margin: 8px 0;
+  font-weight: 700;
+}
+
+#matchLogs {
+  margin-top: 14px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+#matchLogs p {
+  margin: 6px 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--stat-blue);
+}
+
+/* =========================================
+   UTILITIES
+========================================= */
+.warning {
+  color: var(--stat-red);
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted-text);
+}

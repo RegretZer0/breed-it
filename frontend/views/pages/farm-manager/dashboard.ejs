@@ -12,117 +12,168 @@
 
             <!-- stat cards grid -->
             <div class="row g-3 mt-3 stats-grid">
+
+              <!-- Total Pigs -->
               <div class="col-md-6 col-lg-3">
                 <div class="stat-card d-flex justify-content-between align-items-center">
                   <div>
                     <div class="stat-label">Total Pigs</div>
-                    <div class="stat-number">130</div>
+                    <div class="stat-number" data-stat="totalPigs">—</div>
                   </div>
-                  <div class="stat-icon orange"><i class="fa-solid fa-ghost"></i></div>
+                  <div class="stat-icon orange">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                  </div>
                 </div>
               </div>
 
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">Total Farmers</div>
-                    <div class="stat-number">54</div>
-                  </div>
-                  <div class="stat-icon blue"><i class="fa-regular fa-user"></i></div>
-                </div>
-              </div>
-
+              <!-- Alive -->
               <div class="col-md-6 col-lg-3">
                 <div class="stat-card d-flex justify-content-between align-items-center">
                   <div>
                     <div class="stat-label">Alive</div>
-                    <div class="stat-number">32</div>
+                    <div class="stat-number" data-stat="alive">—</div>
                   </div>
-                  <div class="stat-icon green"><i class="fa-regular fa-heart"></i></div>
+                  <div class="stat-icon green">
+                    <i class="fa-regular fa-heart"></i>
+                  </div>
                 </div>
               </div>
 
+              <!-- Mortality -->
               <div class="col-md-6 col-lg-3">
                 <div class="stat-card d-flex justify-content-between align-items-center">
                   <div>
                     <div class="stat-label">Mortality</div>
-                    <div class="stat-number">30</div>
+                    <div class="stat-number" data-stat="mortality">—</div>
                   </div>
-                  <div class="stat-icon red"><i class="fa-solid fa-heartbeat"></i></div>
+                  <div class="stat-icon red">
+                    <i class="fa-solid fa-heartbeat"></i>
+                  </div>
                 </div>
               </div>
 
+              <!-- In-Heat -->
               <div class="col-md-6 col-lg-3">
                 <div class="stat-card d-flex justify-content-between align-items-center">
                   <div>
-                    <div class="stat-label">Farrowing Phase</div>
-                    <div class="stat-number">23</div>
+                    <div class="stat-label">In-Heat Phase</div>
+                    <div class="stat-number" data-stat="inHeat">—</div>
                   </div>
-                  <div class="stat-icon blue2"><i class="fa-solid fa-circle-plus"></i></div>
+                  <div class="stat-icon brown">
+                    <i class="fa-solid fa-droplet"></i>
+                  </div>
                 </div>
               </div>
 
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">Weaning Phase</div>
-                    <div class="stat-number">14</div>
-                  </div>
-                  <div class="stat-icon teal"><i class="fa-regular fa-star"></i></div>
-                </div>
-              </div>
-
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">In-heat Phase</div>
-                    <div class="stat-number">12</div>
-                  </div>
-                  <div class="stat-icon brown"><i class="fa-solid fa-droplet"></i></div>
-                </div>
-              </div>
-
+              <!-- Pregnant Sow -->
               <div class="col-md-6 col-lg-3">
                 <div class="stat-card d-flex justify-content-between align-items-center">
                   <div>
                     <div class="stat-label">Pregnant Sow</div>
-                    <div class="stat-number">23</div>
+                    <div class="stat-number" data-stat="pregnant">—</div>
                   </div>
-                  <div class="stat-icon purple"><i class="fa-regular fa-heart"></i></div>
+                  <div class="stat-icon purple">
+                    <i class="fa-regular fa-heart"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Farrowing -->
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Farrowing Phase</div>
+                    <div class="stat-number" data-stat="farrowing">—</div>
+                  </div>
+                  <div class="stat-icon blue2">
+                    <i class="fa-solid fa-circle-plus"></i>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Weaning -->
+              <div class="col-md-6 col-lg-3">
+                <div class="stat-card d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="stat-label">Weaning Phase</div>
+                    <div class="stat-number" data-stat="weaning">—</div>
+                  </div>
+                  <div class="stat-icon teal">
+                    <i class="fa-regular fa-star"></i>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- calendar + audit logs row -->
+            <div class="row mt-3 g-3">
+
+              <!-- LEFT: Calendar -->
+              <div class="col-lg-8">
+                <div class="card page-card large-card h-100">
+                  <div class="card-body">
+
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                      <h5 class="card-title mb-0">
+                        Breeding &amp; Farrowing Schedule
+                      </h5>
+
+                      <!-- Mobile-only Month View -->
+                      <button
+                        type="button"
+                        id="openCalendarModal"
+                        class="btn btn-outline-secondary btn-sm d-lg-none"
+                      >
+                        Month View
+                      </button>
+                    </div>
+
+                    <!-- Inline calendar -->
+                    <div id="calendar"></div>
+
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- RIGHT: Audit Logs -->
+              <div class="col-lg-4">
+                <div class="card page-card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title mb-3">Recent Audit Logs</h5>
+
+                    <ul id="loginLogs" class="login-log-list">
+                      <li class="log-loading">Loading activity…</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- =======================
+                MOBILE FULL CALENDAR MODAL
+            ======================= -->
+            <div class="modal fade" id="calendarModal" tabindex="-1">
+              <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+                <div class="modal-content">
+
+                  <div class="modal-header">
+                    <h5 class="modal-title">Monthly Schedule</h5>
+                    <button class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+
+                  <div class="modal-body">
+                    <div id="calendarModalBody"></div>
+                  </div>
+
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Main content area (two columns) -->
-        <div class="row mt-3 g-3">
-          <div class="col-lg-8">
-            <div class="card page-card large-card">
-              <div class="card-body">
-                <div class="placeholder-rect mb-4"></div>
-                <div class="placeholder-rect"></div>
-              </div>
-            </div>
-          </div>
 
-        <div class="col-lg-4">
-          <div class="card page-card right-card mb-3">
-            <div class="card-body">
-              <h5 class="card-title mb-3">Recent Login Activity</h5>
-
-              <ul id="loginLogs" class="login-log-list">
-                <li class="log-loading">Loading activity…</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        </div>
-
-      </div>
-    </main>
-  </div>
 
 
 <%- include("../../partials/farm-manager/footer") %>

@@ -31,100 +31,91 @@
 
 /* =========== Global reset / basics =========== */
 *, *::before, *::after { box-sizing: border-box; }
+
 html, body {
   height: 100%;
   margin: 0;
   font-family: var(--font-family-system);
   font-size: var(--base-font-size);
   line-height: var(--base-line-height);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   background: var(--bg);
   color: var(--text-dark);
-  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Make interactive elements obvious and keyboard accessible */
+/* Accessibility */
 button, [role="button"], a {
   cursor: pointer;
-  outline: none;
-  border: none;
   background: none;
-  color: inherit;
+  border: none;
   font: inherit;
 }
 
-/* Keyboard focus styles (visible and high-contrast) */
 :focus {
   outline: 3px solid rgba(21, 67, 255, 0.18);
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* Honor reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
 
-/* =========== Shell layout (topbar & sidebar removed) =========== */
+/* =========== Layout =========== */
 .app-shell{
   display: flex;
   min-height: 100vh;
-  position: relative;
-  gap: var(--gutter);
-  align-items: flex-start;
   padding: var(--gutter);
 }
 
-/* =========== Main content =========== */
 .main-content{
   flex: 1;
   padding: var(--gutter);
-  background: var(--bg);
   min-width: 0;
 }
 
-/* Page card wrapper */
+/* =========== Page Cards =========== */
 .page-card{
   border-radius: var(--radius);
   border: 1px solid var(--card-border);
-  box-shadow: none;
   background: var(--bg);
 }
 
-/* Dashboard title */
-.page-title{
-  font-weight: 700;
-  color: var(--text-dark);
-  margin: 0;
-  font-size: 20px;
+.page-card .card-body{
+  padding: 18px;
 }
 
-/* Stats grid: each stat card */
+.page-title{
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0;
+}
+
+/* =========== Stats Cards =========== */
 .stat-card{
   background: var(--bg);
   border-radius: var(--radius);
   padding: 18px;
   border: 1px solid #f0f0f0;
   min-height: 86px;
-  box-shadow: none;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
 }
+
 .stat-label{
   font-size: 14px;
   color: var(--muted-text);
   margin-bottom: 6px;
 }
+
 .stat-number{
   font-weight: 800;
   font-size: 26px;
-  color: var(--text-dark);
 }
 
-/* colored circular icon */
 .stat-icon{
   width: 44px;
   height: 44px;
@@ -132,10 +123,10 @@ button, [role="button"], a {
   display:flex;
   align-items:center;
   justify-content:center;
-  color: #fff;
-  font-size: 18px;
-  flex: 0 0 44px;
+  color:#fff;
+  font-size:18px;
 }
+
 .stat-icon.orange{ background: var(--stat-orange); }
 .stat-icon.blue{ background: var(--stat-blue); }
 .stat-icon.green{ background: var(--stat-green); }
@@ -145,73 +136,168 @@ button, [role="button"], a {
 .stat-icon.brown{ background: var(--stat-brown); }
 .stat-icon.purple{ background: var(--stat-purple); }
 
-/* placeholders for large content */
-.large-card .placeholder-rect{
-  height: 96px;
-  background: #f4f4f4;
-  border-radius: var(--radius);
-}
-.right-card .placeholder-small{
-  height: 92px;
-  background: #f4f4f4;
-  border-radius: var(--radius);
+/* =========== Login Activity =========== */
+.login-log-list{
+  list-style:none;
+  padding:0;
+  margin:0;
 }
 
-/* Page card inner padding */
-.page-card .card-body{ padding: 18px; }
+.login-log-list li{
+  padding:10px 12px;
+  border:1px solid var(--muted-border);
+  border-radius:var(--radius);
+  margin-bottom:10px;
+  background:#fff;
+}
+
+.log-user{ font-weight:600; }
+.log-role{
+  font-size:11px;
+  padding:2px 6px;
+  border-radius:6px;
+  margin-left:6px;
+  text-transform:uppercase;
+}
+
+.log-role.admin{ background:var(--stat-red); color:#fff; }
+.log-role.encoder{ background:var(--stat-blue); color:#fff; }
+
+.log-time{
+  font-size:12px;
+  color:var(--muted-text);
+}
+
+.log-loading{
+  text-align:center;
+  color:var(--muted-text);
+}
 
 /* =========================
-   Login Activity Card
+   FullCalendar – Base
 ========================= */
 
-.login-log-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+#calendar {
+  width: 100%;
 }
 
-.login-log-list li {
-  padding: 10px 12px;
-  border: 1px solid var(--muted-border);
-  border-radius: var(--radius);
-  margin-bottom: 10px;
-  background: #fff;
-}
+/* =========================
+   Desktop (Month View)
+========================= */
 
-.login-log-list li:last-child {
-  margin-bottom: 0;
-}
-
-.log-user {
+.fc .fc-toolbar-title {
+  font-size: 16px;
   font-weight: 600;
+}
+
+.fc .fc-button {
+  background: #f4f4f4;
+  border: 1px solid var(--muted-border);
   color: var(--text-dark);
-}
-
-.log-role {
-  font-size: 11px;
-  text-transform: uppercase;
-  padding: 2px 6px;
   border-radius: 6px;
-  margin-left: 6px;
-}
-
-.log-role.admin {
-  background: var(--stat-red);
-  color: #fff;
-}
-
-.log-role.encoder {
-  background: var(--stat-blue);
-  color: #fff;
-}
-
-.log-time {
   font-size: 12px;
-  color: var(--muted-text);
-  margin-top: 4px;
+  padding: 6px 10px;
 }
 
-.log-loading {
-  color: var(--muted-text);
-  text-align: center;
+.fc .fc-button-primary.fc-button-active {
+  background: var(--stat-blue);
+  border-color: var(--stat-blue);
+  color: #fff;
 }
+
+/* =========================
+   Mobile List View (KEY FIX)
+========================= */
+
+@media (max-width: 768px) {
+
+  /* Hide useless borders */
+  .fc-theme-standard td,
+  .fc-theme-standard th {
+    border: none;
+  }
+
+  /* Clean list container */
+  .fc-list {
+    border: none;
+  }
+
+  /* Date header */
+  .fc-list-day-cushion {
+    background: #f6f7f9;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  /* Event rows → card style */
+  .fc-list-event {
+    margin: 10px 8px;
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    padding: 12px;
+  }
+
+  .fc-list-event:hover {
+    background: #f9fafb;
+  }
+
+  /* Event title */
+  .fc-list-event-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  /* Time text */
+  .fc-list-event-time {
+    font-size: 12px;
+    color: var(--muted-text);
+    margin-bottom: 4px;
+  }
+
+  /* Remove dots */
+  .fc-list-event-dot {
+    display: none;
+  }
+
+  /* Empty state */
+  .fc-list-empty {
+    padding: 40px 16px;
+    font-size: 14px;
+    color: var(--muted-text);
+    text-align: center;
+  }
+}
+
+/* =========================
+   Event Type Colors
+========================= */
+
+.fc-event[data-type="heat"],
+.fc-list-event[data-type="heat"] {
+  border-left: 4px solid var(--stat-orange);
+}
+
+.fc-event[data-type="farrowing"],
+.fc-list-event[data-type="farrowing"] {
+  border-left: 4px solid var(--stat-green);
+}
+
+/* Mobile list view spacing */
+@media (max-width: 767px) {
+  .fc-list-event {
+    padding: 12px 10px;
+  }
+
+  .fc-list-event-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .fc-toolbar-title {
+    font-size: 15px;
+  }
+}
+
