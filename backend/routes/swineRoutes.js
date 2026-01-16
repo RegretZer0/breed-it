@@ -500,15 +500,7 @@ router.put(
       });
 
     } catch (error) {
-<<<<<<< HEAD
-      console.error("[UPDATE SWINE ERROR]:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error"
-      });
-=======
       res.status(500).json({ success: false, message: "Server error" });
->>>>>>> f9997249303308234122149ba17de1233c8e2818
     }
   }
 );
