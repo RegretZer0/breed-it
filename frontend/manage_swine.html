@@ -22,14 +22,14 @@
     .full-width {
       grid-column: span 2;
     }
-    .reg-type-container {
-      background: #e3f2fd;
+    /* Styles for the External Boar toggle */
+    #externalBoarContainer {
+      background: #fff3e0;
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 20px;
-      border: 1px solid #90caf9;
+      border: 1px solid #ffe0b2;
     }
-    .reg-type-container h4 { margin-top: 0; color: #1976d2; }
 
     .checklist-box {
       border: 1px solid #ccc;
@@ -61,7 +61,7 @@
       border-radius: 5px;
       border: 1px dashed #ffd966;
       margin-top: 10px;
-      display: none; /* Hidden by default until Female/Adult selected */
+      display: none; 
     }
 
     .filter-container {
@@ -114,27 +114,30 @@
   <div class="dashboard-container">
     <h2>Manage Swine Records</h2>
 
-    <div class="reg-type-container">
-      <h4>Registration Type</h4>
-      <label>
-        <input type="radio" name="regType" value="standard" checked> Standard (Farrowed Piglets/Purchased)
-      </label>
-      <label style="margin-left: 20px;">
-        <input type="radio" name="regType" value="boar_source"> External Boar (Semen Source Only)
-      </label>
-    </div>
-
     <div class="form-container">
       <h3 id="formTitle">Register New Swine</h3>
+      
       <form id="registerSwineForm">
-        <div class="form-grid">
-          <div class="form-col">
-            <label for="farmerSelect">Farmer / Owner:</label>
-            <select id="farmerSelect" required>
-              <option value="">Select Farmer</option>
-            </select>
+        <div id="externalBoarContainer">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color: #e65100; font-weight:bold;">
+                <input type="checkbox" id="isExternalBoar"> 
+                Register as External Boar (Semen Source Only)
+            </label>
+            <p style="font-size: 0.8em; margin: 5px 0 0 25px; color: #666;">
+                Checking this locks Sex to Male, Age to Adult, Breed to Native, and skips Farmer selection.
+            </p>
+        </div>
 
-            <label for="batch">Batch ID / Transaction ID:</label>
+        <div class="form-grid">
+          <div class="form-col" id="ownerColumn">
+            <div class="form-group">
+                <label for="farmerSelect">Farmer / Owner:</label>
+                <select id="farmerSelect" required>
+                  <option value="">Select Farmer</option>
+                </select>
+            </div>
+
+            <label for="batch">Batch ID / Source ID:</label>
             <input type="text" id="batch" placeholder="e.g., BATCH-2026-A" required />
 
             <label for="sex">Sex:</label>
@@ -160,10 +163,10 @@
 
           <div class="form-col">
             <label for="breed">Breed:</label>
-            <input type="text" id="breed" placeholder="e.g., Large White, Landrace" required />
+            <input type="text" id="breed" placeholder="e.g., Large White, Native" required />
 
             <label for="color">Color/Markings:</label>
-            <input type="text" id="color" placeholder="e.g., White" />
+            <input type="text" id="color" placeholder="e.g., White / Black Spots" />
 
             <label for="birth_date">Birth Date:</label>
             <input type="date" id="birth_date" required />
@@ -181,7 +184,7 @@
 
           <div class="full-width form-section" id="lineageSection">
             <h4>Parentage & Lineage</h4>
-            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows. Select a Sow to see Boar history.</p>
+            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows.</p>
             <div class="form-grid">
               <div class="form-col">
                 <label for="dam_id">Select Dam (Mother / Sow):</label>
@@ -199,7 +202,7 @@
           </div>
 
           <div class="full-width form-section">
-            <h4>Initial Physical Measurements</h4>
+            <h4>Initial Physical Measurements & Observations</h4>
           </div>
 
           <div class="form-col">
@@ -230,16 +233,6 @@
               <label><input type="checkbox" name="deformities" value="Cleft Palate"> Cleft Palate</label>
             </div>
           </div>
-
-          <div class="full-width form-col">
-             <label>Initial Medical Treatments (On Registration):</label>
-             <div class="checklist-box" id="medicalChecklist">
-                <label><input type="checkbox" value="Iron Injection"> Iron Injection (Day 3)</label>
-                <label><input type="checkbox" value="Tail Docking"> Tail Docking</label>
-                <label><input type="checkbox" value="Ear Notching"> Ear Notching/Tagging</label>
-                <label><input type="checkbox" value="Castration"> Castration</label>
-             </div>
-          </div>
         </div>
 
         <button type="submit" id="submitBtn" style="margin-top: 30px; width: 100%; padding: 15px; background: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 5px;">
@@ -254,13 +247,13 @@
 
       <div class="filter-container">
         <div class="filter-group">
-          <label for="filterBatch">Search Batch:</label>
+          <label for="filterBatch">Search Batch ID:</label>
           <input type="text" id="filterBatch" placeholder="Enter Batch ID..." />
         </div>
         <div class="filter-group">
           <label for="filterFarmer">Filter by Farmer:</label>
           <select id="filterFarmer">
-              <option value="">All Farmers</option>
+              <option value="">All Farmers / Owners</option>
           </select>
         </div>
       </div>
@@ -269,7 +262,7 @@
         <thead>
           <tr>
             <th>ID / Batch</th>
-            <th>Farmer</th>
+            <th>Owner</th>
             <th>Breed & Age</th>
             <th>Status / Health</th>
             <th>Sire / Dam</th>
@@ -295,16 +288,16 @@
       <hr>
       
       <div class="modal-section" style="margin-top:20px;">
-        <h4>Reproductive History (For Sows)</h4>
+        <h4>Reproductive Performance</h4>
         <table id="repoTable">
           <thead>
             <tr>
               <th>Cycle</th>
-              <th>AI Date</th>
+              <th>Service Date</th>
               <th>Farrowing Date</th>
               <th>Total Born</th>
               <th>Live</th>
-              <th>Mortality</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="reproductiveHistoryBody"></tbody>
@@ -316,12 +309,11 @@
         <table id="perfTable">
           <thead>
             <tr>
-              <th>Stage</th>
               <th>Date</th>
               <th>Weight</th>
               <th>L x G</th>
-              <th>Teats</th>
-              <th>Anomalies</th>
+              <th>Stage</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody id="performanceTimelineBody"></tbody>

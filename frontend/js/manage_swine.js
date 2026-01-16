@@ -37,6 +37,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const submitBtn = registerForm.querySelector('button[type="submit"]');
   const swineMessage = document.getElementById("swineMessage");
   const farmerSelect = document.getElementById("farmerSelect");
+  const farmerGroup = farmerSelect.closest('.form-group') || farmerSelect.parentElement;
+  
   const damSelect = document.getElementById("dam_id"); 
   const sireSelect = document.getElementById("sire_id"); 
   const batchInput = document.getElementById("batch");
@@ -44,6 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   const sexSelect = document.getElementById("sex");
   const ageStageSelect = document.getElementById("ageStage");
+  const breedInput = document.getElementById("breed");
   const teatCountGroup = document.getElementById("teatCountGroup");
   const deformityChecklist = document.getElementById("deformityChecklist");
 
@@ -53,6 +56,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const modal = document.getElementById("swineModal");
   const closeModal = document.querySelector(".close-modal");
 
+  // --- External Boar Toggle UI ---
+  const externalGroup = document.createElement("div");
+  externalGroup.className = "form-group";
+  externalGroup.style.marginBottom = "15px";
+  externalGroup.innerHTML = `
+    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color: #2c3e50; font-weight:bold;">
+      <input type="checkbox" id="isExternalBoar"> Register as External Boar (Semen Source Only)
+    </label>
+  `;
+  registerForm.prepend(externalGroup);
+  const externalCheckbox = document.getElementById("isExternalBoar");
+
   const cancelEditBtn = document.createElement("button");
   cancelEditBtn.type = "button";
   cancelEditBtn.textContent = "Cancel Edit";
@@ -61,10 +76,42 @@ document.addEventListener("DOMContentLoaded", async () => {
   cancelEditBtn.style.marginLeft = "10px";
   submitBtn.parentNode.appendChild(cancelEditBtn);
 
-  // ---------------- UI & INCREMENTAL BATCH LOGIC ----------------
+  // ---------------- UI LOGIC ----------------
+
+  const handleExternalToggle = () => {
+    if (externalCheckbox.checked) {
+      // Lock fields for External Boar
+      farmerGroup.style.opacity = "0.5";
+      farmerSelect.disabled = true;
+      farmerSelect.value = ""; 
+      
+      sexSelect.value = "Male";
+      sexSelect.disabled = true;
+      
+      ageStageSelect.value = "adult";
+      ageStageSelect.disabled = true;
+      
+      breedInput.value = "Native";
+      breedInput.readOnly = true;
+
+      batchInput.placeholder = "Enter Semen Batch / Source ID";
+      batchInput.readOnly = false;
+    } else {
+      // Restore fields
+      farmerGroup.style.opacity = "1";
+      farmerSelect.disabled = false;
+      sexSelect.disabled = false;
+      ageStageSelect.disabled = false;
+      breedInput.readOnly = false;
+      updateBatchField();
+    }
+    toggleTeatField();
+  };
+
+  externalCheckbox.addEventListener("change", handleExternalToggle);
 
   const updateBatchField = () => {
-    if (isEditing) return;
+    if (isEditing || externalCheckbox.checked) return;
 
     if (ageStageSelect.value === "piglet") {
       batchInput.readOnly = true;
@@ -148,6 +195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       const data = await res.json();
       if (data.success) {
+        // Handle historical and active boars
         if (data.historicalBoars?.length > 0) {
           const histGroup = document.createElement("optgroup");
           histGroup.label = "Previously Used (History)";
@@ -192,7 +240,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function displaySwine(swineList) {
     swineTableBody.innerHTML = "";
     swineList.forEach((sw) => {
-      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "N/A";
+      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / EXTERNAL";
       const latestPerf = (sw.performance_records || []).slice(-1)[0] || {};
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c" };
       const statusColor = statusColors[sw.current_status] || "#7f8c8d";
@@ -238,6 +286,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineMessage.className = "message info";
     registerForm.scrollIntoView({ behavior: 'smooth' });
 
+    // Set External Toggle based on lack of farmer
+    externalCheckbox.checked = !swine.farmer_id;
+    handleExternalToggle();
+
     const fId = swine.farmer_id?._id || swine.farmer_id || "";
     farmerSelect.value = fId;
     await updateSowDropdown(fId);
@@ -247,7 +299,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (swine.sire_id) sireSelect.value = swine.sire_id;
     batchInput.value = swine.batch || "";
-    batchInput.readOnly = (swine.age_stage === "piglet"); 
     
     document.getElementById("sex").value = swine.sex || "Female";
     document.getElementById("ageStage").value = swine.age_stage || "piglet";
@@ -275,6 +326,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     cancelEditBtn.style.display = "none";
     swineMessage.textContent = "";
     registerForm.reset();
+    externalCheckbox.checked = false;
+    handleExternalToggle();
     deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = false);
     damSelect.innerHTML = '<option value="">-- Select Sow --</option>';
     sireSelect.innerHTML = '<option value="">-- Select Boar --</option>';
@@ -288,14 +341,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const deformities = Array.from(deformityChecklist.querySelectorAll('input:checked')).map(cb => cb.value);
+    
     const payload = {
-      farmer_id: farmerSelect.value, batch: batchInput.value.trim(), sex: sexSelect.value,
-      age_stage: ageStageSelect.value, color: document.getElementById("color").value.trim(),
-      breed: document.getElementById("breed").value.trim(), birth_date: document.getElementById("birth_date").value,
-      health_status: document.getElementById("health_status").value, sire_id: sireSelect.value,
-      dam_id: damSelect.value, weight: document.getElementById("weight").value,
-      bodyLength: document.getElementById("bodyLength").value, heartGirth: document.getElementById("heartGirth").value,
-      teethCount: document.getElementById("teethCount").value, teatCount: document.getElementById("teatCount").value || null,
+      farmer_id: externalCheckbox.checked ? null : farmerSelect.value, 
+      batch: batchInput.value.trim(), 
+      sex: sexSelect.value,
+      age_stage: ageStageSelect.value, 
+      color: document.getElementById("color").value.trim(),
+      breed: breedInput.value.trim(), 
+      birth_date: document.getElementById("birth_date").value,
+      health_status: document.getElementById("health_status").value, 
+      sire_id: sireSelect.value,
+      dam_id: damSelect.value, 
+      weight: document.getElementById("weight").value,
+      bodyLength: document.getElementById("bodyLength").value, 
+      heartGirth: document.getElementById("heartGirth").value,
+      teethCount: document.getElementById("teethCount").value, 
+      teatCount: document.getElementById("teatCount").value || null,
       deformities: deformities.length ? deformities : ["None"],
       date_transfer: document.getElementById("date_transfer").value || new Date().toISOString().split('T')[0],
       managerId
@@ -327,7 +389,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const sw = allSwine.find(s => s.swine_id === e.target.dataset.id);
         if(!sw) return;
 
-        // 1. Pedigree Info
         const damObj = allSwine.find(s => s.swine_id === sw.dam_id);
         const sireObj = allSwine.find(s => s.swine_id === sw.sire_id);
         
@@ -336,7 +397,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             <small style="color: #666;">Childhood Batch: ${sw.batch || 'N/A'}</small>
         `;
 
-        // Create/Update a Pedigree Section (Ensure these IDs exist in your HTML modal)
         const familyInfo = document.getElementById("familyInfoSection") || document.createElement("div");
         familyInfo.id = "familyInfoSection";
         familyInfo.style.margin = "15px 0";
@@ -351,7 +411,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
         document.getElementById("modalSwineId").after(familyInfo);
 
-        // 2. Children List (Offspring)
         const children = allSwine.filter(s => s.dam_id === sw.swine_id || s.sire_id === sw.swine_id);
         const offspringSection = document.getElementById("offspringListSection") || document.createElement("div");
         offspringSection.id = "offspringListSection";
@@ -364,7 +423,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <tbody id="offspringTableBody"></tbody>
             </table>
         `;
-        // Append to modal (e.g., at the end)
         const modalContent = modal.querySelector(".modal-content");
         if(!document.getElementById("offspringListSection")) modalContent.appendChild(offspringSection);
         
@@ -381,7 +439,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             `;
         });
 
-        // 3. Populate existing history tables
         const repoBody = document.getElementById("reproductiveHistoryBody");
         repoBody.innerHTML = (sw.breeding_cycles || []).length ? "" : "<tr><td colspan='6'>No cycle data.</td></tr>";
         (sw.breeding_cycles || []).forEach(c => {
