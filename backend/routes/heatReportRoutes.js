@@ -134,7 +134,7 @@ router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder")
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     const reports = await HeatReport.find({ manager_id: managerId })
       .populate("swine_id", "swine_id breed current_status")
-      .populate("farmer_id", "first_name last_name farmer_id")
+      .populate("farmer_id", "first_name last_name farmer_id user_id")
       .sort({ createdAt: -1 });
     res.json({ success: true, reports });
   } catch (err) {
@@ -144,82 +144,24 @@ router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder")
 });
 
 /* ======================================================
-    GET FARMER'S SPECIFIC REPORTS
+    GET REPORTS FOR SPECIFIC FARMER
 ====================================================== */
 router.get("/farmer/:userId", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
-  try {
-    const { userId } = req.params;
-    let farmer = await Farmer.findOne({ user_id: userId });
-    const queryId = farmer ? farmer._id : userId;
+    try {
+        const { userId } = req.params;
+        const farmerProfile = await Farmer.findOne({ user_id: userId });
+        if (!farmerProfile) {
+            return res.status(404).json({ success: false, message: "Farmer profile not found" });
+        }
+        const reports = await HeatReport.find({ farmer_id: farmerProfile._id })
+            .populate("swine_id", "swine_id breed current_status")
+            .sort({ createdAt: -1 });
 
-    const reports = await HeatReport.find({ farmer_id: queryId })
-      .populate("swine_id", "swine_id breed current_status")
-      .sort({ createdAt: -1 });
-
-    res.json({ success: true, reports });
-  } catch (err) {
-    console.error("Farmer Get Reports Error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch farmer reports" });
-  }
-});
-
-/* ======================================================
-    GET CALENDAR EVENTS
-====================================================== */
-router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
-  try {
-    const user = req.user;
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-    const { farmerId } = req.query;
-
-    let query = { 
-      manager_id: managerId,
-      status: { $in: ["waiting_heat_check", "pregnant"] }
-    };
-
-    if (farmerId) {
-      const farmerDoc = await Farmer.findOne({ user_id: farmerId });
-      if (farmerDoc) query.farmer_id = farmerDoc._id;
+        res.json({ success: true, reports });
+    } catch (err) {
+        console.error("Get Farmer Reports Error:", err);
+        res.status(500).json({ success: false, message: "Failed to fetch your reports" });
     }
-
-    const reports = await HeatReport.find(query)
-      .populate("swine_id", "swine_id")
-      .populate("farmer_id", "first_name last_name");
-
-    const events = [];
-    reports.forEach(r => {
-      let farmerName = r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "N/A";
-
-      if (r.status === "waiting_heat_check" && r.next_heat_check) {
-        events.push({
-          id: r._id,
-          title: `🔍 Heat Check: ${r.swine_id?.swine_id || 'N/A'} (${farmerName})`,
-          start: r.next_heat_check.toISOString().split('T')[0],
-          backgroundColor: "#f39c12",
-          borderColor: "#e67e22",
-          allDay: true,
-          extendedProps: { type: "observation", status: r.status, farmer: farmerName }
-        });
-      }
-
-      if (r.status === "pregnant" && r.expected_farrowing) {
-        events.push({
-          id: r._id,
-          title: `🐷 Farrowing: ${r.swine_id?.swine_id || 'N/A'} (${farmerName})`,
-          start: r.expected_farrowing.toISOString().split('T')[0],
-          backgroundColor: "#27ae60",
-          borderColor: "#2ecc71",
-          allDay: true,
-          extendedProps: { type: "farrowing", status: r.status, farmer: farmerName }
-        });
-      }
-    });
-
-    res.json({ success: true, events });
-  } catch (err) {
-    console.error("Calendar Events Error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch calendar data" });
-  }
 });
 
 /* ======================================================
@@ -227,17 +169,47 @@ router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
 ====================================================== */
 router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id);
+    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
+    const now = new Date();
+    // 3-Day Rule: Approval Date = Day 1. Insemination = Day 3.
+    const scheduledInsemination = new Date(now);
+    scheduledInsemination.setDate(now.getDate() + 2);
+
     report.status = "approved";
-    report.approved_at = new Date();
+    report.approved_at = now;
     report.approved_by = req.user.id;
+    report.next_heat_check = scheduledInsemination; 
+    
     await report.save();
 
-    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
+    const swine = await Swine.findById(report.swine_id);
+    const nextCycleNumber = (swine.breeding_cycles?.length || 0) + 1;
+
+    await Swine.findByIdAndUpdate(report.swine_id, { 
+        current_status: "In-Heat",
+        $push: {
+            breeding_cycles: {
+                cycle_number: nextCycleNumber,
+                heat_report_id: report._id,
+                estrus_date: report.approved_at,
+                is_pregnant: false
+            }
+        }
+    });
+
+    // --- AUTOMATED NOTIFICATION TO FARMER ---
+    if (report.farmer_id && report.farmer_id.user_id) {
+        await Notification.create({
+            user_id: report.farmer_id.user_id,
+            title: "Heat Approved & AI Scheduled",
+            message: `Swine ${report.swine_id.swine_id} is approved! Insemination is scheduled for ${scheduledInsemination.toLocaleDateString()}.`,
+            type: "success"
+        });
+    }
     
-    res.json({ success: true, message: "Report approved. Swine status updated to In-Heat." });
+    res.json({ success: true, message: `Report approved. Insemination scheduled for ${scheduledInsemination.toLocaleDateString()}.` });
   } catch (err) {
     console.error("Approve Error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -247,20 +219,14 @@ router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "
 /* ======================================================
     CONFIRM AI (Admin/Encoder)
 ====================================================== */
-router.post(
-  "/:id/confirm-ai",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
+router.post("/:id/confirm-ai", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
       const { maleSwineId } = req.body;
-      if (!maleSwineId) return res.status(400).json({ success: false, message: "Male Swine selection is required" });
-
       const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-      if (!report) return res.status(404).json({ success: false, message: "Heat report not found" });
-
+      
+      const now = new Date();
       const newAIRecord = new AIRecord({
         insemination_id: `AI-${Date.now()}`,
         swine_id: report.swine_id._id,
@@ -269,35 +235,44 @@ router.post(
         manager_id: req.user.id,
         farmer_id: report.farmer_id._id,
         heat_report_id: report._id,
-        insemination_date: new Date(),
+        insemination_date: now,
         ai_confirmed: true,
-        ai_confirmed_at: new Date(),
+        ai_confirmed_at: now,
         status: "Ongoing"
       });
       await newAIRecord.save({ session });
 
-      report.status = "waiting_heat_check";
-      report.ai_confirmed_at = new Date();
+      report.status = "under_observation";
+      report.ai_confirmed_at = now;
       
       const heatCheckDate = new Date();
       heatCheckDate.setDate(heatCheckDate.getDate() + 23);
       report.next_heat_check = heatCheckDate;
-
+      
       await report.save({ session });
 
-      await Swine.findByIdAndUpdate(report.swine_id._id, { current_status: "Awaiting Recheck" }, { session });
+      await Swine.updateOne(
+        { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
+        { 
+          $set: { 
+            "breeding_cycles.$.ai_service_date": now,
+            "breeding_cycles.$.ai_record_id": newAIRecord._id,
+            "breeding_cycles.$.cycle_sire_id": maleSwineId,
+            current_status: "Under Observation" 
+          }
+        },
+        { session }
+      );
 
       await session.commitTransaction();
-      res.json({ success: true, message: "AI Record created. Swine status updated." });
+      res.json({ success: true, message: "AI Record created and swine moved to Under Observation." });
     } catch (err) {
       await session.abortTransaction();
-      console.error("AI Confirmation Error:", err);
       res.status(500).json({ success: false, message: err.message });
     } finally {
       session.endSession();
     }
-  }
-);
+});
 
 /* ======================================================
     CONFIRM PREGNANCY (Farmer/Admin/Encoder)
@@ -305,13 +280,11 @@ router.post(
 router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
-
     report.status = "pregnant";
     
     const baseDate = report.ai_confirmed_at || new Date();
     const farrowingDate = new Date(baseDate);
-    farrowingDate.setDate(farrowingDate.getDate() + 115);
+    farrowingDate.setDate(farrowingDate.getDate() + 114); 
     
     report.expected_farrowing = farrowingDate;
     report.next_heat_check = null; 
@@ -323,23 +296,64 @@ router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farmer
         farrowing_date: report.expected_farrowing
     });
 
-    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "Pregnant" });
+    await Swine.updateOne(
+        { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
+        { 
+          $set: { 
+            "breeding_cycles.$.is_pregnant": true,
+            "breeding_cycles.$.pregnancy_check_date": new Date(),
+            "breeding_cycles.$.expected_farrowing_date": report.expected_farrowing,
+            current_status: "Pregnant" 
+          }
+        }
+    );
 
-    res.json({ success: true, message: "Pregnancy confirmed. Swine status updated." });
+    res.json({ success: true, message: "Pregnancy confirmed. Expected farrowing date set." });
   } catch (err) {
-    console.error("Pregnancy Confirmation Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
 /* ======================================================
-    STILL IN HEAT / RE-INSEMINATION (Farmer/Admin/Encoder)
+    CONFIRM FARROWING (Admin/Encoder)
+====================================================== */
+router.post("/:id/confirm-farrowing", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+    try {
+        const report = await HeatReport.findById(req.params.id);
+        if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+
+        report.status = "completed"; 
+        await report.save();
+
+        await AIRecord.findOneAndUpdate(
+            { heat_report_id: report._id },
+            { status: "Completed", actual_farrowing_date: new Date() }
+        );
+
+        await Swine.updateOne(
+            { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
+            { 
+              $set: { 
+                "breeding_cycles.$.farrowed": true,
+                "breeding_cycles.$.actual_farrowing_date": new Date(),
+                current_status: "Lactating" 
+              }
+            }
+        );
+
+        res.json({ success: true, message: "Farrowing confirmed. Swine status: Lactating." });
+    } catch (err) {
+        console.error("Farrowing Error:", err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+/* ======================================================
+    STILL IN HEAT (Farmer/Admin/Encoder)
 ====================================================== */
 router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
-
     report.status = "approved"; 
     report.next_heat_check = null;
     report.expected_farrowing = null;
@@ -351,12 +365,79 @@ router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "far
     });
 
     await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
-
-    res.json({ success: true, message: "Cycle reset. Swine status returned to In-Heat." });
+    res.json({ success: true, message: "Cycle reset. Status returned to In-Heat." });
   } catch (err) {
-    console.error("Still-Heat Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
+});
+
+/* ======================================================
+    GET CALENDAR EVENTS
+====================================================== */
+router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
+  try {
+    const user = req.user;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    const reports = await HeatReport.find({ 
+      manager_id: managerId,
+      status: { $in: ["approved", "under_observation", "pregnant"] }
+    }).populate("swine_id", "swine_id").populate("farmer_id", "first_name last_name");
+
+    const events = reports.map(r => {
+      let farmerName = r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "N/A";
+      
+      if (r.status === "approved" && r.next_heat_check) {
+        return {
+          id: r._id,
+          title: `💉 AI Due (3rd Day): ${r.swine_id?.swine_id}`,
+          start: r.next_heat_check.toISOString().split('T')[0],
+          backgroundColor: "#3498db",
+          allDay: true
+        };
+      }
+      if (r.status === "under_observation" && r.next_heat_check) {
+        return {
+          id: r._id,
+          title: `🔍 Heat Re-Check: ${r.swine_id?.swine_id}`,
+          start: r.next_heat_check.toISOString().split('T')[0],
+          backgroundColor: "#f39c12",
+          allDay: true
+        };
+      }
+      if (r.status === "pregnant" && r.expected_farrowing) {
+        return {
+          id: r._id,
+          title: `🐷 Farrowing: ${r.swine_id?.swine_id}`,
+          start: r.expected_farrowing.toISOString().split('T')[0],
+          backgroundColor: "#27ae60",
+          allDay: true
+        };
+      }
+    }).filter(e => e);
+
+    res.json({ success: true, events });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to fetch calendar data" });
+  }
+});
+
+/* ======================================================
+    REJECT REPORT
+====================================================== */
+router.post("/:id/reject", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+    try {
+        const { reason } = req.body; 
+        const report = await HeatReport.findById(req.params.id);
+        if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+
+        report.status = "rejected";
+        report.rejection_message = reason; 
+        await report.save();
+
+        res.json({ success: true, message: "Report rejected successfully." });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
 });
 
 module.exports = router;

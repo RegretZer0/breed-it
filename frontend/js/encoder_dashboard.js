@@ -18,8 +18,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ----- CALENDAR INITIALIZATION -----
   const calendarEl = document.getElementById('calendar');
+  let calendar;
+
   if (calendarEl) {
-    const calendar = new FullCalendar.Calendar(calendarEl, {
+    calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
       height: 'auto',
       headerToolbar: {
@@ -51,10 +53,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       },
       eventDidMount: (info) => {
-        const type = info.event.extendedProps.type;
-        const typeLabel = type === 'farrowing' ? 'Scheduled Farrowing' : '23-Day Recheck';
-        // Tooltip shows "🔍 Heat Check: A-0001 (Farmer Name) - 23-Day Recheck"
-        info.el.title = `${info.event.title} - ${typeLabel}`;
+        // Updated tooltip logic to detect event type based on title strings
+        let typeLabel = 'Scheduled Task';
+        const title = info.event.title.toLowerCase();
+
+        if (title.includes('ai due')) {
+          typeLabel = 'Day 3 Insemination Window';
+        } else if (title.includes('heat re-check')) {
+          typeLabel = '23-Day Pregnancy Re-check';
+        } else if (title.includes('farrowing')) {
+          typeLabel = 'Expected Farrowing Date';
+        }
+
+        // Apply tooltip
+        info.el.title = `${info.event.title} (${typeLabel})`;
+
+        // Visual Enforcement: Apply background colors from backend
+        if (info.event.backgroundColor) {
+          info.el.style.backgroundColor = info.event.backgroundColor;
+          info.el.style.borderColor = info.event.backgroundColor;
+        }
       },
       eventClick: (info) => {
         const reportId = info.event.id;
@@ -65,6 +83,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     calendar.render();
   }
+
+  // Refetch events when window is focused to keep data fresh
+  window.addEventListener('focus', () => {
+    if (calendar) calendar.refetchEvents();
+  });
 
   // ----- Logout handler -----
   const logoutBtn = document.getElementById("logoutBtn");
