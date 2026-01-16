@@ -49,24 +49,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const breedInput = document.getElementById("breed");
   const teatCountGroup = document.getElementById("teatCountGroup");
   const deformityChecklist = document.getElementById("deformityChecklist");
+  const deformityGroup = deformityChecklist.closest('.form-group') || deformityChecklist.parentElement;
 
   const filterBatch = document.getElementById("filterBatch");
   const filterFarmer = document.getElementById("filterFarmer"); 
 
   const modal = document.getElementById("swineModal");
   const closeModal = document.querySelector(".close-modal");
-
-  // --- External Boar Toggle UI ---
-  const externalGroup = document.createElement("div");
-  externalGroup.className = "form-group";
-  externalGroup.style.marginBottom = "15px";
-  externalGroup.innerHTML = `
-    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; color: #2c3e50; font-weight:bold;">
-      <input type="checkbox" id="isExternalBoar"> Register as External Boar (Semen Source Only)
-    </label>
-  `;
-  registerForm.prepend(externalGroup);
-  const externalCheckbox = document.getElementById("isExternalBoar");
 
   const cancelEditBtn = document.createElement("button");
   cancelEditBtn.type = "button";
@@ -78,34 +67,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- UI LOGIC ----------------
 
-  const handleExternalToggle = () => {
-    if (externalCheckbox.checked) {
-      farmerGroup.style.opacity = "0.5";
-      farmerSelect.disabled = true;
-      farmerSelect.value = ""; 
-      sexSelect.value = "Male";
-      sexSelect.disabled = true;
-      ageStageSelect.value = "adult";
-      ageStageSelect.disabled = true;
-      breedInput.value = "Native";
-      breedInput.readOnly = true;
-      batchInput.placeholder = "Enter Semen Batch / Source ID";
-      batchInput.readOnly = false;
+  const toggleDeformityField = () => {
+    if (ageStageSelect.value === "adult") {
+      deformityGroup.style.display = "none";
+      deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = false);
     } else {
-      farmerGroup.style.opacity = "1";
-      farmerSelect.disabled = false;
-      sexSelect.disabled = false;
-      ageStageSelect.disabled = false;
-      breedInput.readOnly = false;
-      updateBatchField();
+      deformityGroup.style.display = "block";
     }
-    toggleTeatField();
   };
 
-  externalCheckbox.addEventListener("change", handleExternalToggle);
-
   const updateBatchField = () => {
-    if (isEditing || externalCheckbox.checked) return;
+    if (isEditing) return;
 
     if (ageStageSelect.value === "piglet") {
       batchInput.readOnly = true;
@@ -139,6 +111,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   ageStageSelect.addEventListener("change", () => {
     toggleTeatField();
     updateBatchField();
+    toggleDeformityField();
   });
 
   // ---------------- CASCADING DROPDOWNS ----------------
@@ -233,12 +206,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   function displaySwine(swineList) {
     swineTableBody.innerHTML = "";
     swineList.forEach((sw) => {
-      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / EXTERNAL";
+      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / MASTER";
       const latestPerf = (sw.performance_records || []).slice(-1)[0] || {};
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c" };
       const statusColor = statusColors[sw.current_status] || "#7f8c8d";
 
-      // DYNAMIC CALCULATION: Count offspring by matching current swine_id as parent
       const offspringCount = allSwine.filter(child => 
         child.dam_id === sw.swine_id || child.sire_id === sw.swine_id
       ).length;
@@ -284,9 +256,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineMessage.className = "message info";
     registerForm.scrollIntoView({ behavior: 'smooth' });
 
-    externalCheckbox.checked = !swine.farmer_id;
-    handleExternalToggle();
-
     const fId = swine.farmer_id?._id || swine.farmer_id || "";
     farmerSelect.value = fId;
     await updateSowDropdown(fId);
@@ -311,9 +280,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("heartGirth").value = latest.heart_girth || "";
     document.getElementById("teethCount").value = latest.teeth_count || "";
     document.getElementById("teatCount").value = latest.teat_count || "";
+    
     const currentDeformities = latest.deformities || [];
     deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = currentDeformities.includes(cb.value));
+    
     toggleTeatField();
+    toggleDeformityField();
   };
 
   const cancelEditing = () => {
@@ -323,12 +295,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     cancelEditBtn.style.display = "none";
     swineMessage.textContent = "";
     registerForm.reset();
-    externalCheckbox.checked = false;
-    handleExternalToggle();
     deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = false);
     damSelect.innerHTML = '<option value="">-- Select Sow --</option>';
     sireSelect.innerHTML = '<option value="">-- Select Boar --</option>';
     toggleTeatField();
+    toggleDeformityField();
     updateBatchField();
   };
 
@@ -340,7 +311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const deformities = Array.from(deformityChecklist.querySelectorAll('input:checked')).map(cb => cb.value);
     
     const payload = {
-      farmer_id: externalCheckbox.checked ? null : farmerSelect.value, 
+      farmer_id: farmerSelect.value || null, 
       batch: batchInput.value.trim(), 
       sex: sexSelect.value,
       age_stage: ageStageSelect.value, 
@@ -479,5 +450,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadFarmers();
   await fetchSwine();
   toggleTeatField();
+  toggleDeformityField();
   updateBatchField();
 });
