@@ -1,12 +1,12 @@
-require("dotenv").config(); // MUST be first
+require("dotenv").config(); // ✅ MUST be first
 
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
-const MongoStore = require("connect-mongo").default; // Fixed .default issue for newer versions
-const initHeatCron = require("./utils/cronJobs"); // 🛠️ Added Cron Job Import
+const MongoStore = require("connect-mongo").default;
+const initHeatCron = require("./utils/cronJobs");
 
 // ROUTES
 const adminRoutes = require("./routes/adminRoutes");
@@ -70,7 +70,7 @@ app.use("/images", express.static(path.join(__dirname, "../frontend/images")));
 app.use("/css", express.static(path.join(__dirname, "../frontend/css")));
 app.use("/js", express.static(path.join(__dirname, "../frontend/js")));
 
-// Uploaded files
+// Uploaded & public assets
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -81,7 +81,6 @@ mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
   .then(() => {
     console.log("✅ MongoDB Connected");
-    // 🛠️ Initialize Cron Jobs once the database is connected
     initHeatCron();
     console.log("⏲️ Heat Observation Cron Job Initialized");
   })
@@ -90,7 +89,9 @@ mongoose
     process.exit(1);
   });
 
-// SESSION CONFIG (MongoDB)
+/* =========================
+   SESSION CONFIG
+========================= */
 app.use(
   session({
     name: "breedit.sid",
@@ -98,10 +99,10 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: "lax",
-      secure: false, // set true in HTTPS
+      secure: false, // true only in HTTPS
     },
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
@@ -112,7 +113,6 @@ app.use(
 
 /* =========================
    SESSION → EJS USER BINDING
-   (AFTER session, BEFORE routes)
 ========================= */
 app.use((req, res, next) => {
   res.locals.user = req.session?.user || null;
@@ -148,7 +148,6 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reproduction", reproductionRoute);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
-
 
 /* =========================
    HEALTH CHECK
