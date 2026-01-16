@@ -14,24 +14,13 @@
 
         <form id="registerSwineForm">
 
-          <!-- EXTERNAL BOAR -->
-          <div class="mb-3">
-            <label class="d-flex align-items-center gap-2 fw-bold text-warning">
-              <input type="checkbox" id="isExternalBoar" />
-              Register as External Boar (Semen Source Only)
-            </label>
-            <small class="text-muted ms-4">
-              Locks Sex to Male, Age to Adult, Breed to Native, and skips Farmer selection.
-            </small>
-          </div>
-
           <!-- FARMER -->
           <h6 class="section-title">Farmer Information</h6>
-          <div class="row mb-4" id="farmerGroup">
+          <div class="row mb-4">
             <div class="col-md-6">
               <label class="form-label">Farmer</label>
               <select id="farmerSelect" class="form-select" required>
-                <option value="">Loading farmers...</option>
+                <option value="">Select Farmer</option>
               </select>
             </div>
           </div>
@@ -41,7 +30,7 @@
           <div class="row g-3 mb-4">
 
             <div class="col-md-3">
-              <label class="form-label">Batch</label>
+              <label class="form-label">Batch ID / Source ID</label>
               <input type="text" id="batch" class="form-control" required />
             </div>
 
@@ -82,24 +71,35 @@
 
             <div class="col-md-3">
               <label class="form-label">Color</label>
-              <select id="color" class="form-select" required>
+              <select id="colorSelect" class="form-select">
                 <option value="">Select Color</option>
-                <option>Black</option>
-                <option>Black with White Markings</option>
-                <option>Brown</option>
-                <option>Reddish Brown</option>
-                <option>Spotted (Black & White)</option>
-                <option>Gray</option>
+                <option value="Black">Black</option>
+                <option value="Black with White Markings">Black with White Markings</option>
+                <option value="Brown">Brown</option>
+                <option value="Reddish Brown">Reddish Brown</option>
+                <option value="Spotted (Black & White)">Spotted (Black & White)</option>
+                <option value="Gray">Gray</option>
+                <option value="Other">Other (Specify)</option>
               </select>
+            </div>
+
+            <div class="col-md-3 d-none" id="otherColorGroup">
+              <label class="form-label">Specify Color</label>
+              <input
+                type="text"
+                id="otherColorInput"
+                class="form-control"
+                placeholder="Enter color description"
+              />
             </div>
 
             <div class="col-md-3">
               <label class="form-label">Birth Date</label>
-              <input type="date" id="birth_date" class="form-control" />
+              <input type="date" id="birth_date" class="form-control" required />
             </div>
 
             <div class="col-md-3">
-              <label class="form-label">Date Registered / Transferred</label>
+              <label class="form-label">Date Registered</label>
               <input type="date" id="date_transfer" class="form-control" />
             </div>
 
@@ -108,17 +108,33 @@
               <select id="health_status" class="form-select">
                 <option value="Healthy">Healthy</option>
                 <option value="Sick">Sick</option>
-                <option value="Deceased (Before Weaning)">Deceased (Before Weaning)</option>
                 <option value="Deceased">Deceased</option>
               </select>
             </div>
 
           </div>
 
-          <!-- MEASUREMENTS -->
-          <h6 class="section-title">Initial Measurements & Lineage</h6>
+          <!-- LINEAGE -->
+          <h6 class="section-title">Parentage</h6>
           <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label class="form-label">Dam (Mother)</label>
+              <select id="dam_id" class="form-select">
+                <option value="">-- Select Sow --</option>
+              </select>
+            </div>
 
+            <div class="col-md-3">
+              <label class="form-label">Sire (Father)</label>
+              <select id="sire_id" class="form-select">
+                <option value="">-- Select Boar --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- MEASUREMENTS -->
+          <h6 class="section-title">Initial Measurements</h6>
+          <div class="row g-3 mb-4">
             <div class="col-md-3">
               <label class="form-label">Weight (kg)</label>
               <input type="number" id="weight" step="0.01" class="form-control" required />
@@ -138,21 +154,6 @@
               <label class="form-label">Teeth Count</label>
               <input type="number" id="teethCount" class="form-control" />
             </div>
-
-            <div class="col-md-3">
-              <label class="form-label">Dam (Mother)</label>
-              <select id="dam_id" class="form-select">
-                <option value="">-- Select Sow --</option>
-              </select>
-            </div>
-
-            <div class="col-md-3">
-              <label class="form-label">Sire (Father)</label>
-              <select id="sire_id" class="form-select">
-                <option value="">-- Select Boar --</option>
-              </select>
-            </div>
-
           </div>
 
           <!-- DEFORMITIES -->
@@ -166,24 +167,11 @@
             <label><input type="checkbox" value="Cleft Palate"> Cleft Palate</label>
           </div>
 
-          <!-- MEDICAL -->
-          <h6 class="section-title">Initial Medical Records</h6>
-          <div id="medicalChecklist" class="mb-4">
-            <label><input type="checkbox" value="Iron Injection"> Iron Injection</label>
-            <label><input type="checkbox" value="Vaccination"> Vaccination</label>
-            <label><input type="checkbox" value="Deworming"> Deworming</label>
-            <label><input type="checkbox" value="Vitamin"> Vitamin Boost</label>
-          </div>
-
           <p id="swineMessage" class="small"></p>
 
           <div class="d-flex justify-content-end gap-3">
-            <button type="reset" class="btn btn-clear px-4">
-              CLEAR
-            </button>
-            <button type="button" id="openPreviewBtn" class="btn btn-save px-4">
-              SAVE
-            </button>
+            <button type="reset" class="btn btn-clear px-4">Clear</button>
+            <button type="submit" class="btn btn-save px-4">Register Pig</button>
           </div>
 
         </form>

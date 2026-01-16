@@ -16,15 +16,30 @@
   color: #333;
 }
 
-/* Improve label spacing */
+/* ============================= */
+/* LABEL + INPUT (VERTICAL) */
+/* ============================= */
+
+.form-group,
+.col-md-3,
+.col-md-6 {
+  display: block;
+}
+
+/* Labels on top */
 .form-label {
+  display: block;
   margin-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
 }
 
 /* Inputs consistent height */
 input.form-control,
 select.form-select {
   min-height: 42px;
+  width: 100%;
 }
 
 /* ============================= */
@@ -62,7 +77,7 @@ select.form-select {
   transition: all 0.2s ease;
 }
 
-/* When visible, align like other inputs */
+/* When visible, behave like normal field */
 #teatCountGroup:not(.d-none) {
   display: block;
 }
@@ -83,11 +98,11 @@ select.form-select {
 }
 
 /* ============================= */
-/* PRIMARY ACTION: SAVE / CONFIRM */
+/* PRIMARY ACTION: SAVE */
 /* ============================= */
 
 .btn-save {
-  background-color: #17c14f;      /* Green */
+  background-color: #17c14f;
   border-color: #17c14f;
   color: #fff;
 }
@@ -100,11 +115,11 @@ select.form-select {
 }
 
 /* ============================= */
-/* SECONDARY ACTION: CLEAR / BACK */
+/* SECONDARY ACTION: CLEAR */
 /* ============================= */
 
 .btn-clear {
-  background-color: #ff6373;      /* Soft Red */
+  background-color: #ff6373;
   border-color: #ff6373;
   color: #fff;
 }
@@ -117,17 +132,6 @@ select.form-select {
 }
 
 /* ============================= */
-/* MODAL BUTTON ALIGNMENT */
-/* ============================= */
-
-.modal-footer .btn {
-  min-width: 130px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  border-radius: 6px;
-}
-
-/* ============================= */
 /* DISABLED STATES */
 /* ============================= */
 
@@ -136,7 +140,6 @@ select.form-select {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
 
 /* ============================= */
 /* PREVIEW MODAL */
@@ -168,7 +171,6 @@ select.form-select {
   font-weight: 600;
   color: #222;
 }
-
 
 /* ============================= */
 /* RESPONSIVE FIXES */

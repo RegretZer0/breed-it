@@ -35,80 +35,6 @@ router.get("/register", (req, res) => {
   });
 });
 
-/* =========================
-   FARMER PAGES
-========================= */
-
-// Farmer Dashboard
-router.get(
-  "/farmer/dashboard",
-  requireLogin,
-  requireFarmer,
-  (req, res) => {
-    res.render("pages/farmer/farmer_dashboard", {
-      page_title: "Farmer Dashboard",
-      current_section: "dashboard",
-      current_page: "farmer_dashboard",
-      user: req.session.user,
-    });
-  }
-);
-
-// My Pigs
-router.get(
-  "/farmer/mypigs",
-  requireLogin,
-  requireFarmer,
-  (req, res) => {
-    res.render("pages/farmer/mypigs", {
-      page_title: "MyPigs",
-      current_section: "pigs",
-      current_page: "mypigs",
-    });
-  }
-);
-
-// Farmer Profile
-router.get(
-  "/farmer/profile",
-  requireLogin,
-  requireFarmer,
-  (req, res) => {
-    res.render("pages/farmer/profile", {
-      page_title: "Profile",
-      current_section: "profile",
-      current_page: "profile",
-    });
-  }
-);
-
-// Farmer Reports
-router.get(
-  "/farmer/report",
-  requireLogin,
-  requireFarmer,
-  (req, res) => {
-    res.render("pages/farmer/report", {
-      page_title: "Report",
-      current_section: "report",
-      current_page: "report",
-    });
-  }
-);
-
-// Farmer Help
-router.get(
-  "/farmer/help",
-  requireLogin,
-  requireFarmer,
-  (req, res) => {
-    res.render("pages/farmer/help", {
-      page_title: "Help",
-      current_section: "help",
-      current_page: "help",
-    });
-  }
-);
 
 /* =========================
    FARM MANAGER PAGES
@@ -219,5 +145,96 @@ router.get(
     });
   }
 );
+
+// Register Boar
+router.get(
+  "/farm-manager/pig-management/register-boar",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/pig-management/register_boar", {
+      page_title: "Register Boar",
+      current_section: "pig_management",
+      current_page: "register_boar",
+    });
+  }
+);
+
+/* =========================
+   FARMER PAGES
+========================= */
+
+// Farmer Dashboard
+router.get(
+  "/farmer/dashboard",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/farmer_dashboard", {
+      page_title: "Farmer Dashboard",
+      current_section: "dashboard",
+      current_page: "farmer_dashboard",
+      user: req.session.user,
+    });
+  }
+);
+
+// My Pigs
+router.get(
+  "/farmer/mypigs",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/mypigs", {
+      page_title: "MyPigs",
+      current_section: "pigs",
+      current_page: "mypigs",
+    });
+  }
+);
+
+// Farmer Profile
+router.get(
+  "/farmer/profile",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/profile", {
+      page_title: "Profile",
+      current_section: "profile",
+      current_page: "profile",
+    });
+  }
+);
+
+// Farmer Reports
+router.get(
+  "/farmer/report",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/report", {
+      page_title: "Report",
+      current_section: "report",
+      current_page: "report",
+    });
+  }
+);
+
+// Farmer Help
+router.get(
+  "/farmer/help",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/help", {
+      page_title: "Help",
+      current_section: "help",
+      current_page: "help",
+    });
+  }
+);
+
+
 
 module.exports = router;

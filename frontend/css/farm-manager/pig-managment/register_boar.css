@@ -1,0 +1,78 @@
+/* ============================= */
+/* BOAR REGISTRATION CARD */
+/* ============================= */
+
+.pig-card .row {
+  align-items: flex-start;
+}
+
+.section-title {
+  margin-top: 25px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #333;
+}
+
+/* ============================= */
+/* LABELS & INPUTS */
+/* ============================= */
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+input.form-control {
+  min-height: 42px;
+}
+
+/* ============================= */
+/* ACTION BUTTONS */
+/* ============================= */
+
+.btn-save {
+  background-color: #17c14f;
+  border-color: #17c14f;
+  color: #fff;
+  font-weight: 600;
+  min-width: 160px;
+}
+
+.btn-save:hover {
+  background-color: #13a944;
+  border-color: #13a944;
+}
+
+.btn-clear {
+  background-color: #ff6373;
+  border-color: #ff6373;
+  color: #fff;
+}
+
+.btn-clear:hover {
+  background-color: #e55362;
+  border-color: #e55362;
+}
+
+/* ============================= */
+/* MESSAGE */
+/* ============================= */
+
+#boarMessage {
+  margin-top: 10px;
+  font-weight: 500;
+}
+
+/* ============================= */
+/* RESPONSIVE */
+/* ============================= */
+
+@media (max-width: 768px) {
+  .btn-save,
+  .btn-clear {
+    width: 100%;
+  }
+}

@@ -1,0 +1,119 @@
+<%- include("../../../partials/farm-manager/header") %>
+<%- include("../../../partials/farm-manager/navbar") %>
+<%- include("../../../partials/farm-manager/sidepanel") %>
+
+<main class="main-content">
+  <div class="container-fluid">
+
+    <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
+
+    <div class="card pig-card">
+      <div class="card-body">
+
+        <h4 class="mb-4 fw-bold">REGISTER MASTER BOAR</h4>
+
+        <p class="text-muted mb-4">
+          Note: A unique Boar ID will be generated automatically (e.g. <strong>BOAR-0001</strong>).
+          Breed is fixed to <strong>Native</strong> for station-owned boars.
+        </p>
+
+            <form id="registerBoarForm">
+
+            <!-- BASIC INFO -->
+            <h6 class="section-title">Boar Information</h6>
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-4">
+                <label class="form-label">Breed</label>
+                <input
+                    type="text"
+                    id="breed"
+                    class="form-control"
+                    value="Native"
+                    readonly
+                />
+                </div>
+
+                <!-- COLOR -->
+                <div class="col-md-4">
+                <label class="form-label">Color</label>
+                <select id="colorSelect" class="form-select" required>
+                    <option value="">Select Color</option>
+                    <option value="Black">Black</option>
+                    <option value="Black with White Markings">Black with White Markings</option>
+                    <option value="Brown">Brown</option>
+                    <option value="Reddish Brown">Reddish Brown</option>
+                    <option value="Spotted (Black & White)">Spotted (Black & White)</option>
+                    <option value="Gray">Gray</option>
+                    <option value="Other">Other (Specify)</option>
+                </select>
+                </div>
+
+                <!-- OTHER COLOR (SAME FIELD PATH) -->
+                <div class="col-md-4 d-none" id="otherColorGroup">
+                <label class="form-label">Specify Color</label>
+                <input
+                    type="text"
+                    id="otherColorInput"
+                    class="form-control"
+                    placeholder="Enter color description"
+                />
+                </div>
+
+
+                <div class="col-md-4">
+                <label class="form-label">Date Registered / Transferred</label>
+                <input
+                    type="date"
+                    id="dateTransfer"
+                    class="form-control"
+                    required
+                />
+                </div>
+
+            </div>
+
+            <!-- MEASUREMENTS -->
+            <h6 class="section-title">Initial Physical Measurements</h6>
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-3">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" id="weight" step="0.01" class="form-control" required />
+                </div>
+
+                <div class="col-md-3">
+                <label class="form-label">Body Length (cm)</label>
+                <input type="number" id="bodyLength" step="0.1" class="form-control" required />
+                </div>
+
+                <div class="col-md-3">
+                <label class="form-label">Heart Girth (cm)</label>
+                <input type="number" id="heartGirth" step="0.1" class="form-control" required />
+                </div>
+
+                <div class="col-md-3">
+                <label class="form-label">Teeth Count</label>
+                <input type="number" id="teethCount" class="form-control" required />
+                </div>
+
+            </div>
+
+            <p id="boarMessage" class="small"></p>
+
+            <div class="d-flex justify-content-end gap-3">
+                <button type="reset" class="btn btn-clear px-4">CLEAR</button>
+                <button type="submit" class="btn btn-save px-4">REGISTER BOAR</button>
+            </div>
+
+            </form>
+
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="/js/register_boar.js"></script>
+
+<%- include("../../../partials/farm-manager/footer") %>
