@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance - Master Data</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .measurement-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #dee2e6;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        .hint {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        /* Status Badge Styling for the table */
+        .status-badge {
+            display: inline-block;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #masterBoarTableBody tr:hover {
+            background-color: #f1f4f9;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>🛠️ Maintenance & Master Data</h2>
+            <div style="display: flex; gap: 10px;">
+                <a href="admin_dashboard.html" style="text-decoration: none;">
+                    <button id="backBtn" class="btn-secondary">Back to Dashboard</button>
+                </a>
+            </div>
+        </div>
+
+        <section class="registration-section">
+            <div style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3>Register Master Boar</h3>
+                <p class="hint">Note: System will automatically generate a unique ID (e.g., BOAR-0001). Breed is set to <strong>Native</strong> by default for station-owned boars.</p>
+                
+                <form id="boarMaintenanceForm">
+                    <div class="form-group">
+                        <label>Color / Markings</label>
+                        <input type="text" id="boarColor" placeholder="e.g. All black, white spots" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date of Registration/Transfer</label>
+                        <input type="date" id="dateTransfer" required>
+                    </div>
+
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px;">
+                        Initial Physical Measurements
+                    </h4>
+                    
+                    <div class="measurement-grid">
+                        <div class="form-group">
+                            <label>Weight (kg)</label>
+                            <input type="number" id="weight" step="0.01" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Body Length (cm)</label>
+                            <input type="number" id="bodyLength" step="0.1" placeholder="0.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Heart Girth (cm)</label>
+                            <input type="number" id="heartGirth" step="0.1" placeholder="0.0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Teeth Count</label>
+                            <input type="number" id="teethCount" placeholder="0" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                        Confirm Master Boar Registration
+                    </button>
+                </form>
+                <div id="maintenanceMessage" style="margin-top: 15px;"></div>
+            </div>
+        </section>
+
+        <section class="list-section" style="margin-top: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3>Active Master Boars (Official Breeding Pool)</h3>
+                <small style="color: #666;">Only showing station-registered boars</small>
+            </div>
+            
+            <div style="background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #2c3e50; color: white; text-align: left;">
+                            <th style="padding: 12px;">Boar ID</th>
+                            <th style="padding: 12px;">Breed</th>
+                            <th style="padding: 12px;">Color</th>
+                            <th style="padding: 12px;">Current Growth Data</th>
+                            <th style="padding: 12px;">Health & Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="masterBoarTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 20px; color: #999;">
+                                Loading official breeding pool...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <script type="module" src="js/maintenance.js"></script>
+</body>
+</html>

@@ -174,10 +174,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             <small>Processed on: ${updateDate}</small>
           </div>`;
     } else if (r.status !== 'pending') {
-        // --- 3-DAY RULE CALCULATION DISPLAY ---
         const approvalDate = new Date(r.approved_at || r.updatedAt);
         const day3 = new Date(approvalDate);
-        day3.setDate(approvalDate.getDate() + 2); // 3rd Day is +2 from start
+        day3.setDate(approvalDate.getDate() + 2); 
 
         statusLogHtml = `
           <div style="color: #27ae60; background: #f0fff4; border: 1px solid #c6f6d5; padding: 10px; border-radius: 6px; margin-top: 10px;">
@@ -228,7 +227,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reportDetails.style.display = "block";
 
-    // --- BUTTON VISIBILITY LOGIC ---
     approveBtn.style.display = (r.status === "pending") ? "inline-block" : "none";
     if (rejectBtn) rejectBtn.style.display = (r.status === "pending") ? "inline-block" : "none"; 
 
@@ -277,7 +275,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- LISTENERS ----------------
   approveBtn.addEventListener("click", () => {
     if (confirm("Approve this heat report? System will automatically schedule insemination on the 3rd day from today.")) {
-      // Logic for 3-day rule: Today is Day 1, Target is Day 3
       const inseminationDate = new Date();
       inseminationDate.setDate(inseminationDate.getDate() + 2); 
       
@@ -297,22 +294,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // UPDATED: Filter for ONLY Master Boars
   confirmAIBtn.addEventListener("click", async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/swine/males`, {
+      // Fetch all swine using your updated route that includes Master Boars
+      const res = await fetch(`${BACKEND_URL}/api/swine/all?sex=Male&age_stage=adult`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include"
       });
       const data = await res.json();
-      if (!data.success || !data.males?.length) {
-        alert("No boars found. Please register a Boar first.");
+      
+      if (!data.success || !data.swine?.length) {
+        alert("No adult boars found in the system.");
         return;
       }
-      boarSelect.innerHTML = data.males.map(m => 
-        `<option value="${m._id}">${m.swine_id} (${m.breed})</option>`
+
+      // Filter for Master Boars (BOAR- pattern or null farmer_id)
+      const masterBoars = data.swine.filter(m => 
+        m.swine_id.startsWith("BOAR-") || m.farmer_id === null
+      );
+
+      if (masterBoars.length === 0) {
+        alert("No Master Boars registered in Maintenance. Please add a Boar in Maintenance first.");
+        return;
+      }
+
+      boarSelect.innerHTML = masterBoars.map(m => 
+        `<option value="${m._id}">${m.swine_id} (${m.breed}) - MASTER</option>`
       ).join("");
+      
       aiConfirmModal.style.display = "block";
-    } catch (err) { alert("Failed to fetch boar list."); }
+    } catch (err) { 
+        console.error(err);
+        alert("Failed to fetch Master Boar list."); 
+    }
   });
 
   submitAIBtn.addEventListener("click", () => {
