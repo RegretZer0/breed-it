@@ -303,75 +303,10 @@ router.get(
                 .populate("farmer_id", "first_name last_name")
                 .lean();
 
-<<<<<<< HEAD
-      res.json({ success: true, swine });
-    } catch (err) {
-      console.error("[FETCH FARMER SWINE ERROR]:", err);
-      res.status(500).json({ success: false, message: "Server error while fetching swine" });
-    }
-  }
-);
-
-/* ======================================================
-    ADD NEW SWINE
-====================================================== */
-router.post(
-  "/add",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
-    const {
-      farmer_id, sex, color, breed, birth_date, health_status,
-      sire_id, dam_id, date_transfer, batch,
-      age_stage, weight, bodyLength, heartGirth, teethCount,
-      legConformation, deformities, teatCount, current_status
-    } = req.body;
-
-    try {
-      if (!farmer_id || !sex || !batch) {
-        return res.status(400).json({ success: false, message: "Farmer ID, sex, and batch are required" });
-      }
-
-      const user = req.user;
-      const managerId =
-        user.role === "farm_manager" ? user.id : user.managerId;
-
-      const farmer = await Farmer.findOne({
-        _id: farmer_id,
-        $or: [
-          { managerId: managerId },
-          { registered_by: managerId },
-          { user_id: managerId }
-        ]
-      });
-
-      if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
-
-      const lastSwine = await Swine.find({ batch }).sort({ _id: -1 }).limit(1);
-      let nextNumber = 1;
-      if (lastSwine.length && lastSwine[0].swine_id) {
-        const parts = lastSwine[0].swine_id.split("-");
-        const lastNum = parseInt(parts[parts.length - 1]);
-        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
-      }
-      const swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
-
-      let initialStatus = current_status; 
-      let initialPerfStage;
-
-      if (!initialStatus) {
-        if (age_stage === "piglet") {
-          initialStatus = "1st Selection Ongoing";
-          initialPerfStage = "1st Stage Selection"; 
-        } else {
-          initialStatus = (sex === "Female" || sex === "female") ? "Open" : "Market-Ready";
-          initialPerfStage = "Routine"; 
-=======
             res.json({ success: true, swine });
         } catch (err) {
             console.error("[FETCH FARMER SWINE ERROR]:", err);
             res.status(500).json({ success: false, message: "Server error while fetching swine" });
->>>>>>> a4cb3564e905bc7842dd45712bfb0d8e2d1c3b28
         }
     }
 );
@@ -466,66 +401,6 @@ router.put(
         const user = req.user;
         const updates = req.body;
 
-<<<<<<< HEAD
-    try {
-      if (!mongoose.Types.ObjectId.isValid(swineId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid swine ID"
-        });
-      }
-
-      const swine = await Swine.findById(swineId);
-
-      if (!swine) {
-        return res.status(404).json({
-          success: false,
-          message: "Swine not found"
-        });
-      }
-
-      // Farmer-level access control
-      if (
-        user.role === "farmer" &&
-        swine.farmer_id.toString() !== user.farmerProfileId
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "Access denied"
-        });
-      }
-
-      const allowedFields = [
-        "sex",
-        "color",
-        "breed",
-        "birth_date",
-        "health_status",
-        "sire_id",
-        "dam_id",
-        "date_transfer",
-        "batch",
-        "age_stage",
-        "current_status"
-      ];
-
-      allowedFields.forEach(field => {
-        if (updates[field] !== undefined) {
-          swine[field] = updates[field];
-        }
-      });
-
-      await swine.save();
-
-      res.json({
-        success: true,
-        message: "Swine updated successfully",
-        swine
-      });
-
-    } catch (error) {
-      res.status(500).json({ success: false, message: "Server error" });
-=======
         try {
             const swine = await Swine.findOne({ swine_id: swineId });
             if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
@@ -548,7 +423,6 @@ router.put(
         } catch (error) {
             res.status(500).json({ success: false, message: "Server error" });
         }
->>>>>>> a4cb3564e905bc7842dd45712bfb0d8e2d1c3b28
     }
 );
 
