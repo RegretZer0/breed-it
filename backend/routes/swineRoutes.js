@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
-const Counter = require("../models/Counter"); // ✅ ATOMIC COUNTER
+const AIRecord = require("../models/AIRecord");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -17,12 +17,11 @@ router.post(
   requireSessionAndToken,
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
-    // Standardized destructuring to match the payload from manage_swine.js
     const {
       farmer_id, sex, color, breed, birth_date, health_status,
       sire_id, dam_id, date_transfer, batch,
       age_stage, weight, bodyLength, heartGirth, teethCount,
-      legConformation, deformities, teatCount
+      legConformation, deformities, teatCount, current_status
     } = req.body;
 
     try {
@@ -45,7 +44,6 @@ router.post(
 
       if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
 
-      // Auto-generate Swine ID based on Batch
       const lastSwine = await Swine.find({ batch }).sort({ _id: -1 }).limit(1);
       let nextNumber = 1;
       if (lastSwine.length && lastSwine[0].swine_id) {
@@ -55,15 +53,19 @@ router.post(
       }
       const swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
 
-      let initialStatus;
+      let initialStatus = current_status; 
       let initialPerfStage;
 
-      if (age_stage === "piglet") {
-        initialStatus = "1st Selection Ongoing";
-        initialPerfStage = "1st Stage Selection"; 
+      if (!initialStatus) {
+        if (age_stage === "piglet") {
+          initialStatus = "1st Selection Ongoing";
+          initialPerfStage = "1st Stage Selection"; 
+        } else {
+          initialStatus = (sex === "Female" || sex === "female") ? "Open" : "Market-Ready";
+          initialPerfStage = "Routine"; 
+        }
       } else {
-        initialStatus = (sex === "Female") ? "Open" : "Market-Ready";
-        initialPerfStage = "Routine"; 
+        initialPerfStage = "Registration";
       }
 
       const newSwine = new Swine({
@@ -74,23 +76,22 @@ router.post(
         sex,
         color,
         breed,
-        birth_date: birth_date,
+        birth_date,
         health_status: health_status || "Healthy",
-        sire_id: sire_id,
-        dam_id: dam_id,
+        sire_id,
+        dam_id,
         age_stage: age_stage || "piglet",
         current_status: initialStatus,
-        date_transfer: date_transfer,
-        
+        date_transfer,
         performance_records: [{
           stage: initialPerfStage,
           record_date: new Date(),
-          weight: weight,
-          body_length: bodyLength,
-          heart_girth: heartGirth,
-          teeth_count: teethCount,
-          leg_conformation: legConformation,
-          teat_count: teatCount, // Assigned to teat_count to match Swine.js Schema
+          weight: weight || 0,
+          body_length: bodyLength || 0,
+          heart_girth: heartGirth || 0,
+          teeth_count: teethCount || 0,
+          leg_conformation: legConformation || "Normal",
+          teat_count: teatCount || 0,
           deformities: Array.isArray(deformities) ? deformities : ["None"],
           recorded_by: user.id
         }]
@@ -107,7 +108,124 @@ router.post(
 );
 
 // ----------------------
-// Add Medical Record (Injections/Vaccines)
+// Get all swine (Search/General query)
+// ----------------------
+router.get(
+  "/all",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder", "farmer"),
+  async (req, res) => {
+    try {
+      const user = req.user;
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+      
+      let query = {};
+
+      if (user.role === "farmer") {
+          query.farmer_id = user.farmerProfileId;
+      } else {
+          const farmers = await Farmer.find({ 
+            $or: [{ managerId: managerId }, { registered_by: managerId }] 
+          }).select("_id");
+          
+          const farmerIds = farmers.map((f) => f._id);
+          query = {
+            $or: [
+              { farmer_id: { $in: farmerIds } },
+              { registered_by: managerId }
+            ]
+          };
+      }
+
+      if (req.query.sex) {
+        query.sex = { $regex: new RegExp(`^${req.query.sex}$`, "i") };
+      }
+      if (req.query.age_stage) {
+        query.age_stage = { $regex: new RegExp(`^${req.query.age_stage}$`, "i") };
+      }
+      if (req.query.farmer_id) {
+        query.farmer_id = req.query.farmer_id;
+      }
+
+      const swine = await Swine.find(query)
+        .populate("farmer_id", "first_name last_name")
+        .lean();
+
+      const swineData = swine.map(s => ({
+        ...s,
+        farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}` : "N/A",
+        total_piglets_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0) || 0,
+        total_mortality_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0) || 0,
+        latest_performance: s.performance_records?.[s.performance_records.length - 1] || {}
+      }));
+
+      res.json({ success: true, swine: swineData });
+    } catch (err) {
+      console.error("[GET ALL SWINE ERROR]:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+// ----------------------
+// Get Boar History for a specific Sow (Cascading Selection)
+// ----------------------
+router.get(
+  "/history/boars/:swineId",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const { swineId } = req.params; 
+      const user = req.user;
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+
+      // 1. Find the Sow document to get the ObjectId (_id)
+      const sow = await Swine.findOne({ swine_id: swineId });
+      if (!sow) return res.status(404).json({ success: false, message: "Sow not found" });
+
+      // 2. Get Historical Boars used for this sow from AIRecords using ObjectId
+      const aiHistory = await AIRecord.find({ swine_id: sow._id })
+        .populate("male_swine_id", "swine_id breed")
+        .lean();
+
+      const historicalBoars = aiHistory
+        .map(record => record.male_swine_id)
+        .filter((boar, index, self) => 
+          boar && self.findIndex(b => b.swine_id === boar.swine_id) === index
+        );
+
+      // 3. Get All Active Boars available under this manager's scope
+      const farmers = await Farmer.find({ 
+        $or: [{ managerId: managerId }, { registered_by: managerId }] 
+      }).select("_id");
+      const farmerIds = farmers.map(f => f._id);
+
+      const allActiveBoars = await Swine.find({
+        sex: { $regex: /^male$/i },
+        age_stage: { $regex: /^adult$/i },
+        current_status: { $ne: "Culled/Sold" },
+        $or: [
+            { registered_by: managerId },
+            { manager_id: managerId },
+            { farmer_id: { $in: farmerIds } }
+        ]
+      }).select("swine_id breed").lean();
+
+      res.json({ 
+        success: true, 
+        historicalBoars: historicalBoars || [], 
+        allActiveBoars: allActiveBoars || [] 
+      });
+    } catch (err) {
+      console.error("[BOAR HISTORY ERROR]:", err);
+      res.status(500).json({ success: false, message: "Error fetching history" });
+    }
+  }
+);
+
+// ----------------------
+// Add Medical Record
 // ----------------------
 router.post(
   "/:swineId/medical",
@@ -129,41 +247,6 @@ router.post(
 
       await swine.save();
       res.json({ success: true, message: "Medical record added", medical_records: swine.medical_records });
-    } catch (error) {
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  }
-);
-
-// ----------------------
-// Get all swine (Search/General query)
-// ----------------------
-router.get(
-  "/",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder", "farmer"),
-  async (req, res) => {
-    const user = req.user;
-    try {
-      let query = {};
-      if (user.role === "farmer") {
-        query.farmer_id = new mongoose.Types.ObjectId(user.farmerProfileId);
-      } else {
-        const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-        const farmers = await Farmer.find({ registered_by: managerId });
-        query.farmer_id = { $in: farmers.map(f => f._id) };
-      }
-
-      const swine = await Swine.find(query).populate("farmer_id", "first_name last_name");
-      
-      const swineData = swine.map(s => ({
-        ...s.toObject(),
-        farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}` : "N/A",
-        total_piglets_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0) || 0,
-        total_mortality_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0) || 0
-      }));
-
-      res.json({ success: true, swine: swineData });
     } catch (error) {
       res.status(500).json({ success: false, message: "Server error" });
     }
@@ -247,103 +330,5 @@ router.put(
     }
   }
 );
-
-// ----------------------
-// Get all swine for manager/encoder (DETAILED LIST)
-// ----------------------
-router.get(
-  "/all",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
-    try {
-      const user = req.user;
-      const managerId =
-        user.role === "farm_manager" ? user.id : user.managerId;
-
-      const farmers = await Farmer.find({ registered_by: managerId }).select("_id");
-      const farmerIds = farmers.map((f) => f._id);
-
-      const swine = await Swine.find({
-        $or: [
-          { farmer_id: { $in: farmerIds } },
-          { registered_by: managerId }
-        ]
-      })
-      .populate("farmer_id", "first_name last_name")
-      .lean();
-
-      const swineData = swine.map(s => ({
-        ...s,
-        farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}` : "N/A",
-        total_piglets_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0) || 0,
-        total_mortality_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0) || 0,
-        latest_performance: s.performance_records?.[s.performance_records.length - 1] || {}
-      }));
-
-      res.json({ success: true, swine: swineData });
-    } catch (err) {
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  }
-);
-
-// ----------------------
-// Get swine assigned to the logged-in farmer (DETAILED)
-// ----------------------
-const { requireApiLogin } = require("../middleware/pageAuth.middleware");
-
-router.get(
-  "/farmer",
-  requireApiLogin,
-  allowRoles("farmer"),
-  async (req, res) => {
-    try {
-      const user = req.user;
-      if (!user.farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
-
-      const swine = await Swine.find({
-        farmer_id: new mongoose.Types.ObjectId(user.farmerProfileId),
-      })
-      .populate("farmer_id", "first_name last_name")
-      .lean();
-
-      const swineData = swine.map((s) => ({
-        ...s,
-        farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}`.trim() : "N/A",
-        total_piglets_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0) || 0,
-        total_mortality_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0) || 0
-      }));
-
-      res.json({ success: true, swine: swineData });
-    } catch (err) {
-      res.status(500).json({ success: false, message: "Server error" });
-    }
-  }
-);
-
-
-// ----------------------
-// Get only male swine 
-// ----------------------
-router.get("/males", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
-  try {
-    const user = req.user;
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-
-    const males = await Swine.find({ 
-      sex: "Male",
-      $or: [
-        { registered_by: managerId },
-        { managerId: managerId },
-        { manager_id: managerId }
-      ]
-    }).select("_id swine_id breed health_status");
-
-    res.json({ success: true, males });
-  } catch (err) {
-    res.status(500).json({ success: false, message: "Error fetching male swine" });
-  }
-});
 
 module.exports = router;

@@ -29,13 +29,22 @@
     }
 
     .button {
-      min-width: 180px;
+      min-width: 200px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
   </style>
 </head>
 <body>
   <div class="dashboard-container">
-    <h2>Welcome, <span id="encoderName">Encoder</span></h2>
+    <header style="text-align: center; margin-bottom: 40px;">
+      <h2 style="margin: 0; font-size: 2rem;">Welcome, <span id="encoderName">Encoder</span></h2>
+      <p style="color: #666;">Farm Management & Reproduction Tracking</p>
+    </header>
 
     <div class="dashboard-actions">
       <a href="manage_swine.html">
@@ -46,20 +55,29 @@
         <button class="button" style="background-color: #5aa9e6;">View Heat Reports</button>
       </a>
 
-      <a href="swine_performance.html">
-        <button class="button" style="background-color: #6aa84f;">Swine Performance</button>
+      <a href="reproduction_manage.html">
+        <button class="button" style="background-color: #9b59b6;">Reproduction & Growth</button>
+      </a>
+
+      <a href="breed_analytics.html">
+        <button class="button" style="background-color: #27ae60;">Breeding Analytics</button>
       </a>
     </div>
 
     <hr style="border: 0; border-top: 1px solid #ddd; margin: 40px 0;">
 
     <div id="calendar-container">
-      <h3 style="text-align: center;">Farm Schedule (Heat Checks & Farrowing)</h3>
+      <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px;">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+          <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+        </svg>
+        Farm Schedule (Heat Checks & Farrowing)
+      </h3>
       <div id="calendar"></div>
     </div>
 
     <div style="margin-top: 40px; text-align: center;">
-      <button id="logoutBtn" class="button" style="background-color: #f44336;">
+      <button id="logoutBtn" class="button" style="background-color: #f44336; min-width: 120px;">
         Logout
       </button>
     </div>

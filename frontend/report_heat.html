@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/styles.css" />
   <style>
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
-    .container { max-width: 1000px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .container { max-width: 1100px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     
     /* Form Styling */
     form { background: #fefefe; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 30px; }
@@ -26,22 +26,11 @@
       border-radius: 6px;
       min-height: 50px;
     }
-    .preview-container {
-      position: relative;
-      width: 100px;
-      height: 100px;
-    }
-    .preview-item {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 6px;
-      border: 2px solid #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+    .preview-container { position: relative; width: 100px; height: 100px; }
+    .preview-item { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 
     /* Table Styling */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; table-layout: auto; }
     th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
     th { background-color: #5aa9e6; color: white; }
     tr:nth-child(even) { background-color: #fafafa; }
@@ -52,11 +41,19 @@
     .btn-submit { background-color: #28a745; border: none; color: white; border-radius: 4px; width: 100%; padding: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .btn-submit:hover { background-color: #218838; }
     .btn-logout { background-color: #dc3545; border: none; color: white; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 20px; }
-    .btn-followup { background-color: #e67e22; border: none; padding: 8px 12px; color: white; border-radius: 4px; font-weight: bold; cursor: pointer; }
     
-    .file-counter-badge { background: #5aa9e6; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 10px; display: none; }
+    /* Action Buttons - Injectable Styles */
+    .btn-followup { background-color: #e67e22; border: none; padding: 8px 10px; color: white; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8em; margin-bottom: 5px; }
+    .btn-followup:hover { background-color: #d35400; }
+    .btn-pregnant { background-color: #28a745; border: none; padding: 8px 10px; color: white; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.8em; }
+    .btn-pregnant:disabled { background-color: #ccc !important; cursor: not-allowed !important; opacity: 0.6; }
 
+    .file-counter-badge { background: #5aa9e6; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 10px; display: none; }
     #reportMessage { margin-top: 15px; font-weight: bold; text-align: center; padding: 10px; border-radius: 4px; }
+    
+    /* Countdown/Badge Styling */
+    .badge-check { background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
+    .badge-farrow { background: #27ae60; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; }
   </style>
 </head>
 <body>
@@ -95,7 +92,7 @@
         <input type="file" id="evidence" name="evidence" accept="image/*,video/*" multiple required style="display:block; margin: 10px 0;">
         
         <small style="color: #856404; display: block;">
-          <b>Hold Ctrl (or Cmd) to select multiple files.</b> Upload clear photos of the vulva or a video of the standing reflex. (Max 5 files).
+          <b>Hold Ctrl (or Cmd) to select multiple files.</b> Upload clear photos (Max 5 files).
         </small>
         
         <div id="mediaPreview"></div>
@@ -121,7 +118,6 @@
     </div>
 
     <h3 style="color: #333;">Your Recent Reports & Cycles</h3>
-    
     <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #eee;">
       <table>
         <thead>
@@ -129,9 +125,9 @@
             <th>Swine ID</th>
             <th>Report Date</th>
             <th>Status</th>
-            <th>Next Check</th>
+            <th>Next Heat Check</th>
             <th>Expected Farrowing</th>
-            <th>Required Action</th>
+            <th style="width: 200px; text-align: center;">Required Action</th>
           </tr>
         </thead>
         <tbody id="reportsTableBody">
@@ -159,12 +155,11 @@
         return;
       }
 
-      // Update the badge
       fileCountBadge.textContent = `${files.length} file(s) selected`;
       fileCountBadge.style.display = 'inline-block';
 
       if (files.length > 5) {
-        alert("Maximum 5 files allowed. Your selection has been cleared.");
+        alert("Maximum 5 files allowed.");
         this.value = ""; 
         fileCountBadge.style.display = 'none';
         return;
@@ -185,10 +180,6 @@
             element.src = e.target.result;
             element.muted = true;
             element.setAttribute('playsinline', '');
-            element.onclick = () => {
-                if (element.paused) element.play();
-                else element.pause();
-            };
           }
           
           if (element) {

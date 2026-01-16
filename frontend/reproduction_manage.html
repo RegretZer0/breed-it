@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproduction & Growth Monitoring</title>
+    <link rel="stylesheet" href="css/style.css"> 
+    <style>
+        .dashboard-container { max-width: 1200px; margin: 20px auto; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .section-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; border-top: 4px solid #28a745; }
+        .section-title { color: #2c3e50; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #f1f1f1; padding-bottom: 12px; font-size: 1.4rem; }
+        
+        /* Table Styling */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #f8f9fa; color: #444; text-align: left; padding: 14px; border-bottom: 2px solid #dee2e6; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 14px; border-bottom: 1px solid #eee; font-size: 0.95rem; color: #333; }
+        tr:hover { background-color: #fcfcfc; }
+
+        /* Status Badges */
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-passed { color: #2e7d32; background: #e8f5e9; border: 1px solid #c8e6c9; }
+        .status-failed { color: #c62828; background: #ffebee; border: 1px solid #ffcdd2; }
+        
+        /* Action Buttons */
+        .action-btn { padding: 8px 16px; cursor: pointer; border-radius: 6px; border: 1px solid #007bff; background: transparent; color: #007bff; font-weight: 600; transition: 0.2s; margin-right: 8px; }
+        .action-btn:hover { background: #007bff; color: white; }
+        .btn-danger { color: #d32f2f; border-color: #d32f2f; }
+        .btn-danger:hover { background: #d32f2f; color: white; }
+        
+        /* Layout for deformities */
+        #deformityList { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        
+        /* Header utility */
+        .back-link { text-decoration: none; color: #555; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 20px; transition: 0.2s; }
+        .back-link:hover { color: #000; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            th, td { padding: 10px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <a href="admin_dashboard.html" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
+        
+        <header style="margin-bottom: 30px;">
+            <h1 style="margin: 0; color: #1a1a1a;">Monitoring of Reproduction</h1>
+            <p style="color: #666; margin-top: 5px;">Track growth, selection processes, and artificial insemination history.</p>
+        </header>
+
+        <div class="section-card" style="border-top-color: #3498db;">
+            <h2 class="section-title">
+                Artificial Insemination History
+                <span style="font-size: 0.8rem; background: #3498db; color: white; padding: 4px 12px; border-radius: 15px;">Read-Only</span>
+            </h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Farmer / Owner</th>
+                            <th>Sow Tag</th>
+                            <th>Boar Tag</th>
+                            <th>Insemination Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="aiTableBody">
+                        <tr><td colspan="4" style="text-align:center; padding: 30px;">Initializing records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card" style="border-top-color: #9b59b6;">
+            <h2 class="section-title">Morphological Characteristics & Growth</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Farmer</th>
+                            <th>Swine Tag</th>
+                            <th>Sex</th> <th>Stage</th>
+                            <th>Physical Traits (W/L/T)</th>
+                            <th>Teeth</th> <th>Date Recorded</th>
+                        </tr>
+                    </thead>
+                    <tbody id="morphTableBody">
+                        <tr><td colspan="7" style="text-align:center; padding: 30px;">Loading growth metrics...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card" style="border-top-color: #e74c3c;">
+            <h2 class="section-title">Deformities Monitoring</h2>
+            <div id="deformityList">
+                <p style="color: #666;">Scanning for deformity reports...</p>
+            </div>
+        </div>
+
+        <div class="section-card" style="border-top-color: #f39c12;">
+            <h2 class="section-title">Selection Process (Breeding Evaluation)</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Swine Tag</th>
+                            <th>Farmer</th>
+                            <th>Current Stage</th>
+                            <th>Selection Recommendation</th>
+                            <th>Administrative Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="selectionTableBody">
+                        <tr><td colspan="5" style="text-align:center; padding: 30px;">Searching for selection candidates...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/reproduction_manage.js"></script>
+</body>
+</html>

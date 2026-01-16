@@ -30,6 +30,13 @@
     #notifList li:hover {
       background-color: #f9f9f9;
     }
+    /* Grid layout adjustment for 6 buttons */
+    .button-grid {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+      gap: 15px; 
+      margin: 20px 0;
+    }
   </style>
 </head>
 <body>
@@ -54,7 +61,7 @@
       </div>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+    <div class="button-grid">
       <a href="manage_accounts.html">
         <button class="button" style="width: 100%;">Manage Accounts</button>
       </a>
@@ -64,8 +71,11 @@
       <a href="admin_heat_reports.html">
         <button class="button" style="background-color: #5aa9e6; width: 100%;">View Heat Reports</button>
       </a>
-      <a href="swine_performance.html">
-        <button class="button" style="background-color: #6aa84f; width: 100%;">Swine Performance</button>
+      <a href="reproduction_manage.html">
+        <button class="button" style="background-color: #e67e22; width: 100%;">🧬 Reproduction Manage</button>
+      </a>
+      <a href="breed_analytics.html">
+        <button class="button" style="background-color: #8e44ad; width: 100%;">📊 Breed Analytics</button>
       </a>
     </div>
 

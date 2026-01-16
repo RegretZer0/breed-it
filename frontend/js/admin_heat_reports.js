@@ -21,6 +21,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const approveBtn = document.getElementById("approveBtn");
   const confirmAIBtn = document.getElementById("confirmAIBtn");
+  
+  // These are now explicitly ignored for Admin view logic
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
   const followUpBtn = document.getElementById("followUpBtn");
 
@@ -78,7 +80,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reports.forEach(r => {
       const row = document.createElement("tr");
-      // FIXED: Use r.swine_id.current_status to match your model
       const currentStatus = r.swine_id?.current_status || "Unknown";
       
       row.innerHTML = `
@@ -116,7 +117,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     currentReportId = reportId;
-    // FIXED: Showing current_status in details for immediate verification
     reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"} 
                              <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">
                                Status: ${r.swine_id?.current_status || "N/A"}
@@ -162,11 +162,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reportDetails.style.display = "block";
 
-    // Logic for button visibility based on Report Status
-    approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-    confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
-    confirmPregnancyBtn.style.display = r.status === "waiting_heat_check" ? "inline-block" : "none";
-    followUpBtn.style.display = r.status === "waiting_heat_check" ? "inline-block" : "none";
+    // --- FIX: ADMIN BUTTON VISIBILITY LOGIC ---
+    // Only show Approval if pending
+    approveBtn.style.display = (r.status === "pending") ? "inline-block" : "none";
+    // Only show AI Confirm if approved
+    confirmAIBtn.style.display = (r.status === "approved") ? "inline-block" : "none";
+
+    // ALWAYS HIDE these for Admin (They belong to the Farmer side)
+    if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
+    if (followUpBtn) followUpBtn.style.display = "none";
   }
 
   // ---------------- ACTION HANDLER ----------------
@@ -195,8 +199,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res.ok) throw new Error(data.message || "Action failed");
       
       alert(successMsg);
-      
-      // Close details and refresh table
       reportDetails.style.display = "none";
       await loadReports(); 
     } catch (err) { 
@@ -240,16 +242,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       aiConfirmModal.style.display = "none";
     } else {
       alert("Please select a boar.");
-    }
-  });
-
-  confirmPregnancyBtn.addEventListener("click", () => {
-    handleAction("confirm-pregnancy", "Pregnancy confirmed! Swine is now 'Pregnant'.");
-  });
-  
-  followUpBtn.addEventListener("click", () => {
-    if(confirm("Is the swine showing heat signs again? This will reset the status to 'In-Heat'.")) {
-      handleAction("still-heat", "Cycle reset to In-Heat.");
     }
   });
 

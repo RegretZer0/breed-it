@@ -63,6 +63,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     calendar.render();
   }
 
+  // --- BUTTON NAVIGATION LOGIC ---
+
   // View Swine
   const viewSwineBtn = document.getElementById("viewSwineBtn");
   if (viewSwineBtn) {
@@ -76,6 +78,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (heatReportBtn) {
     heatReportBtn.addEventListener("click", () => {
       window.location.href = "report_heat.html";
+    });
+  }
+
+  // Reproduction & Growth (NEW)
+  const reproManageBtn = document.getElementById("reproManageBtn");
+  if (reproManageBtn) {
+    reproManageBtn.addEventListener("click", () => {
+      window.location.href = "reproduction_manage.html";
+    });
+  }
+
+  // Breeding Analytics (NEW)
+  const analyticsBtn = document.getElementById("analyticsBtn");
+  if (analyticsBtn) {
+    analyticsBtn.addEventListener("click", () => {
+      window.location.href = "breed_analytics.html";
     });
   }
 

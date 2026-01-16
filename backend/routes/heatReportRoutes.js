@@ -18,7 +18,6 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 /* ======================================================
     MULTER CONFIG
 ====================================================== */
-// Ensure uploads directory exists
 const uploadDir = "uploads/";
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
@@ -32,7 +31,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit per file
+    limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
 /* ======================================================
@@ -62,7 +61,7 @@ router.post(
   "/add",
   requireSessionAndToken,
   allowRoles("farm_manager", "encoder", "farmer"),
-  upload.array("evidence", 5), // Matches the name="evidence" in HTML and allows up to 5 files
+  upload.array("evidence", 5),
   async (req, res) => {
     try {
       const { swineId, signs, farmerId } = req.body;
@@ -79,14 +78,11 @@ router.post(
         return res.status(404).json({ success: false, message: "Farmer or Swine not found" });
       }
 
-      // Convert all uploaded files to Base64 strings for storage
       const evidenceData = files.map(file => {
         const filePath = path.join(__dirname, "../", file.path);
         const fileBuffer = fs.readFileSync(filePath);
         const base64String = fileBuffer.toString("base64");
         const dataUrl = `data:${file.mimetype};base64,${base64String}`;
-        
-        // Clean up temporary file from disk
         fs.unlinkSync(filePath); 
         return dataUrl;
       });
@@ -100,14 +96,13 @@ router.post(
         signs: parsedSigns,
         standing_reflex: parsedSigns.includes("Standing Reflex"),
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
-        evidence_url: evidenceData, // This is now an array of strings
+        evidence_url: evidenceData,
         heat_probability: calculateProbability(parsedSigns),
         status: "pending"
       });
 
       await newReport.save();
 
-      // Notify Manager and Encoders
       const recipients = await UserModel.find({
         $or: [{ _id: farmer.managerId }, { manager_id: farmer.managerId, role: "encoder" }]
       });
@@ -132,7 +127,7 @@ router.post(
 
 
 /* ======================================================
-    GET ALL HEAT REPORTS
+    GET ALL HEAT REPORTS (Admin/Encoder Only)
 ====================================================== */
 router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
@@ -193,7 +188,6 @@ router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
       .populate("farmer_id", "first_name last_name");
 
     const events = [];
-
     reports.forEach(r => {
       let farmerName = r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "N/A";
 
@@ -230,7 +224,7 @@ router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
 });
 
 /* ======================================================
-    APPROVE HEAT REPORT
+    APPROVE HEAT REPORT (Admin/Encoder)
 ====================================================== */
 router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
@@ -252,7 +246,7 @@ router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "
 });
 
 /* ======================================================
-    CONFIRM AI
+    CONFIRM AI (Admin/Encoder)
 ====================================================== */
 router.post(
   "/:id/confirm-ai",
@@ -307,9 +301,9 @@ router.post(
 );
 
 /* ======================================================
-    CONFIRM PREGNANCY
+    CONFIRM PREGNANCY (Farmer/Admin/Encoder)
 ====================================================== */
-router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -340,7 +334,7 @@ router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farm_m
 });
 
 /* ======================================================
-    STILL IN HEAT (Reset Cycle)
+    STILL IN HEAT / RE-INSEMINATION (Farmer/Admin/Encoder)
 ====================================================== */
 router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
