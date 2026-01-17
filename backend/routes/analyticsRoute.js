@@ -6,7 +6,7 @@ const Farmer = require("../models/UserFarmer");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 
 // ---------------------------------------------------------
-// 1. QUALITY RANKING (Ownership-Aware & Status-Filtered)
+// 1. QUALITY RANKING (Optimized for 2-Year Cycle Efficiency)
 // ---------------------------------------------------------
 router.get("/quality-ranking", requireSessionAndToken, async (req, res) => {
     try {
@@ -18,16 +18,12 @@ router.get("/quality-ranking", requireSessionAndToken, async (req, res) => {
             current_status: { $ne: "Culled/Sold" } 
         };
 
-        /** * DATA PRIVACY LOGIC (Consistent with swineRoutes.js)
-         */
         if (role === "farmer") {
-            // Use farmerProfileId to match the farmer_id field in Swine model
             if (!farmerProfileId) {
                 return res.status(400).json({ success: false, message: "Farmer profile not linked" });
             }
             query.farmer_id = new mongoose.Types.ObjectId(farmerProfileId);
         } else {
-            // For Managers/Encoders: Fetch all swine belonging to farmers under this manager
             const effectiveManagerId = role === "farm_manager" ? id : managerId;
             const farmers = await Farmer.find({ registered_by: effectiveManagerId }).select("_id");
             const farmerIds = farmers.map(f => f._id);
@@ -38,43 +34,68 @@ router.get("/quality-ranking", requireSessionAndToken, async (req, res) => {
             ];
         }
 
-        const swines = await Swine.find(query);
+        const swines = await Swine.find(query).lean();
+        
+        // Fetch ALL offspring once to calculate efficiency for all sows
+        const allOffspring = await Swine.find({ dam_id: { $ne: null } }).select("dam_id health_status").lean();
 
         const analytics = swines.map(swine => {
-            let performanceScore = 0;
-            let physicalScore = 0;
-            let reproductiveScore = 0;
+            let finalScore = 0;
 
-            // PHYSICAL & PERFORMANCE
-            const latestPerf = swine.performance_records[swine.performance_records.length - 1];
-            if (latestPerf) {
-                physicalScore = (latestPerf.teat_count * 2) + (latestPerf.passed_selection ? 20 : 0);
-                performanceScore = Math.min(latestPerf.weight / 2, 30); 
-            }
+            // --- A. PHYSICAL CONFORMITY (45% of total) ---
+            let physicalPoints = 45;
+            const latestPerf = swine.performance_records[swine.performance_records.length - 1] || {};
+            
+            const weight = latestPerf.weight || 0;
+            if (weight < 15 || weight > 25) physicalPoints -= 15;
 
-            // SEX-SPECIFIC REPRODUCTIVE SCORING
+            const deformities = latestPerf.deformities?.filter(d => d !== "None") || [];
+            if (deformities.length > 0) physicalPoints -= Math.min(30, deformities.length * 15);
+
+            if (swine.sex === "Female" && (latestPerf.teat_count || 0) < 12) physicalPoints -= 10;
+
+            finalScore += Math.max(0, physicalPoints);
+
+            // --- B. PROVEN SUCCESS (40% of total) ---
+            let successPoints = 0;
             if (swine.sex === "Female") {
-                if (swine.breeding_cycles && swine.breeding_cycles.length > 0) {
-                    const totalPiglets = swine.breeding_cycles.reduce((acc, c) => acc + (c.farrowing_results?.total_piglets || 0), 0);
-                    const totalLoss = swine.breeding_cycles.reduce((acc, c) => acc + (c.farrowing_results?.mortality_count || 0), 0);
-                    reproductiveScore = (totalPiglets * 5) - (totalLoss * 10);
+                const offspring = allOffspring.filter(child => child.dam_id === swine.swine_id);
+                const totalBorn = offspring.length;
+                const deceasedCount = offspring.filter(child => child.health_status === "Deceased").length;
+                
+                // DATA LINK: Use Breeding Cycles length to determine Parity (number of litters)
+                const parityCount = swine.breeding_cycles?.length || 0;
+
+                if (parityCount > 0 && totalBorn > 0) {
+                    const mortalityRate = (deceasedCount / totalBorn) * 100;
+                    const avgLitterSize = totalBorn / parityCount;
+
+                    // Mortality Component (Max 25)
+                    if (mortalityRate <= 5) successPoints += 25;
+                    else if (mortalityRate <= 15) successPoints += 15;
+                    else successPoints += 5;
+
+                    // Efficiency Component (Max 15) - Based on average per parity
+                    if (avgLitterSize >= 10) successPoints += 15;
+                    else if (avgLitterSize >= 7) successPoints += 10;
+                    else successPoints += 5;
                 } else {
-                    reproductiveScore = 20; 
+                    successPoints = 25; // Gilt baseline (clean slate for new breeding stock)
                 }
             } else {
-                reproductiveScore = 45; 
+                successPoints = 35; // Boar baseline
             }
+            finalScore += successPoints;
 
-            const totalScore = Math.max(Math.min(Math.round(performanceScore + physicalScore + reproductiveScore), 100), 0);
+            // --- C. GENETIC SAFETY (15% of total) ---
+            finalScore += 15; 
 
             return {
                 _id: swine._id,
                 swine_id: swine.swine_id,
                 breed: swine.breed,
                 sex: swine.sex,
-                sire_id: swine.sire_id,
-                dam_id: swine.dam_id,
-                qualityScore: totalScore > 0 ? totalScore : 10,
+                qualityScore: Math.min(Math.round(finalScore), 100),
                 current_status: swine.current_status
             };
         });
@@ -94,70 +115,91 @@ router.get("/quality-ranking", requireSessionAndToken, async (req, res) => {
 router.get("/compatibility", requireSessionAndToken, async (req, res) => {
     try {
         const { femaleId, maleId } = req.query;
-        const { role, id, farmerProfileId } = req.user;
+        const { role, farmerProfileId } = req.user;
 
-        const female = await Swine.findById(femaleId);
-        const male = await Swine.findById(maleId);
+        const female = await Swine.findById(femaleId).lean();
+        const male = await Swine.findById(maleId).lean();
 
         if (!female || !male) {
             return res.status(404).json({ success: false, message: "One or both swine not found" });
         }
 
-        // SECURITY CHECK
-        if (role === "farmer") {
+        // Ownership Security check
+        if (role === "farmer" && farmerProfileId) {
             const profileIdStr = farmerProfileId.toString();
-            const femaleOwner = female.farmer_id.toString();
-            const maleOwner = male.farmer_id.toString();
-
-            if (femaleOwner !== profileIdStr || maleOwner !== profileIdStr) {
-                return res.status(403).json({ 
-                    success: false, 
-                    message: "Access Denied: You can only analyze your assigned swine." 
-                });
+            if (female.farmer_id?.toString() !== profileIdStr || male.farmer_id?.toString() !== profileIdStr) {
+                return res.status(403).json({ success: false, message: "Access Denied: Only your swine can be analyzed." });
             }
         }
 
-        let score = 70; 
+        let totalCompatibility = 0;
         let logs = [];
 
-        // INBREEDING CHECK
+        // --- 1. PHYSICAL CONFORMITY (45%) ---
+        let physicalScore = 45;
+        const fPerf = female.performance_records[female.performance_records.length - 1] || {};
+        
+        if (fPerf.weight < 15 || fPerf.weight > 25) {
+            physicalScore -= 15;
+            logs.push(`❗ Sow weight (${fPerf.weight || 0}kg) is outside 15-25kg window.`);
+        }
+        
+        const deformCount = fPerf.deformities?.filter(d => d !== "None").length || 0;
+        if (deformCount > 0) {
+            physicalScore -= 30;
+            logs.push(`❗ Deformity: Issues detected in Sow morphology.`);
+        }
+
+        if ((fPerf.teat_count || 0) < 12) {
+            physicalScore -= 10;
+            logs.push(`🍼 Advisory: Sow has less than 12 teats.`);
+        }
+        totalCompatibility += Math.max(0, physicalScore);
+
+        // --- 2. PROVEN SUCCESS (40%) ---
+        let successScore = 0;
+        const offspring = await Swine.find({ dam_id: female.swine_id }).select("health_status").lean();
+        const parityCount = female.breeding_cycles?.length || 0;
+        
+        if (offspring.length > 0 && parityCount > 0) {
+            const totalBorn = offspring.length;
+            const deceasedCount = offspring.filter(c => c.health_status === "Deceased").length;
+            const mortalityRate = (deceasedCount / totalBorn) * 100;
+            const avgLitterSize = totalBorn / parityCount;
+
+            if (mortalityRate <= 5 && avgLitterSize >= 9) {
+                successScore = 40;
+                logs.push(`📈 Elite Efficiency: ${mortalityRate.toFixed(1)}% mortality with avg ${avgLitterSize.toFixed(1)} piglets per litter.`);
+            } else if (mortalityRate <= 15) {
+                successScore = 25;
+                logs.push(`📊 Stable Production: ${totalBorn} offspring across ${parityCount} parities.`);
+            } else {
+                successScore = 10;
+                logs.push(`⚠️ Caution: High mortality rate (${mortalityRate.toFixed(1)}%) among offspring.`);
+            }
+        } else {
+            successScore = 25; 
+            logs.push("🌱 New Gilt: Neutral start (No farrowing history recorded).");
+        }
+        totalCompatibility += successScore;
+
+        // --- 3. GENETIC SAFETY (15%) ---
+        let geneticScore = 15;
         const sharedSire = (female.sire_id && male.sire_id && female.sire_id === male.sire_id);
         const sharedDam = (female.dam_id && male.dam_id && female.dam_id === male.dam_id);
-        const directLine = (female.sire_id === male.swine_id || male.sire_id === female.swine_id);
+        const directLine = (female.sire_id === male.swine_id || male.sire_id === female.swine_id || female.dam_id === male.swine_id);
 
         if (sharedSire || sharedDam || directLine) {
-            score -= 60;
-            logs.push("⚠️ CRITICAL: Close relative detected! Risk of genetic defects (Inbreeding).");
+            geneticScore = 0;
+            logs.push("❌ CRITICAL: Immediate Inbreeding detected! Pair is related.");
         } else {
-            logs.push("✅ Lineage: No immediate relation detected.");
+            logs.push("✅ Genetic Safety: No immediate shared ancestry.");
         }
-
-        // BREED SYNERGY
-        if (female.breed === male.breed) {
-            score += 15;
-            logs.push(`✅ Breed: Purebred ${female.breed} pairing.`);
-        } else {
-            score += 10;
-            logs.push(`ℹ️ Breed: Crossbreeding for hybrid vigor (Heterosis).`);
-        }
-
-        // PHYSICAL COMPATIBILITY
-        const fPerf = female.performance_records[female.performance_records.length - 1];
-        const mPerf = male.performance_records[male.performance_records.length - 1];
-
-        if (fPerf && mPerf) {
-            const weightDiff = Math.abs(fPerf.weight - mPerf.weight);
-            if (weightDiff < 50) {
-                score += 5;
-                logs.push("✅ Size: Parent weights are compatible for safe breeding.");
-            } else {
-                logs.push("ℹ️ Note: Significant weight difference between parents.");
-            }
-        }
+        totalCompatibility += geneticScore;
 
         res.json({ 
             success: true, 
-            compatibilityScore: Math.max(Math.min(score, 100), 0), 
+            compatibilityScore: Math.round(totalCompatibility), 
             analysis: logs 
         });
 

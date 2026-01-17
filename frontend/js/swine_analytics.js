@@ -38,15 +38,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!result.success) throw new Error(result.message);
 
             /**
-             * NOTE: Filtering is now handled by the Backend for security.
-             * 'result.data' already contains only the swine this user is allowed to see.
+             * LOGIC UPDATE: 
+             * Scoring now accounts for the 2-year production window. 
+             * "Proven Success" (40pts) is calculated using maternal efficiency 
+             * (Offspring count / Breeding Cycles) and survival rates.
              */
             const analyticsData = result.data;
 
             renderRanking(analyticsData);
             populateDropdowns(analyticsData);
             
-            // Generate matches for the accessible swine
+            // Generate matches for the top performing swine
             await generateCompatibilityRankings(analyticsData);
 
         } catch (err) {
@@ -61,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // GENERATE BEST PAIR RANKINGS (LEADERBOARD)
     // ---------------------------------------------------------
     async function generateCompatibilityRankings(allSwine) {
-        // Use the top 5 highest quality sows and boars to find the best match
+        // Optimization: Use top 5 highest quality sows and boars to find the best match
         const sows = allSwine.filter(s => s.sex === "Female").slice(0, 5);
         const boars = allSwine.filter(b => b.sex === "Male").slice(0, 5);
 
@@ -70,14 +72,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                 matchResult.style.display = "block";
                 matchResult.innerHTML = `<p style="text-align:center; color:#666; padding: 20px;">
                     No compatible pairs found in your inventory.<br>
-                    <small>Ensure you have both adult Sows and Boars registered and not culled.</small>
+                    <small>Ensure you have both adult Sows and Boars registered and active.</small>
                 </p>`;
             }
             return;
         }
 
         matchResult.style.display = "block";
-        matchResult.innerHTML = `<p style="text-align:center; color:#666;">🔍 Identifying best matches in your inventory...</p>`;
+        matchResult.innerHTML = `<p style="text-align:center; color:#666;">🔍 Cross-referencing maternal efficiency and lineage safety (2-Year Cycle)...</p>`;
 
         let pairs = [];
 
@@ -102,28 +104,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         matchResult.innerHTML = `
             <h3 style="margin-top:0; color:#2c3e50; font-size:1.1em; border-bottom:1px solid #eee; padding-bottom:10px;">🏆 Top Recommended Matches</h3>
             <div style="display:grid; gap:10px; margin-bottom:20px;">
-                ${pairs.slice(0, 3).map((p, i) => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:10px; border-radius:8px; border:1px solid #e3f2fd; border-left:4px solid #28a745;">
-                        <div>
-                            <span style="font-weight:bold; color:#28a745;">Match #${i+1}</span><br>
-                            <small>${p.sow.swine_id} × ${p.boar.swine_id}</small>
+                ${pairs.slice(0, 3).map((p, i) => {
+                    let borderColor = p.score > 75 ? "#28a745" : (p.score > 50 ? "#ffc107" : "#dc3545");
+                    return `
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:10px; border-radius:8px; border:1px solid #e3f2fd; border-left:4px solid ${borderColor};">
+                            <div>
+                                <span style="font-weight:bold; color:${borderColor};">Recommendation #${i+1}</span><br>
+                                <small>${p.sow.swine_id} (Sow) × ${p.boar.swine_id} (Boar)</small>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="font-weight:bold; font-size:1.2em;">${p.score}%</span><br>
+                                <button onclick="autoSelectPair('${p.sow._id}', '${p.boar._id}')" style="font-size:0.7em; cursor:pointer; background:#f8f9fa; border:1px solid #ddd; border-radius:3px; padding:2px 5px;">View Analysis</button>
+                            </div>
                         </div>
-                        <div style="text-align:right;">
-                            <span style="font-weight:bold; font-size:1.2em;">${p.score}%</span><br>
-                            <button onclick="autoSelectPair('${p.sow._id}', '${p.boar._id}')" style="font-size:0.7em; cursor:pointer; background:#eee; border:1px solid #ccc; border-radius:3px; padding:2px 5px;">Analyze</button>
-                        </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
-            <p style="font-size:0.8em; color:#777; font-style:italic;">Select a pair above or use the dropdowns below for custom analysis.</p>
+            <p style="font-size:0.8em; color:#777; font-style:italic;">Optimized for high-survival progeny and 2-year production efficiency.</p>
         `;
     }
 
-    // Exposed to global scope for the 'Analyze' buttons in the match list
+    // Exposed to global scope for the 'View Analysis' buttons
     window.autoSelectPair = (sId, bId) => {
-        femaleSelect.value = sId;
-        maleSelect.value = bId;
-        window.calculateMatch();
+        if(femaleSelect && maleSelect) {
+            femaleSelect.value = sId;
+            maleSelect.value = bId;
+            window.calculateMatch();
+        }
     };
 
     function renderRanking(data) {
@@ -134,7 +141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         rankingTable.innerHTML = data.map((sw, index) => {
-            let color = sw.qualityScore > 75 ? "#28a745" : (sw.qualityScore > 40 ? "#ffc107" : "#dc3545");
+            let color = sw.qualityScore > 75 ? "#28a745" : (sw.qualityScore > 50 ? "#ffc107" : "#dc3545");
             const sexClass = sw.sex === "Female" ? "badge-female" : "badge-male";
 
             return `
@@ -144,10 +151,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td><span class="badge ${sexClass}">${sw.sex}</span></td>
                 <td>${sw.breed}</td>
                 <td>
-                    <div class="score-bar" style="background:#eee; height:10px; border-radius:5px; width:100px; overflow:hidden;">
+                    <div class="score-bar" style="background:#eee; height:10px; border-radius:5px; width:100px; overflow:hidden; margin-bottom:4px;">
                         <div class="score-fill" style="width:${sw.qualityScore}%; background:${color}; height:100%;"></div>
                     </div>
-                    <small>${sw.qualityScore}% Quality Index</small>
+                    <small style="font-weight:bold; color:${color};">${sw.qualityScore}% Quality Index</small>
                 </td>
             </tr>`;
         }).join('');
@@ -155,13 +162,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function populateDropdowns(data) {
         if (!femaleSelect || !maleSelect) return;
-        femaleSelect.innerHTML = '<option value="">-- Select Your Sow --</option>';
-        maleSelect.innerHTML = '<option value="">-- Select Your Boar --</option>';
+        femaleSelect.innerHTML = '<option value="">-- Select Sow (Dam) --</option>';
+        maleSelect.innerHTML = '<option value="">-- Select Boar (Sire) --</option>';
 
         data.forEach(sw => {
             const opt = document.createElement("option");
             opt.value = sw._id;
-            opt.textContent = `${sw.swine_id} - ${sw.breed} (Quality: ${sw.qualityScore}%)`;
+            opt.textContent = `${sw.swine_id} - ${sw.breed} (Score: ${sw.qualityScore}%)`;
             if (sw.sex === "Female") femaleSelect.appendChild(opt);
             else maleSelect.appendChild(opt);
         });
@@ -170,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.calculateMatch = async () => {
         const fId = femaleSelect.value;
         const mId = maleSelect.value;
-        if (!fId || !mId) return alert("Please select both parents.");
+        if (!fId || !mId) return alert("Please select both parents for breeding analysis.");
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/analytics/compatibility?femaleId=${fId}&maleId=${mId}`, {
@@ -179,21 +186,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             const data = await res.json();
             if (!data.success) throw new Error(data.message);
 
-            let scoreColor = data.compatibilityScore > 70 ? "#28a745" : "#dc3545";
+            let scoreColor = data.compatibilityScore > 75 ? "#28a745" : (data.compatibilityScore > 50 ? "#ffc107" : "#dc3545");
             
             const detailHTML = `
                 <div id="analysisDetail">
                     <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-                    <small style="text-transform: uppercase; color: #777;">Detailed Pair Analysis</small>
-                    <h2 id="matchScore" style="color: ${scoreColor}">${data.compatibilityScore}%</h2>
+                    <small style="text-transform: uppercase; color: #777; font-weight:bold;">Efficiency & Genetic Compatibility Report</small>
+                    <h2 id="matchScore" style="color: ${scoreColor}; margin:10px 0;">${data.compatibilityScore}%</h2>
                     <div id="matchLogs" style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #eee;">
-                        ${data.analysis.map(log => `<p style="margin: 8px 0; padding-left: 10px; border-left: 3px solid #5aa9e6;">${log}</p>`).join('')}
+                        ${data.analysis.map(log => {
+                            let isWarning = log.includes('❗') || log.includes('❌') || log.includes('Caution') || log.includes('Warning');
+                            let borderCol = isWarning ? "#dc3545" : "#28a745";
+                            return `<p style="margin: 8px 0; padding-left: 10px; border-left: 3px solid ${borderCol}; font-size:0.9em; line-height:1.4;">${log}</p>`;
+                        }).join('')}
                     </div>
-                    ${data.compatibilityScore < 40 ? '<p class="warning" style="margin-top:15px; color:red; font-weight:bold;">⚠️ High risk pairing. Not recommended for breeding.</p>' : ''}
+                    ${data.compatibilityScore < 50 ? 
+                        '<p class="warning" style="margin-top:15px; background:#fff5f5; padding:10px; border-radius:5px; border:1px solid #ffcdd2; color:#d32f2f; font-weight:bold; font-size:0.85em;">⚠️ WARNING: High risk of inbreeding or low maternal efficiency. Re-evaluate this pair.</p>' 
+                        : ''}
                 </div>
             `;
 
-            // If the Top Recommended Matches list is present, append detail. Otherwise, replace.
             const existingDetail = document.getElementById("analysisDetail");
             if (existingDetail) existingDetail.remove();
             
@@ -201,7 +213,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             matchResult.style.display = "block";
             
         } catch (err) {
-            alert("Error: " + err.message);
+            alert("Analysis Error: " + err.message);
         }
     };
 
