@@ -68,16 +68,34 @@ router.get(
   }
 );
 
-// Swine Analysis
+/* =========================
+   FARM MANAGER – BREED QUALITY ANALYTICS
+========================= */
+
+// Breed Quality Analysis
 router.get(
-  "/farm-manager/swine-analysis",
+  "/farm-manager/breed-quality-analytics/swine-analysis",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/swine_analysis", {
+    res.render("pages/farm-manager/breed-quality-analytics/swine_analysis", {
       page_title: "Swine Analysis",
       current_section: "analysis",
       current_page: "swine_analysis",
+    });
+  }
+);
+
+// Heat & Breeding Analytics
+router.get(
+  "/farm-manager/breed-quality-analytics/HBE-analysis",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/breed-quality-analytics/HBE_analysis", {
+      page_title: "HBE Analysis",
+      current_section: "HBE analysis",
+      current_page: "HBE_analysis",
     });
   }
 );

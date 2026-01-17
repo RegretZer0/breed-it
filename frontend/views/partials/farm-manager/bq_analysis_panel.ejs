@@ -1,0 +1,33 @@
+<!-- Header card with tabs -->
+<div class="card page-card mb-3">
+  <div class="card-body">
+
+    <h4 class="page-title">BREED QUALITY ANALYTICS</h4>
+
+    <div
+      class="tabs-row mt-3 d-flex flex-wrap gap-3"
+      role="tablist"
+      aria-label="Farmer management sections"
+    >
+
+      <!-- SWINE ANALYSIS -->
+      <a
+        href="/farm-manager/breed-quality-analytics/swine-analysis"
+        class="tab-btn <%= current_page === 'swine_analysis' ? 'active' : '' %>"
+        role="tab"
+      >
+        Breed Quality Ranking
+      </a>
+
+      <!-- HBE ANALYSIS -->
+      <a
+        href="/farm-manager/breed-quality-analytics/HBE-analysis"
+        class="tab-btn <%= current_page === 'HBE_analysis' ? 'active' : '' %>"
+        role="tab"
+      >
+        Heat and Breeding Analytics
+      </a>
+
+    </div>
+  </div>
+</div>

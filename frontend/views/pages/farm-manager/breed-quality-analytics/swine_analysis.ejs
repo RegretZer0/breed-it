@@ -1,17 +1,17 @@
-<%- include("../../partials/farm-manager/header") %>
-<%- include("../../partials/farm-manager/navbar") %>
-<%- include("../../partials/farm-manager/sidepanel") %>
+<%- include("../../../partials/farm-manager/header") %>
+<%- include("../../../partials/farm-manager/navbar") %>
+<%- include("../../../partials/farm-manager/sidepanel") %>
 
    <!-- Main content -->
     <main class="main-content">
       <div class="container-fluid">
+            <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
         <!-- Dashboard Header card -->
         <div class="card page-card">
           <div class="card-body">
-            <h4 class="page-title">BREED QUALITY ANALYSIS</h4>
-                    <!-- Rankings -->
+                 <!-- Rankings -->
                     <!-- <div class="card"> -->
-                        <h3>🏆 Breed Quality Rankings</h3>
+                        <h4>Breed Quality Rankings</h4>
                         <p class="muted">Ranked based on performance, physical traits, and reproductive history.</p>
 
                         <table>
@@ -73,4 +73,4 @@
         </div>
       </div>
     </main>
-<%- include("../../partials/farm-manager/footer") %>
+<%- include("../../../partials/farm-manager/footer") %>
