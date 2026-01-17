@@ -14,50 +14,59 @@
 
   <nav class="nav flex-column w-100 px-2">
 
-    <!-- DASHBOARD -->
-    <a
-      href="/farm-manager/dashboard"
-      class="nav-link <%= current_page === 'dashboard' ? 'active' : '' %>"
-    >
-      <i class="fa-solid fa-border-all me-2"></i>
-      Dashboard
-    </a>
+      <!-- DASHBOARD -->
+      <a
+        href="/farm-manager/dashboard"
+        class="nav-link <%= current_page === 'dashboard' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-border-all me-2"></i>
+        Dashboard
+      </a>
 
-    <!-- PIG MANAGEMENT -->
-    <a
-      href="/farm-manager/pig-management"
-      class="nav-link <%= current_section === 'pig_management' ? 'active' : '' %>"
-    >
-      <i class="fa-solid fa-piggy-bank me-2"></i>
-      Pig Management
-    </a>
+      <!-- PIG MANAGEMENT -->
+      <a
+        href="/farm-manager/pig-management"
+        class="nav-link <%= current_section === 'pig_management' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-piggy-bank me-2"></i>
+        Swine Management
+      </a>
 
-    <!-- SWINE ANALYSIS -->
-    <a
-      href="/farm-manager/swine-analysis"
-      class="nav-link <%= current_page === 'swine_analysis' ? 'active' : '' %>"
-    >
-      <i class="fa-solid fa-chart-line me-2"></i>
-      Swine Analysis
-    </a>
+      <!-- REPRODUCTION MONITORING -->
+      <a
+        href="/farm-manager/reproduction-monitoring"
+        class="nav-link <%= current_page === 'reproduction_monitoring' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-venus-mars me-2"></i>
+        Reproduction Monitoring
+      </a>
 
-    <!-- REPORTS -->
-    <a
-      href="/farm-manager/reports"
-      class="nav-link <%= current_page === 'reports' ? 'active' : '' %>"
-    >
-      <i class="fa-regular fa-file-lines me-2"></i>
-      Reports
-    </a>
+      <!-- SWINE ANALYSIS -->
+      <a
+        href="/farm-manager/swine-analysis"
+        class="nav-link <%= current_page === 'swine_analysis' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-dna me-2"></i>
+        Breed Quality Analytics
+      </a>
 
-    <!-- ACCOUNT MANAGEMENT -->
-    <a
-      href="/farm-manager/user-management/manage"
-      class="nav-link <%= current_section === 'manage' ? 'active' : '' %>"
-    >
-      <i class="fa-regular fa-user me-2"></i>
-      Account Management
-    </a>
+      <!-- REPORTS -->
+      <a
+        href="/farm-manager/reports"
+        class="nav-link <%= current_page === 'reports' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-clipboard-check me-2"></i>
+        Heat Reports Verification
+      </a>
+
+      <!-- ACCOUNT MANAGEMENT -->
+      <a
+        href="/farm-manager/user-management/manage"
+        class="nav-link <%= current_section === 'user_management' ? 'active' : '' %>"
+      >
+        <i class="fa-solid fa-user-gear me-2"></i>
+        Account Management
+      </a>
 
   </nav>
 </aside>

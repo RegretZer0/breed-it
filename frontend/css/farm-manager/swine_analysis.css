@@ -1,71 +1,54 @@
-/* =========================================
-   ROOT TOKENS
-========================================= */
-:root {
+/* =========== Root tokens =========== */
+:root{
   /* palette */
   --bg: #ffffff;
   --muted-border: #e9e9e9;
   --card-border: #e6e6e6;
+  --panel-border: #ededed;
+
   --text-dark: #222222;
   --muted-text: #6c6c6c;
 
   --accent-green: #17c14f;
-
-  --stat-orange: #ff9a1f;
-  --stat-blue: #1ea7ff;
-  --stat-green: #43c572;
-  --stat-red: #f55b66;
-  --stat-blue2: #1543ff;
-  --stat-teal: #12c0a4;
-  --stat-brown: #b67c1a;
-  --stat-purple: #b14cf0;
+  --danger: #f55b66;
 
   /* sizing */
   --gutter: 18px;
-  --radius: 10px;
-
-  /* typography */
-  --font-family-system: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  --base-font-size: 15px;
-  --base-line-height: 1.55;
+  --radius: 8px;
 }
 
-/* =========================================
-   GLOBAL RESET / BASICS
-========================================= */
-*,
-*::before,
-*::after {
+/* =========== Global reset / basics =========== */
+*, *::before, *::after{
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body{
   height: 100%;
   margin: 0;
-  font-family: var(--font-family-system);
-  font-size: var(--base-font-size);
-  line-height: var(--base-line-height);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
   background: var(--bg);
   color: var(--text-dark);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
 }
 
-/* =========================================
-   APP LAYOUT
-========================================= */
-.app-shell {
+/* =========== Shell layout =========== */
+.app-shell{
   display: flex;
   min-height: 100vh;
+  gap: var(--gutter);
   padding: var(--gutter);
+  align-items: flex-start;
 }
 
-.main-content {
+/* =========== Main content =========== */
+.main-content{
   flex: 1;
   min-width: 0;
+  padding: var(--gutter);
+  background: var(--bg);
 }
+
 
 /* =========================================
    CONTAINER

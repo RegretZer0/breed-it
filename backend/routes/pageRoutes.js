@@ -54,6 +54,20 @@ router.get(
   }
 );
 
+// Reproduction Monitoring
+router.get(
+  "/farm-manager/reproduction-monitoring",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/reproduction_monitoring", {
+      page_title: "Reproduction Monitoring",
+      current_section: "reproduction_monitoring",
+      current_page: "reproduction_monitoring",
+    });
+  }
+);
+
 // Swine Analysis
 router.get(
   "/farm-manager/swine-analysis",
@@ -115,7 +129,7 @@ router.get(
 );
 
 /* =========================
-   FARM MANAGER – PIG MANAGEMENT
+   FARM MANAGER – SWINE MANAGEMENT
 ========================= */
 
 // Pig Management Overview

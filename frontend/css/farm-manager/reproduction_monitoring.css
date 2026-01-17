@@ -1,0 +1,249 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+/* =========== Root tokens =========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-green: #17c14f;
+  --stat-orange: #ff9a1f;
+  --stat-blue: #1ea7ff;
+  --stat-green: #43c572;
+  --stat-red: #f55b66;
+  --stat-blue2: #1543ff;
+  --stat-teal: #12c0a4;
+  --stat-brown: #b67c1a;
+  --stat-purple: #b14cf0;
+
+  /* sizing */
+  --gutter: 18px;
+  --radius: 8px;
+
+  /* typography */
+  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --base-line-height: 1.4;
+  --base-font-size: 14px;
+}
+
+/* =========== Global reset / basics =========== */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family-system);
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  background: var(--bg);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility */
+button, [role="button"], a {
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+}
+
+:focus {
+  outline: 3px solid rgba(21, 67, 255, 0.18);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* =========== Layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  padding: var(--gutter);
+}
+
+.main-content{
+  flex: 1;
+  padding: var(--gutter);
+  min-width: 0;
+}
+
+/* =========================
+   FILTER PANEL
+========================= */
+
+.filter-panel{
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 16px;
+}
+
+/* Labels */
+.filter-panel .form-label{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 4px;
+}
+
+/* Inputs */
+.filter-panel .form-control,
+.filter-panel .form-select{
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--muted-border);
+  height: 38px;
+}
+
+/* Focus state */
+.filter-panel .form-control:focus,
+.filter-panel .form-select:focus{
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 0.12rem rgba(23,193,79,0.18);
+}
+
+/* =========================
+   FILTER ACTION BUTTONS
+========================= */
+
+.filter-actions{
+  display: flex;
+  gap: 8px;
+}
+
+.filter-actions .btn{
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 6px;
+  min-height: 38px;
+}
+
+/* Primary */
+.filter-actions .btn-primary{
+  background: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.filter-actions .btn-primary:hover{
+  background: #13a842;
+  border-color: #13a842;
+}
+
+/* Secondary */
+.filter-actions .btn-outline-secondary{
+  border-color: var(--muted-border);
+}
+
+/* =========================
+   ACTIVE FILTER PANEL
+========================= */
+
+.filter-result-panel{
+  border: 1px dashed var(--panel-border);
+  border-radius: var(--radius);
+  background: #fafafa;
+  padding: 12px 14px;
+}
+
+.filter-result-panel strong{
+  font-size: 12px;
+}
+
+.filter-result-panel .badge{
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+/* =========================
+   SECTION CARD ENHANCEMENT
+========================= */
+
+.section-card{
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 0;
+}
+
+.section-title{
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.section-card{
+  border-left: 4px solid transparent;
+}
+
+/* =========================
+   MOBILE RESPONSIVENESS
+========================= */
+
+@media (max-width: 768px){
+
+  /* Stack filters vertically */
+  .filter-panel .row{
+    row-gap: 14px;
+  }
+
+  /* Full-width inputs */
+  .filter-panel .col-md-4,
+  .filter-panel .col-md-3,
+  .filter-panel .col-md-2{
+    width: 100%;
+  }
+
+  /* Buttons side-by-side but full width */
+  .filter-actions{
+    flex-direction: row;
+  }
+
+  .filter-actions .btn{
+    flex: 1;
+  }
+
+  /* Reduce table font size */
+  .table th,
+  .table td{
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  /* Card spacing */
+  .card{
+    margin-bottom: 14px;
+  }
+}
+
+/* =========================
+   EXTRA SMALL DEVICES
+========================= */
+
+@media (max-width: 480px){
+
+  .section-title{
+    font-size: 14px;
+  }
+
+  .filter-panel{
+    padding: 12px;
+  }
+
+  .filter-actions{
+    flex-direction: column;
+  }
+
+  .filter-actions .btn{
+    width: 100%;
+  }
+}

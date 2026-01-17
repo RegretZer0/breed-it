@@ -1,0 +1,234 @@
+<%- include("../../partials/farm-manager/header") %>
+<%- include("../../partials/farm-manager/navbar") %>
+<%- include("../../partials/farm-manager/sidepanel") %>
+
+<main class="main-content">
+  <div class="container-fluid">
+
+    <!-- PAGE HEADER -->
+    <div class="card page-card mb-4">
+      <div class="card-body">
+        <h4 class="page-title">REPRODUCTION AND MONITORING PIPELINE</h4>
+        <p class="text-muted mb-0">
+          Manage the full lifecycle from Insemination through Monitoring (Day 1–30),
+          Weaning, and Final Selection.
+        </p>
+    </div>
+
+    <!-- FILTER PANEL -->
+    <!-- <div class="card mb-4"> -->
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+
+        <div class="col-md-4">
+            <label class="form-label">Search</label>
+            <input type="text" id="filterSearch" class="form-control"
+                placeholder="Farmer, Swine Tag, Boar Tag..." />
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Stage</label>
+            <select id="filterStage" class="form-select">
+            <option value="">All Stages</option>
+            <option value="Day 1-30">Day 1–30</option>
+            <option value="Weaning">Weaning</option>
+            <option value="Final Selection">Final Selection</option>
+            <option value="adult">Adult</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label">Sex</label>
+            <select id="filterSex" class="form-select">
+            <option value="">All</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-grid gap-2">
+            <button id="applyFilterBtn" class="btn btn-primary">Apply</button>
+            <button id="resetFilterBtn" class="btn btn-outline-secondary">Reset</button>
+        </div>
+
+        </div>
+    </div>
+
+
+
+    <!-- FILTERED RESULTS -->
+    <div id="filteredResultCard"
+         style="display:none;">
+      <div class="card-body">
+
+        <h5 class="section-title mb-3">
+          Filtered Results <span class="badge bg-info ms-2">Preview</span>
+        </h5>
+
+        <div class="mb-3">
+          <strong>Active Filters:</strong>
+          <div id="activeFilterTags" class="d-flex gap-2 flex-wrap mt-2"></div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Farmer</th>
+                <th>Swine Tag</th>
+                <th>Sex</th>
+                <th>Stage</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody id="filteredResultTableBody">
+              <tr>
+                <td colspan="5" class="text-center py-4">
+                  Apply filters to view results
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE HEADER -->
+    <div class="card page-card mb-3"></div>
+
+    <!-- AI HISTORY -->
+    <div class="card mb-4 section-card" style="border-left:4px solid #3498db;">
+      <div class="card-body">
+        <h5 class="section-title">
+          Artificial Insemination History
+          <span class="badge bg-primary ms-2">Read-Only</span>
+        </h5>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Farmer / Owner</th>
+                <th>Sow Tag</th>
+                <th>Boar Tag</th>
+                <th>Insemination Date</th>
+              </tr>
+            </thead>
+            <tbody id="aiTableBody">
+              <tr>
+                <td colspan="4" class="text-center py-4">
+                  Initializing records...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- BREEDING PERFORMANCE -->
+    <div class="card mb-4 section-card" style="border-left:4px solid #1abc9c;">
+      <div class="card-body">
+        <h5 class="section-title">
+          Breeding Performance & Mortality
+          <span class="badge bg-success ms-2">Live Statistics</span>
+        </h5>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Farmer Name</th>
+                <th>Sow Tag (Dam)</th>
+                <th class="text-center">Alive</th>
+                <th class="text-center">Deceased</th>
+                <th class="text-center">Mortality Rate</th>
+              </tr>
+            </thead>
+            <tbody id="breedingMortalityTableBody">
+              <tr>
+                <td colspan="5" class="text-center py-4">
+                  Calculating offspring data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROWTH MONITORING -->
+    <div class="card mb-4 section-card" style="border-left:4px solid #9b59b6;">
+      <div class="card-body">
+        <h5 class="section-title">Growth Monitoring & Trait Evaluation</h5>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Farmer</th>
+                <th>Swine Tag</th>
+                <th>Sex</th>
+                <th>Stage</th>
+                <th>Traits</th>
+                <th>Teeth</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="morphTableBody">
+              <tr>
+                <td colspan="7" class="text-center py-4">
+                  Loading growth metrics...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFORMITIES -->
+    <div class="card mb-4 section-card" style="border-left:4px solid #e74c3c;">
+      <div class="card-body">
+        <h5 class="section-title">
+          Deformities Monitoring (Day 1–30 Critical)
+        </h5>
+        <div id="deformityList" class="text-muted">
+          Scanning for deformity reports...
+        </div>
+      </div>
+    </div>
+
+    <!-- SELECTION -->
+    <div class="card mb-4 section-card" style="border-left:4px solid #f39c12;">
+      <div class="card-body">
+        <h5 class="section-title">Selection Process (Retention & Culling)</h5>
+
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Swine Tag</th>
+                <th>Farmer</th>
+                <th>Pipeline Stage</th>
+                <th>System Suggestion</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="selectionTableBody">
+              <tr>
+                <td colspan="5" class="text-center py-4">
+                  Searching for selection candidates...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<%- include("../../partials/farm-manager/footer") %>
