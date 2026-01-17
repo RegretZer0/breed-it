@@ -1,4 +1,6 @@
 const Farmer = require("../models/UserFarmer");
+const jwt = require("jsonwebtoken");
+
 
 // ======================================================
 // Require login for EJS pages
@@ -40,16 +42,33 @@ function requireFarmer(req, res, next) {
 // ======================================================
 async function requireApiLogin(req, res, next) {
   try {
-    if (!req.session || !req.session.user) {
+    let sessionUser = req.session?.user || null;
+
+    // ✅ Allow JWT authentication
+    if (!sessionUser) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.split(" ")[1];
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            sessionUser = decoded.user || decoded;
+        } catch (err) {
+          return res.status(401).json({
+            success: false,
+            message: "Invalid or expired token",
+          });
+        }
+      }
+    }
+
+    if (!sessionUser) {
       return res.status(401).json({
         success: false,
         message: "Not authenticated",
       });
     }
 
-    const sessionUser = req.session.user;
-
-    // Normalize user id
+    // Normalize user identity
     const userId = sessionUser.id || sessionUser._id || null;
     let farmerProfileId = null;
 
@@ -71,7 +90,7 @@ async function requireApiLogin(req, res, next) {
       farmerProfileId = farmer._id.toString();
     }
 
-    // Normalize req.user (MATCH authMiddleware)
+    // 🔑 Unified user object
     req.user = {
       id: userId,
       role: sessionUser.role,
@@ -83,7 +102,7 @@ async function requireApiLogin(req, res, next) {
     next();
   } catch (err) {
     console.error("API Login Middleware Error:", err);
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: "Authentication error",
     });

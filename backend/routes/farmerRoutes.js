@@ -52,39 +52,32 @@ router.get("/profile", requireApiLogin, async (req, res) => {
    GET FARMER PROFILE BY FARMER ID
 ====================================================== */
 router.get(
-  "/profile/:id",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
+  "/farmer",
+  requireApiLogin,          // ✅ JWT OR session
+  allowRoles("farmer"),
   async (req, res) => {
     try {
-      const farmerId = req.params.id;
-      const user = req.user;
+      // ✅ Use normalized farmerProfileId
+      const farmerId = req.user.farmerProfileId;
 
-      if (!mongoose.Types.ObjectId.isValid(farmerId)) {
-        return res.status(400).json({ success: false, message: "Invalid farmer ID" });
+      if (!farmerId) {
+        return res.status(404).json({
+          success: false,
+          message: "Farmer profile not linked",
+        });
       }
 
-      const farmer = await Farmer.findById(farmerId)
-        .select("-password")
+      const swine = await Swine.find({ farmer_id: farmerId })
+        .populate("farmer_id", "first_name last_name")
         .lean();
 
-      if (!farmer) {
-        return res.status(404).json({ success: false, message: "Farmer not found" });
-      }
-
-      if (
-        (user.role === "farm_manager" && farmer.managerId?.toString() !== user.id) ||
-        (user.role === "encoder" && farmer.managerId?.toString() !== user.managerId)
-      ) {
-        return res.status(403).json({ success: false, message: "Access denied" });
-      }
-
-      farmer.name = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
-
-      res.json({ success: true, farmer });
+      res.json({ success: true, swine });
     } catch (err) {
-      console.error("Fetch farmer profile by ID error:", err);
-      res.status(500).json({ success: false, message: "Server error" });
+      console.error("[FETCH FARMER SWINE ERROR]:", err);
+      res.status(500).json({
+        success: false,
+        message: "Server error while fetching swine",
+      });
     }
   }
 );

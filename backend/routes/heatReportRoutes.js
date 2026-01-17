@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs"); 
+const fs = require("fs");
 const mongoose = require("mongoose");
 
 const HeatReport = require("../models/HeatReports");
@@ -12,7 +12,7 @@ const Notification = require("../models/Notifications");
 const UserModel = require("../models/UserModel");
 const AIRecord = require("../models/AIRecord");
 
-const { requireSessionAndToken } = require("../middleware/authMiddleware");
+const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
 /* ======================================================
@@ -59,38 +59,65 @@ const calculateProbability = (signs) => {
 ====================================================== */
 router.post(
   "/add",
-  requireSessionAndToken,
+  requireApiLogin,
   allowRoles("farm_manager", "encoder", "farmer"),
   upload.array("evidence", 5),
   async (req, res) => {
     try {
-      const { swineId, signs, farmerId } = req.body;
+      const { swineId, signs } = req.body;
       const files = req.files;
 
-      if (!swineId || !signs || !files || files.length === 0 || !farmerId) {
-        return res.status(400).json({ success: false, message: "Swine ID, signs, and evidence are required" });
+      if (!swineId || !signs || !files || files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Swine ID, signs, and evidence are required"
+        });
       }
 
-      const farmer = await Farmer.findOne({ user_id: farmerId });
+      // ✅ Farmer resolved by middleware
+      let farmer = null;
+
+      if (req.user.farmerProfileId) {
+        farmer = await Farmer.findById(req.user.farmerProfileId);
+      }
+
+      if (!farmer) {
+        farmer = await Farmer.findOne({ user_id: req.user.id });
+      }
+
+      if (!farmer) {
+        return res.status(404).json({
+          success: false,
+          message: "Farmer profile not found or not linked"
+        });
+      }
+
+      // ---------------- SWINE LOOKUP ----------------
       const swine = await Swine.findOne({ swine_id: swineId });
 
-      if (!farmer || !swine) {
-        return res.status(404).json({ success: false, message: "Farmer or Swine not found" });
+      if (!swine) {
+        return res.status(404).json({
+          success: false,
+          message: "Swine not found"
+        });
       }
 
+
+      // ---------------- EVIDENCE PROCESSING ----------------
       const evidenceData = files.map(file => {
         const filePath = path.join(__dirname, "../", file.path);
         const fileBuffer = fs.readFileSync(filePath);
         const base64String = fileBuffer.toString("base64");
         const dataUrl = `data:${file.mimetype};base64,${base64String}`;
-        fs.unlinkSync(filePath); 
+        fs.unlinkSync(filePath);
         return dataUrl;
       });
 
       const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
 
+      // ---------------- CREATE REPORT ----------------
       const newReport = new HeatReport({
-        swine_id: swine ? swine._id : null,
+        swine_id: swine._id,
         farmer_id: farmer._id,
         manager_id: farmer.managerId,
         signs: parsedSigns,
@@ -103,33 +130,43 @@ router.post(
 
       await newReport.save();
 
+      // ---------------- NOTIFICATIONS ----------------
       const recipients = await UserModel.find({
-        $or: [{ _id: farmer.managerId }, { manager_id: farmer.managerId, role: "encoder" }]
+        $or: [
+          { _id: farmer.managerId },
+          { manager_id: farmer.managerId, role: "encoder" }
+        ]
       });
 
       if (recipients.length > 0) {
-        const notifications = recipients.map(u => ({
-          user_id: u._id,
-          title: "New Heat Report",
-          message: `Farmer ${farmer.first_name} submitted a heat report for Swine ${swine.swine_id}.`,
-          type: "info"
-        }));
-        await Notification.insertMany(notifications);
+        await Notification.insertMany(
+          recipients.map(u => ({
+            user_id: u._id,
+            title: "New Heat Report",
+            message: `Farmer ${farmer.first_name} submitted a heat report for Swine ${swine.swine_id}.`,
+            type: "info"
+          }))
+        );
       }
 
       res.status(201).json({ success: true, report: newReport });
     } catch (err) {
-      console.error("Add Report Error:", err);
-      res.status(500).json({ success: false, message: "Server error while adding report" });
-    }
+        console.error("Add Report Error:", err);
+        res.status(500).json({
+          success: false,
+          message: err.message || "Server error while adding report"
+        });
+      }
+
   }
 );
+
 
 
 /* ======================================================
     GET ALL HEAT REPORTS (Admin/Encoder Only)
 ====================================================== */
-router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
@@ -147,7 +184,7 @@ router.get("/all", requireSessionAndToken, allowRoles("farm_manager", "encoder")
 /* ======================================================
     GET REPORTS FOR SPECIFIC FARMER
 ====================================================== */
-router.get("/farmer/:userId", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.get("/farmer/:userId", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
     try {
         const { userId } = req.params;
         const farmerProfile = await Farmer.findOne({ user_id: userId });
@@ -168,7 +205,7 @@ router.get("/farmer/:userId", requireSessionAndToken, allowRoles("farmer", "farm
 /* ======================================================
     APPROVE HEAT REPORT (Admin/Encoder)
 ====================================================== */
-router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -220,7 +257,7 @@ router.post("/:id/approve", requireSessionAndToken, allowRoles("farm_manager", "
 /* ======================================================
     CONFIRM AI (Admin/Encoder)
 ====================================================== */
-router.post("/:id/confirm-ai", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -278,7 +315,7 @@ router.post("/:id/confirm-ai", requireSessionAndToken, allowRoles("farm_manager"
 /* ======================================================
     CONFIRM PREGNANCY (Farmer/Admin/Encoder)
 ====================================================== */
-router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
     report.status = "pregnant";
@@ -318,7 +355,7 @@ router.post("/:id/confirm-pregnancy", requireSessionAndToken, allowRoles("farmer
 /* ======================================================
     CONFIRM FARROWING (Admin/Encoder)
 ====================================================== */
-router.post("/:id/confirm-farrowing", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
     try {
         const report = await HeatReport.findById(req.params.id);
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -352,7 +389,7 @@ router.post("/:id/confirm-farrowing", requireSessionAndToken, allowRoles("farm_m
 /* ======================================================
     STILL IN HEAT (Farmer/Admin/Encoder)
 ====================================================== */
-router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
     report.status = "approved"; 
@@ -375,7 +412,7 @@ router.post("/:id/still-heat", requireSessionAndToken, allowRoles("farmer", "far
 /* ======================================================
     GET CALENDAR EVENTS
 ====================================================== */
-router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
+router.get("/calendar-events", requireApiLogin, async (req, res) => {
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
@@ -425,7 +462,7 @@ router.get("/calendar-events", requireSessionAndToken, async (req, res) => {
 /* ======================================================
     REJECT REPORT
 ====================================================== */
-router.post("/:id/reject", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
     try {
         const { reason } = req.body; 
         const report = await HeatReport.findById(req.params.id);

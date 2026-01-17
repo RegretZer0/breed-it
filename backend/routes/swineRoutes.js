@@ -8,6 +8,7 @@ const AIRecord = require("../models/AIRecord");
 const HeatReport = require("../models/HeatReports");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
+const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
 /* ======================================================
@@ -292,24 +293,34 @@ router.get(
 ====================================================== */
 router.get(
     "/farmer",
-    requireSessionAndToken,
+    requireApiLogin,          // ✅ JWT OR session
     allowRoles("farmer"),
     async (req, res) => {
         try {
-            const farmer = await Farmer.findOne({ user_id: req.user.id });
-            if (!farmer) return res.status(404).json({ success: false, message: "Farmer profile not found" });
+            const farmerId = req.user.farmerProfileId;
 
-            const swine = await Swine.find({ farmer_id: farmer._id })
+            if (!farmerId) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Farmer profile not linked",
+                });
+            }
+
+            const swine = await Swine.find({ farmer_id: farmerId })
                 .populate("farmer_id", "first_name last_name")
                 .lean();
 
             res.json({ success: true, swine });
         } catch (err) {
             console.error("[FETCH FARMER SWINE ERROR]:", err);
-            res.status(500).json({ success: false, message: "Server error while fetching swine" });
+            res.status(500).json({
+                success: false,
+                message: "Server error while fetching swine",
+            });
         }
     }
 );
+
 
 /* ======================================================
     GET BOAR HISTORY & ACTIVE BOARS
