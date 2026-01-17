@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentReportId = null;
   let allReports = [];
 
-  // ---------------- HELPER: CALCULATE DAYS LEFT ----------------
+  // ---------------- HELPER: CALCULATE DAYS LEFT (Days Only) ----------------
   function getDaysLeft(targetDate) {
     if (!targetDate) return "-";
     const now = new Date();
@@ -48,7 +48,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const diffMs = target - now;
     if (diffMs < 0) return "Overdue";
     if (diffMs === 0) return "TODAY";
-    return `${Math.ceil(diffMs / (1000 * 60 * 60 * 24))} days`;
+    
+    const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return `${days} day${days > 1 ? 's' : ''}`;
   }
 
   // ---------------- FETCH HEAT REPORTS ----------------
@@ -87,10 +89,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = document.createElement("tr");
       const currentStatus = r.swine_id?.current_status || "Unknown";
       
-      const rawStatus = (r.status || "pending").toLowerCase();
-      const isApproved = rawStatus === "approved" || rawStatus === "under_observation" || rawStatus === "pregnant" || rawStatus === "completed" || rawStatus === "ai_service";
-      const isCompleted = rawStatus === "completed" || rawStatus === "farrowed";
-      const isPregnant = rawStatus === "pregnant";
+      const rawStatus = (r.status || "pending").toLowerCase().trim();
+      const isApproved = ["approved", "under_observation", "pregnant", "completed", "lactating", "farrowing_ready", "ai_service"].includes(rawStatus);
+      const isLactating = rawStatus === "lactating" || rawStatus === "completed";
+      const isPregnant = rawStatus === "pregnant" || rawStatus === "farrowing_ready";
       const isRejected = rawStatus === "rejected";
 
       const rejectionNote = r.rejection_message || r.reason || "";
@@ -104,12 +106,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${r.heat_probability !== null ? r.heat_probability + '%' : 'N/A'}
         </td>
         <td style="text-transform: capitalize;">
-            <span class="status-badge" style="${isCompleted ? 'background: #bdc3c7;' : isRejected ? 'background: #e74c3c; color: white;' : ''}">${r.status.replace(/_/g, ' ')}</span><br>
+            <span class="status-badge" style="${isLactating ? 'background: #9b59b6; color: white;' : isRejected ? 'background: #e74c3c; color: white;' : ''}">
+              ${r.status.replace(/_/g, ' ')}
+            </span><br>
             <small style="color: #666;">(Swine: ${currentStatus})</small>
             
             ${isApproved ? `
               <div style="margin-top: 5px; font-size: 0.7em; color: #27ae60;">
-                <b>Approved:</b> ${updateDate}
+                <b>Updated:</b> ${updateDate}
               </div>
             ` : ''}
 
@@ -121,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ` : ''}
         </td>
         <td>
-          ${(!isCompleted && !isPregnant && !isRejected && r.next_heat_check) ? `
+          ${(!isLactating && !isPregnant && !isRejected && r.next_heat_check) ? `
             <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
               <b>Target:</b> ${new Date(r.next_heat_check).toLocaleDateString()}
             </div>
@@ -134,7 +138,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <b>Target:</b> ${new Date(r.expected_farrowing).toLocaleDateString()}
             </div>
             <strong>${getDaysLeft(r.expected_farrowing)}</strong>
-          ` : (isCompleted ? '<span style="color: #27ae60; font-weight: bold;">✅ Completed</span>' : '-')}
+          ` : (isLactating ? '<span style="color: #9b59b6; font-weight: bold;">🤱 Lactating</span>' : '-')}
         </td>
         <td><button class="btn-view" data-id="${r._id}">View</button></td>
       `;
@@ -180,14 +184,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         statusLogHtml = `
           <div style="color: #27ae60; background: #f0fff4; border: 1px solid #c6f6d5; padding: 10px; border-radius: 6px; margin-top: 10px;">
-            <strong>Status Update:</strong> Approved/Processed<br>
-            <small>Confirmed on: ${updateDate}</small>
-            <hr style="border: 0; border-top: 1px solid #c6f6d5; margin: 8px 0;">
-            <div style="font-size: 0.9em;">
-              <strong>Insemination Schedule (3-Day Rule):</strong><br>
-              Start: ${approvalDate.toLocaleDateString()}<br>
-              <b style="color: #2c3e50;">Target (Day 3): ${day3.toLocaleDateString()}</b>
-            </div>
+            <strong>Current Status:</strong> ${r.status.replace(/_/g, ' ').toUpperCase()}<br>
+            <small>Last Update: ${updateDate}</small>
           </div>`;
     }
     
@@ -227,17 +225,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     reportDetails.style.display = "block";
 
+    // --- BUTTON VISIBILITY ---
     approveBtn.style.display = (r.status === "pending") ? "inline-block" : "none";
     if (rejectBtn) rejectBtn.style.display = (r.status === "pending") ? "inline-block" : "none"; 
 
     confirmAIBtn.style.display = (r.status === "approved") ? "inline-block" : "none";
 
-    if (r.expected_farrowing && r.status === "pregnant") {
+    // Show button if status is 'farrowing_ready' OR if 'pregnant' and term reached
+    if (r.status === "farrowing_ready" || (r.status === "pregnant" && r.expected_farrowing)) {
         const today = new Date();
         today.setHours(0,0,0,0);
-        const farrowDate = new Date(r.expected_farrowing);
+        const farrowDate = r.expected_farrowing ? new Date(r.expected_farrowing) : today;
         farrowDate.setHours(0,0,0,0);
-        confirmFarrowingBtn.style.display = (today >= farrowDate) ? "inline-block" : "none";
+        
+        confirmFarrowingBtn.style.display = (r.status === "farrowing_ready" || today >= farrowDate) ? "inline-block" : "none";
     } else {
         confirmFarrowingBtn.style.display = "none";
     }
@@ -274,11 +275,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- LISTENERS ----------------
   approveBtn.addEventListener("click", () => {
-    if (confirm("Approve this heat report? System will automatically schedule insemination on the 3rd day from today.")) {
+    if (confirm("Approve this heat report? System will schedule insemination on the 3rd day.")) {
       const inseminationDate = new Date();
       inseminationDate.setDate(inseminationDate.getDate() + 2); 
       
-      handleAction("approve", "Report approved! Insemination scheduled for " + inseminationDate.toLocaleDateString(), {
+      handleAction("approve", "Report approved! Insemination targeted for " + inseminationDate.toLocaleDateString(), {
         scheduledInsemination: inseminationDate
       });
     }
@@ -286,18 +287,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (rejectBtn) {
     rejectBtn.addEventListener("click", () => {
-        const reason = prompt("Please enter the reason for rejection (this will be seen by the farmer):");
+        const reason = prompt("Enter rejection reason for the farmer:");
         if (reason === null) return; 
-        if (!reason.trim()) return alert("A rejection reason is required to help the farmer improve.");
+        if (!reason.trim()) return alert("Rejection reason is required.");
         
-        handleAction("reject", "Report rejected and message sent.", { reason });
+        handleAction("reject", "Report rejected.", { reason });
     });
   }
 
-  // UPDATED: Filter for ONLY Master Boars
   confirmAIBtn.addEventListener("click", async () => {
     try {
-      // Fetch all swine using your updated route that includes Master Boars
       const res = await fetch(`${BACKEND_URL}/api/swine/all?sex=Male&age_stage=adult`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include"
@@ -305,42 +304,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       
       if (!data.success || !data.swine?.length) {
-        alert("No adult boars found in the system.");
+        alert("No adult boars found.");
         return;
       }
 
-      // Filter for Master Boars (BOAR- pattern or null farmer_id)
       const masterBoars = data.swine.filter(m => 
         m.swine_id.startsWith("BOAR-") || m.farmer_id === null
       );
 
       if (masterBoars.length === 0) {
-        alert("No Master Boars registered in Maintenance. Please add a Boar in Maintenance first.");
+        alert("No Master Boars registered. Please add a Boar in Maintenance.");
         return;
       }
 
       boarSelect.innerHTML = masterBoars.map(m => 
-        `<option value="${m._id}">${m.swine_id} (${m.breed}) - MASTER</option>`
+        `<option value="${m._id}">${m.swine_id} (${m.breed})</option>`
       ).join("");
       
       aiConfirmModal.style.display = "block";
     } catch (err) { 
         console.error(err);
-        alert("Failed to fetch Master Boar list."); 
+        alert("Failed to fetch Boar list."); 
     }
   });
 
   submitAIBtn.addEventListener("click", () => {
     const selectedObjectId = boarSelect.value; 
     if (selectedObjectId) {
-      handleAction("confirm-ai", "AI Confirmed! Swine moved to 'Under Observation'.", { maleSwineId: selectedObjectId });
+      handleAction("confirm-ai", "AI Confirmed! Sow is now under 21-day observation.", { maleSwineId: selectedObjectId });
       aiConfirmModal.style.display = "none";
     }
   });
 
   confirmFarrowingBtn.addEventListener("click", () => {
-    if (confirm("Confirm farrowing? This will finalize the pregnancy cycle and return the swine status to 'Lactating'.")) {
-        handleAction("confirm-farrowing", "Farrowing Confirmed! Pregnancy cycle completed.");
+    if (confirm("Confirm farrowing? This will complete the cycle and update status to 'Lactating'.")) {
+        handleAction("confirm-farrowing", "Farrowing Confirmed! Swine is now in Lactation phase.");
     }
   });
 
@@ -361,7 +359,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           body: JSON.stringify(payload)
         });
         if (res.ok) {
-          alert("Male added.");
+          alert("Boar added successfully.");
           maleModal.style.display = 'none';
           addMaleForm.reset();
         }

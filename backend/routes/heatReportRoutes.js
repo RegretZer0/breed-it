@@ -74,13 +74,10 @@ router.post(
         });
       }
 
-      // ✅ Farmer resolved by middleware
       let farmer = null;
-
       if (req.user.farmerProfileId) {
         farmer = await Farmer.findById(req.user.farmerProfileId);
       }
-
       if (!farmer) {
         farmer = await Farmer.findOne({ user_id: req.user.id });
       }
@@ -92,9 +89,7 @@ router.post(
         });
       }
 
-      // ---------------- SWINE LOOKUP ----------------
       const swine = await Swine.findOne({ swine_id: swineId });
-
       if (!swine) {
         return res.status(404).json({
           success: false,
@@ -102,8 +97,6 @@ router.post(
         });
       }
 
-
-      // ---------------- EVIDENCE PROCESSING ----------------
       const evidenceData = files.map(file => {
         const filePath = path.join(__dirname, "../", file.path);
         const fileBuffer = fs.readFileSync(filePath);
@@ -115,7 +108,6 @@ router.post(
 
       const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
 
-      // ---------------- CREATE REPORT ----------------
       const newReport = new HeatReport({
         swine_id: swine._id,
         farmer_id: farmer._id,
@@ -130,7 +122,6 @@ router.post(
 
       await newReport.save();
 
-      // ---------------- NOTIFICATIONS ----------------
       const recipients = await UserModel.find({
         $or: [
           { _id: farmer.managerId },
@@ -157,11 +148,8 @@ router.post(
           message: err.message || "Server error while adding report"
         });
       }
-
   }
 );
-
-
 
 /* ======================================================
     GET ALL HEAT REPORTS (Admin/Encoder Only)
@@ -203,7 +191,7 @@ router.get("/farmer/:userId", requireApiLogin, allowRoles("farmer", "farm_manage
 });
 
 /* ======================================================
-    APPROVE HEAT REPORT (Admin/Encoder)
+    APPROVE HEAT REPORT (Starts Breeding Cycle)
 ====================================================== */
 router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
@@ -211,7 +199,6 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
     const now = new Date();
-    // 3-Day Rule: Approval Date = Day 1. Insemination = Day 3.
     const scheduledInsemination = new Date(now);
     scheduledInsemination.setDate(now.getDate() + 2);
 
@@ -225,6 +212,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder
     const swine = await Swine.findById(report.swine_id);
     const nextCycleNumber = (swine.breeding_cycles?.length || 0) + 1;
 
+    // ✅ Pushing new breeding cycle for parity tracking
     await Swine.findByIdAndUpdate(report.swine_id, { 
         current_status: "In-Heat",
         $push: {
@@ -237,7 +225,6 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder
         }
     });
 
-    // --- AUTOMATED NOTIFICATION TO FARMER ---
     if (report.farmer_id && report.farmer_id.user_id) {
         await Notification.create({
             user_id: report.farmer_id.user_id,
@@ -255,7 +242,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder
 });
 
 /* ======================================================
-    CONFIRM AI (Admin/Encoder)
+    CONFIRM AI (Links Boar to Cycle)
 ====================================================== */
 router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
     const session = await mongoose.startSession();
@@ -289,6 +276,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "enco
       
       await report.save({ session });
 
+      // ✅ Updating specific cycle with Sire ID
       await Swine.updateOne(
         { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
         { 
@@ -303,7 +291,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "enco
       );
 
       await session.commitTransaction();
-      res.json({ success: true, message: "AI Record created and swine moved to Under Observation." });
+      res.json({ success: true, message: "AI Record created and linked to breeding cycle." });
     } catch (err) {
       await session.abortTransaction();
       res.status(500).json({ success: false, message: err.message });
@@ -313,7 +301,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "enco
 });
 
 /* ======================================================
-    CONFIRM PREGNANCY (Farmer/Admin/Encoder)
+    CONFIRM PREGNANCY (Updates Gestation Data)
 ====================================================== */
 router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
@@ -334,6 +322,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
         farrowing_date: report.expected_farrowing
     });
 
+    // ✅ Setting pregnancy flag and expected date
     await Swine.updateOne(
         { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
         { 
@@ -353,33 +342,40 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 });
 
 /* ======================================================
-    CONFIRM FARROWING (Admin/Encoder)
+    CONFIRM FARROWING (Increments Cycle & Sets Lactation)
 ====================================================== */
 router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
     try {
         const report = await HeatReport.findById(req.params.id);
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-        report.status = "completed"; 
+        const now = new Date();
+
+        // 1. Update HeatReport status to 'lactating'
+        report.status = "lactating"; 
         await report.save();
 
+        // 2. Update AI Record
         await AIRecord.findOneAndUpdate(
             { heat_report_id: report._id },
-            { status: "Completed", actual_farrowing_date: new Date() }
+            { status: "Success", farrowing_date: now }
         );
 
+        // 3. Update Swine: Mark cycle complete, set status to Lactating, and increment parity
         await Swine.updateOne(
             { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
             { 
               $set: { 
-                "breeding_cycles.$.farrowed": true,
-                "breeding_cycles.$.actual_farrowing_date": new Date(),
+                "breeding_cycles.$.is_pregnant": false,
+                "breeding_cycles.$.actual_farrowing_date": now,
                 current_status: "Lactating" 
-              }
+              },
+              // If you have a top-level parity or farrowing count field:
+              $inc: { parity: 1 } 
             }
         );
 
-        res.json({ success: true, message: "Farrowing confirmed. Swine status: Lactating." });
+        res.json({ success: true, message: "Farrowing confirmed. Swine status updated to Lactating." });
     } catch (err) {
         console.error("Farrowing Error:", err);
         res.status(500).json({ success: false, message: err.message });
@@ -387,7 +383,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 });
 
 /* ======================================================
-    STILL IN HEAT (Farmer/Admin/Encoder)
+    STILL IN HEAT (Cycle Failed/Reset)
 ====================================================== */
 router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
@@ -422,12 +418,10 @@ router.get("/calendar-events", requireApiLogin, async (req, res) => {
     }).populate("swine_id", "swine_id").populate("farmer_id", "first_name last_name");
 
     const events = reports.map(r => {
-      let farmerName = r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "N/A";
-      
       if (r.status === "approved" && r.next_heat_check) {
         return {
           id: r._id,
-          title: `💉 AI Due (3rd Day): ${r.swine_id?.swine_id}`,
+          title: `💉 AI Due: ${r.swine_id?.swine_id}`,
           start: r.next_heat_check.toISOString().split('T')[0],
           backgroundColor: "#3498db",
           allDay: true

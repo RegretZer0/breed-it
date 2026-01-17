@@ -5,7 +5,7 @@ const swineSchema = new mongoose.Schema({
   swine_id: { type: String, required: true, unique: true },
   registered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   
-  // UPDATED: farmer_id is now optional for Master/Maintenance Boars
+  // farmer_id is optional for Master/Maintenance Boars
   farmer_id: { type: mongoose.Schema.Types.ObjectId, ref: "Farmer", required: false }, 
   
   sex: { type: String, enum: ["Male", "Female"], required: true },
@@ -13,11 +13,10 @@ const swineSchema = new mongoose.Schema({
   breed: { type: String },
   birth_date: { type: Date },
   
-  // UPDATED: batch is now optional for Maintenance/External Boars
+  // batch is optional for Maintenance/External Boars
   batch: { type: String, required: false }, 
 
   // ------------------- Current Lifecycle State -------------------
-  // UPDATED: Removed 1st/2nd Selection. Pipeline: Monitoring -> Weaned -> Final Selection
   current_status: {
     type: String,
     enum: [
@@ -26,11 +25,9 @@ const swineSchema = new mongoose.Schema({
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
       "Active", "Inactive", "Under Monitoring"
     ],
-    default: "Monitoring (Day 1-30)" // Starts here on first registration
+    default: "Monitoring (Day 1-30)" 
   },
 
-  // UPDATED: Added new pipeline stages to the enum to prevent the "is not a valid enum value" error.
-  // This allows the frontend to send "Monitoring (Day 1-30)" while the user sees "Piglet".
   age_stage: { 
     type: String, 
     enum: [
@@ -66,6 +63,7 @@ const swineSchema = new mongoose.Schema({
     
     pregnancy_check_date: { type: Date }, 
     is_pregnant: { type: Boolean, default: false },
+    farrowed: { type: Boolean, default: false }, // Logic update: Track birth completion
     expected_farrowing_date: { type: Date },
     actual_farrowing_date: { type: Date },
     
@@ -73,6 +71,7 @@ const swineSchema = new mongoose.Schema({
 
     farrowing_results: {
       total_piglets: { type: Number, default: 0 },
+      live_piglets: { type: Number, default: 0 }, // Logic update: Stores the live count
       male_count: { type: Number, default: 0 },
       female_count: { type: Number, default: 0 },
       mortality_count: { type: Number, default: 0 }
@@ -96,7 +95,6 @@ const swineSchema = new mongoose.Schema({
   performance_records: [{
     stage: { 
       type: String, 
-      // UPDATED: Simplified stages aligned with Monitoring -> Weaned -> Final Selection
       enum: ["Registration", "Maintenance Registration", "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", "Market Check", "Routine"] 
     },
     record_date: { type: Date, default: Date.now },
@@ -129,8 +127,6 @@ swineSchema.virtual('offspring', {
   foreignField: 'dam_id'
 });
 
-// VIRTUAL: Selection Suggestion Logic
-// Automates the 15-25kg weight rule for the Final Selection stage.
 swineSchema.virtual('selection_suggestion').get(function() {
   if (!this.performance_records || this.performance_records.length === 0) return "No Growth Data";
   
@@ -138,7 +134,6 @@ swineSchema.virtual('selection_suggestion').get(function() {
   const weight = latest.weight || 0;
   const hasDeformities = latest.deformities && latest.deformities.length > 0 && latest.deformities[0] !== "None";
 
-  // Flowchart Logic: 15-25kg Weight Limit check for Final Selection
   if (weight >= 15 && weight <= 25 && !hasDeformities) {
     return this.sex === "Female" ? "Retain for Breeding" : "Ready for Market";
   } else if (weight > 0) {

@@ -96,6 +96,7 @@ const heatReportSchema = new mongoose.Schema(
         "pregnant",           // Passed 23-day check
         "farrowing_ready",    // Ready for farrowing
         "farrowed",           // Successfully farrowed
+        "lactating",         // Currently lactating
         "completed"           // Cycle ended
       ],
       default: "pending"

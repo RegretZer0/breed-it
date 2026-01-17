@@ -21,13 +21,14 @@ router.post(
     async (req, res) => {
         const {
             color, weight, bodyLength, heartGirth, 
-            teethCount, date_transfer, health_status, current_status
+            teethCount, date_transfer, health_status, current_status, breed
         } = req.body;
 
         try {
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
+            // Generate BOAR ID (consistent logic)
             const boarCount = await Swine.countDocuments({ 
                 swine_id: { $regex: /^BOAR-/ } 
             });
@@ -39,7 +40,7 @@ router.post(
                 registered_by: managerId,
                 farmer_id: null, 
                 sex: "Male",
-                breed: "Native", 
+                breed: breed || "Native", 
                 color: color || "Unknown",
                 age_stage: "adult",
                 is_external_boar: true, 
@@ -49,10 +50,10 @@ router.post(
                 performance_records: [{
                     stage: "Maintenance Registration",
                     record_date: new Date(),
-                    weight: weight || 0,
-                    body_length: bodyLength || 0,
-                    heart_girth: heartGirth || 0,
-                    teeth_count: teethCount || 0,
+                    weight: Number(weight) || 0,
+                    body_length: Number(bodyLength) || 0,
+                    heart_girth: Number(heartGirth) || 0,
+                    teeth_count: Number(teethCount) || 0,
                     recorded_by: user.id
                 }]
             });
@@ -83,58 +84,65 @@ router.post(
             farmer_id, sex, color, breed, birth_date, health_status,
             sire_id, dam_id, date_transfer, batch,
             age_stage, weight, bodyLength, heartGirth, teethCount,
-            legConformation, deformities, teatCount, current_status
+            leg_conformation, deformities, teat_count, current_status
         } = req.body;
 
         try {
-            if (!farmer_id || !sex || !batch) {
-                return res.status(400).json({ success: false, message: "Farmer ID, sex, and batch are required" });
+            if (!sex || !batch) {
+                return res.status(400).json({ success: false, message: "Sex and batch are required" });
             }
 
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-            const farmer = await Farmer.findOne({
-                _id: farmer_id,
-                $or: [
-                    { managerId: managerId },
-                    { registered_by: managerId },
-                    { user_id: managerId }
-                ]
-            });
-
-            if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
-
-            const lastSwine = await Swine.find({ batch }).sort({ _id: -1 }).limit(1);
-            let nextNumber = 1;
-            if (lastSwine.length && lastSwine[0].swine_id) {
-                const parts = lastSwine[0].swine_id.split("-");
-                const lastNum = parseInt(parts[parts.length - 1]);
-                if (!isNaN(lastNum)) nextNumber = lastNum + 1;
+            // Authorization Check for Farmer
+            if (farmer_id) {
+                const farmer = await Farmer.findOne({
+                    _id: farmer_id,
+                    $or: [
+                        { managerId: managerId },
+                        { registered_by: managerId },
+                        { user_id: managerId }
+                    ]
+                });
+                if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
             }
-            const swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
 
-            // UPDATED LOGIC: Initial status for piglets is now "Monitoring (Day 1-30)"
+            // ID Generation Logic
+            let swineId;
+            if (batch === "BOAR" || (sex.toLowerCase() === "male" && age_stage === "adult")) {
+                const boarCount = await Swine.countDocuments({ swine_id: { $regex: /^BOAR-/ } });
+                swineId = `BOAR-${String(boarCount + 1).padStart(4, "0")}`;
+            } else {
+                const lastSwine = await Swine.find({ batch }).sort({ _id: -1 }).limit(1);
+                let nextNumber = 1;
+                if (lastSwine.length && lastSwine[0].swine_id) {
+                    const parts = lastSwine[0].swine_id.split("-");
+                    const lastNum = parseInt(parts[parts.length - 1]);
+                    if (!isNaN(lastNum)) nextNumber = lastNum + 1;
+                }
+                swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
+            }
+
+            // Initial Status Logic
             let initialStatus = current_status; 
-            let initialPerfStage;
+            let initialPerfStage = "Registration";
 
             if (!initialStatus) {
-                if (age_stage === "piglet") {
+                if (age_stage === "piglet" || age_stage === "Monitoring (Day 1-30)") {
                     initialStatus = "Monitoring (Day 1-30)";
                     initialPerfStage = "Monitoring (Day 1-30)"; 
                 } else {
-                    initialStatus = (sex === "Female" || sex === "female") ? "Open" : "Market-Ready";
+                    initialStatus = (sex.toLowerCase() === "female") ? "Open" : "Market-Ready";
                     initialPerfStage = "Routine"; 
                 }
-            } else {
-                initialPerfStage = "Registration";
             }
 
             const newSwine = new Swine({
                 swine_id: swineId,
                 batch,
                 registered_by: managerId,
-                farmer_id: farmer._id,
+                farmer_id: farmer_id || null,
                 sex,
                 color,
                 breed,
@@ -148,12 +156,12 @@ router.post(
                 performance_records: [{
                     stage: initialPerfStage,
                     record_date: new Date(),
-                    weight: weight || 0,
-                    body_length: bodyLength || 0,
-                    heart_girth: heartGirth || 0,
-                    teeth_count: teethCount || 0,
-                    leg_conformation: legConformation || "Normal",
-                    teat_count: teatCount || 0,
+                    weight: Number(weight) || 0,
+                    body_length: Number(bodyLength) || 0,
+                    heart_girth: Number(heartGirth) || 0,
+                    teeth_count: Number(teethCount) || 0,
+                    leg_conformation: leg_conformation || "Normal",
+                    teat_count: Number(teat_count) || 0,
                     deformities: Array.isArray(deformities) ? deformities : ["None"],
                     recorded_by: user.id
                 }]
@@ -170,7 +178,7 @@ router.post(
 );
 
 /* ======================================================
-    REGISTER FARROWING
+    REGISTER FARROWING (CLOSES ACTIVE CYCLE)
 ====================================================== */
 router.post(
     "/:swineId/register-farrowing",
@@ -178,7 +186,7 @@ router.post(
     allowRoles("farm_manager", "encoder", "farmer"),
     async (req, res) => {
         const { swineId } = req.params;
-        const { total_live, mummified, stillborn, farrowing_date, remarks } = req.body;
+        const { total_live, mummified, stillborn, farrowing_date } = req.body;
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -188,20 +196,21 @@ router.post(
             if (!sow) throw new Error("Sow not found");
 
             const totalPiglets = Number(total_live || 0) + Number(mummified || 0) + Number(stillborn || 0);
+            const actualFarrowingDate = farrowing_date || new Date();
 
             const updateResult = await Swine.updateOne(
                 { _id: sow._id, "breeding_cycles.is_pregnant": true },
                 { 
                     $set: { 
-                        "breeding_cycles.$.farrowing_date": farrowing_date || new Date(),
+                        "breeding_cycles.$.farrowed": true,
+                        "breeding_cycles.$.is_pregnant": false,
+                        "breeding_cycles.$.actual_farrowing_date": actualFarrowingDate,
                         "breeding_cycles.$.farrowing_results": {
                             total_piglets: totalPiglets,
-                            live_piglets: total_live || 0,
-                            mortality_count: Number(mummified || 0) + Number(stillborn || 0),
-                            remarks: remarks || ""
+                            live_piglets: Number(total_live || 0),
+                            mortality_count: Number(mummified || 0) + Number(stillborn || 0)
                         },
-                        current_status: "Lactating",
-                        health_status: "Recovering"
+                        current_status: "Lactating"
                     }
                 },
                 { session }
@@ -211,18 +220,25 @@ router.post(
                 throw new Error("No active pregnant cycle found for this sow.");
             }
 
+            // Sync Heat Report
             await HeatReport.findOneAndUpdate(
                 { swine_id: sow._id, status: "pregnant" },
                 { status: "completed" },
                 { session }
             );
 
+            // Sync AI Record
+            await AIRecord.findOneAndUpdate(
+                { swine_id: sow._id, status: "Success" },
+                { status: "Completed", actual_farrowing_date: actualFarrowingDate },
+                { session }
+            );
+
             await session.commitTransaction();
-            res.json({ success: true, message: "Farrowing registered successfully. Sow is now Lactating." });
+            res.json({ success: true, message: "Farrowing registered. Sow is now Lactating." });
 
         } catch (error) {
             await session.abortTransaction();
-            console.error("[FARROWING ERROR]:", error);
             res.status(500).json({ success: false, message: error.message });
         } finally {
             session.endSession();
@@ -231,7 +247,7 @@ router.post(
 );
 
 /* ======================================================
-    GET ALL SWINE
+    GET ALL SWINE (With Lean Optimization)
 ====================================================== */
 router.get(
     "/all",
@@ -252,7 +268,6 @@ router.get(
                 }).select("_id");
                 
                 const farmerIds = farmers.map((f) => f._id);
-                
                 query = {
                     $or: [
                         { farmer_id: { $in: farmerIds } },
@@ -290,18 +305,12 @@ router.get(
 ====================================================== */
 router.get(
     "/farmer",
-    requireApiLogin,          // ✅ JWT OR session
+    requireApiLogin, 
     allowRoles("farmer"),
     async (req, res) => {
         try {
             const farmerId = req.user.farmerProfileId;
-
-            if (!farmerId) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Farmer profile not linked",
-                });
-            }
+            if (!farmerId) return res.status(404).json({ success: false, message: "Farmer profile not linked" });
 
             const swine = await Swine.find({ farmer_id: farmerId })
                 .populate("farmer_id", "first_name last_name")
@@ -309,15 +318,10 @@ router.get(
 
             res.json({ success: true, swine });
         } catch (err) {
-            console.error("[FETCH FARMER SWINE ERROR]:", err);
-            res.status(500).json({
-                success: false,
-                message: "Server error while fetching swine",
-            });
+            res.status(500).json({ success: false, message: "Server error" });
         }
     }
 );
-
 
 /* ======================================================
     GET BOAR HISTORY & ACTIVE BOARS
@@ -413,6 +417,7 @@ router.put(
             const swine = await Swine.findOne({ swine_id: swineId });
             if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
+            // Farmer access check
             if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
                 return res.status(403).json({ success: false, message: "Access denied" });
 
@@ -424,10 +429,11 @@ router.put(
 
             allowedFields.forEach((field) => {
                 if (updates[field] !== undefined) {
-                    // Handle performance_records as an array push if it's a single object
                     if (field === "performance_records" && !Array.isArray(updates[field])) {
+                        // Push new record object to array
                         swine.performance_records.push({
                             ...updates[field],
+                            record_date: new Date(),
                             recorded_by: user.id
                         });
                     } else {

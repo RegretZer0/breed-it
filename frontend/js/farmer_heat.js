@@ -44,12 +44,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     swineList.forEach(sw => {
       let status = (sw.current_status || "Open").toLowerCase();
+      // Logic: If status is pregnant, check if expected farrowing date has passed
       if (status === "pregnant" && sw.expected_farrowing) {
         if (today >= new Date(sw.expected_farrowing)) status = "farrowing";
       }
+      
       if (status === "open") stats.open++;
-      if (status === "pregnant") stats.pregnant++;
-      if (status === "farrowing" || status === "lactating") stats.farrowing++;
+      else if (status === "pregnant") stats.pregnant++;
+      else if (status === "farrowing" || status === "lactating" || status === "monitoring (day 1-30)") stats.farrowing++;
     });
 
     if (document.getElementById("countOpen")) document.getElementById("countOpen").textContent = stats.open;
@@ -107,7 +109,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const rawStatus = (r.status || "pending").toLowerCase().trim().replace(/\s+/g, '_');
         const displayStatus = (r.status || "pending").replace(/_/g, ' ');
 
-        // Logic Update: 'approved' means waiting for Day 3 AI. 'under_observation' means waiting for 21-day heat check.
         const allowedStatuses = ["waiting_heat_check", "under_observation", "approved"];
         
         const isCompleted = rawStatus === "completed" || rawStatus === "pregnant";
@@ -120,7 +121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const heatCheckDate = r.next_heat_check ? new Date(r.next_heat_check) : null;
         const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
         
-        // Update: Pregnancy confirmation button should only be active if status is under_observation AND date has passed.
         const isReadyForPregnancy = (rawStatus === "under_observation") && heatCheckDate && (now >= heatCheckDate);
 
         const row = document.createElement("tr");
@@ -192,18 +192,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { console.error("Load Reports Error:", err); }
   }
 
-  // ---------------- HELPERS ----------------
+  // ---------------- HELPERS (Updated Countdown to Days Only) ----------------
   function formatCountdown(targetDate) {
     if (!targetDate) return "N/A";
     const diffMs = new Date(targetDate) - new Date();
     if (diffMs <= 0) return "Ready/Due";
 
+    // Calculate days and round down
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
 
-    return `${days}d ${hours}h ${mins}m ${secs}s`;
+    if (days === 0) return "Due Tomorrow";
+    return `${days} day${days > 1 ? 's' : ''} left`;
   }
 
   function updateCountdowns() {
@@ -290,9 +289,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   refreshSwineData();
   loadReports();
   
+  // Update countdown display every hour instead of every second (since it's just days now)
   setInterval(() => {
     updateCountdowns();
-  }, 1000);
+  }, 3600000);
 
   setInterval(() => {
     loadReports(); 
