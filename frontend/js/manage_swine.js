@@ -32,6 +32,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // ---------------- HELPER: DISPLAY FORMATTER ----------------
+  const formatStageDisplay = (stage) => {
+    const mapping = {
+      'Monitoring (Day 1-30)': 'Piglet',
+      'Weaned (Monitoring 3 Months)': 'Weaner (3mo)',
+      'Final Selection': 'Selection Phase',
+      'adult': 'Adult',
+      'piglet': 'Piglet'
+    };
+    return mapping[stage] || stage;
+  };
+
   // ---------------- DOM ELEMENTS ----------------
   const registerForm = document.getElementById("registerSwineForm");
   const submitBtn = registerForm.querySelector('button[type="submit"]');
@@ -68,7 +80,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- UI LOGIC ----------------
 
   const toggleDeformityField = () => {
-    if (ageStageSelect.value === "adult") {
+    const isAdult = ageStageSelect.value === "adult";
+    if (isAdult) {
       deformityGroup.style.display = "none";
       deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = false);
     } else {
@@ -79,7 +92,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const updateBatchField = () => {
     if (isEditing) return;
 
-    if (ageStageSelect.value === "piglet") {
+    if (ageStageSelect.value === "Monitoring (Day 1-30)") {
       batchInput.readOnly = true;
       if (damSelect.value) {
         const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
@@ -208,8 +221,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineList.forEach((sw) => {
       const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / MASTER";
       const latestPerf = (sw.performance_records || []).slice(-1)[0] || {};
+      
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c" };
-      const statusColor = statusColors[sw.current_status] || "#7f8c8d";
+      
+      // FIXED: Use raw current_status for the badge text if you want technical names
+      // but keep formatStageDisplay for the Age category
+      const rawStatus = sw.current_status || 'Monitoring (Day 1-30)';
+      const statusColor = statusColors[rawStatus] || "#3498db";
 
       const offspringCount = allSwine.filter(child => 
         child.dam_id === sw.swine_id || child.sire_id === sw.swine_id
@@ -221,8 +239,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div style="margin-top:5px;"><button class="view-btn" data-id="${sw.swine_id}">History</button>
           <button class="edit-btn" data-swine='${JSON.stringify(sw)}'>Edit</button></div></td>
         <td>${farmerName}</td>
-        <td>Sex: ${sw.sex}<br>Breed: ${sw.breed}<br>Age: ${sw.age_stage}</td>
-        <td>Status: <span class="status-badge" style="background:${statusColor};color:white;padding:2px 8px;border-radius:4px;">${sw.current_status || 'Open'}</span><br>
+        <td>Sex: ${sw.sex}<br>Breed: ${sw.breed}<br>Age: ${formatStageDisplay(sw.age_stage)}</td>
+        <td>Status: <span class="status-badge" style="background:${statusColor};color:white;padding:2px 8px;border-radius:4px;">${rawStatus}</span><br>
           Health: <strong style="color:${sw.health_status === 'Healthy' ? '#2ecc71' : '#e74c3c'};">${sw.health_status}</strong></td>
         <td>S: ${sw.sire_id || 'N/A'}<br>D: ${sw.dam_id || 'N/A'}</td>
         <td>Piglets: <strong>${offspringCount}</strong><br>Mortality: ${sw.total_mortality_count || 0}</td>
@@ -267,7 +285,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     batchInput.value = swine.batch || "";
     
     document.getElementById("sex").value = swine.sex || "Female";
-    document.getElementById("ageStage").value = swine.age_stage || "piglet";
+    document.getElementById("ageStage").value = swine.age_stage || "Monitoring (Day 1-30)";
     document.getElementById("color").value = swine.color || "";
     document.getElementById("breed").value = swine.breed || "";
     document.getElementById("health_status").value = swine.health_status || "Healthy";
@@ -315,6 +333,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       batch: batchInput.value.trim(), 
       sex: sexSelect.value,
       age_stage: ageStageSelect.value, 
+      current_status: ageStageSelect.value === "adult" ? "Open" : ageStageSelect.value,
       color: document.getElementById("color").value.trim(),
       breed: breedInput.value.trim(), 
       birth_date: document.getElementById("birth_date").value,
@@ -402,7 +421,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <td>${child.swine_id}</td>
                     <td>${child.batch}</td>
                     <td>${child.sex}</td>
-                    <td>${child.age_stage}</td>
+                    <td>${formatStageDisplay(child.age_stage)}</td>
                 </tr>
             `;
         });
@@ -417,7 +436,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td>${c.actual_farrowing_date ? new Date(c.actual_farrowing_date).toLocaleDateString() : '--'}</td>
               <td>${c.farrowing_results?.total_born || 0}</td>
               <td>${c.farrowing_results?.live_born || 0}</td>
-              <td>${sw.current_status || 'Active'}</td>
+              <td>${sw.current_status}</td>
             </tr>`;
         });
 
@@ -429,7 +448,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td>${new Date(p.record_date).toLocaleDateString()}</td>
               <td>${p.weight} kg</td>
               <td>${p.body_length}x${p.heart_girth}</td>
-              <td>${p.stage}</td>
+              <td>${formatStageDisplay(p.stage)}</td>
               <td>${p.remarks || 'Initial'}</td>
             </tr>`;
         });

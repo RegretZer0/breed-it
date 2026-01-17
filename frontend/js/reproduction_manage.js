@@ -1,4 +1,5 @@
 import { authGuard } from "./authGuard.js";
+import { PerformanceHelper } from "./performance_helper.js"; // Integrated the updated helper
 
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Authenticate and Role Check
@@ -31,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let rawSelectionData = [];
 
     /**
-     * Helper to resolve Farmer Names from the data object.
+     * Helper to resolve Farmer Names
      */
     const resolveFarmerName = (item) => {
         if (item.farmer_name) return item.farmer_name;
@@ -132,6 +133,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             morphBody.innerHTML = filteredMorph.length > 0 ? filteredMorph.map(item => {
                 const isFemale = item.swine_sex === "Female";
                 const teatCount = item.morphology.teat_count;
+                
+                const swineObj = {
+                    swine_id: item.swine_tag,
+                    sex: item.swine_sex,
+                    current_status: item.morphology.stage, 
+                    performance_records: [{
+                        weight: item.morphology.weight,
+                        stage: item.morphology.stage,
+                        deformities: [] 
+                    }]
+                };
+                
+                const suggestion = PerformanceHelper.getSelectionStatus(swineObj, rawPerformanceData.deformities);
+                
                 const teatDisplay = (!isFemale || teatCount === null) ? 
                     `<span style="color: #bbb;">N/A</span>` : `<b style="color: #2e7d32;">${teatCount}</b>`;
 
@@ -140,7 +155,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <td>${resolveFarmerName(item)}</td>
                     <td><strong>${item.swine_tag}</strong></td>
                     <td style="font-weight: bold; color: ${isFemale ? '#d81b60' : '#1976d2'};">${item.swine_sex}</td>
-                    <td><small>${item.morphology.stage}</small></td>
+                    <td><small>${item.morphology.stage}</small><br>
+                        <span style="font-size:0.75rem; padding:2px 4px; border-radius:3px; background:${suggestion.bg || '#f5f5f5'}; color:${suggestion.color}; font-weight:bold;">
+                            ${suggestion.suggestion}
+                        </span>
+                    </td>
                     <td><div style="font-size: 0.9em;">⚖️ ${item.morphology.weight}kg | 📏 ${item.morphology.body_length}cm | 🍼 ${teatDisplay}</div></td>
                     <td><small>${item.morphology.teeth}</small></td>
                     <td>${new Date(item.morphology.date).toLocaleDateString()}</td>
@@ -169,7 +188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------------------------------------------------
-    // 3. SELECTION PROCESS
+    // 3. SELECTION PROCESS (FINAL STAGE ACTION)
     // ---------------------------------------------------------
     async function loadSelectionProcess() {
         try {
@@ -190,27 +209,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         const selectionBody = document.getElementById("selectionTableBody");
         if (!selectionBody) return;
 
-        const filtered = rawSelectionData.filter(s => 
-            resolveFarmerName(s).toLowerCase().includes(term) || 
-            s.swine_tag.toLowerCase().includes(term)
-        );
+        // UPDATED: Filter to only show swines in "Final Selection" or "adult" stage
+        const filtered = rawSelectionData.filter(s => {
+            const matchesSearch = resolveFarmerName(s).toLowerCase().includes(term) || 
+                                  s.swine_tag.toLowerCase().includes(term);
+            const isFinalStage = s.current_stage === "Final Selection" || s.current_stage === "adult";
+            
+            return matchesSearch && isFinalStage;
+        });
 
-        selectionBody.innerHTML = filtered.length > 0 ? filtered.map(c => `
+        selectionBody.innerHTML = filtered.length > 0 ? filtered.map(c => {
+            const morph = rawPerformanceData.morphology.find(m => m.swine_tag === c.swine_tag);
+            const weight = morph ? morph.morphology.weight : 0;
+
+            const swineObj = { 
+                swine_id: c.swine_tag, 
+                sex: c.swine_sex || "Female", 
+                current_status: c.current_stage,
+                performance_records: [{ weight: weight, stage: c.current_stage }] 
+            }; 
+            
+            const result = PerformanceHelper.getSelectionStatus(swineObj, rawPerformanceData.deformities);
+            
+            return `
             <tr>
                 <td><strong>${c.swine_tag}</strong></td>
                 <td>${resolveFarmerName(c)}</td>
-                <td><span class="stage-label">${c.current_stage}</span></td>
+                <td><span class="stage-label" style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 4px;">${c.current_stage}</span></td>
                 <td>
-                    <span class="status-badge" style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${c.can_promote ? '#e8f5e9' : '#ffebee'}; color: ${c.can_promote ? '#2e7d32' : '#c62828'};">
-                        ${c.recommendation}
+                    <span class="status-badge" style="padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: ${result.bg}; color: ${result.color};">
+                        ${result.suggestion}
                     </span>
+                    <br><small style="color: #666;">${result.reason}</small>
+                    ${weight > 0 ? `<br><small style="color: #333; font-weight:bold;">⚖️ Last Weight: ${weight}kg</small>` : ''}
                 </td>
                 <td style="white-space: nowrap;">
-                    <button class="action-btn" onclick="processSelection('${c.id}', true)" style="background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Approve</button>
-                    <button class="action-btn btn-danger" onclick="processSelection('${c.id}', false)" style="background:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:5px;">Cull</button>
+                    <button class="action-btn" onclick="processSelection('${c.id || c._id}', true)" style="background:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Retain</button>
+                    <button class="action-btn btn-danger" onclick="processSelection('${c.id || c._id}', false)" style="background:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; margin-left:5px;">Cull</button>
                 </td>
-            </tr>
-        `).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">No matching candidates.</td></tr>';
+            </tr>`;
+        }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">No candidates ready for Final Selection.</td></tr>';
     }
 
     // Initial Data Fetch
@@ -218,10 +256,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 /**
- * Handle Approval or Culling
+ * Handle Approval (Retain) or Culling
  */
 window.processSelection = async (swineId, isApproved) => {
-    const actionText = isApproved ? 'APPROVE this swine for the next stage' : 'CULL/MARK this swine for sale';
+    const actionText = isApproved ? 'RETAIN this swine for breeding' : 'CULL this swine for market/sale';
     if (!confirm(`Confirm Action: Are you sure you want to ${actionText}?`)) return;
 
     try {
@@ -237,7 +275,7 @@ window.processSelection = async (swineId, isApproved) => {
             alert(data.message);
             location.reload(); 
         } else {
-            alert("Permission Denied: " + data.message);
+            alert("Error: " + data.message);
         }
     } catch (err) { alert("Network error. Please try again."); }
 };

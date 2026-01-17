@@ -17,23 +17,32 @@ const swineSchema = new mongoose.Schema({
   batch: { type: String, required: false }, 
 
   // ------------------- Current Lifecycle State -------------------
+  // UPDATED: Removed 1st/2nd Selection. Pipeline: Monitoring -> Weaned -> Final Selection
   current_status: {
     type: String,
     enum: [
-      "1st Selection Ongoing", "Monitoring (Day 1-30)", "Weaned",
-      "2nd Selection Ongoing", "Monitoring (3 Months)", "Open",
-      "In-Heat", "Under Observation", "Bred", "Pregnant",
+      "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", 
+      "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
-      "Active", "Inactive" // Added for Maintenance Boars
+      "Active", "Inactive", "Under Monitoring"
     ],
-    default: "1st Selection Ongoing"
+    default: "Monitoring (Day 1-30)" // Starts here on first registration
   },
 
+  // UPDATED: Added new pipeline stages to the enum to prevent the "is not a valid enum value" error.
+  // This allows the frontend to send "Monitoring (Day 1-30)" while the user sees "Piglet".
   age_stage: { 
     type: String, 
-    enum: ["piglet", "growing", "adult"], 
+    enum: [
+      "Monitoring (Day 1-30)", 
+      "Weaned (Monitoring 3 Months)", 
+      "Final Selection", 
+      "piglet", 
+      "growing", 
+      "adult"
+    ], 
     required: true, 
-    default: "piglet" 
+    default: "Monitoring (Day 1-30)" 
   },
 
   health_status: {
@@ -87,8 +96,8 @@ const swineSchema = new mongoose.Schema({
   performance_records: [{
     stage: { 
       type: String, 
-      // UPDATED: Added Maintenance Registration to the enum
-      enum: ["Registration", "Maintenance Registration", "1st Stage Selection", "2nd Stage Selection", "Market Check", "Routine"] 
+      // UPDATED: Simplified stages aligned with Monitoring -> Weaned -> Final Selection
+      enum: ["Registration", "Maintenance Registration", "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", "Market Check", "Routine"] 
     },
     record_date: { type: Date, default: Date.now },
     weight: { type: Number },
@@ -118,6 +127,24 @@ swineSchema.virtual('offspring', {
   ref: 'Swine',
   localField: 'swine_id',
   foreignField: 'dam_id'
+});
+
+// VIRTUAL: Selection Suggestion Logic
+// Automates the 15-25kg weight rule for the Final Selection stage.
+swineSchema.virtual('selection_suggestion').get(function() {
+  if (!this.performance_records || this.performance_records.length === 0) return "No Growth Data";
+  
+  const latest = this.performance_records[this.performance_records.length - 1];
+  const weight = latest.weight || 0;
+  const hasDeformities = latest.deformities && latest.deformities.length > 0 && latest.deformities[0] !== "None";
+
+  // Flowchart Logic: 15-25kg Weight Limit check for Final Selection
+  if (weight >= 15 && weight <= 25 && !hasDeformities) {
+    return this.sex === "Female" ? "Retain for Breeding" : "Ready for Market";
+  } else if (weight > 0) {
+    return "Cull or Sell for Market";
+  }
+  return "Monitoring";
 });
 
 swineSchema.pre("save", function(next) {

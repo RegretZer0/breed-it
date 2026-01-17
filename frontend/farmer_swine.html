@@ -21,17 +21,32 @@
     th {
       background-color: #f8f9fa;
       font-weight: bold;
+      font-size: 0.85rem;
+      text-transform: uppercase;
     }
+    
     /* Style for the nested performance list */
     .performance-cell ul {
       margin: 0;
       padding-left: 15px;
-      font-size: 0.9em;
+      font-size: 0.85em;
       list-style-type: square;
     }
     .performance-cell li {
       margin-bottom: 3px;
     }
+
+    /* Helper Suggestion Styling */
+    .suggestion-badge {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
     /* Status Badge styling */
     .status-pill {
       display: inline-block;
@@ -42,20 +57,42 @@
       background-color: #e3f2fd;
       color: #1976d2;
     }
-    .health-healthy { color: #2e7d32; }
-    .health-sick { color: #d32f2f; }
+    
+    .health-update-dropdown {
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9em;
+    }
+
+    /* Action Buttons */
+    .update-btn {
+      margin-top: 8px;
+      cursor: pointer;
+      padding: 5px 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+    }
+    .update-btn:hover {
+      background: #2980b9;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>My Swine List</h2>
-
-    <button 
-      style="margin-bottom: 15px; padding: 10px 20px; background-color: #5aa9e6; color: white; border: none; border-radius: 5px; cursor: pointer;"
-      onclick="window.location.href='/farmer_dashboard.html'"
-    >
-      ← Back to Dashboard
-    </button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>My Swine List</h2>
+        <button 
+          style="padding: 10px 20px; background-color: #5aa9e6; color: white; border: none; border-radius: 5px; cursor: pointer;"
+          onclick="window.location.href='/farmer_dashboard.html'"
+        >
+          ← Back to Dashboard
+        </button>
+    </div>
 
     <p id="loadingMessage">Loading swine data...</p>
 
@@ -65,18 +102,15 @@
           <tr>
             <th>Swine ID</th>
             <th>Breed</th>
-            <th>Color</th>
             <th>Sex</th>
-            <th>Health</th>
+            <th>Health Status</th>
             <th>Age Stage</th>
-            <th>Pipeline Status</th>
-            <th>Batch</th>
-            <th>Registered</th>
-            <th>Latest Performance</th>
+            <th>Pipeline Status & Suggestion</th>
+            <th>Latest Performance Metrics</th>
           </tr>
         </thead>
         <tbody id="swineTableBody">
-          </tbody>
+            </tbody>
       </table>
     </div>
   </div>
