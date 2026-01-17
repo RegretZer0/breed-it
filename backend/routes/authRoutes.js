@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
+const dns = require("dns").promises;
+const nodemailer = require("nodemailer");
 
 const { JWT_SECRET } = require("../config/jwt");
 
@@ -12,9 +15,39 @@ const attachUser = require("../middleware/attachUser");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
+// Temporary in-memory storage for OTPs
+const otpStore = new Map();
+
 /* ======================
-   JWT HELPER
+    HELPERS
 ====================== */
+
+// 🛡️ Password Strength: Minimum 8 characters
+function validatePassword(password) {
+  if (!password || password.length < 8) {
+    throw new Error("Password must be at least 8 characters long.");
+  }
+  return true;
+}
+
+// 🛡️ LEGITIMACY CHECK: Verify format and real-world domain existence
+async function validateEmailLegitimacy(email) {
+  if (!validator.isEmail(email)) {
+    throw new Error("Invalid email format.");
+  }
+
+  const domain = email.split("@")[1];
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    if (!mxRecords || mxRecords.length === 0) {
+      throw new Error("Email domain does not exist or cannot receive mail.");
+    }
+  } catch (err) {
+    throw new Error("Email provider domain is invalid or unreachable.");
+  }
+  return true;
+}
+
 function generateToken(user) {
   return jwt.sign(
     {
@@ -32,7 +65,65 @@ function generateToken(user) {
 }
 
 /* ======================
-   LOGIN
+    OTP SYSTEM
+====================== */
+
+// 1. Send OTP Route
+router.post("/send-otp", async (req, res) => {
+  const { email } = req.body;
+  try {
+    if (!email) return res.status(400).json({ success: false, message: "Email is required." });
+
+    await validateEmailLegitimacy(email);
+    
+    // Check if email already exists in any collection
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Email already registered in the system." });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    otpStore.set(email, { otp, expires: Date.now() + 600000 }); // Valid for 10 mins
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    await transporter.sendMail({
+      from: `"BreedIT System" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your Registration OTP",
+      text: `Your OTP for registration is: ${otp}. This code will expire in 10 minutes.`
+    });
+
+    res.json({ success: true, message: "OTP sent successfully to your email." });
+  } catch (error) {
+    console.error("OTP Error:", error);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Helper to verify OTP inside registration routes
+function verifyOTPInternal(email, userOtp) {
+  const record = otpStore.get(email);
+  if (!record) throw new Error("No OTP found for this email.");
+  if (Date.now() > record.expires) {
+    otpStore.delete(email);
+    throw new Error("OTP has expired.");
+  }
+  if (record.otp !== userOtp) throw new Error("Invalid OTP code.");
+  
+  otpStore.delete(email); // Success, remove the OTP
+  return true;
+}
+
+/* ======================
+    LOGIN
 ====================== */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -87,7 +178,7 @@ router.post("/login", async (req, res) => {
 });
 
 /* ======================
-   LOGOUT
+    LOGOUT
 ====================== */
 router.post("/logout", (req, res) => {
   req.session?.destroy(() => {
@@ -97,7 +188,7 @@ router.post("/logout", (req, res) => {
 });
 
 /* ======================
-   GET CURRENT USER
+    GET CURRENT USER
 ====================== */
 router.get("/me", (req, res) => {
   if (req.session?.user) {
@@ -134,25 +225,29 @@ router.get("/me", (req, res) => {
 });
 
 /* ======================
-   REGISTER FARM MANAGER
-   (SINGLE ROUTE – DUPLICATE REMOVED)
+    REGISTER FARM MANAGER
 ====================== */
 router.post("/register", async (req, res) => {
-  const { first_name, last_name, address, contact_info, email, password } = req.body;
+  const { first_name, last_name, address, contact_info, email, password, otp } = req.body;
 
   try {
-    if (!first_name || !last_name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
+    if (!first_name || !last_name || !email || !password || !otp) {
+      return res.status(400).json({ success: false, message: "Missing required fields (including OTP)" });
     }
 
-    if (await User.findOne({ email })) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
+    // 1. Password Strength
+    validatePassword(password);
+
+    // 2. OTP Verification
+    verifyOTPInternal(email, otp);
+
+    // 3. Legitimacy Check
+    await validateEmailLegitimacy(email);
+
+    // 4. Cross-collection Uniqueness Check
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
     }
 
     const user = await User.create({
@@ -171,12 +266,12 @@ router.post("/register", async (req, res) => {
       user,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 
 /* ======================
-   REGISTER FARMER (FIXED)
+    REGISTER FARMER
 ====================== */
 router.post("/register-farmer", async (req, res) => {
   try {
@@ -195,17 +290,19 @@ router.post("/register-farmer", async (req, res) => {
     } = req.body;
 
     if (!email || !password || !managerId) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    if (await Farmer.findOne({ email })) {
-      return res.status(400).json({
-        success: false,
-        message: "Farmer already exists",
-      });
+    // 1. Password Strength
+    validatePassword(password);
+
+    // 2. Legitimacy Check
+    await validateEmailLegitimacy(email);
+
+    // 3. Cross-collection Uniqueness Check
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Email already in use" });
     }
 
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
@@ -220,7 +317,7 @@ router.post("/register-farmer", async (req, res) => {
       first_name,
       last_name,
       address,
-      contact_no: contact_info, // ✅ FIX
+      contact_no: contact_info,
       email,
       password: await bcrypt.hash(password, 10),
       managerId,
@@ -237,16 +334,12 @@ router.post("/register-farmer", async (req, res) => {
     });
   } catch (error) {
     console.error("Register farmer error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 
 /* ======================
-   GET FARMERS (NO PARAM)
-   ✅ MATCHES FRONTEND
+    GET FARMERS (NO PARAM)
 ====================== */
 router.get(
   "/farmers",
@@ -255,11 +348,8 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-      const managerId =
-        user.role === "farm_manager" ? user.id : user.managerId;
-
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
       const farmers = await Farmer.find({ managerId });
-
       res.json({ success: true, farmers });
     } catch (err) {
       console.error("Fetch farmers error:", err);
@@ -269,8 +359,7 @@ router.get(
 );
 
 /* ======================
-   GET FARMERS (LEGACY PARAM ROUTE)
-   ⚠️ KEPT FOR BACKWARD COMPAT
+    GET FARMERS (LEGACY PARAM ROUTE)
 ====================== */
 router.get(
   "/farmers/:managerId",
@@ -280,35 +369,23 @@ router.get(
     try {
       const paramManagerId = req.params.managerId;
       const user = req.user;
-
-      const managerId =
-        user.role === "farm_manager"
-          ? user.id
-          : user.managerId;
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
       if (paramManagerId !== managerId) {
-        return res.status(403).json({
-          success: false,
-          message: "Unauthorized manager access",
-        });
+        return res.status(403).json({ success: false, message: "Unauthorized manager access" });
       }
 
       const farmers = await Farmer.find({ managerId });
-
       res.json({ success: true, farmers });
     } catch (error) {
       console.error("Fetch farmers error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-      });
+      res.status(500).json({ success: false, message: "Server error" });
     }
   }
 );
 
 /* ======================
-   UPDATE FARMER
-   ✅ MATCHES FRONTEND
+    UPDATE FARMER
 ====================== */
 router.put(
   "/update-farmer/:farmerId",
@@ -322,10 +399,7 @@ router.put(
       });
 
       if (!farmer) {
-        return res.status(404).json({
-          success: false,
-          message: "Farmer not found",
-        });
+        return res.status(404).json({ success: false, message: "Farmer not found" });
       }
 
       [
@@ -343,7 +417,6 @@ router.put(
       });
 
       await farmer.save();
-
       res.json({ success: true, farmer });
     } catch (err) {
       console.error("Update farmer error:", err);
@@ -353,40 +426,31 @@ router.put(
 );
 
 /* ======================
-   REGISTER ENCODER
+    REGISTER ENCODER
 ====================== */
 router.post("/register-encoder", async (req, res) => {
-  const {
-    first_name,
-    last_name,
-    address,
-    contact_info,
-    email,
-    password,
-    managerId,
-  } = req.body;
+  const { first_name, last_name, address, contact_info, email, password, managerId } = req.body;
 
   try {
     if (!first_name || !last_name || !email || !password || !managerId) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields",
-      });
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
+
+    // 1. Password Strength
+    validatePassword(password);
+
+    // 2. Legitimacy Check
+    await validateEmailLegitimacy(email);
 
     const manager = await User.findById(managerId);
     if (!manager || manager.role !== "farm_manager") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid Farm Manager ID",
-      });
+      return res.status(400).json({ success: false, message: "Invalid Farm Manager ID" });
     }
 
-    if (await User.findOne({ email })) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
+    // 3. Cross-collection Uniqueness Check
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
     }
 
     const encoder = await User.create({
@@ -408,13 +472,12 @@ router.post("/register-encoder", async (req, res) => {
     });
   } catch (error) {
     console.error("Register encoder error:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 
 /* ======================
-   GET ENCODERS
-   ✅ PROTECTED + MATCHES FRONTEND
+    GET ENCODERS
 ====================== */
 router.get(
   "/encoders",
@@ -436,16 +499,13 @@ router.get(
 );
 
 /* ======================
-   UPDATE ENCODER
+    UPDATE ENCODER
 ====================== */
 router.put("/update-encoder/:id", async (req, res) => {
   try {
     const encoder = await User.findById(req.params.id);
     if (!encoder || encoder.role !== "encoder") {
-      return res.status(404).json({
-        success: false,
-        message: "Encoder not found",
-      });
+      return res.status(404).json({ success: false, message: "Encoder not found" });
     }
 
     Object.assign(encoder, req.body);
@@ -462,7 +522,7 @@ router.put("/update-encoder/:id", async (req, res) => {
 });
 
 /* ======================
-   GET SINGLE ENCODER
+    GET SINGLE ENCODER
 ====================== */
 router.get("/encoders/single/:id", async (req, res) => {
   try {
@@ -472,10 +532,7 @@ router.get("/encoders/single/:id", async (req, res) => {
     }).select("-password -__v");
 
     if (!encoder) {
-      return res.status(404).json({
-        success: false,
-        message: "Encoder not found",
-      });
+      return res.status(404).json({ success: false, message: "Encoder not found" });
     }
 
     res.json({ success: true, encoder });

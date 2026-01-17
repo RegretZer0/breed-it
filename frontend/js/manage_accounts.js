@@ -57,7 +57,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      renderAccounts(data[currentRole + "s"]);
+      // Dynamic key selection based on currentRole
+      const accounts = data[currentRole + "s"] || [];
+      renderAccounts(accounts);
     } catch (err) {
       console.error("Fetch error:", err);
       accountsList.innerHTML = "<li>Server error</li>";
@@ -77,10 +79,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const li = document.createElement("li");
 
       li.innerHTML = `
-       ${acc.first_name || ""} ${acc.last_name || ""}
+        <span>${acc.first_name || ""} ${acc.last_name || ""}</span>
         ${
           currentRole === "farmer"
-            ? ` - Pens: ${acc.num_of_pens}, Capacity: ${acc.pen_capacity}`
+            ? `<span> - Pens: ${acc.num_of_pens}, Capacity: ${acc.pen_capacity}</span>`
             : ""
         }
         <button class="edit-btn">Edit</button>
@@ -96,13 +98,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const password = document.getElementById("password").value;
+
+    // 🛡️ Strengthening: Minimum 8 characters check
+    if (password.length < 8) {
+      messageEl.style.color = "red";
+      messageEl.textContent = "Password must be at least 8 characters long.";
+      return;
+    }
+
     const payload = {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_no: document.getElementById("contact_no").value.trim(),
+      contact_info: document.getElementById("contact_no").value.trim(), // Renamed to contact_info for backend consistency
       email: document.getElementById("email").value.trim(),
-      password: document.getElementById("password").value,
+      password: password,
       managerId: adminId
     };
 
@@ -140,7 +151,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (res.ok && data.success) {
         messageEl.style.color = "green";
-        messageEl.textContent = `${currentRole} registered successfully!`;
+        messageEl.textContent = `${currentRole.charAt(0).toUpperCase() + currentRole.slice(1)} registered successfully!`;
         registerForm.reset();
         fetchAccounts();
       } else {
@@ -149,7 +160,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (err) {
       console.error("Register error:", err);
-      messageEl.textContent = "Server error";
+      messageEl.style.color = "red";
+      messageEl.textContent = err.message || "Server error";
     }
   });
 
@@ -158,7 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("editFirstName").value = acc.first_name || "";
     document.getElementById("editLastName").value = acc.last_name || "";
     document.getElementById("editAddress").value = acc.address || "";
-    document.getElementById("editContact").value = acc.contact_no || "";
+    document.getElementById("editContact").value = acc.contact_no || acc.contact_info || "";
 
     if (currentRole === "farmer") {
       document.getElementById("editPens").value = acc.num_of_pens || 0;
@@ -185,27 +197,34 @@ document.addEventListener("DOMContentLoaded", async () => {
       payload.pen_capacity = Number(document.getElementById("editCapacity").value);
     }
 
+    // Determine update endpoint
+    // Note: ensure your backend has /api/auth/update-farmer/:farmerId if update-encoder uses an ID
     const endpoint =
       currentRole === "farmer"
-        ? `/api/auth/farmer/update`  // ✅ use attachUser route
+        ? `/api/auth/update-farmer/${editForm.dataset.id}` // Using consistent ID-based routing
         : `/api/auth/update-encoder/${editForm.dataset.id}`;
 
-    const res = await fetch(`${BASE_URL}${endpoint}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      editModal.style.display = "none";
-      fetchAccounts();
-    } else {
-      alert(data.message || "Update failed");
+    try {
+        const res = await fetch(`${BASE_URL}${endpoint}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+    
+        const data = await res.json();
+    
+        if (res.ok && data.success) {
+          editModal.style.display = "none";
+          fetchAccounts();
+        } else {
+          alert(data.message || "Update failed");
+        }
+    } catch (err) {
+        console.error("Update error:", err);
+        alert("An error occurred during update.");
     }
   });
 

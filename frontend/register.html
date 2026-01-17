@@ -5,19 +5,61 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BreedIT - Register</title>
   <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    /* Adding some basic layout for the OTP group */
+    .otp-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .otp-group input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    #sendOtpBtn {
+      background-color: #5aa9e6;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    #sendOtpBtn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #message {
+      margin-top: 10px;
+      font-size: 0.9em;
+      min-height: 1.2em;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <h2>Register an Account</h2>
 
-    <form id="registerForm">
+    <form id="signupForm">
       <input type="text" id="first_name" placeholder="First Name" required />
       <input type="text" id="last_name" placeholder="Last Name" required />
+      
+      <input type="text" id="phone" placeholder="Phone Number" required />
+      
       <input type="email" id="email" placeholder="Email" required />
-      <input type="password" id="password" placeholder="Password" required />
+
+      <div class="otp-group">
+        <input type="text" id="otp" placeholder="Enter OTP" required />
+        <button type="button" id="sendOtpBtn">Send OTP</button>
+      </div>
+
+      <input type="password" id="password" placeholder="Password (Min. 8 characters)" required />
+      <input type="password" id="confirm_password" placeholder="Confirm Password" required />
 
       <button type="submit">Register</button>
     </form>
+
+    <div id="message"></div>
 
     <p style="margin-top: 15px;">
       Already have an account?

@@ -20,7 +20,8 @@
     "mongoose": "^8.19.3",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "validator": "^13.15.26"
   },
   "devDependencies": {
     "@types/node": "^25.0.3"
