@@ -16,11 +16,17 @@
         td { padding: 14px; border-bottom: 1px solid #eee; font-size: 0.95rem; color: #333; }
         tr:hover { background-color: #fcfcfc; }
 
+        /* Badge Tag Styling for Swine IDs */
+        .badge-tag { background: #f1f3f5; color: #495057; padding: 2px 8px; border-radius: 4px; font-family: monospace; font-weight: bold; border: 1px solid #dee2e6; }
+
         /* Status Badges */
-        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .status-passed { color: #2e7d32; background: #e8f5e9; border: 1px solid #c8e6c9; }
-        .status-failed { color: #c62828; background: #ffebee; border: 1px solid #ffcdd2; }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; }
         
+        /* Search Bar Styling */
+        .search-container { margin-bottom: 25px; display: flex; gap: 10px; }
+        .search-input { flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.2s; }
+        .search-input:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1); }
+
         /* Action Buttons */
         .action-btn { padding: 8px 16px; cursor: pointer; border-radius: 6px; border: 1px solid #007bff; background: transparent; color: #007bff; font-weight: 600; transition: 0.2s; margin-right: 8px; }
         .action-btn:hover { background: #007bff; color: white; }
@@ -36,8 +42,8 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .form-grid { grid-template-columns: 1fr; }
             th, td { padding: 10px; font-size: 0.85rem; }
+            .search-container { flex-direction: column; }
         }
     </style>
 </head>
@@ -49,9 +55,13 @@
         </a>
         
         <header style="margin-bottom: 30px;">
-            <h1 style="margin: 0; color: #1a1a1a;">Monitoring of Reproduction</h1>
-            <p style="color: #666; margin-top: 5px;">Track growth, selection processes, and artificial insemination history.</p>
+            <h1 style="margin: 0; color: #1a1a1a;">Reproduction & Monitoring Pipeline</h1>
+            <p style="color: #666; margin-top: 5px;">Manage the full lifecycle from Insemination through Monitoring (Day 1-30), Weaning, and Final Selection.</p>
         </header>
+
+        <div class="search-container">
+            <input type="text" id="reproductionSearch" class="search-input" placeholder="Search by Farmer, Swine Tag, or Stage (e.g. Monitoring, Weaned, Final Selection)...">
+        </div>
 
         <div class="section-card" style="border-top-color: #3498db;">
             <h2 class="section-title">
@@ -76,16 +86,18 @@
         </div>
 
         <div class="section-card" style="border-top-color: #9b59b6;">
-            <h2 class="section-title">Morphological Characteristics & Growth</h2>
+            <h2 class="section-title">Growth Monitoring & Trait Evaluation</h2>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
                             <th>Farmer</th>
                             <th>Swine Tag</th>
-                            <th>Sex</th> <th>Stage</th>
-                            <th>Physical Traits (W/L/T)</th>
-                            <th>Teeth</th> <th>Date Recorded</th>
+                            <th>Sex</th> 
+                            <th>Current Stage</th> 
+                            <th>Traits (Wt/Len/Teat)</th>
+                            <th>Teeth</th> 
+                            <th>Date Recorded</th>
                         </tr>
                     </thead>
                     <tbody id="morphTableBody">
@@ -96,22 +108,22 @@
         </div>
 
         <div class="section-card" style="border-top-color: #e74c3c;">
-            <h2 class="section-title">Deformities Monitoring</h2>
+            <h2 class="section-title">Deformities Monitoring (Critical for Day 1-30)</h2>
             <div id="deformityList">
-                <p style="color: #666;">Scanning for deformity reports...</p>
+                <p style="color: #666;">Scanning for deformity reports in the current batch...</p>
             </div>
         </div>
 
         <div class="section-card" style="border-top-color: #f39c12;">
-            <h2 class="section-title">Selection Process (Breeding Evaluation)</h2>
+            <h2 class="section-title">Selection Process (Retention & Culling)</h2>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
                             <th>Swine Tag</th>
                             <th>Farmer</th>
-                            <th>Current Stage</th>
-                            <th>Selection Recommendation</th>
+                            <th>Current Pipeline Stage</th>
+                            <th>System Suggestion</th>
                             <th>Administrative Actions</th>
                         </tr>
                     </thead>

@@ -28,23 +28,21 @@ router.post(
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-            // 1. Auto-generate Boar ID (Pattern: BOAR-0001)
             const boarCount = await Swine.countDocuments({ 
                 swine_id: { $regex: /^BOAR-/ } 
             });
             const nextNumber = boarCount + 1;
             const swineId = `BOAR-${String(nextNumber).padStart(4, "0")}`;
 
-            // 2. Create the Master Boar record
             const newBoar = new Swine({
                 swine_id: swineId,
                 registered_by: managerId,
-                farmer_id: null, // Master Boars don't belong to a single farmer
+                farmer_id: null, 
                 sex: "Male",
                 breed: "Native", 
                 color: color || "Unknown",
                 age_stage: "adult",
-                is_external_boar: true, // Tag as master/external source
+                is_external_boar: true, 
                 date_transfer: date_transfer || new Date(),
                 health_status: health_status || "Healthy",
                 current_status: current_status || "Active",
@@ -116,13 +114,14 @@ router.post(
             }
             const swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
 
+            // UPDATED LOGIC: Initial status for piglets is now "Monitoring (Day 1-30)"
             let initialStatus = current_status; 
             let initialPerfStage;
 
             if (!initialStatus) {
                 if (age_stage === "piglet") {
-                    initialStatus = "1st Selection Ongoing";
-                    initialPerfStage = "1st Stage Selection"; 
+                    initialStatus = "Monitoring (Day 1-30)";
+                    initialPerfStage = "Monitoring (Day 1-30)"; 
                 } else {
                     initialStatus = (sex === "Female" || sex === "female") ? "Open" : "Market-Ready";
                     initialPerfStage = "Routine"; 
@@ -232,7 +231,7 @@ router.post(
 );
 
 /* ======================================================
-    GET ALL SWINE (Cleanest Forward Logic)
+    GET ALL SWINE
 ====================================================== */
 router.get(
     "/all",
@@ -254,7 +253,6 @@ router.get(
                 
                 const farmerIds = farmers.map((f) => f._id);
                 
-                // Logical OR: Show swine belonging to my farmers OR Master Boars I registered
                 query = {
                     $or: [
                         { farmer_id: { $in: farmerIds } },
@@ -264,7 +262,6 @@ router.get(
                 };
             }
 
-            // Filters
             if (req.query.sex) query.sex = { $regex: new RegExp(`^${req.query.sex}$`, "i") };
             if (req.query.age_stage) query.age_stage = { $regex: new RegExp(`^${req.query.age_stage}$`, "i") };
             if (req.query.farmer_id) query.farmer_id = req.query.farmer_id;
@@ -360,7 +357,7 @@ router.get(
                 $or: [
                         { registered_by: managerId },
                         { farmer_id: { $in: farmerIds } },
-                        { farmer_id: null } // Include Maintenance Boars
+                        { farmer_id: null } 
                 ]
             }).select("swine_id breed").lean();
 
@@ -422,16 +419,27 @@ router.put(
             const allowedFields = [
                 "sex", "color", "breed", "birth_date", "health_status", 
                 "sire_id", "dam_id", "date_transfer", 
-                "batch", "age_stage", "current_status"
+                "batch", "age_stage", "current_status", "performance_records"
             ];
 
             allowedFields.forEach((field) => {
-                if (updates[field] !== undefined) swine[field] = updates[field];
+                if (updates[field] !== undefined) {
+                    // Handle performance_records as an array push if it's a single object
+                    if (field === "performance_records" && !Array.isArray(updates[field])) {
+                        swine.performance_records.push({
+                            ...updates[field],
+                            recorded_by: user.id
+                        });
+                    } else {
+                        swine[field] = updates[field];
+                    }
+                }
             });
 
             await swine.save();
             res.json({ success: true, message: "Swine updated successfully", swine });
         } catch (error) {
+            console.error("[UPDATE SWINE ERROR]:", error);
             res.status(500).json({ success: false, message: "Server error" });
         }
     }
