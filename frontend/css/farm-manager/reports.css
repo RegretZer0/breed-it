@@ -1,6 +1,7 @@
-/* =========== Root tokens =========== */
-:root{
-  /* palette */
+/* =========================================================
+   ROOT TOKENS
+========================================================= */
+:root {
   --bg: #ffffff;
   --muted-border: #e9e9e9;
   --card-border: #e6e6e6;
@@ -12,141 +13,405 @@
   --stat-blue: #1ea7ff;
   --stat-green: #43c572;
   --stat-red: #f55b66;
-  --stat-blue2: #1543ff;
-  --stat-teal: #12c0a4;
-  --stat-brown: #b67c1a;
-  --stat-purple: #b14cf0;
 
-  /* sizing */
-  --gutter: 18px;
-  --radius: 8px;
+  --gutter: 16px;
+  --radius: 10px;
 }
-/* =========== Global reset / basics =========== */
-*, *::before, *::after { box-sizing: border-box; }
-html, body {
-  height: 100%;
+
+
+/* =========================================================
+   RESET / BASE
+========================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
   margin: 0;
-  font-family: var(--font-family-system);
-  font-size: var(--base-font-size);
-  line-height: var(--base-line-height);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text-dark);
-  -webkit-text-size-adjust: 100%;
 }
 
-/* =========== Shell layout (topbar & sidebar removed) =========== */
-.app-shell{
-  display: flex;
-  min-height: 100vh;
-  position: relative;
-  gap: var(--gutter);
-  align-items: flex-start;
-  padding: var(--gutter);
-}
 
-/* =========== Main content =========== */
-.main-content{
-  flex: 1;
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+.main-content {
   padding: var(--gutter);
-  background: var(--bg);
   min-width: 0;
 }
 
-/* Page card wrapper */
-.page-card{
+.page-card {
+  background: var(--bg);
   border-radius: var(--radius);
   border: 1px solid var(--card-border);
-  box-shadow: none;
-  background: var(--bg);
+  padding: var(--gutter);
 }
 
-/* Dashboard title */
-.page-title{
-  font-weight: 700;
-  color: var(--text-dark);
-  margin: 0;
+.page-title {
   font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 10px;
 }
 
-/* Stats grid: each stat card */
-.stat-card{
-  background: var(--bg);
+
+/* =========================================================
+   STATS GRID
+========================================================= */
+.stats-grid {
+  margin-top: 10px;
+}
+
+.stat-card {
+  background: #fff;
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 16px;
   border: 1px solid #f0f0f0;
-  min-height: 86px;
-  box-shadow: none;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
   align-items: center;
-}
-.stat-label{
-  font-size: 14px;
-  color: var(--muted-text);
-  margin-bottom: 6px;
-}
-.stat-number{
-  font-weight: 800;
-  font-size: 26px;
-  color: var(--text-dark);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* colored circular icon */
-.stat-icon{
-  width: 44px;
-  height: 44px;
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--muted-text);
+  margin-bottom: 4px;
+}
+
+.stat-number {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   font-size: 18px;
-  flex: 0 0 44px;
 }
-.stat-icon.orange{ background: var(--stat-orange); }
-.stat-icon.blue{ background: var(--stat-blue); }
-.stat-icon.green{ background: var(--stat-green); }
-.stat-icon.red{ background: var(--stat-red); }
 
+.stat-icon.orange { background: var(--stat-orange); }
+.stat-icon.blue   { background: var(--stat-blue); }
+.stat-icon.green  { background: var(--stat-green); }
+.stat-icon.red    { background: var(--stat-red); }
+
+
+/* =========================================================
+   REPORTS TABLE (DESKTOP)
+========================================================= */
 .reports-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
+  margin-top: 20px;
+  background: #fff;
+}
+
+.reports-table th {
+  background: #f8f8f8;
+  text-align: left;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .reports-table th,
 .reports-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
 }
 
-.reports-table th {
-  background: #f5f5f5;
+.reports-table tr:hover {
+  background: #fafafa;
 }
 
 .reports-table button {
-  padding: 6px 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #222;
+  color: #fff;
   cursor: pointer;
 }
 
-.report-details {
-  margin-top: 25px;
-  border: 1px solid #ccc;
-  padding: 15px;
-  background: #fafafa;
-  max-width: 700px;
+.reports-table button:hover {
+  opacity: 0.9;
 }
 
-.report-details video,
-.report-details img {
+
+/* =========================================================
+   MOBILE TABLE (STACKED)
+========================================================= */
+@media (max-width: 768px) {
+  .reports-table thead {
+    display: none;
+  }
+
+  .reports-table,
+  .reports-table tbody,
+  .reports-table tr,
+  .reports-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .reports-table tr {
+    border: 1px solid #eaeaea;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+
+  .reports-table td {
+    border: none;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+
+  .reports-table td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted-text);
+    display: block;
+    margin-bottom: 2px;
+  }
+}
+
+
+/* =========================================================
+   REPORT DETAILS PANEL
+========================================================= */
+.report-details {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 18px;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.report-details-card .card-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+
+/* =========================================================
+   DETAILS GRID (MERGED + RESPONSIVE)
+========================================================= */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin-bottom: 20px;
+}
+
+.detail-grid p {
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   MEDIA (IMAGES / VIDEO)
+========================================================= */
+.media-wrapper {
+  margin-top: 16px;
+}
+
+.media-wrapper img,
+.media-wrapper video,
+.report-details img,
+.report-details video {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: 10px;
   margin-top: 10px;
-  max-width: 100%;
+}
+
+
+/* =========================================================
+   ACTION BUTTONS
+========================================================= */
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
 }
 
 .report-actions button {
-  margin-right: 10px;
-  margin-top: 10px;
+  flex: 1 1 140px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+#approveBtn {
+  background: var(--stat-green);
+  color: #fff;
+}
+
+#confirmAIBtn {
+  background: var(--stat-blue);
+  color: #fff;
+}
+
+#confirmPregnancyBtn {
+  background: var(--stat-orange);
+  color: #fff;
+}
+
+.report-actions button:last-child {
+  background: #ddd;
+  color: #333;
+}
+
+
+/* =========================================================
+   FILTER CARD
+========================================================= */
+.filter-card {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-row input,
+.filter-row select {
+  flex: 1;
+  min-height: 42px;
+  min-width: 200px;
+}
+
+.filter-row button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #222;
+  color: #fff;
+  min-width: 100px;
+}
+
+.filter-row button.secondary {
+  background: #ddd;
+  color: #333;
+}
+
+@media (max-width: 640px) {
+  .filter-row {
+    flex-direction: column;
+  }
+}
+
+
+/* =========================================================
+   MODAL OVERLAY
+========================================================= */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  padding: 16px;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   MODAL CONTENT
+========================================================= */
+.modal-content {
+  background: #fff;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  animation: modalPop 0.25s ease-out;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-content h3 {
+  margin: 0 0 12px;
+}
+
+.modal-content label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.modal-content input,
+.modal-content select,
+.modal-content textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.modal-content .btn-nav {
+  padding: 10px 14px;
+  font-weight: 600;
+}
+
+.btn-nav.secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-nav.secondary:hover {
+  background: #d1d5db;
 }
