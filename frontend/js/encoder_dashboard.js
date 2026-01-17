@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (welcome) welcome.textContent = `Welcome, ${user.name || "Encoder"}`;
 
   // ----- Notifications Setup -----
+  // Initializes notifications for the encoder. 
+  // Our updated cron job now sends detailed messages to encoders including Swine ID and Farmer Name.
   initNotifications(user.id);
 
   // ----- CALENDAR INITIALIZATION -----
@@ -41,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
           const data = await response.json();
           if (data.success) {
-            // These events now include the farmer name in the title from the backend
+            // These events include titles and background colors defined in the backend
             successCallback(data.events);
           } else {
             console.error("Backend returned error for calendar:", data.message);
@@ -60,18 +62,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (title.includes('ai due')) {
           typeLabel = 'Day 3 Insemination Window';
         } else if (title.includes('heat re-check')) {
-          typeLabel = '23-Day Pregnancy Re-check';
+          typeLabel = '21-23 Day Pregnancy Re-check';
         } else if (title.includes('farrowing')) {
           typeLabel = 'Expected Farrowing Date';
+        } else if (title.includes('weaning') || title.includes('ready for weaning')) {
+          typeLabel = '30-Day Weaning / Cycle Reset';
         }
 
-        // Apply tooltip
+        // Apply tooltip showing both the event title and the logic-based label
         info.el.title = `${info.event.title} (${typeLabel})`;
 
         // Visual Enforcement: Apply background colors from backend
         if (info.event.backgroundColor) {
           info.el.style.backgroundColor = info.event.backgroundColor;
           info.el.style.borderColor = info.event.backgroundColor;
+        }
+
+        // Encoder UI Enhancement: Differentiate high-priority biological events
+        if (title.includes('ai') || title.includes('farrowing')) {
+          info.el.style.borderLeft = '3px solid #000';
         }
       },
       eventClick: (info) => {
@@ -84,7 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     calendar.render();
   }
 
-  // Refetch events when window is focused to keep data fresh
+  // Refetch events when window is focused to keep data fresh (e.g. after adding a report)
   window.addEventListener('focus', () => {
     if (calendar) calendar.refetchEvents();
   });

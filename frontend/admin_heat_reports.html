@@ -92,6 +92,9 @@
     .modal-content { background: white; margin: 10% auto; padding: 30px; width: 380px; border-radius: 12px; position: relative; }
     .modal-content label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
     .modal-content input, .modal-content select, .modal-content textarea { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.95rem; }
+    
+    /* Grid for farrowing counts */
+    .count-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   </style>
 </head>
 <body>
@@ -195,6 +198,36 @@
         <button id="submitAI" class="btn-nav" style="flex: 1; background: var(--info);">Confirm AI</button>
         <button type="button" class="btn-nav btn-close" onclick="document.getElementById('aiConfirmModal').style.display='none'" style="flex: 1;">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <div id="farrowingModal" class="modal">
+    <div class="modal-content" style="width: 450px;">
+      <h3 style="color: var(--success); margin-top: 0;">🐷 Register Farrowing Results</h3>
+      <form id="farrowingForm">
+        <label>Actual Farrowing Date</label>
+        <input type="date" id="farrowingDateInput" required>
+        
+        <div class="count-grid">
+          <div>
+            <label>Live</label>
+            <input type="number" id="liveCount" value="0" min="0" required>
+          </div>
+          <div>
+            <label>Mummy</label>
+            <input type="number" id="mummyCount" value="0" min="0">
+          </div>
+          <div>
+            <label>Stillborn</label>
+            <input type="number" id="stillCount" value="0" min="0">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button type="submit" class="btn-nav" style="flex: 1; background: var(--success);">Confirm Farrowing</button>
+          <button type="button" class="btn-nav btn-close" onclick="document.getElementById('farrowingModal').style.display='none'" style="flex: 1;">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 

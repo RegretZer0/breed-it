@@ -32,6 +32,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // ---------------- HELPER: NOTIFICATIONS ----------------
+  const sendNotification = async (farmerId, message) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/notifications/send`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          recipient_id: farmerId,
+          message: message,
+          type: "swine_registration",
+          sender_id: user.id
+        })
+      });
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+    }
+  };
+
   // ---------------- HELPER: DISPLAY FORMATTER ----------------
   const formatStageDisplay = (stage) => {
     const mapping = {
@@ -42,6 +63,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       'piglet': 'Piglet'
     };
     return mapping[stage] || stage;
+  };
+
+  // ---------------- HELPER: FIND ACTIVE CYCLE ----------------
+  const getActiveMotherData = (swineId) => {
+    const mother = allSwine.find(s => s.swine_id === swineId);
+    if (!mother || !mother.breeding_cycles) return null;
+    
+    const farrowedCycles = mother.breeding_cycles
+      .filter(c => c.farrowed === true)
+      .sort((a, b) => b.cycle_number - a.cycle_number);
+      
+    return farrowedCycles.length > 0 ? farrowedCycles[0] : null;
   };
 
   // ---------------- DOM ELEMENTS ----------------
@@ -95,10 +128,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (stage === "Monitoring (Day 1-30)") {
       batchInput.readOnly = true;
       if (damSelect.value) {
-        const baseBatch = `${damSelect.value}`;
-        const existingCount = allSwine.filter(s => s.dam_id === damSelect.value).length;
+        const cycle = getActiveMotherData(damSelect.value);
+        const cycleCode = cycle ? `C${cycle.cycle_number}` : "CX";
+        const baseBatch = `${damSelect.value}-${cycleCode}`;
+        const existingCount = allSwine.filter(s => s.dam_id === damSelect.value && s.batch.includes(cycleCode)).length;
         const nextSequence = (existingCount + 1).toString().padStart(2, '0');
         batchInput.value = `${baseBatch}-${nextSequence}`;
+
+        if (cycle && cycle.actual_farrowing_date) {
+            document.getElementById("birth_date").value = cycle.actual_farrowing_date.split('T')[0];
+        }
       } else {
         batchInput.value = "";
         batchInput.placeholder = "Select Sow to generate Batch ID";
@@ -107,8 +146,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (stage === "adult") {
         batchInput.readOnly = true;
         const managerSowCount = allSwine.filter(s => s.age_stage === "adult" && s.sex === "Female").length;
-        const batchLetter = String.fromCharCode(65 + managerSowCount); 
-        batchInput.value = `${batchLetter}-1`;
+        const batchLetter = String.fromCharCode(65 + (managerSowCount % 26)); 
+        batchInput.value = `${batchLetter}-${managerSowCount + 1}`;
     }
     else {
       batchInput.readOnly = false;
@@ -149,7 +188,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     toggleDeformityField();
   });
 
-  // ---------------- CASCADING DROPDOWNS ----------------
+  // ---------------- DROPDOWNS ----------------
 
   async function loadFarmers() {
     try {
@@ -244,7 +283,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / MASTER";
       const latestPerf = (sw.performance_records || []).slice(-1)[0] || {};
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c", "Lactating": "#2ecc71" };
-      const rawStatus = sw.current_status || 'Monitoring (Day 1-30)';
+      const rawStatus = sw.current_status || 'Monitoring';
       const statusColor = statusColors[rawStatus] || "#3498db";
 
       const offspringCount = allSwine.filter(child => 
@@ -254,7 +293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><strong>${sw.swine_id}</strong><br><small>Batch: ${sw.batch}</small><br>
-          <div style="margin-top:5px;"><button class="view-btn" data-id="${sw.swine_id}">History</button>
+          <div style="margin-top:5px;"><button class="view-btn" data-id="${sw.swine_id}">View</button>
           <button class="edit-btn" data-swine='${JSON.stringify(sw)}'>Edit</button></div></td>
         <td>${farmerName}</td>
         <td>Sex: ${sw.sex}<br>Breed: ${sw.breed}<br>Age: ${formatStageDisplay(sw.age_stage)}</td>
@@ -352,11 +391,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    // Validation: Require mother for piglets
-    if (ageStageSelect.value === "Monitoring (Day 1-30)" && !damSelect.value) {
-      swineMessage.className = "message error";
-      swineMessage.textContent = "A Mother (Dam ID) is required to register new piglets.";
-      return;
+    let birthCycleNumber = null;
+
+    if (ageStageSelect.value === "Monitoring (Day 1-30)") {
+      if (!damSelect.value) {
+        swineMessage.className = "message error";
+        swineMessage.textContent = "A Mother (Dam ID) is required to register new piglets.";
+        return;
+      }
+      const activeCycle = getActiveMotherData(damSelect.value);
+      if (activeCycle) birthCycleNumber = activeCycle.cycle_number;
     }
 
     const teatVal = document.getElementById("teatCount").value;
@@ -374,7 +418,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       swine_id: ageStageSelect.value === "adult" ? batchInput.value.trim() : null,
       sex: sexSelect.value, 
       age_stage: ageStageSelect.value, 
-      current_status: ageStageSelect.value === "adult" ? "Open" : ageStageSelect.value,
+      current_status: ageStageSelect.value === "adult" ? "Open" : "Monitoring",
       color: document.getElementById("color").value.trim(),
       breed: breedInput.value.trim(), 
       birth_date: document.getElementById("birth_date").value,
@@ -388,7 +432,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       teatCount: teatVal || null,
       deformities: deformities.length ? deformities : ["None"],
       date_transfer: document.getElementById("date_transfer").value || new Date().toISOString().split('T')[0],
-      managerId
+      managerId,
+      birth_cycle_number: birthCycleNumber 
     };
 
     try {
@@ -402,6 +447,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (data.success) {
         swineMessage.className = "message success";
         swineMessage.textContent = isEditing ? "Successfully Updated!" : "Successfully Registered!";
+
+        // Send notification to farmer if it's a new registration
+        if (!isEditing && farmerSelect.value) {
+          const senderRole = role === "encoder" ? "Encoder" : "Farm Manager";
+          const msg = `New swine record (ID: ${data.swine?.swine_id || payload.batch}) has been registered to your farm by the ${senderRole}.`;
+          await sendNotification(farmerSelect.value, msg);
+        }
+
         cancelEditing();
         await fetchSwine();
       } else {
@@ -412,93 +465,65 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ---------------- VIEW MODAL (History Logic) ----------------
-  swineTableBody.addEventListener("click", (e) => {
+  swineTableBody.addEventListener("click", async (e) => {
     if (e.target.classList.contains("view-btn")) {
         const sw = allSwine.find(s => s.swine_id === e.target.dataset.id);
         if(!sw) return;
 
-        const damObj = allSwine.find(s => s.swine_id === sw.dam_id);
-        const sireObj = allSwine.find(s => s.swine_id === sw.sire_id);
+        document.getElementById("modalSwineId").textContent = `Swine History: ${sw.swine_id}`;
         
-        document.getElementById("modalSwineId").innerHTML = `
-            Record: ${sw.swine_id} <br>
-            <small style="color: #666;">Childhood Batch: ${sw.batch || 'N/A'}</small>
-        `;
+        const reproSection = document.getElementById("reproSummarySection");
+        if (sw.sex === "Female" && sw.age_stage === "adult") {
+            reproSection.style.display = "block";
+            const cycles = sw.breeding_cycles || [];
+            const totalBorn = cycles.reduce((sum, c) => sum + (c.farrowing_results?.total_born || 0), 0);
+            const totalLive = cycles.reduce((sum, c) => sum + (c.farrowing_results?.live_born || 0), 0);
+            
+            document.getElementById("statCycles").textContent = cycles.length;
+            document.getElementById("statTotalBorn").textContent = totalBorn;
+            document.getElementById("statAvgLitter").textContent = cycles.length ? (totalBorn / cycles.length).toFixed(1) : 0;
+            document.getElementById("statTotalLive").textContent = totalLive;
+        } else {
+            reproSection.style.display = "none";
+        }
 
-        const familyInfo = document.getElementById("familyInfoSection") || document.createElement("div");
+        const existingFamily = document.getElementById("familyInfoSection");
+        if(existingFamily) existingFamily.remove();
+        
+        const familyInfo = document.createElement("div");
         familyInfo.id = "familyInfoSection";
-        familyInfo.style.margin = "15px 0";
-        familyInfo.style.padding = "10px";
-        familyInfo.style.background = "#f9f9f9";
+        familyInfo.style.padding = "15px";
+        familyInfo.style.background = "#f8f9fa";
         familyInfo.style.borderRadius = "8px";
+        familyInfo.style.marginBottom = "20px";
         familyInfo.innerHTML = `
-            <div style="display:flex; justify-content: space-between;">
-                <div><strong>Sire (Father):</strong> ${sw.sire_id || 'Unknown'}<br><small>${sireObj ? sireObj.breed : ''}</small></div>
-                <div><strong>Dam (Mother):</strong> ${sw.dam_id || 'Unknown'}<br><small>${damObj ? damObj.breed : ''}</small></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div><strong>Sire (Father):</strong> ${sw.sire_id || 'Unknown'}</div>
+                <div><strong>Dam (Mother):</strong> ${sw.dam_id || 'Unknown'}</div>
             </div>
         `;
         document.getElementById("modalSwineId").after(familyInfo);
 
-        // Filter all children ever recorded for this sow/boar
-        const children = allSwine.filter(s => s.dam_id === sw.swine_id || s.sire_id === sw.swine_id);
-        
-        const offspringSection = document.getElementById("offspringListSection") || document.createElement("div");
-        offspringSection.id = "offspringListSection";
-        offspringSection.innerHTML = `
-            <h4>Offspring (Family Tree)</h4>
-            <table class="swine-table" style="width:100%; font-size: 0.85em;">
-                <thead>
-                    <tr><th>ID</th><th>Batch</th><th>Sex</th><th>Stage</th></tr>
-                </thead>
-                <tbody id="offspringTableBody"></tbody>
-            </table>
-        `;
-        const modalContent = modal.querySelector(".modal-content");
-        if(!document.getElementById("offspringListSection")) modalContent.appendChild(offspringSection);
-        
-        const offspringTable = document.getElementById("offspringTableBody");
-        offspringTable.innerHTML = children.length ? "" : "<tr><td colspan='4'>No recorded offspring.</td></tr>";
-        children.forEach(child => {
-            offspringTable.innerHTML += `
-                <tr>
-                    <td>${child.swine_id}</td>
-                    <td>${child.batch}</td>
-                    <td>${child.sex}</td>
-                    <td>${formatStageDisplay(child.age_stage)}</td>
-                </tr>
-            `;
-        });
-
-        // REPRODUCTIVE HISTORY: Link cycles to the registered piglets
         const repoBody = document.getElementById("reproductiveHistoryBody");
-        repoBody.innerHTML = (sw.breeding_cycles || []).length ? "" : "<tr><td colspan='6'>No cycle data.</td></tr>";
-        
-        
-
+        repoBody.innerHTML = "";
         (sw.breeding_cycles || []).forEach(c => {
-          // Identify piglets belonging to THIS specific cycle based on farrowing date
-          const cycleStart = new Date(c.actual_farrowing_date);
-          const cycleEnd = new Date(cycleStart);
-          cycleEnd.setDate(cycleEnd.getDate() + 7); // 7-day window for registration
-
-          const countThisCycle = children.filter(child => {
-            const birth = new Date(child.birth_date);
-            return birth >= cycleStart && birth <= cycleEnd;
-          }).length;
+          const linkedPiglets = allSwine.filter(child => 
+            child.dam_id === sw.swine_id && child.birth_cycle_number === c.cycle_number
+          ).length;
 
           repoBody.innerHTML += `
             <tr>
-              <td>${c.cycle_number}</td>
+              <td>Cycle ${c.cycle_number}</td>
               <td>${c.ai_service_date ? new Date(c.ai_service_date).toLocaleDateString() : '--'}</td>
               <td>${c.actual_farrowing_date ? new Date(c.actual_farrowing_date).toLocaleDateString() : '--'}</td>
-              <td>${countThisCycle} Registered</td>
-              <td>${c.farrowing_results?.live_born || 0} (Initial)</td>
-              <td>${sw.current_status}</td>
+              <td>${c.farrowing_results?.total_born || 0} born</td>
+              <td>${c.farrowing_results?.live_born || 0} L / ${c.farrowing_results?.stillborn || 0} S</td>
+              <td><span class="status-badge" style="background:#eee;">${linkedPiglets} Registered</span></td>
             </tr>`;
         });
 
         const perfBody = document.getElementById("performanceTimelineBody");
-        perfBody.innerHTML = (sw.performance_records || []).length ? "" : "<tr><td colspan='5'>No growth records.</td></tr>";
+        perfBody.innerHTML = "";
         (sw.performance_records || []).forEach(p => {
           perfBody.innerHTML += `
             <tr>
@@ -523,7 +548,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = (role === "encoder") ? "encoder_dashboard.html" : "admin_dashboard.html";
   });
 
-  // INITIALIZATION CALLS
+  // INITIALIZATION
   await loadFarmers();
   await fetchSwine();
   handleStageAndSexLogic(); 

@@ -16,6 +16,9 @@ const swineSchema = new mongoose.Schema({
   // batch is optional for Maintenance/External Boars
   batch: { type: String, required: false }, 
 
+  // NEW: Link piglet to a specific breeding cycle of the dam
+  birth_cycle_number: { type: Number, required: false },
+
   // ------------------- Current Lifecycle State -------------------
   current_status: {
     type: String,
@@ -121,10 +124,19 @@ const swineSchema = new mongoose.Schema({
 
 // ------------------- Logic / Helpers -------------------
 
+// Virtual to find all offspring
 swineSchema.virtual('offspring', {
   ref: 'Swine',
   localField: 'swine_id',
   foreignField: 'dam_id'
+});
+
+// NEW: Virtual to calculate total mortality count for display in tables
+swineSchema.virtual('total_mortality_count').get(function() {
+  if (!this.breeding_cycles) return 0;
+  return this.breeding_cycles.reduce((acc, cycle) => {
+    return acc + (cycle.farrowing_results?.mortality_count || 0);
+  }, 0);
 });
 
 swineSchema.virtual('selection_suggestion').get(function() {

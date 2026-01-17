@@ -19,7 +19,7 @@ const initHeatCron = () => {
     try {
       const now = new Date();
 
-      // --- PART 1: AI REMINDERS (New Logic) ---
+      // --- PART 1: AI REMINDERS ---
       // Send a reminder to the farmer if the scheduled AI (next_heat_check) is tomorrow
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -33,13 +33,11 @@ const initHeatCron = () => {
       for (const report of reportsNeedingReminder) {
         const aiDateStr = report.next_heat_check.toISOString().split('T')[0];
         
-        // If the AI date is tomorrow, send a notification
         if (aiDateStr === tomorrowStr && report.farmer_id?.user_id) {
-          // Check if we already sent a reminder today to avoid spam
           const existingNotif = await Notification.findOne({
             user_id: report.farmer_id.user_id,
             title: "Reminder: AI Scheduled Tomorrow",
-            createdAt: { $gte: new Date(now.setHours(0,0,0,0)) }
+            created_at: { $gte: new Date(new Date().setHours(0,0,0,0)) }
           });
 
           if (!existingNotif) {
@@ -54,7 +52,7 @@ const initHeatCron = () => {
         }
       }
 
-      // --- PART 2: AUTO-CONFIRM PREGNANCY (Original Logic) ---
+      // --- PART 2: AUTO-CONFIRM PREGNANCY ---
       const reportsToConfirm = await HeatReport.find({
         status: "under_observation",
         next_heat_check: { $lte: now }
@@ -63,14 +61,12 @@ const initHeatCron = () => {
       for (const report of reportsToConfirm) {
         report.status = "pregnant";
         
-        // Calculate 115-day farrowing date from the original AI date
         const farrowDate = new Date(report.ai_confirmed_at || now);
         farrowDate.setDate(farrowDate.getDate() + 115);
         report.expected_farrowing = farrowDate;
 
         await report.save();
 
-        // Update the Swine Model status
         await Swine.findByIdAndUpdate(report.swine_id, {
           current_status: "Pregnant"
         });
@@ -82,15 +78,15 @@ const initHeatCron = () => {
       const activePregnancies = await HeatReport.find({
         status: "pregnant",
         expected_farrowing: { $exists: true }
-      });
+      }).populate("farmer_id");
 
       for (const report of activePregnancies) {
         const farrowDate = new Date(report.expected_farrowing);
-        
         const diffTime = now - farrowDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         let newSwineStatus = null;
+        let shouldNotifyWeaning = false;
 
         if (diffDays >= 0 && diffDays < 2) {
             newSwineStatus = "Farrowing";
@@ -101,8 +97,12 @@ const initHeatCron = () => {
         else if (diffDays >= 30) {
             newSwineStatus = "Open";
             
-            report.status = "completed";
-            await report.save();
+            // Mark the breeding cycle report as completed
+            if (report.status !== "completed") {
+                report.status = "completed";
+                await report.save();
+                shouldNotifyWeaning = true; // Trigger notification only once when transitioning
+            }
         }
 
         if (newSwineStatus) {
@@ -111,6 +111,16 @@ const initHeatCron = () => {
                 swine.current_status = newSwineStatus;
                 await swine.save();
                 console.log(`Swine ${swine.swine_id} transitioned to ${newSwineStatus}`);
+
+                // Send notification when moving to Open (Weaning)
+                if (shouldNotifyWeaning && report.farmer_id?.user_id) {
+                    await Notification.create({
+                        user_id: report.farmer_id.user_id,
+                        title: "Weaning Complete",
+                        message: `Swine ${swine.swine_id} has completed the 30-day lactation period. Status is now 'Open' and ready for a new heat report.`,
+                        type: "success"
+                    });
+                }
             }
         }
       }

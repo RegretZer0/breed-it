@@ -28,7 +28,6 @@ router.post(
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-            // Generate BOAR ID (consistent logic)
             const boarCount = await Swine.countDocuments({ 
                 swine_id: { $regex: /^BOAR-/ } 
             });
@@ -84,7 +83,8 @@ router.post(
             farmer_id, sex, color, breed, birth_date, health_status,
             sire_id, dam_id, date_transfer, batch,
             age_stage, weight, bodyLength, heartGirth, teethCount,
-            leg_conformation, deformities, teat_count, current_status
+            leg_conformation, deformities, teat_count, current_status,
+            birth_cycle_number // ADDED: New field for lineage linking
         } = req.body;
 
         try {
@@ -95,7 +95,6 @@ router.post(
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-            // Authorization Check for Farmer
             if (farmer_id) {
                 const farmer = await Farmer.findOne({
                     _id: farmer_id,
@@ -108,7 +107,6 @@ router.post(
                 if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
             }
 
-            // ID Generation Logic
             let swineId;
             if (batch === "BOAR" || (sex.toLowerCase() === "male" && age_stage === "adult")) {
                 const boarCount = await Swine.countDocuments({ swine_id: { $regex: /^BOAR-/ } });
@@ -124,7 +122,6 @@ router.post(
                 swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
             }
 
-            // Initial Status Logic
             let initialStatus = current_status; 
             let initialPerfStage = "Registration";
 
@@ -147,6 +144,7 @@ router.post(
                 color,
                 breed,
                 birth_date,
+                birth_cycle_number, // ADDED: Assigning the cycle number
                 health_status: health_status || "Healthy",
                 sire_id,
                 dam_id,
@@ -220,14 +218,12 @@ router.post(
                 throw new Error("No active pregnant cycle found for this sow.");
             }
 
-            // Sync Heat Report
             await HeatReport.findOneAndUpdate(
                 { swine_id: sow._id, status: "pregnant" },
-                { status: "completed" },
+                { status: "lactating" }, 
                 { session }
             );
 
-            // Sync AI Record
             await AIRecord.findOneAndUpdate(
                 { swine_id: sow._id, status: "Success" },
                 { status: "Completed", actual_farrowing_date: actualFarrowingDate },
@@ -242,6 +238,50 @@ router.post(
             res.status(500).json({ success: false, message: error.message });
         } finally {
             session.endSession();
+        }
+    }
+);
+
+/* ======================================================
+    MANUAL WEANING (Override Route)
+====================================================== */
+router.patch(
+    "/:swineId/manual-weaning",
+    requireSessionAndToken,
+    allowRoles("farm_manager", "encoder", "farmer"),
+    async (req, res) => {
+        const { swineId } = req.params;
+        try {
+            const swine = await Swine.findOne({ swine_id: swineId });
+            if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+
+            if (swine.current_status !== "Lactating") {
+                return res.status(400).json({ success: false, message: "Only lactating swine can be weaned." });
+            }
+
+            swine.current_status = "Open";
+            
+            swine.performance_records.push({
+                stage: "Manual Weaning",
+                record_date: new Date(),
+                recorded_by: req.user.id,
+                remarks: "Manual override used to set status to Open."
+            });
+
+            await swine.save();
+
+            await HeatReport.findOneAndUpdate(
+                { swine_id: swine._id, status: "lactating" },
+                { status: "completed" }
+            );
+
+            res.json({ 
+                success: true, 
+                message: `Swine ${swineId} has been manually weaned and is now Open.` 
+            });
+        } catch (error) {
+            console.error("[MANUAL WEANING ERROR]:", error);
+            res.status(500).json({ success: false, message: "Server error during weaning." });
         }
     }
 );
@@ -417,20 +457,19 @@ router.put(
             const swine = await Swine.findOne({ swine_id: swineId });
             if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-            // Farmer access check
             if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
                 return res.status(403).json({ success: false, message: "Access denied" });
 
             const allowedFields = [
                 "sex", "color", "breed", "birth_date", "health_status", 
                 "sire_id", "dam_id", "date_transfer", 
-                "batch", "age_stage", "current_status", "performance_records"
+                "batch", "age_stage", "current_status", "performance_records",
+                "birth_cycle_number" // ADDED: Allow updating lineage cycle
             ];
 
             allowedFields.forEach((field) => {
                 if (updates[field] !== undefined) {
                     if (field === "performance_records" && !Array.isArray(updates[field])) {
-                        // Push new record object to array
                         swine.performance_records.push({
                             ...updates[field],
                             record_date: new Date(),

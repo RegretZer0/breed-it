@@ -4,12 +4,29 @@ import { PerformanceHelper } from "./performance_helper.js"; // Integrated Helpe
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page: only farmers
-  await authGuard("farmer");
+  const user = await authGuard("farmer");
+  if (!user) return;
 
   const token = localStorage.getItem("token");
   const swineTableBody = document.querySelector("#swineTableBody");
   const loadingMessage = document.querySelector("#loadingMessage");
   const BACKEND_URL = "http://localhost:5000";
+
+  // --- HELPER: SEND NOTIFICATIONS ---
+  const sendAdminNotification = async (title, message, type = "info") => {
+    try {
+      await fetch(`${BACKEND_URL}/api/notifications/admin`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ title, message, type })
+      });
+    } catch (err) {
+      console.error("Failed to notify admin:", err);
+    }
+  };
 
   // --- HELPER: DISPLAY FORMATTER ---
   const formatStageDisplay = (stage) => {
@@ -40,6 +57,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         alert("Error: " + (data.message || "Failed to update health status."));
       } else {
         console.log(`Swine ${swineId} database updated to: ${newStatus}`);
+        
+        // Notify Admin of health changes
+        if (newStatus === "Sick" || newStatus === "Deceased") {
+          const nType = newStatus === "Deceased" ? "error" : "warning";
+          await sendAdminNotification(
+            `Health Alert: ${swineId}`,
+            `Farmer ${user.first_name} marked ${swineId} as ${newStatus}.`,
+            nType
+          );
+        }
       }
     } catch (error) {
       console.error("Update Error:", error);
@@ -83,6 +110,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (data.success) {
         alert(`Record added! Swine status moved to: ${nextStage}`);
+        
+        // Notify Admin of Growth Update
+        await sendAdminNotification(
+          "Growth Record Added",
+          `Farmer ${user.first_name} updated ${swineId} to ${nextStage}. Weight: ${weight}kg.`,
+          "info"
+        );
+
         location.reload(); 
       } else {
         alert("Error: " + data.message);
@@ -136,7 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const statusResult = PerformanceHelper.getSelectionStatus(swine);
 
       // --- TIMER CALCULATIONS ---
-      // Start from record_date of the last update, or transfer date if it's the first phase
       const phaseStartDate = latestPerf.record_date 
         ? new Date(latestPerf.record_date) 
         : new Date(swine.date_transfer || swine.createdAt);
@@ -152,7 +186,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (swine.current_status === "Monitoring (Day 1-30)") {
         daysRequired = 30;
       } else if (swine.current_status === "Weaned (Monitoring 3 Months)") {
-        daysRequired = 90; // 3 months roughly
+        daysRequired = 90; 
       }
 
       if (daysRequired > 0) {
@@ -232,7 +266,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (event.target.classList.contains("health-update-dropdown")) {
         const swineId = event.target.getAttribute("data-id");
         const newStatus = event.target.value;
-        if (newStatus.includes("Deceased") && !confirm(`Confirm Deceased status?`)) {
+        if (newStatus.includes("Deceased") && !confirm(`Confirm Deceased status for ${swineId}?`)) {
             location.reload(); 
             return;
         }

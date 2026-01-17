@@ -109,6 +109,23 @@
       overflow-y: auto; border-radius: 10px;
     }
     .close-modal { float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+
+    /* New styles for Repro stats in modal */
+    .repro-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .repro-stat-card {
+        background: #f0f7ff;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        border: 1px solid #d0e3ff;
+    }
+    .repro-stat-card span { display: block; font-size: 1.2em; font-weight: bold; color: #0056b3; }
+    .repro-stat-card label { font-size: 0.75em; color: #666; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -141,7 +158,7 @@
             <label for="ageStage">Age Stage:</label>
             <select id="ageStage" required>
               <option value="">Select Age Stage</option>
-              <option value="Monitoring (Day 1-30)">Piglet</option>
+              <option value="Monitoring (Day 1-30)">Piglet (Offspring)</option>
               <option value="adult">Adult (Breeder/Transferred Sow)</option>
             </select>
 
@@ -173,19 +190,19 @@
           </div>
 
           <div class="full-width form-section" id="lineageSection">
-            <h4>Parentage & Lineage</h4>
-            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows. (Lineage not required for Adult Batches)</p>
+            <h4>Parentage & Lineage (Family Tree)</h4>
+            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows. This links the swine to its biological parents.</p>
             <div class="form-grid">
               <div class="form-col">
                 <label for="dam_id">Select Dam (Mother / Sow):</label>
                 <select id="dam_id">
-                  <option value="">-- Select Sow --</option>
+                  <option value="">-- No Record / Unknown --</option>
                 </select>
               </div>
               <div class="form-col">
                 <label for="sire_id">Select Sire (Father / Boar):</label>
                 <select id="sire_id">
-                  <option value="">-- Select Boar --</option>
+                  <option value="">-- No Record / Unknown --</option>
                 </select>
               </div>
             </div>
@@ -276,9 +293,31 @@
       <span class="close-modal">&times;</span>
       <h2 id="modalSwineId">Swine History Card</h2>
       <hr>
+
+      <div id="reproSummarySection" class="modal-section" style="margin-top:20px; display:none;">
+          <h4>Lifetime Reproductive Summary</h4>
+          <div class="repro-summary-grid">
+              <div class="repro-stat-card">
+                  <label>Total Cycles</label>
+                  <span id="statCycles">0</span>
+              </div>
+              <div class="repro-stat-card">
+                  <label>Total Piglets Born</label>
+                  <span id="statTotalBorn">0</span>
+              </div>
+              <div class="repro-stat-card">
+                  <label>Avg. Litter Size</label>
+                  <span id="statAvgLitter">0</span>
+              </div>
+              <div class="repro-stat-card">
+                  <label>Total Live</label>
+                  <span id="statTotalLive">0</span>
+              </div>
+          </div>
+      </div>
       
       <div class="modal-section" style="margin-top:20px;">
-        <h4>Reproductive Performance</h4>
+        <h4>Breeding & Farrowing History</h4>
         <table id="repoTable">
           <thead>
             <tr>
@@ -286,7 +325,7 @@
               <th>Service Date</th>
               <th>Farrowing Date</th>
               <th>Total Born</th>
-              <th>Live</th>
+              <th>Live / Dead</th>
               <th>Status</th>
             </tr>
           </thead>

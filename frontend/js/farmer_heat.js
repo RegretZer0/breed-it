@@ -37,16 +37,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // ---------------- NOTIFICATION HELPER ----------------
+  const sendAdminNotification = async (title, message, type = "info") => {
+    try {
+      await fetch(`${BACKEND_URL}/api/notifications/admin`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ title, message, type })
+      });
+    } catch (err) {
+      console.error("Failed to notify admin:", err);
+    }
+  };
+
   // ---------------- UPDATE STATS ----------------
   async function updateStats(swineList) {
     const stats = { open: 0, pregnant: 0, farrowing: 0 };
     const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
 
     swineList.forEach(sw => {
       let status = (sw.current_status || "Open").toLowerCase();
-      // Logic: If status is pregnant, check if expected farrowing date has passed
+      
       if (status === "pregnant" && sw.expected_farrowing) {
         if (today >= new Date(sw.expected_farrowing)) status = "farrowing";
+      }
+
+      if (status === "lactating") {
+        const lastCycle = sw.breeding_cycles?.[sw.breeding_cycles.length - 1];
+        if (lastCycle?.actual_farrowing_date) {
+          const farrowDate = new Date(lastCycle.actual_farrowing_date);
+          if (farrowDate <= thirtyDaysAgo) status = "open"; 
+        }
       }
       
       if (status === "open") stats.open++;
@@ -65,13 +91,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetchWithAuth(`${BACKEND_URL}/api/swine/farmer`);
       if (res) {
         const data = await res.json();
-        updateStats(data.swine || []);
+        const swineList = data.swine || [];
+        updateStats(swineList);
+        
         swineSelect.innerHTML = '<option value="">-- Select Swine --</option>';
 
-        const eligibleSows = (data.swine || []).filter(sw => 
-          sw.sex?.toLowerCase() === "female" && 
-          (sw.current_status?.toLowerCase() === "open" || !sw.current_status)
-        );
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+
+        const eligibleSows = swineList.filter(sw => {
+          const isFemale = sw.sex?.toLowerCase() === "female";
+          const status = (sw.current_status || "Open").toLowerCase();
+
+          if (isFemale && status === "open") return true;
+
+          if (isFemale && status === "lactating") {
+            const lastCycle = sw.breeding_cycles?.[sw.breeding_cycles.length - 1];
+            if (lastCycle?.actual_farrowing_date) {
+              const farrowDate = new Date(lastCycle.actual_farrowing_date);
+              return farrowDate <= thirtyDaysAgo;
+            }
+          }
+          return false;
+        });
 
         if (eligibleSows.length === 0) {
           swineSelect.innerHTML = '<option value="">No eligible sows available</option>';
@@ -79,7 +122,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           eligibleSows.forEach(sw => {
             const opt = document.createElement("option");
             opt.value = sw.swine_id;
-            opt.textContent = `${sw.swine_id} - ${sw.breed}`;
+            opt.textContent = `${sw.swine_id} - ${sw.breed} (${sw.current_status})`;
             swineSelect.appendChild(opt);
           });
         }
@@ -111,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const allowedStatuses = ["waiting_heat_check", "under_observation", "approved"];
         
-        const isCompleted = rawStatus === "completed" || rawStatus === "pregnant";
+        const isCompleted = rawStatus === "completed" || rawStatus === "pregnant" || rawStatus === "farrowing_ready";
         const isRejected = rawStatus === "rejected"; 
         const isProcessed = rawStatus !== "pending" && !isRejected;
         
@@ -154,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ` : '-'}
           </td>
           <td>
-            ${(rawStatus === "pregnant" && farrowingDate) ? `
+            ${(isCompleted && farrowingDate) ? `
               <div style="font-size: 0.85em; color: #555; margin-bottom: 4px;">
                   <b>Target:</b> ${farrowingDate.toLocaleDateString()}
               </div>
@@ -168,7 +211,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 ${rawStatus !== 'approved' ? `
                 <button class="btn-followup" 
                    style="background-color: #f39c12 !important; color: white !important; border: none; padding: 8px; border-radius: 4px; cursor: pointer; width: 100%; display: block;"
-                   onclick="submitFollowUp('${r._id}')">Back in Heat</button>
+                   onclick="submitFollowUp('${r._id}', '${swineDisplay}')">Back in Heat</button>
                 ` : '<span style="color:#3498db; font-size:0.8em;">Waiting for Admin to Confirm AI</span>'}
                 
                 ${rawStatus === "under_observation" ? `
@@ -178,7 +221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     ? 'background-color:#ccc !important; color:#777 !important; cursor:not-allowed; opacity:0.8; border: 1px solid #999; padding: 8px; border-radius: 4px; width: 100%; display: block !important;' 
                     : 'background-color:#28a745 !important; color:white !important; cursor:pointer; border: none; padding: 8px; border-radius: 4px; width: 100%; display: block !important;'}"
                   title="${!isReadyForPregnancy ? 'Wait for 21-day heat re-check' : 'Confirm Pregnancy'}"
-                  onclick="confirmPregnancy('${r._id}')">
+                  onclick="confirmPregnancy('${r._id}', '${swineDisplay}')">
                   Confirm Pregnant
                 </button>` : ''}
               </div>` : 
@@ -192,15 +235,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { console.error("Load Reports Error:", err); }
   }
 
-  // ---------------- HELPERS (Updated Countdown to Days Only) ----------------
+  // ---------------- HELPERS ----------------
   function formatCountdown(targetDate) {
     if (!targetDate) return "N/A";
     const diffMs = new Date(targetDate) - new Date();
     if (diffMs <= 0) return "Ready/Due";
 
-    // Calculate days and round down
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
     if (days === 0) return "Due Tomorrow";
     return `${days} day${days > 1 ? 's' : ''} left`;
   }
@@ -212,17 +253,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ---------------- ACTIONS ----------------
-  window.submitFollowUp = async (id) => {
-    if (!confirm("Is the sow in heat again? This will reset the cycle for re-insemination.")) return;
+  window.submitFollowUp = async (id, swineId) => {
+    if (!confirm(`Is ${swineId} in heat again? This will reset the cycle for re-insemination.`)) return;
     const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${id}/still-heat`, { method: "POST" });
     if (res && res.ok) {
       alert("Cycle reset for re-insemination.");
+      await sendAdminNotification("Sow Back in Heat", `Farmer ${user.first_name} reported ${swineId} is back in heat after service.`, "warning");
       await loadReports();
     }
   };
 
-  window.confirmPregnancy = async (id) => {
-    if (!confirm("Confirm pregnancy? This starts the 114-day gestation countdown.")) return;
+  window.confirmPregnancy = async (id, swineId) => {
+    if (!confirm(`Confirm pregnancy for ${swineId}? This starts the 114-day gestation countdown.`)) return;
     const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${id}/confirm-pregnancy`, { 
       method: "POST",
       headers: { "Content-Type": "application/json" }
@@ -230,6 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     if (res && res.ok) {
       alert("Pregnancy confirmed!");
+      await sendAdminNotification("Pregnancy Confirmed", `${swineId} has been confirmed pregnant by Farmer ${user.first_name}.`, "success");
       await loadReports();
       await refreshSwineData();
     } else {
@@ -266,9 +309,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (res && res.ok) {
         reportMessage.style.color = "green";
         reportMessage.textContent = "Heat report submitted!";
+        
+        await sendAdminNotification("New Heat Report", `Farmer ${user.first_name} submitted a new heat report for ${swineSelect.value}.`, "info");
+        
         reportForm.reset();
         document.getElementById("mediaPreview").innerHTML = "";
-        document.getElementById("fileCountBadge").style.display = "none";
+        if(document.getElementById("fileCountBadge")) document.getElementById("fileCountBadge").style.display = "none";
         
         await loadReports();
         await refreshSwineData();
@@ -289,7 +335,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   refreshSwineData();
   loadReports();
   
-  // Update countdown display every hour instead of every second (since it's just days now)
   setInterval(() => {
     updateCountdowns();
   }, 3600000);

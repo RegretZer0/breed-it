@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (welcome) welcome.textContent = `Welcome, ${user.name || "Farm Manager"}`;
 
   // ----- Notifications Setup -----
+  // Passes the user ID to the notification system to fetch role-specific alerts
   initNotifications(user.id);
 
   // ----- CALENDAR INITIALIZATION -----
@@ -57,21 +58,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         let typeLabel = 'Scheduled Event';
         const title = info.event.title.toLowerCase();
 
+        // Updated Tooltip Logic to match new Status Transitions
         if (title.includes('ai due')) {
           typeLabel = 'Day 3 Insemination Window';
         } else if (title.includes('heat re-check')) {
-          typeLabel = '23-Day Pregnancy Re-check';
+          typeLabel = '21-23 Day Pregnancy Re-check';
         } else if (title.includes('farrowing')) {
           typeLabel = 'Expected Farrowing Date';
+        } else if (title.includes('weaning') || title.includes('ready for weaning')) {
+          typeLabel = '30-Day Weaning Threshold';
         }
 
-        // Apply native tooltip
+        // Apply native tooltip with detailed info
         info.el.title = `${info.event.title} (${typeLabel})`;
         
         // Ensure the background color from the backend is applied
         if (info.event.backgroundColor) {
           info.el.style.backgroundColor = info.event.backgroundColor;
           info.el.style.borderColor = info.event.backgroundColor;
+        }
+
+        // Add visual indicator for high-priority events (Insemination and Farrowing)
+        if (title.includes('ai') || title.includes('farrowing')) {
+          info.el.style.fontWeight = 'bold';
+          info.el.style.borderLeft = '4px solid rgba(0,0,0,0.3)';
         }
       },
       eventClick: (info) => {

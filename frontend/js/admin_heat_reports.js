@@ -34,8 +34,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   const boarSelect = document.getElementById("boarSelect");
   const submitAIBtn = document.getElementById("submitAI");
 
+  // NEW: Farrowing Modal Elements
+  const farrowingModal = document.getElementById("farrowingModal");
+  const farrowingForm = document.getElementById("farrowingForm");
+
   let currentReportId = null;
   let allReports = [];
+
+  // ---------------- HELPER: SEND NOTIFICATIONS ----------------
+  const sendNotification = async (farmerId, title, message, type = "info") => {
+    try {
+      await fetch(`${BACKEND_URL}/api/notifications`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({
+          user_id: farmerId,
+          title: title,
+          message: message,
+          type: type
+        })
+      });
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+    }
+  };
 
   // ---------------- HELPER: CALCULATE DAYS LEFT (Days Only) ----------------
   function getDaysLeft(targetDate) {
@@ -231,7 +256,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     confirmAIBtn.style.display = (r.status === "approved") ? "inline-block" : "none";
 
-    // Show button if status is 'farrowing_ready' OR if 'pregnant' and term reached
     if (r.status === "farrowing_ready" || (r.status === "pregnant" && r.expected_farrowing)) {
         const today = new Date();
         today.setHours(0,0,0,0);
@@ -247,9 +271,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (followUpBtn) followUpBtn.style.display = "none";
   }
 
-  // ---------------- ACTION HANDLER ----------------
+  // ---------------- ACTION HANDLER (WITH NOTIFICATIONS) ----------------
   const handleAction = async (endpoint, successMsg, extraData = {}) => {
     if (!currentReportId) return;
+
+    // Get current report to identify the farmer
+    const report = allReports.find(r => r._id === currentReportId);
+    const farmerId = report?.farmer_id?._id || report?.farmer_id;
+    const swineIdStr = report?.swine_id?.swine_id || "Swine";
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/heat/${currentReportId}/${endpoint}`, {
@@ -266,6 +295,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res.ok) throw new Error(data.message || "Action failed");
       
       alert(successMsg);
+
+      // --- NEW NOTIFICATION LOGIC ---
+      if (farmerId) {
+        let nTitle = "Heat Report Update";
+        let nMsg = "";
+        let nType = "info";
+
+        switch (endpoint) {
+          case "approve":
+            nTitle = "Heat Report Approved";
+            nMsg = `The report for ${swineIdStr} was approved. Scheduled AI Insemination has been logged.`;
+            nType = "success";
+            break;
+          case "reject":
+            nTitle = "Heat Report Rejected";
+            nMsg = `The report for ${swineIdStr} was rejected. Reason: ${extraData.reason || "Not specified"}`;
+            nType = "error";
+            break;
+          case "confirm-ai":
+            nTitle = "AI Service Completed";
+            nMsg = `Insemination for ${swineIdStr} is confirmed. The sow is now under 21-day observation.`;
+            nType = "success";
+            break;
+          case "confirm-farrowing":
+            nTitle = "Farrowing Registered";
+            nMsg = `Farrowing data for ${swineIdStr} has been successfully registered. The sow is now Lactating.`;
+            nType = "success";
+            break;
+        }
+        
+        if (nMsg) await sendNotification(farmerId, nTitle, nMsg, nType);
+      }
+
       reportDetails.style.display = "none";
       await loadReports(); 
     } catch (err) { 
@@ -337,10 +399,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   confirmFarrowingBtn.addEventListener("click", () => {
-    if (confirm("Confirm farrowing? This will complete the cycle and update status to 'Lactating'.")) {
-        handleAction("confirm-farrowing", "Farrowing Confirmed! Swine is now in Lactation phase.");
+    const r = allReports.find(report => report._id === currentReportId);
+    if (!r || !r.swine_id) return;
+
+    if (farrowingModal) {
+        farrowingModal.style.display = "block";
+        document.getElementById("farrowingDateInput").valueAsDate = new Date();
+    } else {
+        if (confirm("Confirm farrowing for " + r.swine_id.swine_id + "?")) {
+            handleAction("confirm-farrowing", "Farrowing Confirmed!");
+        }
     }
   });
+
+  if (farrowingForm) {
+      farrowingForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const total_live = document.getElementById("liveCount").value;
+          const mummified = document.getElementById("mummyCount").value;
+          const stillborn = document.getElementById("stillCount").value;
+          const farrowing_date = document.getElementById("farrowingDateInput").value;
+
+          handleAction("confirm-farrowing", "Farrowing Registered! Sow is now Lactating.", {
+              total_live: Number(total_live),
+              mummified: Number(mummified),
+              stillborn: Number(stillborn),
+              farrowing_date: farrowing_date
+          });
+
+          farrowingModal.style.display = "none";
+          farrowingForm.reset();
+      });
+  }
 
   if (addMaleForm) {
     addMaleForm.addEventListener("submit", async (e) => {

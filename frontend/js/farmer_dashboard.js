@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
 
   // ----- Notifications Setup -----
+  // The farmer will receive concise alerts like "Swine TAG-01 is now Open"
   initNotifications(farmerId); 
 
   // ----- CALENDAR INITIALIZATION -----
@@ -30,7 +31,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Fetching events filtered for THIS specific farmer
       events: async function(info, successCallback, failureCallback) {
         try {
-          // We pass the farmerId as a query parameter so the backend can filter
           const response = await fetch(`${BACKEND_URL}/api/heat/calendar-events?farmerId=${farmerId}`, {
             method: 'GET',
             headers: {
@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       },
       eventDidMount: (info) => {
-        // Updated logic to show correct labels for farmers
+        // Updated logic to show correct labels for farmers including Weaning
         let typeLabel = 'Event';
         const title = info.event.title.toLowerCase();
 
@@ -61,6 +61,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           typeLabel = 'Check for Heat Signs';
         } else if (title.includes('farrowing')) {
           typeLabel = 'Expected Farrowing';
+        } else if (title.includes('weaning') || title.includes('open')) {
+          typeLabel = 'Ready for New Heat Report';
         }
 
         info.el.title = `${info.event.title} - ${typeLabel}`;
@@ -70,10 +72,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           info.el.style.backgroundColor = info.event.backgroundColor;
           info.el.style.borderColor = info.event.backgroundColor;
         }
+
+        // Farmer UI Enhancement: Highlight Insemination/Farrowing
+        if (title.includes('ai') || title.includes('farrowing')) {
+            info.el.style.fontWeight = 'bold';
+        }
       },
       eventClick: (info) => {
         // Farmers can click to go straight to the reporting page for that swine
-        // We look for the swine ID which is usually in the title format "🔍 Heat Check: A-0001"
         const titleParts = info.event.title.split(':');
         if (titleParts.length > 1) {
           const swineId = titleParts[1].trim().split(' ')[0];
