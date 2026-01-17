@@ -49,7 +49,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const submitBtn = registerForm.querySelector('button[type="submit"]');
   const swineMessage = document.getElementById("swineMessage");
   const farmerSelect = document.getElementById("farmerSelect");
-  const farmerGroup = farmerSelect.closest('.form-group') || farmerSelect.parentElement;
   
   const damSelect = document.getElementById("dam_id"); 
   const sireSelect = document.getElementById("sire_id"); 
@@ -89,40 +88,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  /**
+   * UPDATED: Simplified Batch ID generation for Piglets.
+   * Format: [MotherID]-[SequenceNumber] (e.g., M123-01)
+   */
   const updateBatchField = () => {
     if (isEditing) return;
+    const stage = ageStageSelect.value;
 
-    if (ageStageSelect.value === "Monitoring (Day 1-30)") {
+    if (stage === "Monitoring (Day 1-30)") {
       batchInput.readOnly = true;
       if (damSelect.value) {
-        const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-        const baseBatch = `${damSelect.value}-${todayStr}`;
-        const existingCount = allSwine.filter(s => s.batch && s.batch.startsWith(baseBatch)).length;
+        const baseBatch = `${damSelect.value}`;
+        // Count how many offspring this specific dam already has in the system
+        const existingCount = allSwine.filter(s => s.dam_id === damSelect.value).length;
         const nextSequence = (existingCount + 1).toString().padStart(2, '0');
         batchInput.value = `${baseBatch}-${nextSequence}`;
       } else {
         batchInput.value = "";
         batchInput.placeholder = "Select Sow to generate Batch ID";
       }
-    } else {
+    } 
+    else if (stage === "adult") {
+        batchInput.readOnly = true;
+        const managerSowCount = allSwine.filter(s => s.age_stage === "adult" && s.sex === "Female").length;
+        const batchLetter = String.fromCharCode(65 + managerSowCount); 
+        batchInput.value = `${batchLetter}-1`;
+    }
+    else {
       batchInput.readOnly = false;
       batchInput.placeholder = "Enter Batch ID (e.g. B127-4)";
     }
   };
 
-  const toggleTeatField = () => {
-    if (sexSelect.value === "Female" || ageStageSelect.value === "adult") {
+  const handleStageAndSexLogic = () => {
+    const isAdult = ageStageSelect.value === "adult";
+    const isFemale = sexSelect.value === "Female";
+
+    if (isAdult) {
+      sexSelect.value = "Female";
+      sexSelect.disabled = true;
+      
+      if (!isEditing) {
+        damSelect.value = "";
+        sireSelect.value = "";
+        damSelect.disabled = true;
+        sireSelect.disabled = true;
+      }
+    } else {
+      sexSelect.disabled = false;
+      damSelect.disabled = false;
+      sireSelect.disabled = false;
+    }
+
+    if (isAdult && sexSelect.value === "Female") {
       teatCountGroup.style.display = "block";
     } else {
       teatCountGroup.style.display = "none";
       const teatInput = document.getElementById("teatCount");
-      if(teatInput) teatInput.value = "";
+      if (teatInput) teatInput.value = ""; 
     }
   };
 
-  sexSelect.addEventListener("change", toggleTeatField);
+  sexSelect.addEventListener("change", handleStageAndSexLogic);
   ageStageSelect.addEventListener("change", () => {
-    toggleTeatField();
+    handleStageAndSexLogic();
     updateBatchField();
     toggleDeformityField();
   });
@@ -221,11 +251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     swineList.forEach((sw) => {
       const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ''} ${sw.farmer_id.last_name || ''}`.trim() : "OFFICE / MASTER";
       const latestPerf = (sw.performance_records || []).slice(-1)[0] || {};
-      
       const statusColors = { "Open": "#7f8c8d", "In-Heat": "#e67e22", "Pregnant": "#9b59b6", "Farrowing": "#e74c3c" };
-      
-      // FIXED: Use raw current_status for the badge text if you want technical names
-      // but keep formatStageDisplay for the Age category
       const rawStatus = sw.current_status || 'Monitoring (Day 1-30)';
       const statusColor = statusColors[rawStatus] || "#3498db";
 
@@ -277,6 +303,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fId = swine.farmer_id?._id || swine.farmer_id || "";
     farmerSelect.value = fId;
     await updateSowDropdown(fId);
+    
+    damSelect.disabled = false;
+    sireSelect.disabled = false;
+    
     if (swine.dam_id) {
         damSelect.value = swine.dam_id;
         await updateBoarDropdown(swine.dam_id);
@@ -302,7 +332,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const currentDeformities = latest.deformities || [];
     deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = currentDeformities.includes(cb.value));
     
-    toggleTeatField();
+    handleStageAndSexLogic();
     toggleDeformityField();
   };
 
@@ -313,10 +343,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     cancelEditBtn.style.display = "none";
     swineMessage.textContent = "";
     registerForm.reset();
+    sexSelect.disabled = false;
+    damSelect.disabled = false;
+    sireSelect.disabled = false;
     deformityChecklist.querySelectorAll('input').forEach(cb => cb.checked = false);
     damSelect.innerHTML = '<option value="">-- Select Sow --</option>';
     sireSelect.innerHTML = '<option value="">-- Select Boar --</option>';
-    toggleTeatField();
+    handleStageAndSexLogic();
     toggleDeformityField();
     updateBatchField();
   };
@@ -326,12 +359,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- SUBMIT ----------------
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    const teatVal = document.getElementById("teatCount").value;
+    if (ageStageSelect.value === "adult" && sexSelect.value === "Female" && (!teatVal || teatVal.trim() === "")) {
+      swineMessage.className = "message error";
+      swineMessage.textContent = "Teat Count (Total) is required for adult sows.";
+      return;
+    }
+
     const deformities = Array.from(deformityChecklist.querySelectorAll('input:checked')).map(cb => cb.value);
     
     const payload = {
       farmer_id: farmerSelect.value || null, 
       batch: batchInput.value.trim(), 
-      sex: sexSelect.value,
+      swine_id: ageStageSelect.value === "adult" ? batchInput.value.trim() : null,
+      sex: sexSelect.value, 
       age_stage: ageStageSelect.value, 
       current_status: ageStageSelect.value === "adult" ? "Open" : ageStageSelect.value,
       color: document.getElementById("color").value.trim(),
@@ -344,7 +386,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       bodyLength: document.getElementById("bodyLength").value, 
       heartGirth: document.getElementById("heartGirth").value,
       teethCount: document.getElementById("teethCount").value, 
-      teatCount: document.getElementById("teatCount").value || null,
+      teatCount: teatVal || null,
       deformities: deformities.length ? deformities : ["None"],
       date_transfer: document.getElementById("date_transfer").value || new Date().toISOString().split('T')[0],
       managerId
@@ -370,7 +412,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { swineMessage.textContent = "Server connection error."; }
   });
 
-  // ---------------- VIEW MODAL WITH FAMILY TREE ----------------
+  // ---------------- VIEW MODAL ----------------
   swineTableBody.addEventListener("click", (e) => {
     if (e.target.classList.contains("view-btn")) {
         const sw = allSwine.find(s => s.swine_id === e.target.dataset.id);
@@ -466,9 +508,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = (role === "encoder") ? "encoder_dashboard.html" : "admin_dashboard.html";
   });
 
+  // INITIALIZATION CALLS
   await loadFarmers();
   await fetchSwine();
-  toggleTeatField();
+  handleStageAndSexLogic(); 
   toggleDeformityField();
   updateBatchField();
 });
