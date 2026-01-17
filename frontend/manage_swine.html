@@ -23,6 +23,15 @@
       grid-column: span 2;
     }
 
+    /* Styles for the auto-generated batch field */
+    #batch[readonly] {
+      background-color: #e9ecef;
+      cursor: not-allowed;
+      border: 1px solid #adb5bd;
+      color: #495057;
+      font-weight: bold;
+    }
+
     .checklist-box {
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -119,8 +128,8 @@
                 </select>
             </div>
 
-            <label for="batch">Batch ID / Source ID:</label>
-            <input type="text" id="batch" placeholder="e.g., BATCH-2026-A" required />
+            <label for="batch">Batch ID / Tag:</label>
+            <input type="text" id="batch" placeholder="Generated automatically..." readonly required />
 
             <label for="sex">Sex:</label>
             <select id="sex" required>
@@ -133,7 +142,7 @@
             <select id="ageStage" required>
               <option value="">Select Age Stage</option>
               <option value="Monitoring (Day 1-30)">Piglet</option>
-              <option value="adult">Adult (Breeder)</option>
+              <option value="adult">Adult (Breeder/Transferred Sow)</option>
             </select>
 
             <div id="teatCountGroup">
@@ -165,7 +174,7 @@
 
           <div class="full-width form-section" id="lineageSection">
             <h4>Parentage & Lineage</h4>
-            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows.</p>
+            <p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Select Farmer first to see available Sows. (Lineage not required for Adult Batches)</p>
             <div class="form-grid">
               <div class="form-col">
                 <label for="dam_id">Select Dam (Mother / Sow):</label>

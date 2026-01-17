@@ -1,5 +1,5 @@
 import { authGuard } from "./authGuard.js";
-import { PerformanceHelper } from "./performance_helper.js"; // Integrated the updated helper
+import { PerformanceHelper } from "./performance_helper.js"; 
 
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Authenticate and Role Check
@@ -26,10 +26,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const BACKEND_URL = "http://localhost:5000";
     const token = localStorage.getItem("token");
 
-    // Local State for Filtering
+    // Local State
     let rawAiData = [];
     let rawPerformanceData = { morphology: [], deformities: [] };
     let rawSelectionData = [];
+    let allSwineData = []; 
 
     /**
      * Helper to resolve Farmer Names
@@ -59,6 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderAIRecords(filterTerm);
         renderPerformanceAnalytics(filterTerm);
         renderSelectionProcess(filterTerm);
+        renderBreedingMortalityTable(filterTerm); 
     }
 
     // ---------------------------------------------------------
@@ -85,8 +87,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const filtered = rawAiData.filter(r => 
             resolveFarmerName(r).toLowerCase().includes(term) || 
-            r.sow_tag.toLowerCase().includes(term) ||
-            r.boar_tag.toLowerCase().includes(term)
+            (r.sow_tag && r.sow_tag.toLowerCase().includes(term)) ||
+            (r.boar_tag && r.boar_tag.toLowerCase().includes(term))
         );
 
         tableBody.innerHTML = filtered.length > 0 ? filtered.map(record => `
@@ -127,7 +129,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (morphBody) {
             const filteredMorph = rawPerformanceData.morphology.filter(m => 
                 resolveFarmerName(m).toLowerCase().includes(term) || 
-                m.swine_tag.toLowerCase().includes(term)
+                (m.swine_tag && m.swine_tag.toLowerCase().includes(term))
             );
 
             morphBody.innerHTML = filteredMorph.length > 0 ? filteredMorph.map(item => {
@@ -170,7 +172,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (deformityContainer) {
             const filteredDef = rawPerformanceData.deformities.filter(d => 
                 resolveFarmerName(d).toLowerCase().includes(term) || 
-                d.swine_tag.toLowerCase().includes(term)
+                (d.swine_tag && d.swine_tag.toLowerCase().includes(term))
             );
 
             if (filteredDef.length === 0) {
@@ -209,10 +211,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const selectionBody = document.getElementById("selectionTableBody");
         if (!selectionBody) return;
 
-        // UPDATED: Filter to only show swines in "Final Selection" or "adult" stage
         const filtered = rawSelectionData.filter(s => {
             const matchesSearch = resolveFarmerName(s).toLowerCase().includes(term) || 
-                                  s.swine_tag.toLowerCase().includes(term);
+                                  (s.swine_tag && s.swine_tag.toLowerCase().includes(term));
             const isFinalStage = s.current_stage === "Final Selection" || s.current_stage === "adult";
             
             return matchesSearch && isFinalStage;
@@ -251,8 +252,99 @@ document.addEventListener("DOMContentLoaded", async () => {
         }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">No candidates ready for Final Selection.</td></tr>';
     }
 
+    // ---------------------------------------------------------
+    // 4. BREEDING & MORTALITY ANALYTICS
+    // ---------------------------------------------------------
+    async function fetchAllSwine() {
+        try {
+            // Note: Ensure this endpoint exists on your backend
+            const res = await fetch(`${BACKEND_URL}/api/swine/all`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            
+            // Adjust based on your API's response structure (e.g., result.swine or result.data)
+            if (result.success) {
+                allSwineData = result.swine || result.data || [];
+                renderBreedingMortalityTable();
+            } else {
+                console.error("Failed to fetch swine data:", result.message);
+                document.getElementById("breedingMortalityTableBody").innerHTML = '<tr><td colspan="5" style="text-align:center;">Failed to load data.</td></tr>';
+            }
+        } catch (err) { 
+            console.error("Error fetching all swine for mortality:", err); 
+            document.getElementById("breedingMortalityTableBody").innerHTML = '<tr><td colspan="5" style="text-align:center;">Network error.</td></tr>';
+        }
+    }
+
+    function renderBreedingMortalityTable(term = "") {
+        const tableBody = document.getElementById("breedingMortalityTableBody");
+        if (!tableBody) return;
+
+        // 1. Filter for Sows (Adult Females)
+        let adultSows = allSwineData.filter(s => 
+            (s.age_stage === "adult" || s.current_stage === "adult") && 
+            (s.sex === "Female" || s.swine_sex === "Female")
+        );
+        
+        // 2. Apply Role-based filtering
+        const role = user.role.toLowerCase();
+        if (role === "farmer") {
+            const userId = user.id || user._id;
+            adultSows = adultSows.filter(s => {
+                const fId = s.farmer_id?._id || s.farmer_id;
+                return fId === userId;
+            });
+        }
+
+        // 3. Apply Search Term
+        const filtered = adultSows.filter(s => {
+            const sId = s.swine_id || s.swine_tag || "";
+            return resolveFarmerName(s).toLowerCase().includes(term) || sId.toLowerCase().includes(term);
+        });
+
+        tableBody.innerHTML = filtered.length > 0 ? filtered.map(sow => {
+            const sowId = sow.swine_id || sow.swine_tag;
+            
+            // 4. Calculate offspring (Checking both dam_id and mother_id for safety)
+            const offspring = allSwineData.filter(child => 
+                child.dam_id === sowId || child.mother_id === sowId
+            );
+            
+            const aliveCount = offspring.filter(child => child.health_status !== "Deceased").length;
+            const deceasedCount = offspring.filter(child => child.health_status === "Deceased").length;
+            const totalBorn = offspring.length;
+
+            let mortalityRate = 0;
+            if (totalBorn > 0) {
+                mortalityRate = ((deceasedCount / totalBorn) * 100).toFixed(1);
+            }
+
+            const rateColor = mortalityRate > 15 ? "#d32f2f" : mortalityRate > 5 ? "#f57c00" : "#2e7d32";
+
+            return `
+                <tr>
+                    <td><strong>${resolveFarmerName(sow)}</strong></td>
+                    <td><span class="badge-tag">${sowId}</span></td>
+                    <td style="text-align:center;"><b>${aliveCount}</b></td>
+                    <td style="text-align:center; color: #d32f2f;"><b>${deceasedCount}</b></td>
+                    <td style="text-align:center;">
+                        <span style="font-weight:bold; color: ${rateColor};">
+                            ${mortalityRate}%
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">No registered sows found.</td></tr>';
+    }
+
     // Initial Data Fetch
-    await Promise.all([loadAIRecords(), loadPerformanceAnalytics(), loadSelectionProcess()]);
+    await Promise.all([
+        loadAIRecords(), 
+        loadPerformanceAnalytics(), 
+        loadSelectionProcess(), 
+        fetchAllSwine() 
+    ]);
 });
 
 /**

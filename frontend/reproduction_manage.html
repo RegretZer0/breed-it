@@ -60,7 +60,7 @@
         </header>
 
         <div class="search-container">
-            <input type="text" id="reproductionSearch" class="search-input" placeholder="Search by Farmer, Swine Tag, or Stage (e.g. Monitoring, Weaned, Final Selection)...">
+            <input type="text" id="reproductionSearch" class="search-input" placeholder="Search by Farmer, Swine Tag, or Stage...">
         </div>
 
         <div class="section-card" style="border-top-color: #3498db;">
@@ -80,6 +80,29 @@
                     </thead>
                     <tbody id="aiTableBody">
                         <tr><td colspan="4" style="text-align:center; padding: 30px;">Initializing records...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-card" style="border-top-color: #1abc9c;">
+            <h2 class="section-title">
+                Breeding Performance & Mortality
+                <span style="font-size: 0.8rem; background: #1abc9c; color: white; padding: 4px 12px; border-radius: 15px;">Live Statistics</span>
+            </h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Farmer Name</th>
+                            <th>Sow Tag (Dam)</th>
+                            <th style="text-align:center;">Alive Piglets</th>
+                            <th style="text-align:center;">Deceased Piglets</th>
+                            <th style="text-align:center;">Mortality Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breedingMortalityTableBody">
+                        <tr><td colspan="5" style="text-align:center; padding: 30px;">Calculating offspring data...</td></tr>
                     </tbody>
                 </table>
             </div>
