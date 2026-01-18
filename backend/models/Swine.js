@@ -26,7 +26,7 @@ const swineSchema = new mongoose.Schema({
       "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", 
       "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
-      "Active", "Inactive", "Under Monitoring"
+      "Active", "Inactive", "Under Monitoring", "Routine Monitoring"
     ],
     default: "Monitoring (Day 1-30)" 
   },
@@ -94,11 +94,20 @@ const swineSchema = new mongoose.Schema({
     administered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],
 
-  // ------------------- Growth & Selection -------------------
+  // ------------------- Growth & Selection (UPDATED) -------------------
   performance_records: [{
     stage: { 
       type: String, 
-      enum: ["Registration", "Maintenance Registration", "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", "Market Check", "Routine"] 
+      enum: [
+        "Registration", 
+        "Maintenance Registration", 
+        "Monitoring (Day 1-30)", 
+        "Weaned (Monitoring 3 Months)", 
+        "Final Selection", 
+        "Market Check", 
+        "Routine",
+        "Monthly Update" // Added for the new farmer button
+      ] 
     },
     record_date: { type: Date, default: Date.now },
     weight: { type: Number },
@@ -129,6 +138,19 @@ swineSchema.virtual('offspring', {
   ref: 'Swine',
   localField: 'swine_id',
   foreignField: 'dam_id'
+});
+
+// NEW: Virtual for Average Daily Gain (ADG)
+swineSchema.virtual('current_adg').get(function() {
+  if (!this.performance_records || this.performance_records.length < 2) return 0;
+  
+  const current = this.performance_records[this.performance_records.length - 1];
+  const previous = this.performance_records[this.performance_records.length - 2];
+  
+  const weightDiff = current.weight - previous.weight;
+  const daysDiff = (new Date(current.record_date) - new Date(previous.record_date)) / (1000 * 60 * 60 * 24);
+  
+  return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
 });
 
 // NEW: Virtual to calculate total mortality count for display in tables

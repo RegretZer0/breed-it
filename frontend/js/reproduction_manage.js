@@ -253,17 +253,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------------------------------------------------
-    // 4. BREEDING & MORTALITY ANALYTICS
+    // 4. BREEDING & MORTALITY ANALYTICS (UPDATED)
     // ---------------------------------------------------------
     async function fetchAllSwine() {
         try {
-            // Note: Ensure this endpoint exists on your backend
             const res = await fetch(`${BACKEND_URL}/api/swine/all`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await res.json();
             
-            // Adjust based on your API's response structure (e.g., result.swine or result.data)
             if (result.success) {
                 allSwineData = result.swine || result.data || [];
                 renderBreedingMortalityTable();
@@ -281,23 +279,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         const tableBody = document.getElementById("breedingMortalityTableBody");
         if (!tableBody) return;
 
-        // 1. Filter for Sows (Adult Females)
-        let adultSows = allSwineData.filter(s => 
-            (s.age_stage === "adult" || s.current_stage === "adult") && 
-            (s.sex === "Female" || s.swine_sex === "Female")
-        );
+        // 1. Identify Sows (Adult Females)
+        let adultSows = allSwineData.filter(s => {
+            const stage = (s.age_stage || s.current_stage || "").toLowerCase();
+            const gender = (s.sex || s.swine_sex || "").toLowerCase();
+            return stage === "adult" && gender === "female";
+        });
         
-        // 2. Apply Role-based filtering
+        // 2. Apply Role-based filtering (Farmers only see their own sows)
         const role = user.role.toLowerCase();
         if (role === "farmer") {
-            const userId = user.id || user._id;
+            const userProfileId = user.farmerProfileId; // Use the linked profile ID
             adultSows = adultSows.filter(s => {
                 const fId = s.farmer_id?._id || s.farmer_id;
-                return fId === userId;
+                return fId === userProfileId;
             });
         }
 
-        // 3. Apply Search Term
+        // 3. Filter by Search Term
         const filtered = adultSows.filter(s => {
             const sId = s.swine_id || s.swine_tag || "";
             return resolveFarmerName(s).toLowerCase().includes(term) || sId.toLowerCase().includes(term);
@@ -306,7 +305,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         tableBody.innerHTML = filtered.length > 0 ? filtered.map(sow => {
             const sowId = sow.swine_id || sow.swine_tag;
             
-            // 4. Calculate offspring (Checking both dam_id and mother_id for safety)
+            // 4. Calculate Offspring Stats
+            // We check dam_id (used in registration) or mother_id (used in farrowing logs)
             const offspring = allSwineData.filter(child => 
                 child.dam_id === sowId || child.mother_id === sowId
             );
@@ -320,6 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 mortalityRate = ((deceasedCount / totalBorn) * 100).toFixed(1);
             }
 
+            // Visual indicator for high mortality
             const rateColor = mortalityRate > 15 ? "#d32f2f" : mortalityRate > 5 ? "#f57c00" : "#2e7d32";
 
             return `

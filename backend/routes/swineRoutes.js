@@ -19,16 +19,22 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 router.post(
     "/add-master-boar",
     requireSessionAndToken,
-    allowRoles("farm_manager", "encoder"),
+    allowRoles("farm_manager", "encoder", "admin"),
     async (req, res) => {
         const {
             color, weight, bodyLength, heartGirth, 
-            teethCount, date_transfer, health_status, current_status, breed
+            teethCount, date_transfer, health_status, current_status, breed,
+            manager_id // Recieving manager_id from maintenance.js
         } = req.body;
 
         try {
             const user = req.user;
-            const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+            
+            // LOGIC: Determine who the "Owner/Manager" of this boar is.
+            // 1. If manager_id is provided from frontend, use it.
+            // 2. Otherwise, if the logged-in user is a manager, use their ID.
+            // 3. If it's an encoder, use their linked managerId.
+            const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
 
             const boarCount = await Swine.countDocuments({ 
                 swine_id: { $regex: /^BOAR-/ } 
@@ -38,7 +44,7 @@ router.post(
 
             const newBoar = new Swine({
                 swine_id: swineId,
-                registered_by: managerId,
+                registered_by: registeredBy, // Linked to the Farm Manager
                 farmer_id: null, 
                 sex: "Male",
                 breed: breed || "Native", 
@@ -55,7 +61,7 @@ router.post(
                     body_length: Number(bodyLength) || 0,
                     heart_girth: Number(heartGirth) || 0,
                     teeth_count: Number(teethCount) || 0,
-                    recorded_by: user.id
+                    recorded_by: user.id // The actual person who pressed "Submit"
                 }]
             });
 
@@ -87,7 +93,7 @@ router.post(
     async (req, res) => {
         const {
             farmer_id, sex, color, breed, birth_date, health_status,
-            sire_id, dam_id, date_transfer, batch,
+            sire_id, dog_id, date_transfer, batch,
             age_stage, weight, bodyLength, heartGirth, teethCount,
             leg_conformation, deformities, teat_count, current_status,
             birth_cycle_number 
@@ -462,7 +468,7 @@ router.post(
 );
 
 /* ======================================================
-    UPDATE SWINE
+    UPDATE SWINE (MODIFIED FOR MONTHLY OVERWRITE)
 ====================================================== */
 router.put(
     "/update/:swineId",
@@ -487,17 +493,41 @@ router.put(
                 "birth_cycle_number" 
             ];
 
-            allowedFields.forEach((field) => {
-                if (updates[field] !== undefined) {
-                    if (field === "performance_records" && !Array.isArray(updates[field])) {
-                        swine.performance_records.push({
-                            ...updates[field],
-                            record_date: new Date(),
-                            recorded_by: user.id
-                        });
+            // --- Performance Record Logic (Overwrite vs Push) ---
+            if (updates.performance_records) {
+                const newPerfData = {
+                    ...updates.performance_records,
+                    record_date: new Date(),
+                    recorded_by: user.id
+                };
+
+                // Logic: If overwrite_monthly is true, find existing record for this month/year and replace it
+                if (updates.overwrite_monthly) {
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    const existingIndex = swine.performance_records.findIndex(rec => {
+                        const d = new Date(rec.record_date);
+                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    });
+
+                    if (existingIndex !== -1) {
+                        swine.performance_records[existingIndex] = newPerfData;
                     } else {
-                        swine[field] = updates[field];
+                        swine.performance_records.push(newPerfData);
                     }
+                } else {
+                    // Standard Push behavior
+                    swine.performance_records.push(newPerfData);
+                }
+            }
+
+            // --- Update other fields ---
+            allowedFields.forEach((field) => {
+                // performance_records is handled above
+                if (updates[field] !== undefined && field !== "performance_records") {
+                    swine[field] = updates[field];
                 }
             });
 
@@ -515,7 +545,7 @@ router.put(
 );
 
 /* ======================================================
-    NEW: GET AUDIT LOGS (Fetch History)
+    GET AUDIT LOGS (Fetch History)
 ====================================================== */
 router.get(
     "/logs/audit",
