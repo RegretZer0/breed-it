@@ -10,6 +10,8 @@ const { JWT_SECRET } = require("../config/jwt");
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
+const AuditLog = require("../models/AuditLog"); // ✅ AuditLog Model
+const logAction = require("../middleware/logger"); // ✅ Logger utility
 
 const attachUser = require("../middleware/attachUser");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
@@ -152,7 +154,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    req.session.regenerate(() => {
+    req.session.regenerate(async () => {
       req.session.user = {
         id: user._id.toString(),
         role,
@@ -162,6 +164,9 @@ router.post("/login", async (req, res) => {
         name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
         managerId: user.managerId || null,
       };
+
+      // ✅ Audit Log: Login
+      await logAction(user._id, "LOGIN", "USER_AUTH", "User successfully logged into the system", req);
 
       res.json({
         success: true,
@@ -180,7 +185,13 @@ router.post("/login", async (req, res) => {
 /* ======================
     LOGOUT
 ====================== */
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
+  const user = req.session?.user;
+  if (user) {
+    // ✅ Audit Log: Logout
+    await logAction(user.id, "LOGOUT", "USER_AUTH", "User logged out", req);
+  }
+
   req.session?.destroy(() => {
     res.clearCookie("connect.sid");
     res.json({ success: true, message: "Logged out successfully" });
@@ -235,16 +246,10 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields (including OTP)" });
     }
 
-    // 1. Password Strength
     validatePassword(password);
-
-    // 2. OTP Verification
     verifyOTPInternal(email, otp);
-
-    // 3. Legitimacy Check
     await validateEmailLegitimacy(email);
 
-    // 4. Cross-collection Uniqueness Check
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
     if (existing) {
       return res.status(400).json({ success: false, message: "Email already registered" });
@@ -260,6 +265,9 @@ router.post("/register", async (req, res) => {
       role: "farm_manager",
     });
 
+    // ✅ Audit Log: Self-Registration
+    await logAction(user._id, "REGISTER_SELF", "USER_AUTH", "New Farm Manager account created via registration", req);
+
     res.status(201).json({
       success: true,
       message: "Farm Manager registered successfully",
@@ -273,7 +281,7 @@ router.post("/register", async (req, res) => {
 /* ======================
     REGISTER FARMER
 ====================== */
-router.post("/register-farmer", async (req, res) => {
+router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
   try {
     const {
       first_name,
@@ -293,13 +301,9 @@ router.post("/register-farmer", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // 1. Password Strength
     validatePassword(password);
-
-    // 2. Legitimacy Check
     await validateEmailLegitimacy(email);
 
-    // 3. Cross-collection Uniqueness Check
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
     if (existing) {
       return res.status(400).json({ success: false, message: "Email already in use" });
@@ -327,6 +331,9 @@ router.post("/register-farmer", async (req, res) => {
       membership_date,
     });
 
+    // ✅ Audit Log: Register Farmer
+    await logAction(req.user.id, "REGISTER_FARMER", "ACCOUNT_MANAGEMENT", `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`, req);
+
     res.status(201).json({
       success: true,
       message: "Farmer registered successfully",
@@ -339,7 +346,7 @@ router.post("/register-farmer", async (req, res) => {
 });
 
 /* ======================
-    GET FARMERS (NO PARAM)
+    GET FARMERS
 ====================== */
 router.get(
   "/farmers",
@@ -402,7 +409,7 @@ router.put(
         return res.status(404).json({ success: false, message: "Farmer not found" });
       }
 
-      [
+      const fieldsToUpdate = [
         "first_name",
         "last_name",
         "address",
@@ -410,13 +417,19 @@ router.put(
         "num_of_pens",
         "pen_capacity",
         "status",
-      ].forEach((field) => {
+      ];
+
+      fieldsToUpdate.forEach((field) => {
         if (req.body[field] !== undefined) {
           farmer[field] = req.body[field];
         }
       });
 
       await farmer.save();
+
+      // ✅ Audit Log: Update Farmer
+      await logAction(req.user.id, "UPDATE_FARMER", "ACCOUNT_MANAGEMENT", `Updated details for Farmer: ${req.params.farmerId}`, req);
+
       res.json({ success: true, farmer });
     } catch (err) {
       console.error("Update farmer error:", err);
@@ -428,7 +441,7 @@ router.put(
 /* ======================
     REGISTER ENCODER
 ====================== */
-router.post("/register-encoder", async (req, res) => {
+router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
   const { first_name, last_name, address, contact_info, email, password, managerId } = req.body;
 
   try {
@@ -436,10 +449,7 @@ router.post("/register-encoder", async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // 1. Password Strength
     validatePassword(password);
-
-    // 2. Legitimacy Check
     await validateEmailLegitimacy(email);
 
     const manager = await User.findById(managerId);
@@ -447,7 +457,6 @@ router.post("/register-encoder", async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid Farm Manager ID" });
     }
 
-    // 3. Cross-collection Uniqueness Check
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
     if (existing) {
       return res.status(400).json({ success: false, message: "Email already registered" });
@@ -464,6 +473,9 @@ router.post("/register-encoder", async (req, res) => {
       managerId,
       status: "active",
     });
+
+    // ✅ Audit Log: Register Encoder
+    await logAction(req.user.id, "REGISTER_ENCODER", "ACCOUNT_MANAGEMENT", `Registered new Encoder: ${first_name} ${last_name}`, req);
 
     res.status(201).json({
       success: true,
@@ -501,15 +513,23 @@ router.get(
 /* ======================
     UPDATE ENCODER
 ====================== */
-router.put("/update-encoder/:id", async (req, res) => {
+router.put("/update-encoder/:id", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
   try {
     const encoder = await User.findById(req.params.id);
     if (!encoder || encoder.role !== "encoder") {
       return res.status(404).json({ success: false, message: "Encoder not found" });
     }
 
+    // Security: Only Manager who created the encoder can update them
+    if(encoder.managerId?.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, message: "Access Denied" });
+    }
+
     Object.assign(encoder, req.body);
     await encoder.save();
+
+    // ✅ Audit Log: Update Encoder
+    await logAction(req.user.id, "UPDATE_ENCODER", "ACCOUNT_MANAGEMENT", `Updated details for Encoder: ${encoder.email}`, req);
 
     res.json({
       success: true,
@@ -541,5 +561,37 @@ router.get("/encoders/single/:id", async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+
+/* ======================
+    AUDIT LOGS RETRIEVAL
+====================== */
+router.get(
+  "/audit-logs",
+  requireSessionAndToken,
+  allowRoles("farm_manager"),
+  async (req, res) => {
+    try {
+      const { limit = 100, skip = 0 } = req.query;
+
+      // Find all team members (Manager + Encoders)
+      const teamEncoders = await User.find({ managerId: req.user.id }).select("_id");
+      const teamIds = teamEncoders.map(e => e._id);
+      teamIds.push(new mongoose.Types.ObjectId(req.user.id));
+
+      const logs = await AuditLog.find({ user_id: { $in: teamIds } })
+        .populate("user_id", "first_name last_name role email")
+        .sort({ timestamp: -1 })
+        .limit(parseInt(limit))
+        .skip(parseInt(skip));
+
+      const total = await AuditLog.countDocuments({ user_id: { $in: teamIds } });
+
+      res.json({ success: true, total, logs });
+    } catch (error) {
+      console.error("Fetch Audit Logs error:", error);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
 
 module.exports = router;

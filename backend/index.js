@@ -32,7 +32,7 @@ if (!process.env.SESSION_SECRET) {
 const app = express();
 
 /* =========================
-   GLOBAL EJS DEFAULTS
+    GLOBAL EJS DEFAULTS
 ========================= */
 app.use((req, res, next) => {
   res.locals.page_title = "BreedIT";
@@ -41,13 +41,13 @@ app.use((req, res, next) => {
 });
 
 /* =========================
-   VIEW ENGINE (EJS)
+    VIEW ENGINE (EJS)
 ========================= */
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "../frontend/views"));
 
 /* =========================
-   CORS
+    CORS
 ========================= */
 app.use(
   cors({
@@ -57,25 +57,28 @@ app.use(
 );
 
 /* =========================
-   BODY PARSERS
+    BODY PARSERS
 ========================= */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =========================
-   STATIC FILES
+    STATIC FILES
 ========================= */
-// Frontend assets
+// Specific asset folders
 app.use("/images", express.static(path.join(__dirname, "../frontend/images")));
 app.use("/css", express.static(path.join(__dirname, "../frontend/css")));
 app.use("/js", express.static(path.join(__dirname, "../frontend/js")));
+
+// ✅ UPDATED: Serve the frontend root to allow access to audit_logs.html and others
+app.use(express.static(path.join(__dirname, "../frontend")));
 
 // Uploaded & public assets
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "public")));
 
 /* =========================
-   MONGODB CONNECTION
+    MONGODB CONNECTION
 ========================= */
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
@@ -90,7 +93,7 @@ mongoose
   });
 
 /* =========================
-   SESSION CONFIG
+    SESSION CONFIG
 ========================= */
 app.use(
   session({
@@ -112,7 +115,7 @@ app.use(
 );
 
 /* =========================
-   SESSION → EJS USER BINDING
+    SESSION → EJS USER BINDING
 ========================= */
 app.use((req, res, next) => {
   res.locals.user = req.session?.user || null;
@@ -120,7 +123,7 @@ app.use((req, res, next) => {
 });
 
 /* =========================
-   PREVENT CACHE AFTER LOGOUT
+    PREVENT CACHE AFTER LOGOUT
 ========================= */
 app.use((req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
@@ -130,13 +133,14 @@ app.use((req, res, next) => {
 });
 
 /* =========================
-   PAGE ROUTES (EJS)
+    PAGE ROUTES (EJS)
 ========================= */
 app.use("/", require("./routes/pageRoutes"));
 
 /* =========================
-   API ROUTES
+    API ROUTES
 ========================= */
+// ✅ The audit log endpoint is contained within authRoutes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/swine", require("./routes/swineRoutes"));
 app.use("/api/heat", require("./routes/heatReportRoutes"));
@@ -150,20 +154,20 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 
 /* =========================
-   HEALTH CHECK
+    HEALTH CHECK
 ========================= */
 app.get("/health", (req, res) => {
   res.json({ status: "ok", service: "BreedIT Backend" });
 });
 
 /* =========================
-   START SERVER
+    START SERVER
 ========================= */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log("📄 EJS Views:", path.join(__dirname, "../frontend/views"));
-  console.log("🎨 Frontend Assets Enabled");
+  console.log("🎨 Frontend Root Static Assets Enabled");
   console.log("🔐 JWT Secret Loaded:", !!process.env.JWT_SECRET);
 });

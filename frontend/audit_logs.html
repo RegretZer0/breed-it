@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BreedIT | Audit Logs</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .badge-encoder { background-color: #17a2b8; color: white; }
+        .badge-manager { background-color: #007bff; color: white; }
+        .log-table thead th { position: sticky; top: 0; background: white; z-index: 10; }
+        .table-responsive { max-height: 700px; }
+        .action-code { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #d63384; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container-fluid py-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">System Audit Logs</h1>
+        <button class="btn btn-primary btn-sm shadow-sm" onclick="fetchAuditLogs()">
+            <i class="fas fa-sync-alt fa-sm text-white-50"></i> Refresh Logs
+        </button>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="m-0 font-weight-bold text-primary">Activity Tracking</h6>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" id="logSearch" class="form-control form-control-sm" 
+                               placeholder="Search by user, action, or details...">
+                        <div class="input-group-append">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover log-table" id="auditLogTable">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Action</th>
+                            <th>Module</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditLogBody">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/audit_logs.js"></script>
+</body>
+</html>
