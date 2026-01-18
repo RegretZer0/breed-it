@@ -6,6 +6,8 @@ const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
 const AIRecord = require("../models/AIRecord");
 const HeatReport = require("../models/HeatReports");
+const AuditLog = require("../models/AuditLog"); // Added for retrieval route
+const logAction = require("../middleware/logger"); // ✅ Utility referenced correctly
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
@@ -58,6 +60,10 @@ router.post(
             });
 
             await newBoar.save();
+
+            // ✅ Audit Log: Master Boar Registration
+            await logAction(user.id, "REGISTER_MASTER_BOAR", "SWINE_MANAGEMENT", `Registered Master Boar ${swineId} (${breed})`, req);
+
             res.status(201).json({ 
                 success: true, 
                 message: "Master Boar registered with ID: " + swineId, 
@@ -84,7 +90,7 @@ router.post(
             sire_id, dam_id, date_transfer, batch,
             age_stage, weight, bodyLength, heartGirth, teethCount,
             leg_conformation, deformities, teat_count, current_status,
-            birth_cycle_number // ADDED: New field for lineage linking
+            birth_cycle_number 
         } = req.body;
 
         try {
@@ -144,7 +150,7 @@ router.post(
                 color,
                 breed,
                 birth_date,
-                birth_cycle_number, // ADDED: Assigning the cycle number
+                birth_cycle_number, 
                 health_status: health_status || "Healthy",
                 sire_id,
                 dam_id,
@@ -166,6 +172,10 @@ router.post(
             });
 
             await newSwine.save();
+
+            // ✅ Audit Log: Swine Registration
+            await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Added new swine ${swineId} to batch ${batch}`, req);
+
             res.status(201).json({ success: true, message: "Swine added successfully", swine: newSwine });
 
         } catch (error) {
@@ -230,6 +240,9 @@ router.post(
                 { session }
             );
 
+            // ✅ Audit Log: Farrowing Registration
+            await logAction(req.user.id, "REGISTER_FARROWING", "BREEDING", `Registered farrowing for Sow ${swineId}: ${total_live} live, ${totalPiglets - total_live} mortality`, req);
+
             await session.commitTransaction();
             res.json({ success: true, message: "Farrowing registered. Sow is now Lactating." });
 
@@ -274,6 +287,9 @@ router.patch(
                 { swine_id: swine._id, status: "lactating" },
                 { status: "completed" }
             );
+
+            // ✅ Audit Log: Manual Weaning
+            await logAction(req.user.id, "MANUAL_WEANING", "BREEDING", `Manually weaned Sow ${swineId}. Status updated to Open.`, req);
 
             res.json({ 
                 success: true, 
@@ -434,6 +450,10 @@ router.post(
             });
 
             await swine.save();
+
+            // ✅ Audit Log: Medical Record
+            await logAction(req.user.id, "ADD_MEDICAL_RECORD", "HEALTH_MANAGEMENT", `Added ${treatment_type} record (${medicine_name}) for Swine ${req.params.swineId}`, req);
+
             res.json({ success: true, message: "Medical record added", medical_records: swine.medical_records });
         } catch (error) {
             res.status(500).json({ success: false, message: "Server error" });
@@ -464,7 +484,7 @@ router.put(
                 "sex", "color", "breed", "birth_date", "health_status", 
                 "sire_id", "dam_id", "date_transfer", 
                 "batch", "age_stage", "current_status", "performance_records",
-                "birth_cycle_number" // ADDED: Allow updating lineage cycle
+                "birth_cycle_number" 
             ];
 
             allowedFields.forEach((field) => {
@@ -482,10 +502,49 @@ router.put(
             });
 
             await swine.save();
+
+            // ✅ Audit Log: Swine Update
+            await logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated profile/performance data for Swine ${swineId}`, req);
+
             res.json({ success: true, message: "Swine updated successfully", swine });
         } catch (error) {
             console.error("[UPDATE SWINE ERROR]:", error);
             res.status(500).json({ success: false, message: "Server error" });
+        }
+    }
+);
+
+/* ======================================================
+    NEW: GET AUDIT LOGS (Fetch History)
+====================================================== */
+router.get(
+    "/logs/audit",
+    requireSessionAndToken,
+    allowRoles("farm_manager", "encoder"),
+    async (req, res) => {
+        try {
+            const { module_name, action_type, limit = 50, skip = 0 } = req.query;
+            
+            let query = {};
+            if (module_name) query.module = module_name;
+            if (action_type) query.action = action_type;
+
+            const logs = await AuditLog.find(query)
+                .populate("user_id", "first_name last_name email role")
+                .sort({ timestamp: -1 })
+                .limit(parseInt(limit))
+                .skip(parseInt(skip));
+
+            const total = await AuditLog.countDocuments(query);
+
+            res.json({ 
+                success: true, 
+                total,
+                logs 
+            });
+        } catch (error) {
+            console.error("[FETCH LOGS ERROR]:", error);
+            res.status(500).json({ success: false, message: "Error retrieving audit logs" });
         }
     }
 );
