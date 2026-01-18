@@ -39,6 +39,17 @@ function requireFarmer(req, res, next) {
   next();
 }
 
+
+function requireApiFarmer(req, res, next) {
+  if (!req.user || req.user.role !== "farmer") {
+    return res.status(403).json({
+      success: false,
+      message: "Farmer access required",
+    });
+  }
+  next();
+}
+
 // ======================================================
 // Require login for API routes (JSON)
 // FIXED: supports id, _id, and email
@@ -128,4 +139,5 @@ module.exports = {
   requireFarmManager,
   requireFarmManagerOnly,
   requireFarmer,
+  requireApiFarmer, // 👈 ADD
 };

@@ -1,0 +1,236 @@
+/* =========================
+   FARMER PAGE OFFSET (FIX NAV OVERLAP)
+========================= */
+
+.app-root {
+  padding-top: 50px; 
+}
+
+/* =========================
+   VISIBILITY HELPERS
+========================= */
+.hidden {
+  display: none;
+}
+
+/* =========================
+   PAGE TITLE
+========================= */
+
+.page-title {
+  text-align: center;
+  margin: 28px 0 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.page-subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* =========================
+   CONTAINER
+========================= */
+
+.reproduction-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+.search-container {
+  margin-bottom: 22px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #4caf50;
+}
+
+/* =========================
+   SECTION CARDS
+========================= */
+
+.section-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 22px;
+  border-top: 4px solid transparent;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Badge inside title */
+.section-title .badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* =========================
+   TABLES
+========================= */
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+thead th {
+  background: #f4f6f8;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px;
+  text-align: left;
+}
+
+tbody td {
+  padding: 10px;
+  font-size: 13px;
+  border-top: 1px solid #eee;
+  vertical-align: middle;
+}
+
+th,
+td {
+  white-space: nowrap;
+}
+
+/* =========================
+   DEFORMITY LIST
+========================= */
+
+#deformityList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deformity-item {
+  background: #fff5f5;
+  border-left: 5px solid #d32f2f;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* =========================
+   ACTION BUTTONS
+========================= */
+
+.action-btn {
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-btn:not(.btn-danger) {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.action-btn.btn-danger {
+  background: #d32f2f;
+  color: #fff;
+}
+
+/* =========================
+   MOBILE (TABLETS)
+========================= */
+
+@media (max-width: 768px) {
+  .reproduction-container {
+    padding: 16px;
+  }
+
+  .section-card {
+    padding: 14px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  thead th,
+  tbody td {
+    font-size: 12px;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  .search-input {
+    font-size: 13px;
+  }
+}
+
+/* =========================
+   EXTRA SMALL DEVICES
+========================= */
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 18px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+  }
+
+  .section-title {
+    font-size: 13px;
+  }
+
+  .section-card {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  table {
+    min-width: 520px;
+  }
+
+  .search-input {
+    padding: 10px 12px;
+  }
+}

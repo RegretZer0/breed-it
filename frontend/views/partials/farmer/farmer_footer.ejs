@@ -1,4 +1,7 @@
+<!-- GLOBAL SCRIPTS -->
 <script src="/js/farmer/farmer_main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
 
 <% if (page_title === "Farmer Dashboard") { %>
   <script src="/js/farmer/farmer_dashboard.js"></script>
@@ -15,7 +18,7 @@
 <% } else if (page_title === "Your Schedule") { %>
   <script type="module" src="/js/farmer/calendar.js"></script>
 
-<% } else if (page_title === "Reproduction & Growth") { %>
+<% } else if (page_title === "Reproduction Growth") { %>
   <script type="module" src="/js/farmer/reproduction.js"></script>
 
 <% } else if (page_title === "Help") { %>

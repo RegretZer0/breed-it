@@ -1,0 +1,131 @@
+
+/* =========================
+   VISIBILITY HELPERS
+========================= */
+.hidden {
+  display: none;
+}
+
+
+/* =========================
+   PAGE CONTAINER
+========================= */
+.calendar-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* =========================
+   TITLES
+========================= */
+.page-title {
+  text-align: center;
+  margin: 28px 0 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.calendar-subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 16px;
+}
+
+/* =========================
+   CALENDAR WRAPPER
+========================= */
+.calendar-wrapper {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* =========================
+   FULLCALENDAR BASE
+========================= */
+#calendar {
+  font-size: 12px; /* Mobile-first */
+}
+
+/* Reduce header clutter on small screens */
+.fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Buttons */
+.fc .fc-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Day numbers */
+.fc .fc-daygrid-day-number {
+  font-size: 11px;
+}
+
+/* Event pills */
+.fc-event {
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+/* Prevent text overflow */
+.fc-event-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================
+   TABLET VIEW
+========================= */
+@media (min-width: 600px) {
+  #calendar {
+    font-size: 13px;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.2rem;
+  }
+
+  .fc .fc-button {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+
+  .fc-event {
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   DESKTOP VIEW
+========================= */
+@media (min-width: 992px) {
+  .calendar-wrapper {
+    padding: 16px;
+  }
+
+  #calendar {
+    font-size: 14px;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.4rem;
+  }
+
+  .fc-event {
+    font-size: 13px;
+  }
+}

@@ -23,25 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = "/farmer/profile";
   });
 
+  document.getElementById("scheduleBtn")?.addEventListener("click", () => {
+    window.location.href = "/farmer/calendar";
+  });
+
+  document.getElementById("reproductionBtn")?.addEventListener("click", () => {
+    window.location.href = "/farmer/reproduction";
+  });
+
   // =========================
   // LOGOUT
   // =========================
 
-document.querySelector('[data-action="logout"]')
-  ?.addEventListener("click", async () => {
-    console.log("🚪 Logout clicked");
+  document.querySelector('[data-action="logout"]')
+    ?.addEventListener("click", async () => {
+      console.log("🚪 Logout clicked");
 
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      console.log("✅ Logout request sent");
-    } catch (err) {
-      console.error("Logout error:", err);
-    } finally {
-      localStorage.clear();
-      window.location.href = "/login";
-    }
-  });
+      try {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+        console.log("✅ Logout request sent");
+      } catch (err) {
+        console.error("Logout error:", err);
+      } finally {
+        localStorage.clear();
+        window.location.href = "/login";
+      }
+    });
 });

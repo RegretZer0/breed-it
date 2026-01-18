@@ -281,6 +281,7 @@ router.get(
       page_title: "Your Schedule",
       current_section: "calendar",
       current_page: "calendar",
+      user: req.user 
     });
   }
 );
@@ -292,7 +293,7 @@ router.get(
   requireFarmer,
   (req, res) => {
     res.render("pages/farmer/reproduction", {
-      page_title: "Reproduction & Growth",
+      page_title: "Reproduction Growth",
       current_section: "reproduction",
       current_page: "reproduction",
     });

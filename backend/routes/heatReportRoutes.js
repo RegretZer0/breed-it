@@ -407,71 +407,71 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 /* ======================================================
     GET CALENDAR EVENTS (Now includes 30-day Weaning)
 ====================================================== */
-router.get("/calendar-events", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
-  try {
-    const user = req.user;
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-    
-    // Include 'lactating' status to calculate weaning events
-    const reports = await HeatReport.find({ 
-      manager_id: managerId,
-      status: { $in: ["approved", "under_observation", "pregnant", "lactating"] }
-    }).populate("swine_id", "swine_id").populate("farmer_id", "first_name last_name");
+router.get(
+  "/calendar-events",
+  requireApiLogin,
+  allowRoles("farmer"),
+  async (req, res) => {
+    try {
+      const farmerProfileId = req.user.farmerProfileId;
 
-    const events = [];
+      const reports = await HeatReport.find({
+        farmer_id: farmerProfileId,
+        status: { $in: ["approved", "under_observation", "pregnant", "lactating"] }
+      })
+        .populate("swine_id", "swine_id");
 
-    reports.forEach(r => {
-      // 1. AI Reminders
-      if (r.status === "approved" && r.next_heat_check) {
-        events.push({
-          id: r._id,
-          title: `💉 AI Due: ${r.swine_id?.swine_id}`,
-          start: r.next_heat_check.toISOString().split('T')[0],
-          backgroundColor: "#3498db",
-          allDay: true
-        });
-      }
-      // 2. Heat Re-checks
-      if (r.status === "under_observation" && r.next_heat_check) {
-        events.push({
-          id: r._id,
-          title: `🔍 Heat Re-Check: ${r.swine_id?.swine_id}`,
-          start: r.next_heat_check.toISOString().split('T')[0],
-          backgroundColor: "#f39c12",
-          allDay: true
-        });
-      }
-      // 3. Farrowing Dates
-      if (r.status === "pregnant" && r.expected_farrowing) {
-        events.push({
-          id: r._id,
-          title: `🐷 Farrowing: ${r.swine_id?.swine_id}`,
-          start: r.expected_farrowing.toISOString().split('T')[0],
-          backgroundColor: "#27ae60",
-          allDay: true
-        });
-      }
-      // 4. ✅ Automated Weaning Event (30 Days After Expected Farrowing or AI Success)
-      if (r.status === "lactating" && r.expected_farrowing) {
-        const weaningDate = new Date(r.expected_farrowing);
-        weaningDate.setDate(weaningDate.getDate() + 30);
-        
-        events.push({
-          id: r._id,
-          title: `🍼 Weaning: ${r.swine_id?.swine_id}`,
-          start: weaningDate.toISOString().split('T')[0],
-          backgroundColor: "#9b59b6", // Purple for Weaning
-          allDay: true
-        });
-      }
-    });
+      const events = [];
 
-    res.json({ success: true, events });
-  } catch (err) {
-    console.error("Calendar Data Error:", err);
-    res.status(500).json({ success: false, message: "Failed to fetch calendar data" });
+      reports.forEach(r => {
+        if (r.status === "approved" && r.next_heat_check) {
+          events.push({
+            title: `💉 AI Due: ${r.swine_id?.swine_id}`,
+            start: r.next_heat_check.toISOString().split("T")[0],
+            backgroundColor: "#3498db",
+            allDay: true
+          });
+        }
+
+        if (r.status === "under_observation" && r.next_heat_check) {
+          events.push({
+            title: `🔍 Heat Re-Check: ${r.swine_id?.swine_id}`,
+            start: r.next_heat_check.toISOString().split("T")[0],
+            backgroundColor: "#f39c12",
+            allDay: true
+          });
+        }
+
+        if (r.status === "pregnant" && r.expected_farrowing) {
+          events.push({
+            title: `🐷 Farrowing: ${r.swine_id?.swine_id}`,
+            start: r.expected_farrowing.toISOString().split("T")[0],
+            backgroundColor: "#27ae60",
+            allDay: true
+          });
+        }
+
+        if (r.status === "lactating" && r.expected_farrowing) {
+          const weaningDate = new Date(r.expected_farrowing);
+          weaningDate.setDate(weaningDate.getDate() + 30);
+
+          events.push({
+            title: `🍼 Weaning: ${r.swine_id?.swine_id}`,
+            start: weaningDate.toISOString().split("T")[0],
+            backgroundColor: "#9b59b6",
+            allDay: true
+          });
+        }
+      });
+
+      res.json({ success: true, events });
+    } catch (err) {
+      console.error("Calendar Data Error:", err);
+      res.status(500).json({ success: false, message: "Failed to fetch calendar data" });
+    }
   }
-});
+);
+
 
 /* ======================================================
     REJECT REPORT
