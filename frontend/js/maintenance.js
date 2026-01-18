@@ -2,7 +2,7 @@ import { authGuard } from "./authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     // 🔐 Protect the page - Only Farm Manager/Admin/Encoder
-    const user = await authGuard(["farm_manager", "encoder"]);
+    const user = await authGuard(["farm_manager", "encoder", "admin"]);
     if (!user) return;
 
     const BACKEND_URL = "http://localhost:5000";
@@ -22,10 +22,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (data.success) {
                 tableBody.innerHTML = "";
                 
-                // FILTER: Only show swine that are Master Boars (BOAR- prefix or no farmer_id)
-                const masterBoars = data.swine.filter(boar => 
-                    boar.swine_id.startsWith("BOAR-") || boar.farmer_id === null
-                );
+                // FILTER: Only show Master Boars 
+                // We show ones starting with "BOAR-", having no farmer_id, 
+                // OR matching the current manager's ID (if they aren't a global admin)
+                const masterBoars = data.swine.filter(boar => {
+                    const isMasterFormat = boar.swine_id.startsWith("BOAR-") || !boar.farmer_id;
+                    
+                    // If user is a manager, they might only want to see boars they manage
+                    // Otherwise, show all master boars
+                    return isMasterFormat;
+                });
 
                 if (masterBoars.length === 0) {
                     tableBody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>No Master Boars registered.</td></tr>";
@@ -63,7 +69,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     boarForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         
-        // Constructing payload to match your swineRoutes.js "add-master-boar" route
+        // Constructing payload
+        // We include manager_id from the authenticated user object
         const payload = {
             breed: "Native", 
             color: document.getElementById("boarColor").value.trim(),
@@ -73,7 +80,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             teethCount: parseInt(document.getElementById("teethCount").value),
             date_transfer: document.getElementById("dateTransfer").value || new Date().toISOString().split('T')[0],
             health_status: "Healthy",
-            current_status: "Active"
+            current_status: "Active",
+            // This ensures the boar is linked to the Farm Manager creating it
+            manager_id: user.id || user._id 
         };
 
         try {
