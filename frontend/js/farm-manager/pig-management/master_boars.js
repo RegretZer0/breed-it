@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // ✅ Master Boar filter
       const masterBoars = data.swine.filter(boar =>
-        boar.swine_id?.startsWith("BOAR-") || boar.farmer_id === null
+        boar.swine_id.startsWith("BOAR-") || !boar.farmer_id
       );
 
       if (masterBoars.length === 0) {

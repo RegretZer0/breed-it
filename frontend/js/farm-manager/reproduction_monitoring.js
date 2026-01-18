@@ -457,19 +457,22 @@ function renderFilteredResults() {
         if (!tableBody) return;
 
         // 1. Filter for Sows (Adult Females ONLY – core business rule)
-        let adultSows = allSwineData.filter(s =>
-            (s.age_stage === "adult" || s.current_stage === "adult") &&
-            (s.sex === "Female" || s.swine_sex === "Female")
-        );
+        let adultSows = allSwineData.filter(s => {
+        const stage = (s.age_stage || s.current_stage || "").toLowerCase();
+        const sex   = (s.sex || s.swine_sex || "").toLowerCase();
+
+        return stage === "adult" && sex === "female";
+        });
+
 
         // 2. Apply Role-based filtering
         const role = user.role.toLowerCase();
         if (role === "farmer") {
-            const userId = user.id || user._id;
-            adultSows = adultSows.filter(s => {
+                const userProfileId = user.farmerProfileId;
+                adultSows = adultSows.filter(s => {
                 const fId = s.farmer_id?._id || s.farmer_id;
-                return fId === userId;
-            });
+                return fId === userProfileId;
+                });
         }
 
         // 3. APPLY SEARCH + SEX FILTER

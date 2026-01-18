@@ -72,7 +72,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         dateTransferInput.value ||
         new Date().toISOString().split("T")[0],
       health_status: "Healthy",
-      current_status: "Active"
+      current_status: "Active",
+
+      // ✅ ADD THIS (from maintenance.js)
+      manager_id: user.id || user._id
     };
 
     try {
