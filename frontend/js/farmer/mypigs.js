@@ -177,9 +177,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.innerHTML = `
         <div class="pig-left">
           <img 
-              src="${pig.image_url || '/images/default-pig.jpg'}"
+              src="${pig.image_url || '/images/default-pig.png'}"
               alt="Pig"
-              onerror="this.src='/images/default-pig.jpg'"
+              onerror="this.src='/images/default-pig.png'"
             />
           <span class="pig-tag">${pig.swine_id}</span>
         </div>
