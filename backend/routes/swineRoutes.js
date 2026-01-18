@@ -476,7 +476,13 @@ router.put(
     allowRoles("farm_manager", "encoder", "farmer"),
     async (req, res) => {
         const { swineId } = req.params;
-        const user = req.user;
+        const user = req.user || req.session?.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated"
+            });
+        }
         const updates = req.body;
 
         try {

@@ -1,7 +1,8 @@
 import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  await authGuard("farmer");
+  const user = await authGuard("farmer");
+  if (!user) return;
 
   const token = localStorage.getItem("token");
   const pigList = document.getElementById("pigList");
@@ -9,21 +10,146 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pigModal = document.getElementById("pigModal");
   const modalBody = document.getElementById("modalBody");
   const closeModal = document.getElementById("closeModal");
+  const BACKEND_URL = "http://localhost:5000";
 
-  if (!pigList || !loadingMessage) {
-    console.error("❌ Required DOM elements missing");
-    return;
-  }
+  let currentSwineData = [];
 
   closeModal?.addEventListener("click", () => {
     pigModal.classList.add("hidden");
   });
 
+  /* =========================
+     HELPERS (FROM PROTOTYPE)
+  ========================= */
+
+  const formatStageDisplay = (stage) => {
+    const mapping = {
+      "Monitoring (Day 1-30)": "piglet",
+      "Weaned (Monitoring 3 Months)": "weaner",
+      "Final Selection": "selection",
+      adult: "adult",
+      piglet: "piglet",
+    };
+    return mapping[stage] || stage || "-";
+  };
+
+  const getLatestPerformance = (records = []) => {
+    if (!records.length) return {};
+    return records.sort(
+      (a, b) => new Date(b.record_date) - new Date(a.record_date)
+    )[0];
+  };
+
+  const formatDeformities = (deformities) => {
+    const active = (deformities || []).filter(d => d && d !== "None");
+    return active.length ? active.join(", ") : "None";
+  };
+
+  const calculateADG = (records = []) => {
+    if (records.length < 2) return "N/A";
+    const last = records[records.length - 1];
+    const prev = records[records.length - 2];
+    const days =
+      (new Date(last.record_date) - new Date(prev.record_date)) /
+      (1000 * 60 * 60 * 24);
+    if (days <= 0) return "N/A";
+    return ((last.weight - prev.weight) / days).toFixed(3) + " kg/day";
+  };
+
+  /* =========================
+     HEALTH UPDATE (ACTION)
+  ========================= */
+  async function updateHealthStatus(swineId, newStatus) {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/swine/update/${swineId}`,
+        {
+          method: "PUT",
+          credentials: "include", // 🔑 REQUIRED
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ health_status: newStatus }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        alert("Error: " + (data.message || "Failed to update health status."));
+        return;
+      }
+
+      location.reload();
+    } catch (error) {
+      console.error("Update Error:", error);
+      alert("Server error while updating health status.");
+    }
+  }
+
+  /* =========================
+     MONTHLY UPDATE (ACTION)
+  ========================= */
+  window.recordGrowth = async (swineId) => {
+    const swine = currentSwineData.find(s => s.swine_id === swineId);
+    if (!swine) return;
+
+    const weight = prompt("Enter Weight (kg):");
+    if (weight === null) return;
+
+    const length = prompt("Enter Body Length (cm):");
+    const girth = prompt("Enter Heart Girth (cm):");
+    const teeth = prompt("Enter Teeth Count:");
+    const deformity = prompt("Enter Deformities (leave blank for 'None'):") || "None";
+
+    const payload = {
+      performance_records: {
+        weight: parseFloat(weight),
+        body_length: parseFloat(length),
+        heart_girth: parseFloat(girth),
+        teeth_count: parseInt(teeth),
+        deformities: [deformity],
+        stage: swine.current_status,
+        record_date: new Date()
+      }
+    };
+
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/swine/update/${swineId}`,
+        {
+          method: "PUT",
+          credentials: "include", // 🔑 REQUIRED
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        alert(`Monthly update saved for ${swineId}!`);
+        location.reload();
+      } else {
+        alert("Error: " + data.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save growth record.");
+    }
+  };
+
+  /* =========================
+     LOAD SWINE
+  ========================= */
   try {
     loadingMessage.textContent = "Loading your pigs...";
 
-    const response = await fetch("http://localhost:5000/api/swine/farmer", {
-      method: "GET",
+    const response = await fetch(`${BACKEND_URL}/api/swine/farmer`, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -31,100 +157,93 @@ document.addEventListener("DOMContentLoaded", async () => {
       credentials: "include",
     });
 
-    // ✅ SAME SAFETY CHECK AS WORKING PROTOTYPE
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Non-JSON response:", text);
-      throw new Error("Server returned invalid response (HTML)");
-    }
-
     const data = await response.json();
-
     if (!response.ok || !data.success) {
       loadingMessage.textContent = data.message || "Failed to load pigs.";
       return;
     }
 
-    if (!data.swine || data.swine.length === 0) {
-      loadingMessage.textContent = "No pigs registered yet.";
-      return;
-    }
-
+    currentSwineData = data.swine;
     loadingMessage.textContent = "";
     pigList.innerHTML = "";
 
-    data.swine.forEach((pig) => {
-  const latestPerf =
-    pig.performance_records?.[pig.performance_records.length - 1] || {};
+    data.swine.forEach(pig => {
+      const latest = getLatestPerformance(pig.performance_records);
+      const adg = calculateADG(pig.performance_records);
 
-  const card = document.createElement("div");
-  card.className = "pig-card";
+      const card = document.createElement("div");
+      card.className = "pig-card";
 
-  card.innerHTML = `
-    <div class="pig-left">
-      <img src="/images/pig-placeholder.png" alt="Pig" />
-      <div class="pig-tag">${pig.swine_id || "-"}</div>
-    </div>
+      card.innerHTML = `
+        <div class="pig-left">
+          <img 
+              src="${pig.image_url || '/images/default-pig.jpg'}"
+              alt="Pig"
+              onerror="this.src='/images/default-pig.jpg'"
+            />
+          <span class="pig-tag">${pig.swine_id}</span>
+        </div>
 
-    <div class="pig-summary">
-      <p><strong>Age Stage:</strong> ${pig.age_stage || "-"}</p>
-      <p><strong>Breed:</strong> ${pig.breed || "-"}</p>
-      <p><strong>Health:</strong> ${pig.health_status || "Healthy"}</p>
-      <p><strong>Status:</strong> ${pig.current_status || "-"}</p>
-      <p><strong>Batch:</strong> ${pig.batch || "-"}</p>
-    </div>
+        <div class="pig-summary">
+          <p><strong>Breed:</strong> ${pig.breed}</p>
+          <p><strong>Age Stage:</strong> ${formatStageDisplay(pig.age_stage)}</p>
+          <p><strong>Health:</strong> ${pig.health_status}</p>
 
-    <div class="pig-actions">
-      <button class="details-btn">View Details</button>
-    </div>
-  `;
+          <p><strong>Status:</strong> ${pig.current_status}</p>
+          <span class="pipeline-badge success">
+            Ready for Final Selection
+          </span>
+        </div>
 
-  card.querySelector(".details-btn").onclick = () => {
-    modalBody.innerHTML = `
-      <h3>${pig.swine_id}</h3>
-      <hr />
+        <div class="pig-actions">
+          <button class="details-btn">View / Edit</button>
+        </div>
+      `;
 
-      <p><strong>Breed:</strong> ${pig.breed || "-"}</p>
-      <p><strong>Color:</strong> ${pig.color || "-"}</p>
-      <p><strong>Sex:</strong> ${pig.sex || "-"}</p>
-      <p><strong>Health Status:</strong> ${pig.health_status || "Healthy"}</p>
-      <p><strong>Pipeline Status:</strong> ${pig.current_status || "-"}</p>
-      <p><strong>Age Stage:</strong> ${pig.age_stage || "-"}</p>
-      <p><strong>Batch:</strong> ${pig.batch || "-"}</p>
-      <p><strong>Date Registered:</strong>
-        ${
-          pig.date_registered || pig.createdAt
-            ? new Date(pig.date_registered || pig.createdAt).toLocaleDateString()
-            : "-"
-        }
-      </p>
+      card.querySelector(".details-btn").onclick = () => {
+        modalBody.innerHTML = `
+          <h3>${pig.swine_id}</h3>
+          <hr />
 
-      <hr />
-      <h4>Latest Performance</h4>
-      <ul>
-        <li><strong>Weight:</strong> ${latestPerf.weight ? latestPerf.weight + " kg" : "-"}</li>
-        <li><strong>Body Length:</strong> ${latestPerf.body_length || "-"} cm</li>
-        <li><strong>Teeth Count:</strong> ${latestPerf.teeth_count || "-"}</li>
-        <li><strong>Deformities:</strong> ${
-          Array.isArray(latestPerf.deformities)
-            ? latestPerf.deformities.join(", ")
-            : latestPerf.deformities || "None"
-        }</li>
-        <li><strong>Stage:</strong> ${latestPerf.stage || "Initial"}</li>
-      </ul>
-    `;
+          <p><strong>Breed:</strong> ${pig.breed}</p>
+          <p><strong>Sex:</strong> ${pig.sex}</p>
+          <p><strong>Age Stage:</strong> ${formatStageDisplay(pig.age_stage)}</p>
 
-    pigModal.classList.remove("hidden");
-  };
+          <h4>Health Status</h4>
+          <select id="healthSelect">
+            <option ${pig.health_status === "Healthy" ? "selected" : ""}>Healthy</option>
+            <option ${pig.health_status === "Sick" ? "selected" : ""}>Sick</option>
+            <option ${pig.health_status === "Deceased" ? "selected" : ""}>Deceased</option>
+          </select>
 
-  pigList.appendChild(card);
-});
+          <h4>Latest Performance</h4>
+          <ul>
+            <li><strong>Weight:</strong> ${latest.weight || "-"} kg</li>
+            <li><strong>Dimensions:</strong> ${latest.body_length || "-"}L / ${latest.heart_girth || "-"}G</li>
+            <li><strong>ADG:</strong> ${adg}</li>
+            <li><strong>Deformities:</strong> ${formatDeformities(latest.deformities)}</li>
+          </ul>
 
+          <button class="btn-update-growth"
+            onclick="recordGrowth('${pig.swine_id}')">
+            Monthly Update
+          </button>
+        `;
 
-  } catch (error) {
-    console.error("❌ Load error:", error);
+        modalBody.querySelector("#healthSelect")
+          .addEventListener("change", e =>
+            updateHealthStatus(pig.swine_id, e.target.value)
+          );
+
+        pigModal.classList.remove("hidden");
+      };
+
+      pigList.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error(err);
     loadingMessage.innerHTML =
-      `<span style="color:red">${error.message}</span>`;
+      `<span style="color:red">${err.message}</span>`;
   }
 });

@@ -8,6 +8,9 @@ const {
   requireFarmer,
 } = require("../middleware/pageAuth.middleware");
 
+const requireSystemAdmin = require("../middleware/requireSystemAdmin.page");
+
+
 
 /* =========================
    AUTH / PUBLIC PAGES
@@ -300,6 +303,19 @@ router.get(
   }
 );
 
+// Farmer Breeding Analytics
+router.get(
+  "/farmer/breeding-analytics",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/breeding_analytics", {
+      page_title: "Breeding Analytics",
+      current_section: "breeding_analytics",
+      current_page: "breeding_analytics",
+    });
+  }
+);
 
 // Farmer Help
 router.get(
@@ -314,6 +330,27 @@ router.get(
     });
   }
 );
+
+
+
+/* =========================
+   SYSTEM ADMIN PAGES
+========================= */
+
+router.get(
+  "/system-admin/dashboard",
+  requireLogin,
+  requireSystemAdmin,
+  (req, res) => {
+    res.render("pages/system-admin/dashboard", {
+      page_title: "System Admin Dashboard",
+      current_section: "dashboard",
+      current_page: "dashboard",
+      user: req.session.user,
+    });
+  }
+);
+
 
 
 

@@ -5,34 +5,90 @@
 
   <p id="loadingMessage">Loading pigs...</p>
 
-  <!-- Pig Cards List -->
+  <!-- =========================
+       PIG CARD LIST (SUMMARY)
+  ========================= -->
   <div id="pigList">
-    <!-- 
-      Pig cards will be injected here by mypigs.js
-      Expected structure per card:
-      - Image + Tag
-      - Summary info (Age, Breed, Status, Location)
-      - View Details button
+    <!-- Injected by mypigs.js -->
+
+    <!-- CARD EXPECTATION
+    <div class="pig-card">
+      <div class="pig-left">
+        <img />
+        <span class="pig-tag">A-0012-0001</span>
+      </div>
+
+      <div class="pig-summary">
+        <p><strong>Breed:</strong> Native</p>
+        <p><strong>Age Stage:</strong> adult</p>
+        <p><strong>Health:</strong> Healthy</p>
+
+        <p class="pipeline-status">
+          <strong>Status:</strong> Under Observation
+        </p>
+        <span class="pipeline-badge success">
+          Ready for Final Selection
+        </span>
+      </div>
+
+      <div class="pig-actions">
+        <button class="details-btn">View / Edit</button>
+      </div>
+    </div>
     -->
   </div>
 </div>
 
 <!-- =========================
-     PIG DETAILS MODAL
+     PIG DETAILS / ACTION MODAL
 ========================= -->
 <div id="pigModal" class="modal hidden">
   <div class="modal-content">
     <span id="closeModal">&times;</span>
 
-    <!-- Full pig details injected dynamically -->
     <div id="modalBody">
-      <!-- 
-        Full data example:
-        - Tag / Breed / Sex
-        - Health & Pipeline Status
-        - Performance records
-        - Medical history
-        - Registration info
+      <!-- Injected dynamically -->
+
+      <!-- MODAL EXPECTATION
+      <h3>A-0012-0001</h3>
+
+      <section class="modal-section">
+        <h4>Basic Information</h4>
+        <p><strong>Breed:</strong> Native</p>
+        <p><strong>Sex:</strong> Female</p>
+        <p><strong>Age Stage:</strong> adult</p>
+      </section>
+
+      <section class="modal-section">
+        <h4>Health Status</h4>
+        <select class="health-select">
+          <option>Healthy</option>
+          <option>Sick</option>
+          <option>Deceased</option>
+        </select>
+      </section>
+
+      <section class="modal-section">
+        <h4>Pipeline Status & Suggestion</h4>
+        <p><strong>Status:</strong> Under Observation</p>
+        <span class="pipeline-badge success">
+          Ready for Final Selection
+        </span>
+      </section>
+
+      <section class="modal-section">
+        <h4>Latest Performance Metrics</h4>
+        <ul>
+          <li><strong>Weight:</strong> 21 kg</li>
+          <li><strong>Dimensions:</strong> 21L / 16G</li>
+          <li><strong>ADG:</strong> N/A</li>
+          <li><strong>Deformities:</strong> None</li>
+        </ul>
+
+        <button class="btn-update-growth">
+          Monthly Update
+        </button>
+      </section>
       -->
     </div>
   </div>

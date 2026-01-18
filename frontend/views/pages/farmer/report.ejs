@@ -1,7 +1,6 @@
 <%- include("../../partials/farmer/farmer_nav") %>
 
 <div class="app-root">
-  <!-- CONTENT -->
   <main class="report-container">
     <h2 class="page-title">REPORT</h2>
 
@@ -15,8 +14,9 @@
     <section id="logsSection">
       <div class="filters">
         <div class="filter">
-          <label>Report Status</label>
+          <label>Status</label>
           <select id="statusFilter">
+            <option value="">All</option>
             <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
             <option value="waiting_heat_check">Waiting Heat Check</option>
@@ -27,7 +27,7 @@
 
         <div class="filter">
           <label>Date</label>
-          <input type="date" />
+          <input type="date" id="dateFilter" />
         </div>
 
         <div class="filter">
@@ -37,22 +37,70 @@
           </select>
         </div>
 
-        <button class="chat-btn" id="searchBtn">
+        <button class="search-btn" id="searchBtn">
           <i class="fa-solid fa-magnifying-glass"></i> SEARCH
         </button>
-        <button class="chat-btn outline" id="clearFilterBtn">CLEAR</button>
+        <button class="search-btn outline" id="clearFilterBtn">CLEAR</button>
       </div>
 
-      <!-- FILTERED RESULTS -->
-      <section id="filteredSection" style="display:none;">
-        <h4 class="section-title">Filtered Results</h4>
-        <div id="filteredLogsContainer"></div>
-      </section>
+      <!-- ================= STATS (REQUIRED BY JS) ================= -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <div>
+            <h4>Open Sows</h4>
+            <span id="countOpen">0</span>
+          </div>
+          <div class="stat-icon blue">
+            <i class="fa-solid fa-o"></i>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div>
+            <h4>Pregnant</h4>
+            <span id="countPregnant">0</span>
+          </div>
+          <div class="stat-icon pink">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div>
+            <h4>Farrowing Soon</h4>
+            <span id="countFarrowing">0</span>
+          </div>
+          <div class="stat-icon orange">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+        </div>
+      </div>
+
 
       <!-- RECENT LOGS -->
       <h4 class="section-title">Recent Logs</h4>
-      <div id="logsContainer">
-        <div class="spinner"></div>
+
+      <!-- ================= TABLE LOGS (REQUIRED BY JS) ================= -->
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Swine ID</th>
+              <th>Report Date</th>
+              <th>Status & Feedback</th>
+              <th>Next Heat Check</th>
+              <th>Expected Farrowing</th>
+              <th>Required Action</th>
+            </tr>
+          </thead>
+          <tbody id="reportsTableBody">
+            <tr>
+              <td colspan="6" style="text-align:center;">
+                Checking for active reports...
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -70,188 +118,67 @@
     <!-- ================= CREATE REPORT ================= -->
     <section id="createSection" class="hidden">
       <form id="heatReportForm" class="form-card">
-        
-     <div class="form-section">
-      <h4>General Information</h4>
-        <div class="form-row">
-          <div>
-            <label>Report ID</label>
-            <input type="text" id="reportId" readonly />
-          </div>
 
-          <div>
-            <label>Select Pig</label>
-            <select id="swineSelect" required>
-              <option value="">Select pig</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-        <!-- ================= HEALTH ================= -->
+        <!-- GENERAL -->
         <div class="form-section">
-        <h4>Health & Feeding</h4>
-        <label>Health Concerns</label>
-        <div class="checkbox-group">
-          <label><input type="checkbox" name="healthConcerns" value="coughing"> Coughing</label>
-          <label><input type="checkbox" name="healthConcerns" value="fever"> Fever</label>
-          <label><input type="checkbox" name="healthConcerns" value="injury"> Injury</label>
-          <label><input type="checkbox" name="healthConcerns" value="diarrhea"> Diarrhea</label>
-          <label><input type="checkbox" name="healthConcerns" value="lameness"> Lameness</label>
-          <label><input type="checkbox" name="healthConcerns" value="skin_lesions"> Skin Lesions</label>
+          <h4>General Information</h4>
+
+          <label>Select Pig</label>
+          <select id="swineSelect" required>
+            <option value="">Loading your swine...</option>
+          </select>
         </div>
 
-        <small class="hint-text">Select all that apply</small>
+        <!-- HEAT SIGNS -->
+        <div class="form-section">
+          <h4>Observed Heat Signs</h4>
 
-
-        <label>Feeding & Growth Status</label>
-        <select id="feedingStatus">
-          <option value="">Normal</option>
-          <option value="poor_appetite">Poor Appetite</option>
-          <option value="weight_loss">Weight Loss</option>
-        </select>
-        </div>
-
-        <!-- ================= ESTRUS DETECTION ================= -->
-         <div class="form-section">
-        <h4>Reproductive Observation (Estrus Detection)</h4>
-
-        <label>Observed Reproductive Signs</label>
           <div class="checkbox-group">
-            <label>
-              <input type="checkbox" name="signs" value="reddened_vulva">
-              Reddened Vulva
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="swollen_vulva">
-              Swollen Vulva
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="mucous_discharge">
-              Mucous Discharge
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="seeking_boar">
-              Seeking the Boar
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="perked_ears">
-              Perked / Twitching Ears
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="standing_reflex">
-              <strong>Standing Reflex</strong>
-            </label>
-
-            <label>
-              <input type="checkbox" name="signs" value="back_pressure_positive">
-              <strong>Back Pressure Test (Positive)</strong>
-            </label>
+            <label><input type="checkbox" name="signs" value="Reddened Vulva"> Reddened Vulva</label>
+            <label><input type="checkbox" name="signs" value="Swollen Vulva"> Swollen Vulva</label>
+            <label><input type="checkbox" name="signs" value="Mucous Discharge"> Mucous Discharge</label>
+            <label><input type="checkbox" name="signs" value="Seeking the Boar"> Seeking the Boar</label>
+            <label><input type="checkbox" name="signs" value="Perked/Twitching Ears"> Perked / Twitching Ears</label>
+            <label><input type="checkbox" name="signs" value="Standing Reflex"><strong> Standing Reflex</strong></label>
+            <label><input type="checkbox" name="signs" value="Back Pressure Test"><strong> Back Pressure Test</strong></label>
           </div>
 
-
-        <small class="hint-text">Select all that apply</small>
+          <small class="hint-text">Select all that apply</small>
         </div>
 
-        <!-- ================= BREEDING ACTION ================= -->
+        <!-- UPLOAD EVIDENCE -->
         <div class="form-section">
-        <h4>Breeding Decision</h4>
+          <h4>Upload Evidence</h4>
 
-        <label>Breeding Action Taken</label>
-        <select id="breedingAction">
-          <option value="">Select</option>
-          <option value="artificial_insemination">Artificial Insemination</option>
-          <option value="natural_mating">Natural Mating</option>
-          <option value="observation_only">Observation Only</option>
-        </select>
-        </div>
-
-        <!-- ================= PREGNANCY & FARROWING ================= -->
-        <div class="form-section">
-        <h4>Pregnancy & Farrowing</h4>
-
-        <label>Current Reproductive Status</label>
-        <select id="pregnancyStatus">
-          <option value="">Select</option>
-          <option value="open">Open / Not Pregnant</option>
-          <option value="suspected_pregnant">Suspected Pregnant</option>
-          <option value="confirmed_pregnant">Confirmed Pregnant</option>
-          <option value="farrowed">Farrowed</option>
-        </select>
-
-        <label>Piglet Outcome (If Farrowed)</label>
-        <div class="form-row">
-          <input type="number" id="totalPiglets" placeholder="Total Piglets Born" min="0">
-          <input type="number" id="femalePiglets" placeholder="Female Piglets" min="0">
-          <input type="number" id="malePiglets" placeholder="Male Piglets" min="0">
-          <input type="number" id="pigletMortality" placeholder="Mortality Count" min="0">
-        </div>
-        </div>
-
-        <!-- ================= SELECTION & GROWTH ================= -->
-        <div class="form-section">
-        <h4>Growth & Selection Monitoring</h4>
-
-        <label>Growth Performance</label>
-        <select id="growthPerformance">
-          <option value="">Select</option>
-          <option value="excellent">Excellent</option>
-          <option value="average">Average</option>
-          <option value="poor">Poor</option>
-        </select>
-
-        <label>Observed Deformities</label>
-        <select id="deformities">
-          <option value="">Select</option>
-          <option value="none">None</option>
-          <option value="minor">Minor</option>
-          <option value="major">Major</option>
-        </select>
-
-        <label>Current Weight (kg)</label>
-        <input type="number" id="currentWeight" min="0" step="0.1" placeholder="e.g. 18.5">
-        </div>
-
-        <!-- ================= MEDICATION ================= -->
-        <div class="form-section">
-        <h4>Vaccination & Medication</h4>
-
-        <label>Medication Status</label>
-        <select id="medicationStatus">
-          <option value="">Select</option>
-          <option value="up_to_date">Up to Date</option>
-          <option value="needs_medication">Needs Medication</option>
-        </select>
-        </div>
-        <!-- ================= REMARKS ================= -->
-        <label>Other Concerns / Remarks</label>
-        <textarea id="remarks" placeholder="Additional observations or notes"></textarea>
-
-        <!-- ================= UPLOAD ================= -->
-        <label>Upload Image / Video</label>
-        <div class="upload-box">
-          <input
+          <div class="upload-box">
+            <input
               type="file"
               id="evidence"
+              name="evidence"
               accept="image/*,video/*"
               multiple
+              required
               hidden
             />
-          <button type="button" class="upload-btn" id="uploadBtn">
-            <i class="fa-solid fa-plus"></i>
-          </button>
-          <div id="previewContainer"></div>
+
+            <button type="button" class="upload-btn" id="uploadBtn">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+
+            <span id="fileCountBadge" class="file-counter-badge"></span>
+            <div id="mediaPreview"></div>
+          </div>
+
+          <small class="hint-text">
+            Upload clear photos or videos (maximum 5 files).
+          </small>
         </div>
 
-        <!-- ================= ACTIONS ================= -->
+        <!-- ACTIONS -->
         <div class="form-actions">
           <button type="button" class="cancel-btn" id="cancelCreate">CANCEL</button>
-          <button type="submit" class="send-btn">SEND</button>
+          <!-- REQUIRED CLASS FOR JS -->
+          <button type="submit" class="btn-submit send-btn">SEND</button>
         </div>
 
         <p id="reportMessage"></p>

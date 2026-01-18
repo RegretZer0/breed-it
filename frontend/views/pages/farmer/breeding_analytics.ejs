@@ -1,0 +1,97 @@
+<%- include("../../partials/farmer/farmer_nav") %>
+
+<div class="app-root">
+  <main class="profile-container">
+        <h2 class="page-title">BREED ANALYTICS</h2>
+
+    <!-- CENTERED CONTENT WRAPPER -->
+    <div class="page-content">
+
+      <!-- =========================
+           BREED QUALITY RANKINGS
+      ========================== -->
+      <div class="card page-card">
+        <div class="card-body">
+
+          <h3>Breed Quality Rankings</h3>
+          <p class="muted">
+            Ranked based on performance, physical traits, and reproductive history.
+          </p>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Swine ID</th>
+                  <th>Sex</th>
+                  <th>Breed</th>
+                  <th>Quality Index</th>
+                </tr>
+              </thead>
+              <tbody id="rankingTable">
+                <tr>
+                  <td colspan="5" style="text-align:center;">
+                    Loading analytics data…
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- =========================
+           BREEDING COMPATIBILITY
+      ========================== -->
+      <div class="card page-card">
+        <div class="card-body">
+
+          <h3>🧬 Breeding Compatibility Checker</h3>
+          <p class="muted">
+            Analyze genetic compatibility between a selected pair to minimize inbreeding risks.
+          </p>
+
+          <div class="pair-select">
+            <div>
+              <label>Sow (Female)</label>
+              <select id="femaleSelect">
+                <option value="">-- Select Sow --</option>
+              </select>
+            </div>
+
+            <div class="pair-symbol">×</div>
+
+            <div>
+              <label>Boar (Male)</label>
+              <select id="maleSelect">
+                <option value="">-- Select Boar --</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            id="calcBtn"
+            onclick="calculateMatch()"
+            class="btn-submit">
+            Run Compatibility Analysis
+          </button>
+
+          <!-- Analysis Result (NOW VISIBLE) -->
+          <div id="matchResult" class="match-box">
+            <small class="muted" style="text-transform: uppercase;">
+              Estimated Match Score
+            </small>
+            <div id="matchScore">0%</div>
+            <div id="matchLogs"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<%- include("../../partials/farmer/farmer_footer") %>
