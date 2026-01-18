@@ -48,7 +48,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const roleRedirectMap = {
       system_admin: "/system-admin/dashboard",
       farm_manager: "/farm-manager/dashboard",
-      encoder: "/encoder/dashboard",
+      encoder: "/farm-manager/dashboard",
       farmer: "/farmer/dashboard",
     };
 

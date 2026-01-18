@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ============================
   // Auth check (farm manager)
   // ============================
-  const user = await authGuard("farm_manager");
+  const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
 
   const BACKEND_URL = "http://localhost:5000";
@@ -21,8 +21,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ============================
   const welcome = document.querySelector(".dashboard-container h4");
   if (welcome) {
-    welcome.textContent = `Welcome, ${user.name || "Farm Manager"}`;
+    const roleLabel = user.role === "encoder"
+      ? "Encoder"
+      : user.role === "farm_manager"
+      ? "Farm Manager"
+      : "User";
+
+    welcome.textContent = `Welcome, ${user.name || roleLabel}`;
   }
+
 
   // ============================
   // Notifications

@@ -26,6 +26,14 @@ router.post(
         return res.status(400).json({ success: false, message: "Missing fields" });
       }
 
+      // 🔐 ENCODER RESTRICTION (INSERT HERE)
+      if (req.user.role === "encoder" && user_id !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: "Encoders can only create notifications for themselves",
+        });
+      }
+
       const notification = await Notification.create({
         user_id,
         title,

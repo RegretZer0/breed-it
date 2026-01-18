@@ -8,7 +8,7 @@ const { getFarmManagerStats } = require("../controllers/dashboardController");
 router.get(
   "/farm-manager/stats",
   requireSessionAndToken,
-  allowRoles("farm_manager"),
+  allowRoles("farm_manager", "encoder"),
   getFarmManagerStats
 );
 

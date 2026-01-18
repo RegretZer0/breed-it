@@ -13,10 +13,13 @@ function requireLogin(req, res, next) {
 }
 
 // ======================================================
-// Require Farm Manager role
+// Require Farm Manager role - added encoder as allowed role
 // ======================================================
 function requireFarmManager(req, res, next) {
-  if (!req.session?.user || req.session.user.role !== "farm_manager") {
+  if (
+    !req.session?.user ||
+    !["farm_manager", "encoder"].includes(req.session.user.role)
+  ) {
     return res.status(403).render("pages/auth/unauthorized", {
       page_title: "Unauthorized",
     });
@@ -109,9 +112,20 @@ async function requireApiLogin(req, res, next) {
   }
 }
 
+function requireFarmManagerOnly(req, res, next) {
+  if (!req.session?.user || req.session.user.role !== "farm_manager") {
+    return res.status(403).render("pages/auth/unauthorized", {
+      page_title: "Unauthorized",
+    });
+  }
+  next();
+}
+
+
 module.exports = {
   requireLogin,
   requireApiLogin,
   requireFarmManager,
+  requireFarmManagerOnly,
   requireFarmer,
 };

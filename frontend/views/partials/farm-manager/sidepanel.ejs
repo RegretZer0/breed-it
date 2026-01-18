@@ -60,13 +60,15 @@
       </a>
 
       <!-- ACCOUNT MANAGEMENT -->
-      <a
-        href="/farm-manager/user-management/manage"
-        class="nav-link <%= current_section === 'user_management' ? 'active' : '' %>"
-      >
-        <i class="fa-solid fa-user-gear me-2"></i>
-        Account Management
-      </a>
+      <% if (user?.role === "farm_manager") { %>
+        <a
+          href="/farm-manager/user-management/manage"
+          class="nav-link <%= current_section === 'user_management' ? 'active' : '' %>"
+        >
+          <i class="fa-solid fa-user-gear me-2"></i>
+          Account Management
+        </a>
+      <% } %> 
 
   </nav>
 </aside>

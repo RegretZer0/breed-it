@@ -193,7 +193,7 @@ router.get("/farmer/:userId", requireApiLogin, allowRoles("farmer", "farm_manage
 /* ======================================================
     APPROVE HEAT REPORT (Starts Breeding Cycle)
 ====================================================== */
-router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -244,7 +244,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager", "encoder
 /* ======================================================
     CONFIRM AI (Links Boar to Cycle)
 ====================================================== */
-router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -303,7 +303,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager", "enco
 /* ======================================================
     CONFIRM PREGNANCY (Updates Gestation Data)
 ====================================================== */
-router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
     report.status = "pregnant";
@@ -344,7 +344,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 /* ======================================================
     CONFIRM FARROWING (Increments Cycle & Sets Lactation)
 ====================================================== */
-router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     try {
         const report = await HeatReport.findById(req.params.id);
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -384,7 +384,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 /* ======================================================
     STILL IN HEAT (Cycle Failed/Reset)
 ====================================================== */
-router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id);
     report.status = "approved"; 
@@ -407,7 +407,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 /* ======================================================
     GET CALENDAR EVENTS (Now includes 30-day Weaning)
 ====================================================== */
-router.get("/calendar-events", requireApiLogin, async (req, res) => {
+router.get("/calendar-events", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
@@ -476,7 +476,7 @@ router.get("/calendar-events", requireApiLogin, async (req, res) => {
 /* ======================================================
     REJECT REPORT
 ====================================================== */
-router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
+router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     try {
         const { reason } = req.body; 
         const report = await HeatReport.findById(req.params.id);

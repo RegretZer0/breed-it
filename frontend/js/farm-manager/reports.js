@@ -2,7 +2,7 @@ import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- AUTH ----------------
-  const user = await authGuard(["farm_manager"]);
+  const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
 
   const token = localStorage.getItem("token");

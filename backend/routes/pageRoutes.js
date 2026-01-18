@@ -4,8 +4,10 @@ const router = express.Router();
 const {
   requireLogin,
   requireFarmManager,
+  requireFarmManagerOnly,
   requireFarmer,
 } = require("../middleware/pageAuth.middleware");
+
 
 /* =========================
    AUTH / PUBLIC PAGES
@@ -50,6 +52,7 @@ router.get(
       page_title: "Farm Manager Dashboard",
       current_section: "dashboard",
       current_page: "dashboard",
+      user: req.session.user,
     });
   }
 );
@@ -122,7 +125,7 @@ router.get(
 router.get(
   "/farm-manager/user-management/create",
   requireLogin,
-  requireFarmManager,
+  requireFarmManagerOnly,
   (req, res) => {
     res.render("pages/farm-manager/user-management/create_account", {
       page_title: "Create Account",
@@ -136,7 +139,7 @@ router.get(
 router.get(
   "/farm-manager/user-management/manage",
   requireLogin,
-  requireFarmManager,
+  requireFarmManagerOnly,
   (req, res) => {
     res.render("pages/farm-manager/user-management/manage_account", {
       page_title: "Manage Account",
