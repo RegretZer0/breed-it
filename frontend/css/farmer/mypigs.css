@@ -209,6 +209,14 @@
   border-radius: 8px;
 }
 
+.pipeline-badge.success {
+  color: #1f7a1f;
+  font-weight: bold;
+  background-color: #e6f4ea;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
 /* =========================
    MOBILE RESPONSIVE
 ========================= */
