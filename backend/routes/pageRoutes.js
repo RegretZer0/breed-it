@@ -178,6 +178,20 @@ router.get(
   }
 );
 
+// Master Boar
+router.get(
+  "/farm-manager/pig-management/master-boars",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/pig-management/master_boars", {
+      page_title: "Master Boars",
+      current_section: "pig_management",
+      current_page: "master_boars",
+    });
+  }
+);
+
 // Register Boar
 router.get(
   "/farm-manager/pig-management/register-boar",
@@ -191,6 +205,7 @@ router.get(
     });
   }
 );
+
 
 /* =========================
    FARMER PAGES

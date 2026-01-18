@@ -86,11 +86,14 @@ button, [role="button"], a {
   padding: 18px;
 }
 
-.page-title{
+.dashboard-welcome {
+  text-transform: uppercase;
   font-weight: 700;
   font-size: 20px;
   margin: 0;
 }
+
+
 
 /* =========== Stats Cards =========== */
 .stat-card{
@@ -180,6 +183,53 @@ button, [role="button"], a {
 #calendar {
   width: 100%;
 }
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Match backend event colors */
+.legend-color.ai {
+  background-color: #ff9800;
+}
+
+.legend-color.recheck {
+  background-color: #03a9f4;
+}
+
+.legend-color.farrowing {
+  background-color: #e91e63;
+}
+
+.legend-color.weaning {
+  background-color: #4caf50;
+}
+
+@media (max-width: 768px) {
+  .calendar-legend {
+    font-size: 0.75rem;
+    gap: 0.5rem;
+  }
+}
+
 
 /* =========================
    Desktop (Month View)

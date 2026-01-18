@@ -47,3 +47,11 @@
 .page-card .card-body{
   padding: 18px;
 }
+
+.tab-divider {
+  width: 1px;
+  height: 28px;
+  background-color: #d1d5db; /* subtle gray */
+  align-self: center;
+}
+

@@ -1,4 +1,4 @@
-import { authGuard } from "./authGuard.js";
+import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // ================= AUTH =================

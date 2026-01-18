@@ -1,6 +1,6 @@
 <div class="card page-card mb-3">
   <div class="card-body">
-    <h4 class="page-title">PIG MANAGEMENT</h4>
+    <h4 class="page-title">SWINE MANAGEMENT</h4>
 
     <div
       class="tabs-row mt-3 d-flex flex-wrap gap-3"
@@ -14,7 +14,7 @@
         class="tab-btn <%= current_page === 'overview' ? 'active' : '' %>"
         role="tab"
       >
-        Overview
+        Swine Inventory
       </a>
 
       <!-- REGISTER PIG -->
@@ -24,6 +24,17 @@
         role="tab"
       >
         Register Pig
+      </a>
+
+      <span class="tab-divider" aria-hidden="true"></span>
+
+      <!-- BOAR OVERVIEW -->
+      <a
+        href="/farm-manager/pig-management/master-boars"
+        class="tab-btn <%= current_page === 'master_boars' ? 'active' : '' %>"
+        role="tab"
+      >
+        Master Boars
       </a>
 
       <!-- REGISTER BOAR -->

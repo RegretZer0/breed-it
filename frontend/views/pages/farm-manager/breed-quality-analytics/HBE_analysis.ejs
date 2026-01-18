@@ -2,15 +2,108 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-   <!-- Main content -->
-    <main class="main-content">
-      <div class="container-fluid">
-            <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
-        <!-- Dashboard Header card -->
-        <div class="card page-card">
+<main class="main-content">
+  <div class="container-fluid">
+
+    <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
+
+    <!-- PAGE CARD -->
+    <div class="card page-card">
+      <div class="card-body">
+
+        <h3 class="mb-4">
+          <i class="fa-solid fa-chart-line text-primary me-2"></i>
+          Heat and Breeding Analytics
+        </h3>
+
+        <!-- ===== CHARTS GRID ===== -->
+        <div class="row g-3">
+
+          <!-- Heat Trends -->
+          <div class="col-md-6 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fa-solid fa-fire text-danger me-2"></i>
+                  Heat Detection Trends (Current Year)
+                </h6>
+                <canvas id="monthlyReportsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lifecycle Status -->
+          <div class="col-md-6 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fa-solid fa-diagram-project text-warning me-2"></i>
+                  Lifecycle Status Distribution
+                </h6>
+                <canvas id="statusReportsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Farmer Activity -->
+          <div class="col-md-6 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fa-solid fa-user-group text-success me-2"></i>
+                  Reports per Farmer
+                </h6>
+                <canvas id="farmerActivityChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Confidence Levels -->
+          <div class="col-md-6 col-lg-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="mb-3">
+                  <i class="fa-solid fa-bullseye text-info me-2"></i>
+                  System Confidence Levels
+                </h6>
+                <canvas id="probabilityChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== SUMMARY TABLE ===== -->
+        <div class="card mt-4">
           <div class="card-body">
-                 <!-- Rankings -->
-                    <!-- <div class="card"> -->
-                        <h3>🏆 Heat and Breeding Analytics</h3>
+            <h6 class="mb-3">
+              <i class="fa-solid fa-lightbulb text-warning me-2"></i>
+              Quick Insights Summary
+            </h6>
+
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Total Count</th>
+                    <th>Health Status</th>
+                  </tr>
+                </thead>
+                <tbody id="insightSummaryBody">
+                  <tr>
+                    <td colspan="3">Calculating insights...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
 
 <%- include("../../../partials/farm-manager/footer") %>

@@ -99,6 +99,12 @@ html, body {
   outline: none;
 }
 
+/* Hide browser default password reveal icon (Edge / Chromium) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* Toggle password button */
 .input-group .toggle-pass{
   border-left: 1px solid #e6e6e6;

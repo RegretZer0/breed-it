@@ -41,6 +41,15 @@ button, [role="button"], a {
   background: transparent;
 }
 
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
 /* Accessibility focus */
 :focus:not(:focus-visible) {
   outline: none;

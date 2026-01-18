@@ -13,7 +13,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include", // session cookie
+      credentials: "include",
     });
 
     const data = await res.json();
@@ -22,20 +22,29 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       throw new Error(data.message || "Login failed");
     }
 
-    // Optional: store JWT if backend still provides it
+    // ✅ Normalize full name (from prototype)
+    const fullName =
+      `${data.user.first_name || ""} ${data.user.last_name || ""}`.trim() ||
+      "User";
+
+    // Optional: store JWT if backend provides it
     if (data.token) {
       localStorage.setItem("token", data.token);
     }
 
-    // Store user info
-    localStorage.setItem("user", JSON.stringify(data.user));
+    // ✅ Enhanced user storage
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ ...data.user, name: fullName })
+    );
     localStorage.setItem("userId", data.user._id || data.user.id);
     localStorage.setItem("role", data.user.role);
+    localStorage.setItem("name", fullName); // quick access
 
     messageEl.style.color = "green";
     messageEl.textContent = "Login successful! Redirecting...";
 
-    // ✅ ROLE → ROUTE MAP (single source of truth)
+    // ✅ Centralized role → route map (kept)
     const roleRedirectMap = {
       system_admin: "/system-admin/dashboard",
       farm_manager: "/farm-manager/dashboard",
@@ -79,11 +88,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     passwordInput.type = isHidden ? "text" : "password";
 
-    // Toggle icon
     icon.classList.toggle("fa-eye", !isHidden);
     icon.classList.toggle("fa-eye-slash", isHidden);
 
-    // Accessibility
     toggleBtn.setAttribute(
       "aria-label",
       isHidden ? "Hide password" : "Show password"

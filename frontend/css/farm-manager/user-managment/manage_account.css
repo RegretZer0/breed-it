@@ -35,6 +35,23 @@ html,body {
 }
 .page-shell, .page-shell * { -webkit-tap-highlight-color: transparent; }
 
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
+/* =========== Main content =========== */
+.main-content{
+  flex: 1;
+  min-width: 0;
+  padding: var(--gutter);
+  background: var(--bg);
+}
+
 .outer-card {
   width: 100%;
   margin: 0;

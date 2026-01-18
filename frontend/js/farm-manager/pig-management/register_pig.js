@@ -73,6 +73,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // ================= LOAD FARMERS =================
+  let farmers = [];
+
+  const farmerDropdownBtn = document.getElementById("farmerDropdownBtn");
+  const farmerOptions = document.getElementById("farmerOptions");
+  const farmerSearch = document.getElementById("farmerSearch");
+
   async function loadFarmers() {
     const res = await fetch(`/api/auth/farmers/${managerId}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -80,15 +86,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const data = await res.json();
-    farmerSelect.innerHTML = `<option value="">Select Farmer</option>`;
-    if (data.success) {
-      data.farmers.forEach(f => {
-        farmerSelect.add(
-          new Option(`${f.first_name} ${f.last_name}`.trim(), f._id)
-        );
-      });
-    }
+    farmers = data.success ? data.farmers : [];
+    renderFarmers(farmers);
   }
+
+  function renderFarmers(list) {
+    farmerOptions.innerHTML = "";
+
+    if (!list.length) {
+      farmerOptions.innerHTML =
+        `<div class="text-muted small">No farmers found</div>`;
+      return;
+    }
+
+    list.forEach(f => {
+      const div = document.createElement("div");
+      div.className = "dropdown-item";
+      div.textContent = `${f.first_name} ${f.last_name}`.trim();
+
+      div.onclick = () => {
+        farmerDropdownBtn.textContent = div.textContent;
+        document.getElementById("farmerSelect").value = f._id;
+
+        updateSows(f._id); // 👈 existing cascade
+      };
+
+      farmerOptions.appendChild(div);
+    });
+  }
+
+  // Search filter
+  farmerSearch.addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    renderFarmers(
+      farmers.filter(f =>
+        `${f.first_name} ${f.last_name}`.toLowerCase().includes(q)
+      )
+    );
+  });
 
   // ================= CASCADE =================
   async function updateSows(farmerId) {

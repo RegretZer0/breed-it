@@ -1,0 +1,201 @@
+/* =========== Root tokens =========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --panel-border: #ededed;
+
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-green: #17c14f;
+  --danger: #f55b66;
+
+  /* sizing */
+  --gutter: 18px;
+  --radius: 8px;
+}
+
+/* =========== Global reset / basics =========== */
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
+html, body{
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
+/* =========== Main content =========== */
+.main-content{
+  flex: 1;
+  min-width: 0;
+  padding: var(--gutter);
+  background: var(--bg);
+}
+
+/* =========== Cards =========== */
+.page-card{
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.page-title{
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 14px 0;
+}
+
+/* =========================
+   MASTER BOARS – TABLE
+   (Adapted from overview.css)
+========================= */
+
+/* Wrapper */
+.master-boars-table-wrap{
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius);
+}
+
+/* Base table */
+.master-boars-table{
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg);
+}
+
+/* =========================
+   TABLE HEADER
+========================= */
+.master-boars-table thead th{
+  padding: 12px 14px;
+  background: #fafafa;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* =========================
+   TABLE BODY
+========================= */
+.master-boars-table tbody td{
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-dark);
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.master-boars-table tbody td:first-child{
+  font-weight: 700;
+}
+
+.master-boars-table tbody tr:hover td{
+  background: #fffaf6;
+}
+
+/* Empty / loading row */
+.master-boars-table tbody td[colspan]{
+  text-align: center;
+  color: var(--muted-text);
+  padding: 32px 14px;
+  border-bottom: none;
+}
+
+/* =========================
+   COLUMN WIDTH CONTROL
+   (5 columns)
+========================= */
+.master-boars-table th:nth-child(1),
+.master-boars-table td:nth-child(1){
+  min-width: 130px;
+}
+
+.master-boars-table th:nth-child(2),
+.master-boars-table td:nth-child(2){
+  min-width: 140px;
+}
+
+.master-boars-table th:nth-child(3),
+.master-boars-table td:nth-child(3){
+  min-width: 120px;
+}
+
+.master-boars-table th:nth-child(4),
+.master-boars-table td:nth-child(4){
+  min-width: 240px;
+}
+
+.master-boars-table th:nth-child(5),
+.master-boars-table td:nth-child(5){
+  min-width: 160px;
+}
+
+/* =========================
+   STATUS BADGES
+========================= */
+.status-badge{
+  display: inline-block;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: rgba(23,193,79,0.12);
+  color: var(--accent-green);
+}
+
+.status-badge.inactive{
+  background: rgba(245,91,102,0.15);
+  color: var(--danger);
+}
+
+/* =========================
+   RESPONSIVE SCROLL
+========================= */
+@media (max-width: 1100px){
+  .master-boars-table{ min-width: 900px; }
+}
+
+@media (max-width: 880px){
+  .master-boars-table{ min-width: 760px; }
+}
+
+@media (max-width: 720px){
+  .master-boars-table{ min-width: 680px; }
+}
+
+@media (max-width: 520px){
+  .master-boars-table{ min-width: 560px; }
+
+  .master-boars-table thead th{
+    font-size: 11px;
+    padding: 10px;
+  }
+
+  .master-boars-table tbody td{
+    font-size: 12px;
+    padding: 10px;
+  }
+}

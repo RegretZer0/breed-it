@@ -1,3 +1,68 @@
+/* =========== Root tokens =========== */
+:root{
+  /* palette */
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --panel-border: #ededed;
+
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-green: #17c14f;
+  --danger: #f55b66;
+
+  /* sizing */
+  --gutter: 18px;
+  --radius: 8px;
+}
+
+/* =========== Global reset / basics =========== */
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
+html, body{
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
+/* =========== Main content =========== */
+.main-content{
+  flex: 1;
+  min-width: 0;
+  padding: var(--gutter);
+  background: var(--bg);
+}
+
+/* =========== Cards =========== */
+.page-card{
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.page-title{
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 14px 0;
+}
+
 /* ============================= */
 /* BOAR REGISTRATION CARD */
 /* ============================= */

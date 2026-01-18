@@ -137,6 +137,26 @@ body.offcanvas-open .sidebar {
 }
 
 
+/* =========================
+   SAFETY: prevent stuck overlays
+========================= */
+
+/* If no modal or offcanvas is visible, allow interaction */
+body:not(.modal-open):not(.offcanvas-open) {
+  pointer-events: auto;
+}
+
+/* Ensure backdrops never exceed modal */
+.modal-backdrop {
+  z-index: 1500;
+}
+
+/* Remove lingering offcanvas backdrop issues */
+.offcanvas-backdrop.show {
+  pointer-events: auto;
+}
+
+
 /* =========== Sidebar =========== */
 .sidebar{
   width: var(--sidebar-width);
@@ -241,4 +261,42 @@ body.offcanvas-open .sidebar {
   .burger-btn{ display: none; }
   .sidebar-close-wrap{ display:none; }
   #overlay{ display: none !important; }
+}
+
+/* =========================
+   BOOTSTRAP BACKDROP FAILSAFE
+========================= */
+
+/* If no modal or offcanvas is visible, nothing should block clicks */
+body:not(.modal-open):not(.offcanvas-open) {
+  pointer-events: auto !important;
+  overflow: auto !important;
+}
+
+/* Never allow invisible backdrops to trap clicks */
+.modal-backdrop,
+.offcanvas-backdrop {
+  pointer-events: none;
+}
+
+/* When visible, allow interaction */
+.modal-backdrop.show,
+.offcanvas-backdrop.show {
+  pointer-events: auto;
+}
+
+/* =========================
+   REMOVE BACKDROP FLASH
+========================= */
+
+/* Disable backdrop fade animation */
+.modal-backdrop,
+.offcanvas-backdrop {
+  transition: none !important;
+}
+
+/* Ensure backdrops are fully transparent when not shown */
+.modal-backdrop:not(.show),
+.offcanvas-backdrop:not(.show) {
+  opacity: 0 !important;
 }

@@ -13,6 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterStatus = document.getElementById("filterStatus");
   const resetFiltersBtn = document.getElementById("resetFiltersBtn");
 
+  const filterFarmerBtn = document.getElementById("filterFarmerBtn");
+  const filterFarmerSearch = document.getElementById("filterFarmerSearch");
+  const filterFarmerOptions = document.getElementById("filterFarmerOptions");
+  const filterFarmerId = document.getElementById("filterFarmerId");
+
   const filteredSection = document.getElementById("filteredSection");
   const filteredTbody = document.getElementById("filteredTbody");
   const recentTbody = document.getElementById("recentTbody");
@@ -92,6 +97,7 @@ async function resolveManagerId() {
       if (!eData.success) throw new Error("Failed to fetch encoders");
 
       farmers = fData.farmers;
+      renderFarmerFilter(farmers);
       encoders = eData.encoders;
 
       updateStats();
@@ -162,7 +168,7 @@ async function resolveManagerId() {
 
 
   /* =========================
-     APPLY FILTERS
+    APPLY FILTERS
   ========================= */
   filtersForm.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -170,6 +176,7 @@ async function resolveManagerId() {
     const type = filterAccountType.value;
     const location = filterLocation.value.toLowerCase().trim();
     const status = filterStatus.value;
+    const selectedId = filterFarmerId.value; // now general
 
     let data =
       type === "farmer"
@@ -178,12 +185,21 @@ async function resolveManagerId() {
         ? encoders
         : [...farmers, ...encoders];
 
+    // ✅ General account filter (Farmer OR Encoder)
+    if (selectedId) {
+      data = data.filter(acc =>
+        acc.farmer_id === selectedId || acc._id === selectedId
+      );
+    }
+
+    // ✅ Location filter
     if (location) {
       data = data.filter(acc =>
         (acc.address || "").toLowerCase().includes(location)
       );
     }
 
+    // ✅ Status filter
     if (status && status !== "all") {
       data = data.filter(acc =>
         (acc.status || "active") === status
@@ -191,13 +207,102 @@ async function resolveManagerId() {
     }
 
     filteredSection.classList.remove("d-none");
-    renderTableTo(filteredTbody, data);
+    renderFilteredTable(data); // aligned table
   });
+
+
+  function renderFilteredTable(data) {
+  filteredTbody.innerHTML = "";
+
+  if (!data.length) {
+    filteredTbody.innerHTML =
+      `<tr><td colspan="8">No results found</td></tr>`;
+    return;
+  }
+
+  data.forEach(acc => {
+    const isFarmer = !!acc.farmer_id;
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${acc.farmer_id || acc._id}</td>
+      <td>${acc.first_name} ${acc.last_name}</td>
+      <td>${acc.address || "-"}</td>
+      <td>${acc.contact_no || acc.contact_info || "-"}</td>
+      <td>${isFarmer ? acc.num_of_pens ?? "-" : "-"}</td>
+      <td>${isFarmer ? acc.pen_capacity ?? "-" : "-"}</td>
+      <td>${acc.status || "active"}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary">Edit</button>
+      </td>
+    `;
+
+    tr.querySelector("button").onclick = () => openEditModal(acc);
+    filteredTbody.appendChild(tr);
+  });
+}
+
+
+  /* =========================
+    GENERAL SEARCHABLE FILTER
+    (Farmers + Encoders)
+  ========================= */
+  function getSearchSource() {
+    const type = filterAccountType.value;
+
+    if (type === "farmer") return farmers;
+    if (type === "encoder") return encoders;
+
+    return [...farmers, ...encoders]; // all
+  }
+
+  function renderFarmerFilter(list) {
+    filterFarmerOptions.innerHTML = "";
+
+    if (!list.length) {
+      filterFarmerOptions.innerHTML =
+        `<div class="text-muted small">No results found</div>`;
+      return;
+    }
+
+    list.forEach(acc => {
+      const isFarmer = !!acc.farmer_id;
+
+      const div = document.createElement("div");
+      div.className = "dropdown-item";
+      div.textContent = `${acc.first_name} ${acc.last_name}`.trim();
+
+      div.onclick = () => {
+        filterFarmerBtn.textContent = div.textContent;
+        filterFarmerId.value = isFarmer ? acc.farmer_id : acc._id;
+      };
+
+      filterFarmerOptions.appendChild(div);
+    });
+  }
+
+  // 🔍 Typing filter (general)
+  filterFarmerSearch.addEventListener("input", e => {
+    const q = e.target.value.toLowerCase();
+    const source = getSearchSource();
+
+    renderFarmerFilter(
+      source.filter(acc =>
+        `${acc.first_name} ${acc.last_name}`.toLowerCase().includes(q)
+      )
+    );
+  });
+
+
 
   /* =========================
      RESET FILTERS
   ========================= */
   resetFiltersBtn.addEventListener("click", () => {
+    filterFarmerId.value = "";
+    filterFarmerSearch.value = "";
+    filterFarmerBtn.textContent = "Select Farmer";
+
     filterAccountType.value = "";
     filterLocation.value = "";
     filterStatus.value = "";

@@ -1,78 +1,66 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
-
 /* =========== Root tokens =========== */
 :root{
   /* palette */
   --bg: #ffffff;
   --muted-border: #e9e9e9;
   --card-border: #e6e6e6;
+  --panel-border: #ededed;
+
   --text-dark: #222222;
   --muted-text: #6c6c6c;
 
   --accent-green: #17c14f;
-  --stat-orange: #ff9a1f;
-  --stat-blue: #1ea7ff;
-  --stat-green: #43c572;
-  --stat-red: #f55b66;
-  --stat-blue2: #1543ff;
-  --stat-teal: #12c0a4;
-  --stat-brown: #b67c1a;
-  --stat-purple: #b14cf0;
+  --danger: #f55b66;
 
   /* sizing */
   --gutter: 18px;
   --radius: 8px;
-
-  /* typography */
-  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --base-line-height: 1.4;
-  --base-font-size: 14px;
 }
 
 /* =========== Global reset / basics =========== */
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after{
+  box-sizing: border-box;
+}
 
-html, body {
+html, body{
   height: 100%;
   margin: 0;
-  font-family: var(--font-family-system);
-  font-size: var(--base-font-size);
-  line-height: var(--base-line-height);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
   background: var(--bg);
   color: var(--text-dark);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Accessibility */
-button, [role="button"], a {
-  cursor: pointer;
-  background: none;
-  border: none;
-  font: inherit;
-}
-
-:focus {
-  outline: 3px solid rgba(21, 67, 255, 0.18);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
-}
-
-/* =========== Layout =========== */
+/* =========== Shell layout =========== */
 .app-shell{
   display: flex;
   min-height: 100vh;
+  gap: var(--gutter);
   padding: var(--gutter);
+  align-items: flex-start;
 }
 
+/* =========== Main content =========== */
 .main-content{
   flex: 1;
-  padding: var(--gutter);
   min-width: 0;
+  padding: var(--gutter);
+  background: var(--bg);
+}
+
+/* =========== Cards =========== */
+.page-card{
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.page-title{
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 14px 0;
 }
 
 /* =========================

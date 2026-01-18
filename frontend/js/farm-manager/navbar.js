@@ -53,3 +53,43 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
+  const notificationsPanel = document.getElementById("notificationsPanel");
+  const notificationHistoryModal = document.getElementById("notificationHistoryModal");
+
+  if (!viewAllBtn || !notificationsPanel || !notificationHistoryModal) return;
+
+  const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(notificationsPanel);
+  const modal = bootstrap.Modal.getOrCreateInstance(notificationHistoryModal);
+
+  // 🔥 HARD CLEANUP FUNCTION
+  const forceCleanup = () => {
+    document.body.classList.remove("modal-open", "offcanvas-open");
+    document.body.style.removeProperty("overflow");
+
+    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach(b => b.remove());
+  };
+
+  viewAllBtn.addEventListener("click", () => {
+    // Close offcanvas
+    offcanvas.hide();
+
+  notificationsPanel.addEventListener(
+    "hidden.bs.offcanvas",
+    () => {
+      forceCleanup();
+      requestAnimationFrame(() => {
+        modal.show();
+      });
+    },
+    { once: true }
+  );
+});
+
+  // When modal closes → CLEAN AGAIN
+  notificationHistoryModal.addEventListener("hidden.bs.modal", () => {
+    forceCleanup();
+  });
+});

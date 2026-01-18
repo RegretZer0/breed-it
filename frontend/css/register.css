@@ -134,6 +134,13 @@ html, body {
   box-shadow: none;
 }
 
+/* Hide browser default password reveal icon (Edge / Chromium) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+
 /* =====================
    Signup button
 ===================== */

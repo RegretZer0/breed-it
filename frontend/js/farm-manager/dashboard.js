@@ -1,4 +1,5 @@
 import { authGuard } from "/js/authGuard.js";
+import { initNotifications } from "/js/notifications.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // ============================
@@ -16,32 +17,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ============================
+  // Welcome message
+  // ============================
+  const welcome = document.querySelector(".dashboard-container h4");
+  if (welcome) {
+    welcome.textContent = `Welcome, ${user.name || "Farm Manager"}`;
+  }
+
+  // ============================
+  // Notifications
+  // ============================
+  initNotifications(user.id);
+
+  // ============================
   // Load dashboard data
   // ============================
   loadLoginLogs();
   await loadDashboardStats(token);
-  initCalendar(BACKEND_URL, token);
 
-  // ============================
-  // Logout handler
-  // ============================
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      try {
-        await fetch("/api/auth/logout", {
-          method: "POST",
-          credentials: "include"
-        });
-        localStorage.clear();
-        window.location.href = "/Login";
-      } catch (err) {
-        console.error("Logout error:", err);
-        alert("Logout failed. Try again.");
-      }
-    });
-  }
+  const calendars = initCalendar(BACKEND_URL, token);
+  renderCalendarLegend();
+
+  // Refetch calendar when tab regains focus
+  window.addEventListener("focus", () => {
+    calendars.forEach(c => c?.refetchEvents());
+  });
 });
 
 // ============================
@@ -50,9 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadDashboardStats(token) {
   try {
     const res = await fetch("/api/dashboard/farm-manager/stats", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     const data = await res.json();
@@ -62,7 +60,6 @@ async function loadDashboardStats(token) {
       const el = document.querySelector(`[data-stat="${key}"]`);
       if (el) el.textContent = value;
     });
-
   } catch (err) {
     console.error("Dashboard stats error:", err);
   }
@@ -72,48 +69,57 @@ async function loadDashboardStats(token) {
 // Calendar initialization
 // ============================
 function initCalendar(BACKEND_URL, token) {
+  const calendars = [];
   const calendarEl = document.getElementById("calendar");
-  if (!calendarEl || !window.FullCalendar) return;
+  if (!calendarEl || !window.FullCalendar) return calendars;
 
   const isMobile = window.innerWidth < 992;
 
-  /* =========================
-     INLINE CALENDAR
-  ========================= */
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: isMobile ? "listWeek" : "dayGridMonth",
-    height: "auto",
-    expandRows: true,
+  function calendarConfig(extra = {}) {
+    return {
+      initialView: isMobile ? "listWeek" : "dayGridMonth",
+      height: "auto",
+      expandRows: true,
+      headerToolbar: isMobile
+        ? { left: "prev,next", center: "title", right: "" }
+        : { left: "prev,next today", center: "title", right: "dayGridMonth,listWeek" },
+      events: fetchCalendarEvents,
+      eventDidMount: enhanceEventUI,
+      eventClick: handleEventClick,
+      ...extra
+    };
+  }
 
-    headerToolbar: isMobile
-      ? {
-          left: "prev,next",
-          center: "title",
-          right: ""
-        }
-      : {
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,listWeek"
-        },
-
-    views: {
-      listWeek: {
-        listDayFormat: { weekday: "short", month: "short", day: "numeric" },
-        listDaySideFormat: false
-      }
-    },
-
-    events: fetchCalendarEvents,
-    eventDidMount: tagEventType,
-    eventClick: handleEventClick
-  });
-
+  const calendar = new FullCalendar.Calendar(calendarEl, calendarConfig());
   calendar.render();
+  calendars.push(calendar);
 
-  /* =========================
-     MOBILE MONTH MODAL CALENDAR
-  ========================= */
+  //CALENDAR LEGEND
+  function renderCalendarLegend() {
+  const legend = document.getElementById("calendarLegend");
+  if (!legend) return;
+
+  const types = [
+    { label: "AI Due (Insemination Window)", color: "#ff9800" },
+    { label: "Heat Re-check (21–23 Days)", color: "#03a9f4" },
+    { label: "Expected Farrowing", color: "#e91e63" },
+    { label: "Weaning Threshold", color: "#4caf50" }
+  ];
+
+  legend.innerHTML = types.map(t => `
+    <div class="legend-item">
+      <span class="legend-color" style="background:${t.color}"></span>
+      <span>${t.label}</span>
+    </div>
+  `).join("");
+}
+
+renderCalendarLegend();
+
+
+  // ============================
+  // Mobile modal calendar
+  // ============================
   let modalCalendar = null;
   const modalEl = document.getElementById("calendarModal");
   const modalBody = document.getElementById("calendarModalBody");
@@ -124,28 +130,15 @@ function initCalendar(BACKEND_URL, token) {
       const modal = new bootstrap.Modal(modalEl);
       modal.show();
 
-      // IMPORTANT: render AFTER modal is visible
       setTimeout(() => {
         if (!modalCalendar) {
           modalBody.innerHTML = `<div id="calendarModalInner"></div>`;
-
           modalCalendar = new FullCalendar.Calendar(
             document.getElementById("calendarModalInner"),
-            {
-              initialView: "dayGridMonth",
-              height: "auto",
-              headerToolbar: {
-                left: "prev,next today",
-                center: "title",
-                right: ""
-              },
-              events: fetchCalendarEvents,
-              eventDidMount: tagEventType,
-              eventClick: handleEventClick
-            }
+            calendarConfig({ initialView: "dayGridMonth" })
           );
-
           modalCalendar.render();
+          calendars.push(modalCalendar);
         } else {
           modalCalendar.updateSize();
         }
@@ -153,9 +146,9 @@ function initCalendar(BACKEND_URL, token) {
     });
   }
 
-  /* =========================
-     HELPERS
-  ========================= */
+  // ============================
+  // Helpers
+  // ============================
   async function fetchCalendarEvents(info, success, failure) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/heat/calendar-events`, {
@@ -164,7 +157,6 @@ function initCalendar(BACKEND_URL, token) {
           "Content-Type": "application/json"
         }
       });
-
       const data = await res.json();
       data.success ? success(data.events) : failure(data.message);
     } catch (err) {
@@ -173,14 +165,33 @@ function initCalendar(BACKEND_URL, token) {
     }
   }
 
-  function tagEventType(info) {
-    const type = info.event.extendedProps.type;
-    if (type) info.el.setAttribute("data-type", type);
+  function enhanceEventUI(info) {
+    const title = info.event.title.toLowerCase();
+    let typeLabel = "Scheduled Event";
+
+    if (title.includes("ai due")) typeLabel = "Day 3 Insemination Window";
+    else if (title.includes("heat re-check")) typeLabel = "21–23 Day Pregnancy Re-check";
+    else if (title.includes("farrowing")) typeLabel = "Expected Farrowing Date";
+    else if (title.includes("weaning")) typeLabel = "30-Day Weaning Threshold";
+
+    info.el.title = `${info.event.title} (${typeLabel})`;
+
+    if (info.event.backgroundColor) {
+      info.el.style.backgroundColor = info.event.backgroundColor;
+      info.el.style.borderColor = info.event.backgroundColor;
+    }
+
+    if (title.includes("ai") || title.includes("farrowing")) {
+      info.el.style.fontWeight = "bold";
+      info.el.style.borderLeft = "4px solid rgba(0,0,0,0.3)";
+    }
   }
 
   function handleEventClick(info) {
     window.location.href = `/admin_heat_reports?reportId=${info.event.id}`;
   }
+
+  return calendars;
 }
 
 // ============================
@@ -191,10 +202,7 @@ async function loadLoginLogs() {
   if (!list) return;
 
   try {
-    const res = await fetch("/api/auth/logs", {
-      credentials: "include"
-    });
-
+    const res = await fetch("/api/auth/logs", { credentials: "include" });
     const data = await res.json();
 
     if (!data.success || !data.logs?.length) {
@@ -203,24 +211,19 @@ async function loadLoginLogs() {
     }
 
     list.innerHTML = "";
-
-    data.logs.forEach((log) => {
+    data.logs.forEach(log => {
       const li = document.createElement("li");
-      const time = new Date(log.createdAt).toLocaleString();
-
       li.innerHTML = `
         <div>
           <span class="log-user">${log.name}</span>
           <span class="log-role ${log.role}">${log.role}</span>
         </div>
-        <div class="log-time">${time}</div>
+        <div class="log-time">${new Date(log.createdAt).toLocaleString()}</div>
       `;
-
       list.appendChild(li);
     });
   } catch (err) {
     console.error("Failed to load logs:", err);
-    list.innerHTML =
-      "<li class='log-loading'>Error loading activity.</li>";
+    list.innerHTML = "<li class='log-loading'>Error loading activity.</li>";
   }
 }

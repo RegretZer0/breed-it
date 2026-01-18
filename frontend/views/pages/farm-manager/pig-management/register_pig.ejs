@@ -14,16 +14,44 @@
 
         <form id="registerSwineForm">
 
-          <!-- FARMER -->
-          <h6 class="section-title">Farmer Information</h6>
-          <div class="row mb-4">
-            <div class="col-md-6">
-              <label class="form-label">Farmer</label>
-              <select id="farmerSelect" class="form-select" required>
-                <option value="">Select Farmer</option>
-              </select>
+        <!-- FARMER -->
+        <h6 class="section-title">Farmer Information</h6>
+        <div class="row mb-4">
+          <div class="col-md-6 position-relative">
+            <label class="form-label">Farmer</label>
+
+            <div class="dropdown w-100">
+              <button
+                class="form-select text-start"
+                type="button"
+                id="farmerDropdownBtn"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Select Farmer
+              </button>
+
+              <div
+                class="dropdown-menu w-100 p-2"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <input
+                  type="text"
+                  id="farmerSearch"
+                  class="form-control form-control-sm mb-2"
+                  placeholder="Search farmer..."
+                />
+
+                <div id="farmerOptions">
+                  <div class="text-muted small">Loading farmers...</div>
+                </div>
+              </div>
             </div>
+
+            <!-- hidden input to store farmer ID -->
+            <input type="hidden" id="farmerSelect" required />
           </div>
+        </div>
 
           <!-- BASIC INFO -->
           <h6 class="section-title">Pig Information</h6>

@@ -8,7 +8,10 @@
         <!-- Dashboard Header card -->
         <div class="card page-card">
           <div class="card-body">
-            <h4 class="page-title">DASHBOARD</h4>
+            <div class="dashboard-container">
+              <h4 class="dashboard-welcome">
+                Welcome, <span class="welcome-name">Farm Manager</span>
+              </h4>
 
             <!-- stat cards grid -->
             <div class="row g-3 mt-3 stats-grid">
@@ -132,6 +135,32 @@
 
                     <!-- Inline calendar -->
                     <div id="calendar"></div>
+                    <div class="calendar-wrapper">
+                      <div class="calendar-legend">
+                        <div class="legend-item">
+                          <span class="legend-color ai"></span>
+                          <span>AI Due (Insemination Window)</span>
+                        </div>
+
+                        <div class="legend-item">
+                          <span class="legend-color recheck"></span>
+                          <span>Heat Re-check (21–23 Days)</span>
+                        </div>
+
+                        <div class="legend-item">
+                          <span class="legend-color farrowing"></span>
+                          <span>Expected Farrowing</span>
+                        </div>
+
+                        <div class="legend-item">
+                          <span class="legend-color weaning"></span>
+                          <span>Weaning Threshold</span>
+                        </div>
+                      </div>
+
+                      <div id="calendar"></div>
+                    </div>
+
 
                   </div>
                 </div>
@@ -172,7 +201,7 @@
                 </div>
               </div>
             </div>
-
+          </div>
 
 
 
