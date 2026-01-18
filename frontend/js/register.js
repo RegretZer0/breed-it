@@ -1,9 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signupForm");
-  const sendOtpBtn = document.getElementById("sendOtpBtn"); // Ensure this ID exists in your HTML
-  const otpInput = document.getElementById("otp"); // Ensure this ID exists in your HTML
+  const sendOtpBtn = document.getElementById("sendOtpBtn");
+  const otpInput = document.getElementById("otp");
   const messageEl = document.getElementById("message");
 
+  // ✅ Updated to Port 5000 to match your backend
+  const BASE_URL = "http://localhost:5000";
   let otpSent = false;
 
   /* ======================
@@ -23,11 +25,19 @@ document.addEventListener("DOMContentLoaded", () => {
       messageEl.style.color = "black";
       messageEl.textContent = "Sending OTP...";
 
-      const res = await fetch("/api/auth/send-otp", {
+      const res = await fetch(`${BASE_URL}/api/auth/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+
+      // 🛡️ Guard against non-JSON responses
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textError = await res.text();
+        console.error("Server Error Response:", textError);
+        throw new Error("Server Error: Check backend console for BadCredentials/Config issues.");
+      }
 
       const data = await res.json();
 
@@ -39,7 +49,6 @@ document.addEventListener("DOMContentLoaded", () => {
       messageEl.style.color = "green";
       messageEl.textContent = "OTP sent to your email!";
 
-      // 30-second cooldown timer for the button
       let cooldown = 30;
       const timer = setInterval(() => {
         cooldown--;
@@ -74,24 +83,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const role = "farm_manager";
 
-    messageEl.style.color = "black";
-    messageEl.textContent = "Creating account...";
-
-    // 1. Basic Field Validation
     if (!firstName || !lastName || !email || !password || !confirmPassword || !otp) {
       messageEl.style.color = "red";
       messageEl.textContent = "Please fill out all fields, including the OTP.";
       return;
     }
 
-    // 2. Password Length Validation (Strengthening)
     if (password.length < 8) {
       messageEl.style.color = "red";
       messageEl.textContent = "Password must be at least 8 characters long.";
       return;
     }
 
-    // 3. Match Validation
     if (password !== confirmPassword) {
       messageEl.style.color = "red";
       messageEl.textContent = "Passwords do not match.";
@@ -105,19 +108,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("/api/auth/register", {
+      messageEl.style.color = "black";
+      messageEl.textContent = "Creating account...";
+
+      const res = await fetch(`${BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: firstName,   // Updated to match backend
-          last_name: lastName,     // Updated to match backend
+          first_name: firstName,
+          last_name: lastName,
           email: email,
-          contact_info: phone,     // Updated to match backend
+          contact_info: phone,
           password: password,
           role: role,
-          otp: otp                 // Required for the new backend check
+          otp: otp
         }),
       });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned an invalid response. Check your backend port.");
+      }
 
       const data = await res.json();
 
@@ -129,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
       messageEl.textContent = "Registration successful! Redirecting to login...";
 
       setTimeout(() => {
-        window.location.href = "/login";
+        window.location.href = "login.html"; // Updated to .html if you aren't using EJS routes
       }, 2000);
 
     } catch (err) {

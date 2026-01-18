@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!adminId) {
     alert("Manager ID missing. Please log in again.");
+    window.location.href = "login.html";
     return;
   }
 
@@ -40,29 +41,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const endpoint =
         currentRole === "farmer"
-          ? `/api/auth/farmers/${adminId}` // manager fetching all farmers
+          ? `/api/auth/farmers/${adminId}`
           : `/api/auth/encoders/${adminId}`;
 
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const text = await res.text();
-      console.log("Raw fetch response:", text);
-
-      const data = JSON.parse(text);
-
-      if (!res.ok || !data.success) {
-        accountsList.innerHTML = `<li>Error loading ${currentRole}s</li>`;
+      // 🛡️ JSON Parsing Guard
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textError = await res.text();
+        console.error("Non-JSON response:", textError);
+        accountsList.innerHTML = `<li>Error: Server returned invalid format. Check console.</li>`;
         return;
       }
 
-      // Dynamic key selection based on currentRole
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        accountsList.innerHTML = `<li>Error loading ${currentRole}s: ${data.message || 'Unknown error'}</li>`;
+        return;
+      }
+
+      // Dynamic key selection based on currentRole (data.farmers or data.encoders)
       const accounts = data[currentRole + "s"] || [];
       renderAccounts(accounts);
     } catch (err) {
       console.error("Fetch error:", err);
-      accountsList.innerHTML = "<li>Server error</li>";
+      accountsList.innerHTML = "<li>Server error: Connection refused or timed out.</li>";
     }
   }
 
@@ -79,17 +86,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       const li = document.createElement("li");
 
       li.innerHTML = `
-        <span>${acc.first_name || ""} ${acc.last_name || ""}</span>
+        <span><strong>${acc.first_name || ""} ${acc.last_name || ""}</strong></span>
         ${
           currentRole === "farmer"
-            ? `<span> - Pens: ${acc.num_of_pens}, Capacity: ${acc.pen_capacity}</span>`
-            : ""
+            ? `<span> - Pens: ${acc.num_of_pens || 0}, Capacity: ${acc.pen_capacity || 0}</span>`
+            : `<span> - Encoder</span>`
         }
         <button class="edit-btn">Edit</button>
       `;
 
       li.querySelector(".edit-btn").addEventListener("click", () => openEditModal(acc));
-
       accountsList.appendChild(li);
     });
   }
@@ -100,7 +106,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const password = document.getElementById("password").value;
 
-    // 🛡️ Strengthening: Minimum 8 characters check
     if (password.length < 8) {
       messageEl.style.color = "red";
       messageEl.textContent = "Password must be at least 8 characters long.";
@@ -111,7 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_info: document.getElementById("contact_no").value.trim(), // Renamed to contact_info for backend consistency
+      contact_info: document.getElementById("contact_no").value.trim(), 
       email: document.getElementById("email").value.trim(),
       password: password,
       managerId: adminId
@@ -122,14 +127,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       payload.pen_capacity = Number(document.getElementById("pen_capacity").value) || 0;
     }
 
-    console.log("Register payload:", payload);
-
     const endpoint =
       currentRole === "farmer"
         ? "/api/auth/register-farmer"
         : "/api/auth/register-encoder";
 
     try {
+      messageEl.style.color = "blue";
+      messageEl.textContent = "Processing...";
+
       const res = await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
         headers: {
@@ -139,15 +145,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         body: JSON.stringify(payload),
       });
 
-      const text = await res.text();
-      console.log("Raw register response:", text);
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error("Server returned non-JSON response");
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server error: Check backend console for details.");
       }
+
+      const data = await res.json();
 
       if (res.ok && data.success) {
         messageEl.style.color = "green";
@@ -170,6 +173,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("editFirstName").value = acc.first_name || "";
     document.getElementById("editLastName").value = acc.last_name || "";
     document.getElementById("editAddress").value = acc.address || "";
+    // Note: Farmer uses contact_no, User/Encoder uses contact_info. 
+    // We check both to be safe.
     document.getElementById("editContact").value = acc.contact_no || acc.contact_info || "";
 
     if (currentRole === "farmer") {
@@ -189,7 +194,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       first_name: document.getElementById("editFirstName").value.trim(),
       last_name: document.getElementById("editLastName").value.trim(),
       address: document.getElementById("editAddress").value.trim(),
-      contact_no: document.getElementById("editContact").value.trim()
+      // Send both field names or handle mapping here
+      contact_no: document.getElementById("editContact").value.trim(),
+      contact_info: document.getElementById("editContact").value.trim()
     };
 
     if (currentRole === "farmer") {
@@ -197,11 +204,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       payload.pen_capacity = Number(document.getElementById("editCapacity").value);
     }
 
-    // Determine update endpoint
-    // Note: ensure your backend has /api/auth/update-farmer/:farmerId if update-encoder uses an ID
     const endpoint =
       currentRole === "farmer"
-        ? `/api/auth/update-farmer/${editForm.dataset.id}` // Using consistent ID-based routing
+        ? `/api/auth/update-farmer/${editForm.dataset.id}`
         : `/api/auth/update-encoder/${editForm.dataset.id}`;
 
     try {
@@ -214,6 +219,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           body: JSON.stringify(payload),
         });
     
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+           throw new Error("Update failed: Server error.");
+        }
+
         const data = await res.json();
     
         if (res.ok && data.success) {
@@ -224,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     } catch (err) {
         console.error("Update error:", err);
-        alert("An error occurred during update.");
+        alert(err.message || "An error occurred during update.");
     }
   });
 
