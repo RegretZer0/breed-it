@@ -29,6 +29,14 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ email }),
       });
 
+      // ✅ Guard against non-JSON responses
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textError = await res.text();
+        console.error("Server Error Response:", textError);
+        throw new Error("Server error while sending OTP. Please try again.");
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -115,6 +123,12 @@ document.addEventListener("DOMContentLoaded", () => {
           otp,
         }),
       });
+
+      // ✅ Guard against invalid backend responses
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned an invalid response.");
+      }
 
       const data = await res.json();
 

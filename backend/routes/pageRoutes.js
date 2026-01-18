@@ -271,6 +271,35 @@ router.get(
   }
 );
 
+// Farmer Schedule
+router.get(
+  "/farmer/calendar",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/calendar", {
+      page_title: "Your Schedule",
+      current_section: "calendar",
+      current_page: "calendar",
+    });
+  }
+);
+
+// Farmer Reproduction & Growth
+router.get(
+  "/farmer/reproduction",
+  requireLogin,
+  requireFarmer,
+  (req, res) => {
+    res.render("pages/farmer/reproduction", {
+      page_title: "Reproduction & Growth",
+      current_section: "reproduction",
+      current_page: "reproduction",
+    });
+  }
+);
+
+
 // Farmer Help
 router.get(
   "/farmer/help",

@@ -87,8 +87,23 @@ async function resolveManagerId() {
           headers: { Authorization: `Bearer ${token}` },
           credentials: "include",
         })
-
       ]);
+
+      // ✅ Guard against non-JSON responses
+      const fType = fRes.headers.get("content-type");
+      const eType = eRes.headers.get("content-type");
+
+      if (!fType?.includes("application/json")) {
+        const text = await fRes.text();
+        console.error("Farmers non-JSON response:", text);
+        throw new Error("Invalid farmers response from server.");
+      }
+
+      if (!eType?.includes("application/json")) {
+        const text = await eRes.text();
+        console.error("Encoders non-JSON response:", text);
+        throw new Error("Invalid encoders response from server.");
+      }
 
       const fData = await fRes.json();
       const eData = await eRes.json();
@@ -97,17 +112,19 @@ async function resolveManagerId() {
       if (!eData.success) throw new Error("Failed to fetch encoders");
 
       farmers = fData.farmers;
-      renderFarmerFilter(farmers);
       encoders = eData.encoders;
 
+      renderFarmerFilter(farmers);
       updateStats();
       renderTableTo(tbody, [...farmers, ...encoders]);
       renderRecentAccounts();
+
     } catch (err) {
       console.error("FETCH ACCOUNTS ERROR:", err);
       tbody.innerHTML = `<tr><td colspan="9">Server error</td></tr>`;
     }
   }
+
 
 
   /* =========================
@@ -383,7 +400,7 @@ async function resolveManagerId() {
       last_name: editForm.editLastName.value.trim(),
       address: editForm.editAddress.value.trim(),
       contact_no: editForm.editContact.value.trim(),
-      status: editForm.editStatus.value, // ✅ RESTORED
+      status: editForm.editStatus.value,
     };
 
     if (isFarmer) {
@@ -405,6 +422,14 @@ async function resolveManagerId() {
         body: JSON.stringify(payload),
       });
 
+      // ✅ Guard against non-JSON responses
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Update non-JSON response:", text);
+        throw new Error("Server error during update.");
+      }
+
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -414,8 +439,8 @@ async function resolveManagerId() {
         alert(data.message || "Update failed");
       }
     } catch (err) {
-      console.error(err);
-      alert("Server error");
+      console.error("UPDATE ERROR:", err);
+      alert(err.message || "Server error");
     }
   });
 
