@@ -20,7 +20,7 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 ====================================================== */
 const uploadDir = "uploads/";
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
@@ -74,13 +74,12 @@ router.post(
         });
       }
 
-      let farmer = null;
-      if (req.user.farmerProfileId) {
-        farmer = await Farmer.findById(req.user.farmerProfileId);
-      }
-      if (!farmer) {
-        farmer = await Farmer.findOne({ user_id: req.user.id });
-      }
+      let farmer = await Farmer.findOne({
+        $or: [
+          { _id: req.user.farmerProfileId },
+          { user_id: req.user.id }
+        ]
+      });
 
       if (!farmer) {
         return res.status(404).json({
@@ -97,14 +96,8 @@ router.post(
         });
       }
 
-      const evidenceData = files.map(file => {
-        const filePath = path.join(__dirname, "../", file.path);
-        const fileBuffer = fs.readFileSync(filePath);
-        const base64String = fileBuffer.toString("base64");
-        const dataUrl = `data:${file.mimetype};base64,${base64String}`;
-        fs.unlinkSync(filePath);
-        return dataUrl;
-      });
+      // Optimized: Save file paths instead of heavy Base64 strings
+      const evidenceData = files.map(file => `/uploads/${file.filename}`);
 
       const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
 
@@ -127,7 +120,7 @@ router.post(
           { _id: farmer.managerId },
           { manager_id: farmer.managerId, role: "encoder" }
         ]
-      });
+      }).lean();
 
       if (recipients.length > 0) {
         await Notification.insertMany(
@@ -159,13 +152,31 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     const reports = await HeatReport.find({ manager_id: managerId })
+      .select("-evidence_url") // Optimization: Don't load images for the list
       .populate("swine_id", "swine_id breed current_status")
       .populate("farmer_id", "first_name last_name farmer_id user_id")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     res.json({ success: true, reports });
   } catch (err) {
     console.error("Get Reports Error:", err);
     res.status(500).json({ success: false, message: "Failed to fetch reports" });
+  }
+});
+
+/* ======================================================
+    GET SINGLE REPORT DETAIL (Includes Images)
+====================================================== */
+router.get("/:id/detail", requireApiLogin, async (req, res) => {
+  try {
+    const report = await HeatReport.findById(req.params.id)
+      .populate("swine_id")
+      .populate("farmer_id")
+      .lean();
+    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching report details" });
   }
 });
 
@@ -175,13 +186,15 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
 router.get("/farmer/:userId", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
     try {
         const { userId } = req.params;
-        const farmerProfile = await Farmer.findOne({ user_id: userId });
+        const farmerProfile = await Farmer.findOne({ user_id: userId }).lean();
         if (!farmerProfile) {
             return res.status(404).json({ success: false, message: "Farmer profile not found" });
         }
         const reports = await HeatReport.find({ farmer_id: farmerProfile._id })
+            .select("-evidence_url") // Optimization
             .populate("swine_id", "swine_id breed current_status")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         res.json({ success: true, reports });
     } catch (err) {
@@ -212,7 +225,6 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     const swine = await Swine.findById(report.swine_id);
     const nextCycleNumber = (swine.breeding_cycles?.length || 0) + 1;
 
-    // ✅ Pushing new breeding cycle for parity tracking
     await Swine.findByIdAndUpdate(report.swine_id, { 
         current_status: "In-Heat",
         $push: {
@@ -271,12 +283,11 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       report.ai_confirmed_at = now;
       
       const heatCheckDate = new Date();
-      heatCheckDate.setDate(heatCheckDate.getDate() + 23);
+      heatCheckDate.setDate(heatCheckDate.getDate() + 23); // Re-confirmed 23 days
       report.next_heat_check = heatCheckDate;
       
       await report.save({ session });
 
-      // ✅ Updating specific cycle with Sire ID
       await Swine.updateOne(
         { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
         { 
@@ -322,7 +333,6 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
         farrowing_date: report.expected_farrowing
     });
 
-    // ✅ Setting pregnancy flag and expected date
     await Swine.updateOne(
         { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
         { 
@@ -351,17 +361,14 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 
         const now = new Date();
 
-        // 1. Update HeatReport status to 'lactating'
         report.status = "lactating"; 
         await report.save();
 
-        // 2. Update AI Record
         await AIRecord.findOneAndUpdate(
             { heat_report_id: report._id },
             { status: "Success", farrowing_date: now }
         );
 
-        // 3. Update Swine: Mark cycle complete, set status to Lactating, and increment parity
         await Swine.updateOne(
             { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
             { 
@@ -405,7 +412,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 });
 
 /* ======================================================
-    GET CALENDAR EVENTS (Now includes 30-day Weaning)
+    GET CALENDAR EVENTS
 ====================================================== */
 router.get(
   "/calendar-events",
@@ -419,7 +426,8 @@ router.get(
         farmer_id: farmerProfileId,
         status: { $in: ["approved", "under_observation", "pregnant", "lactating"] }
       })
-        .populate("swine_id", "swine_id");
+        .populate("swine_id", "swine_id")
+        .lean();
 
       const events = [];
 
@@ -471,7 +479,6 @@ router.get(
     }
   }
 );
-
 
 /* ======================================================
     REJECT REPORT
