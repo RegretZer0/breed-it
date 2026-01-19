@@ -18,6 +18,8 @@ const attachUser = require("../middleware/attachUser");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
+const otpEmailTemplate = require("../emails/otpEmailTemplate");
+
 // Temporary in-memory storage for OTPs
 const otpStore = new Map();
 
@@ -67,6 +69,16 @@ function generateToken(user) {
   );
 }
 
+// 📧 Mail transporter (reuse across requests)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+
 /* ======================
     OTP SYSTEM
 ====================== */
@@ -74,54 +86,83 @@ function generateToken(user) {
 // 1. Send OTP Route
 router.post("/send-otp", async (req, res) => {
   const { email } = req.body;
+
   try {
-    if (!email) return res.status(400).json({ success: false, message: "Email is required." });
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required.",
+      });
+    }
 
     await validateEmailLegitimacy(email);
-    
-    // Check if email already exists in any collection
-    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+
+    // Check if email already exists
+    const existing =
+      (await User.findOne({ email })) ||
+      (await Farmer.findOne({ email }));
+
     if (existing) {
-      return res.status(400).json({ success: false, message: "Email already registered in the system." });
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered in the system.",
+      });
     }
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(email, { otp, expires: Date.now() + 600000 }); // Valid for 10 mins
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+    // 🔒 Hash OTP before storing
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    otpStore.set(email, {
+      otp: hashedOtp,
+      expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
+    // 📧 Send branded HTML email
     await transporter.sendMail({
-      from: `"BreedIT System" <${process.env.EMAIL_USER}>`,
+      from: `"breedIT" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Your Registration OTP",
-      text: `Your OTP for registration is: ${otp}. This code will expire in 10 minutes.`
+      subject: "Your breedIT Verification Code",
+      html: otpEmailTemplate({ otp }),
     });
 
-    res.json({ success: true, message: "OTP sent successfully to your email." });
+    res.json({
+      success: true,
+      message: "OTP sent successfully to your email.",
+    });
+
   } catch (error) {
     console.error("OTP Error:", error);
-    res.status(400).json({ success: false, message: error.message });
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
 // Helper to verify OTP inside registration routes
-function verifyOTPInternal(email, userOtp) {
+async function verifyOTPInternal(email, userOtp) {
   const record = otpStore.get(email);
-  if (!record) throw new Error("No OTP found for this email.");
+
+  if (!record) {
+    throw new Error("No OTP found for this email.");
+  }
+
   if (Date.now() > record.expires) {
     otpStore.delete(email);
     throw new Error("OTP has expired.");
   }
-  if (record.otp !== userOtp) throw new Error("Invalid OTP code.");
-  
-  otpStore.delete(email); // Success, remove the OTP
+
+  // 🔐 Compare hashed OTP
+  const isMatch = await bcrypt.compare(userOtp, record.otp);
+  if (!isMatch) {
+    throw new Error("Invalid OTP code.");
+  }
+
+  // OTP used successfully → remove it
+  otpStore.delete(email);
   return true;
 }
 
