@@ -24,7 +24,6 @@ async function requireSessionAndToken(req, res, next) {
     }
 
     let userId;
-    let userRole;
 
     // 3) Process Token if present, otherwise use Session
     if (token) {
@@ -48,22 +47,50 @@ async function requireSessionAndToken(req, res, next) {
         userId = req.session.user.id;
       }
     } else {
-      // Use Session data if no token was provided (fix for simple dashboard fetches)
+      // Use Session data if no token was provided
       userId = req.session.user.id;
     }
 
     // 4) LOAD FULL USER FROM DATABASE
-    const user = await User.findById(userId).lean();
+    // We check both User and Farmer collections to find the base account
+    let user = await User.findById(userId).lean();
+    
+    // Fallback: Check if the ID provided is actually a Farmer ID directly
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not found" });
+        const directFarmer = await Farmer.findById(userId).lean();
+        if (directFarmer) {
+            // Reconstruct a user-like object from the farmer profile if needed
+            user = {
+                _id: directFarmer.user_id || directFarmer._id,
+                role: "farmer",
+                first_name: directFarmer.first_name,
+                last_name: directFarmer.last_name,
+                managerId: directFarmer.registered_by
+            };
+        }
+    }
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User account not found" });
     }
 
     // 5) Attach farmerProfileId if user is a farmer
     let farmerProfileId = null;
     if (user.role === "farmer") {
-      const farmerProfile = await Farmer.findOne({ user_id: user._id }).lean();
+      // Look for the profile linked to this user account
+      let farmerProfile = await Farmer.findOne({ user_id: user._id }).lean();
+      
+      // Fallback: check if the userId itself is the Farmer Profile entry
       if (!farmerProfile) {
-        return res.status(401).json({ success: false, message: "Farmer profile missing" });
+          farmerProfile = await Farmer.findById(userId).lean();
+      }
+
+      if (!farmerProfile) {
+        console.error(`❌ Auth Denied: No Farmer Profile found for User ${userId}`);
+        return res.status(401).json({ 
+            success: false, 
+            message: "Farmer profile missing or account not linked." 
+        });
       }
       farmerProfileId = farmerProfile._id.toString();
     }
@@ -72,7 +99,7 @@ async function requireSessionAndToken(req, res, next) {
     req.user = {
       id: user._id.toString(),
       role: user.role,
-      email: user.email,
+      email: user.email || "",
       name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
       managerId: user.managerId ? user.managerId.toString() : null,
       farmerProfileId,

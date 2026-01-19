@@ -11,6 +11,7 @@ const Farmer = require("../models/UserFarmer");
 const Notification = require("../models/Notifications");
 const UserModel = require("../models/UserModel");
 const AIRecord = require("../models/AIRecord");
+const logAction = require("../middleware/logger"); // ✅ Added Logger
 
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -96,9 +97,7 @@ router.post(
         });
       }
 
-      // Optimized: Save file paths instead of heavy Base64 strings
       const evidenceData = files.map(file => `/uploads/${file.filename}`);
-
       const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
 
       const newReport = new HeatReport({
@@ -114,6 +113,9 @@ router.post(
       });
 
       await newReport.save();
+
+      // ✅ AUDIT LOG: ADD HEAT REPORT
+      await logAction(req.user.id, "ADD_HEAT_REPORT", "BREEDING", `Farmer ${farmer.first_name} submitted a heat report for Swine ${swineId}. Probability: ${newReport.heat_probability}%`, req);
 
       const recipients = await UserModel.find({
         $or: [
@@ -152,7 +154,7 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     const reports = await HeatReport.find({ manager_id: managerId })
-      .select("-evidence_url") // Optimization: Don't load images for the list
+      .select("-evidence_url") 
       .populate("swine_id", "swine_id breed current_status")
       .populate("farmer_id", "first_name last_name farmer_id user_id")
       .sort({ createdAt: -1 })
@@ -249,6 +251,9 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
         }
     });
 
+    // ✅ AUDIT LOG: APPROVE HEAT
+    await logAction(req.user.id, "APPROVE_HEAT_REPORT", "BREEDING", `Approved heat report for Swine ${report.swine_id.swine_id}. Cycle #${nextCycleNumber} started.`, req);
+
     if (report.farmer_id && report.farmer_id.user_id) {
         await Notification.create({
             user_id: report.farmer_id.user_id,
@@ -295,7 +300,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       report.ai_confirmed_at = now;
       
       const heatCheckDate = new Date();
-      heatCheckDate.setDate(heatCheckDate.getDate() + 23); // Re-confirmed 23 days
+      heatCheckDate.setDate(heatCheckDate.getDate() + 23); 
       report.next_heat_check = heatCheckDate;
       
       await report.save({ session });
@@ -313,6 +318,9 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
         { session }
       );
 
+      // ✅ AUDIT LOG: CONFIRM AI
+      await logAction(req.user.id, "CONFIRM_AI", "BREEDING", `Confirmed AI for Swine ${report.swine_id.swine_id} using Male Swine ${maleSwineId}.`, req);
+
       await session.commitTransaction();
       res.json({ success: true, message: "AI Record created and linked to breeding cycle." });
     } catch (err) {
@@ -328,7 +336,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
 ====================================================== */
 router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id);
+    const report = await HeatReport.findById(req.params.id).populate("swine_id");
     report.status = "pregnant";
     
     const baseDate = report.ai_confirmed_at || new Date();
@@ -346,7 +354,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
     });
 
     await Swine.updateOne(
-        { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
+        { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
         { 
           $set: { 
             "breeding_cycles.$.is_pregnant": true,
@@ -356,6 +364,9 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
           }
         }
     );
+
+    // ✅ AUDIT LOG: CONFIRM PREGNANCY
+    await logAction(req.user.id, "CONFIRM_PREGNANCY", "BREEDING", `Confirmed pregnancy for Swine ${report.swine_id.swine_id}. Expected farrowing: ${farrowingDate.toLocaleDateString()}`, req);
 
     res.json({ success: true, message: "Pregnancy confirmed. Expected farrowing date set." });
   } catch (err) {
@@ -368,7 +379,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 ====================================================== */
 router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     try {
-        const report = await HeatReport.findById(req.params.id);
+        const report = await HeatReport.findById(req.params.id).populate("swine_id");
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
         const now = new Date();
@@ -382,7 +393,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         );
 
         await Swine.updateOne(
-            { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
+            { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
             { 
               $set: { 
                 "breeding_cycles.$.is_pregnant": false,
@@ -392,6 +403,9 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
               $inc: { parity: 1 } 
             }
         );
+
+        // ✅ AUDIT LOG: CONFIRM FARROWING
+        await logAction(req.user.id, "CONFIRM_FARROWING", "BREEDING", `Confirmed farrowing for Swine ${report.swine_id.swine_id}. Status updated to Lactating and Parity incremented.`, req);
 
         res.json({ success: true, message: "Farrowing confirmed. Swine status updated to Lactating." });
     } catch (err) {
@@ -405,7 +419,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 ====================================================== */
 router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id);
+    const report = await HeatReport.findById(req.params.id).populate("swine_id");
     report.status = "approved"; 
     report.next_heat_check = null;
     report.expected_farrowing = null;
@@ -416,7 +430,11 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
         status: "Failed" 
     });
 
-    await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
+    await Swine.findByIdAndUpdate(report.swine_id._id, { current_status: "In-Heat" });
+
+    // ✅ AUDIT LOG: STILL IN HEAT
+    await logAction(req.user.id, "STILL_IN_HEAT", "BREEDING", `Recorded 'Still In Heat' for Swine ${report.swine_id.swine_id}. Breeding cycle reset.`, req);
+
     res.json({ success: true, message: "Cycle reset. Status returned to In-Heat." });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -498,12 +516,15 @@ router.get(
 router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     try {
         const { reason } = req.body; 
-        const report = await HeatReport.findById(req.params.id);
+        const report = await HeatReport.findById(req.params.id).populate("swine_id");
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
         report.status = "rejected";
         report.rejection_message = reason; 
         await report.save();
+
+        // ✅ AUDIT LOG: REJECT REPORT
+        await logAction(req.user.id, "REJECT_HEAT_REPORT", "BREEDING", `Rejected heat report for Swine ${report.swine_id.swine_id}. Reason: ${reason}`, req);
 
         res.json({ success: true, message: "Report rejected successfully." });
     } catch (err) {

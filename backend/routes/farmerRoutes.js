@@ -2,13 +2,14 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Farmer = require("../models/UserFarmer");
+const logAction = require("../middleware/logger"); // ✅ Added Logger utility
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 
 /* ======================================================
-   GET LOGGED-IN FARMER PROFILE (SESSION-BASED)
+    GET LOGGED-IN FARMER PROFILE (SESSION-BASED)
 ====================================================== */
 router.get("/profile", requireApiLogin, async (req, res) => {
   try {
@@ -49,7 +50,7 @@ router.get("/profile", requireApiLogin, async (req, res) => {
 });
 
 /* ======================================================
-   GET FARMER PROFILE BY FARMER ID
+    GET FARMER PROFILE BY FARMER ID
 ====================================================== */
 router.get(
   "/farmer",
@@ -67,6 +68,7 @@ router.get(
         });
       }
 
+      // Note: Assuming Swine model is required/imported if used
       const swine = await Swine.find({ farmer_id: farmerId })
         .populate("farmer_id", "first_name last_name")
         .lean();
@@ -83,7 +85,7 @@ router.get(
 );
 
 /* ======================================================
-   UPDATE LOGGED-IN FARMER PROFILE
+    UPDATE LOGGED-IN FARMER PROFILE
 ====================================================== */
 router.put("/profile", requireApiLogin, async (req, res) => {
   try {
@@ -128,6 +130,16 @@ router.put("/profile", requireApiLogin, async (req, res) => {
         message: "Farmer profile not found",
       });
     }
+
+    // ✅ Audit Log: Update Profile
+    // We use user.id (the ID from session/token) to ensure it appears in their audit history
+    await logAction(
+      user.id, 
+      "UPDATE_USER", 
+      "USER_AUTH", 
+      `Farmer updated their profile details (Email: ${updatedFarmer.email})`, 
+      req
+    );
 
     updatedFarmer.name =
       `${updatedFarmer.first_name || ""} ${updatedFarmer.last_name || ""}`.trim();
