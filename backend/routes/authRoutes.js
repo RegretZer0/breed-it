@@ -240,7 +240,7 @@ router.get("/me", (req, res) => {
     REGISTER FARM MANAGER
 ====================== */
 router.post("/register", async (req, res) => {
-  const { first_name, last_name, address, contact_info, email, password, otp } = req.body;
+  const { first_name, last_name, address, contact_no, email, password, otp } = req.body;
 
   try {
     if (!first_name || !last_name || !email || !password || !otp) {
@@ -260,7 +260,7 @@ router.post("/register", async (req, res) => {
       first_name,
       last_name,
       address,
-      contact_info,
+      contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       role: "farm_manager",
@@ -288,7 +288,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_info,
+      contact_no,   // ✅ FIX
       email,
       password,
       managerId,
@@ -297,6 +297,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       production_type,
       membership_date,
     } = req.body;
+
 
     if (!email || !password || !managerId) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
@@ -322,7 +323,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_no: contact_info,
+      contact_no: contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       managerId,
@@ -443,7 +444,7 @@ router.put(
     REGISTER ENCODER
 ====================== */
 router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
-  const { first_name, last_name, address, contact_info, email, password, managerId } = req.body;
+  const { first_name, last_name, address, contact_no, email, password, managerId } = req.body;
 
   try {
     if (!first_name || !last_name || !email || !password || !managerId) {
@@ -467,7 +468,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       first_name,
       last_name,
       address,
-      contact_info,
+      contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       role: "encoder",

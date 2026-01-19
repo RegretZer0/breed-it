@@ -117,6 +117,52 @@ document.addEventListener("DOMContentLoaded", async () => {
   accountTypeSelect.addEventListener("change", toggleFarmerFields);
   toggleFarmerFields();
 
+  
+  function fillConfirmationModal(payload, accountType) {
+    // Account type
+    document.getElementById("preview_account_type").textContent =
+      accountType === "farmer" ? "Farmer" : "Encoder";
+
+    // Name
+    document.getElementById("preview_name").textContent =
+      `${payload.first_name} ${payload.last_name}`;
+
+    // Email
+    document.getElementById("preview_email").textContent =
+      payload.email || "-";
+
+    // Contact Info
+    document.getElementById("preview_contact").textContent =
+      payload.contact_no || "-";
+
+    // Address
+    document.getElementById("preview_address").textContent =
+      payload.address || "-";
+
+    // Farmer-only preview sections
+    const farmerPreviewEls = document.querySelectorAll(".farmer-preview");
+
+    if (accountType === "farmer") {
+      farmerPreviewEls.forEach(el => (el.style.display = ""));
+
+      document.getElementById("preview_production").textContent =
+        payload.production_type || "-";
+
+      document.getElementById("preview_pens").textContent =
+        payload.num_of_pens ?? "-";
+
+      document.getElementById("preview_capacity").textContent =
+        payload.pen_capacity ?? "-";
+
+      document.getElementById("preview_membership").textContent =
+        payload.membership_date || "-";
+    } else {
+      // Hide farmer-only fields for encoder
+      farmerPreviewEls.forEach(el => (el.style.display = "none"));
+    }
+  }
+
+
   /* =========================
      FORM SUBMIT (PREVIEW)
   ========================= */
@@ -130,17 +176,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirm_password").value;
+
+    if (!password || !confirmPassword) {
+      showAlert("danger", "Password fields are required.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showAlert("danger", "Passwords do not match.");
+      return;
+    }
+
+    const contactNo = document.getElementById("contact_info").value.trim();
+    if (!contactNo) {
+      showAlert("danger", "Contact number is required.");
+      return;
+    }
+
     const accountType = accountTypeSelect.value;
 
     const payload = {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_no: document.getElementById("contact_info").value.trim(),
+      contact_no: contactNo,
       email: document.getElementById("email").value.trim(),
-      password: document.getElementById("password").value,
+      password,
       managerId,
-      otp, // ✅ OTP INCLUDED
+      otp,
     };
 
     let endpoint = "/api/auth/register-encoder";
@@ -159,6 +224,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     pendingPayload = payload;
     pendingEndpoint = endpoint;
+
+    // ✅ FILL CONFIRMATION MODAL HERE
+    fillConfirmationModal(payload, accountType);
 
     new bootstrap.Modal(
       document.getElementById("confirmModal")
