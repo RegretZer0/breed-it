@@ -1,5 +1,5 @@
 import { authGuard } from "/js/authGuard.js";
-import { PerformanceHelper } from "/js/performance_helper.js";
+// import { PerformanceHelper } from "/js/performance_helper.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Authenticate and Role Check

@@ -190,9 +190,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           <p><strong>Health:</strong> ${pig.health_status}</p>
 
           <p><strong>Status:</strong> ${pig.current_status}</p>
-          <span class="pipeline-badge success">
-            Ready for Final Selection
-          </span>
         </div>
 
         <div class="pig-actions">

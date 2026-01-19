@@ -16,7 +16,7 @@ const swineSchema = new mongoose.Schema({
   // batch is optional for Maintenance/External Boars
   batch: { type: String, required: false }, 
 
-  // NEW: Link piglet to a specific breeding cycle of the dam
+  // Link piglet to a specific breeding cycle of the dam
   birth_cycle_number: { type: Number, required: false },
 
   // ------------------- Current Lifecycle State -------------------
@@ -94,7 +94,7 @@ const swineSchema = new mongoose.Schema({
     administered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],
 
-  // ------------------- Growth & Selection (UPDATED) -------------------
+  // ------------------- Growth & Selection (UPDATED ENUM) -------------------
   performance_records: [{
     stage: { 
       type: String, 
@@ -106,7 +106,15 @@ const swineSchema = new mongoose.Schema({
         "Final Selection", 
         "Market Check", 
         "Routine",
-        "Monthly Update" // Added for the new farmer button
+        "Pregnant",
+        "Monthly Update",
+        "Under Observation", // Added to fix validation error
+        "Manual Weaning",    // Added to support manual override route
+        "In-Heat",
+        "Bred",
+        "Lactating",
+        "Farrowing",
+        "Market-Ready"
       ] 
     },
     record_date: { type: Date, default: Date.now },
@@ -140,7 +148,7 @@ swineSchema.virtual('offspring', {
   foreignField: 'dam_id'
 });
 
-// NEW: Virtual for Average Daily Gain (ADG)
+// Virtual for Average Daily Gain (ADG)
 swineSchema.virtual('current_adg').get(function() {
   if (!this.performance_records || this.performance_records.length < 2) return 0;
   
@@ -153,7 +161,7 @@ swineSchema.virtual('current_adg').get(function() {
   return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
 });
 
-// NEW: Virtual to calculate total mortality count for display in tables
+// Virtual to calculate total mortality count for display in tables
 swineSchema.virtual('total_mortality_count').get(function() {
   if (!this.breeding_cycles) return 0;
   return this.breeding_cycles.reduce((acc, cycle) => {

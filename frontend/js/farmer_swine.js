@@ -1,6 +1,5 @@
 // farmer_swine.js
 import { authGuard } from "./authGuard.js";
-import { PerformanceHelper } from "./performance_helper.js"; // Integrated Helper
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 Protect the page: only farmers
@@ -74,11 +73,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // --- UPDATED: FUNCTION TO RECORD MONTHLY GROWTH ---
+  // --- FUNCTION TO RECORD MONTHLY GROWTH ---
   window.recordGrowth = async (swineId) => {
     const swine = currentSwineData.find(s => s.swine_id === swineId);
     const today = new Date();
-    const currentMonthYear = `${today.getMonth() + 1}-${today.getFullYear()}`;
 
     // Check if a record exists for this month
     const existingRecordIndex = swine.performance_records?.findIndex(rec => {
@@ -100,7 +98,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const deformity = prompt("Enter Deformities (leave blank for 'None'):") || "None";
     
     const payload = {
-      // Pass a flag so the backend knows to replace the existing monthly entry if necessary
       overwrite_monthly: existingRecordIndex !== -1,
       performance_records: {
         weight: parseFloat(weight),
@@ -108,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         heart_girth: parseFloat(girth),
         teeth_count: parseInt(teeth),
         deformities: [deformity],
-        stage: swine.current_status,
+        stage: swine.current_status, // Use actual DB status
         record_date: new Date()
       }
     };
@@ -126,11 +123,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (data.success) {
         alert(`Monthly update saved for ${swineId}!`);
-        await sendAdminNotification(
-          "Monthly Growth Updated",
-          `Farmer ${user.first_name} updated ${swineId}. Weight: ${weight}kg, Girth: ${girth}cm.`,
-          "info"
-        );
         location.reload(); 
       } else {
         alert("Error: " + data.message);
@@ -160,7 +152,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    currentSwineData = data.swine; // Save for the recordGrowth function
+    currentSwineData = data.swine;
     swineTableBody.innerHTML = "";
     
     if (!data.swine || data.swine.length === 0) {
@@ -174,26 +166,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       const records = swine.performance_records || [];
       const latestPerf = records.length > 0 ? records[records.length - 1] : {};
       
-      // Calculate Average Daily Gain (ADG) if at least 2 records exist
+      // Calculate ADG
       let adgDisplay = "N/A";
       if (records.length >= 2) {
         const last = records[records.length - 1];
         const prev = records[records.length - 2];
         const weightDiff = last.weight - prev.weight;
         const dateDiff = (new Date(last.record_date) - new Date(prev.record_date)) / (1000 * 60 * 60 * 24);
-        if (dateDiff > 0) {
-          adgDisplay = `${(weightDiff / dateDiff).toFixed(3)} kg/day`;
-        }
+        if (dateDiff > 0) adgDisplay = `${(weightDiff / dateDiff).toFixed(3)} kg/day`;
       }
 
-      const statusResult = PerformanceHelper.getSelectionStatus(swine);
+      // Internal Deformity Check (Replacing Helper)
+      const hasDeformities = latestPerf.deformities && 
+                             latestPerf.deformities.length > 0 && 
+                             latestPerf.deformities[0] !== "None";
 
-      // Format Deformities
       let deformityText = "None";
       let deformityColor = "green";
-      const activeDeformities = (latestPerf.deformities || []).filter(d => d !== "None");
-      if (activeDeformities.length > 0) {
-          deformityText = activeDeformities.join(", ");
+      if (hasDeformities) {
+          deformityText = latestPerf.deformities.filter(d => d !== "None").join(", ");
           deformityColor = "red";
       }
 
@@ -214,9 +205,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>${formatStageDisplay(swine.age_stage)}</td> 
         <td>
             <strong>${swine.current_status || "-"}</strong><br>
-            <span style="font-size: 0.8rem; font-weight: bold; color: ${statusResult.color}; background: ${statusResult.bg || 'transparent'}; padding: 2px 4px; border-radius: 3px;">
-                ${statusResult.suggestion}
-            </span>
+            ${hasDeformities ? 
+              `<span style="font-size: 0.8rem; font-weight: bold; color: #c62828; background: #ffebee; padding: 2px 4px; border-radius: 3px;">
+                ⚠️ Suggest: Cull/Sell
+              </span>` : 
+              `<span style="font-size: 0.8rem; font-weight: bold; color: #2e7d32; background: #e8f5e9; padding: 2px 4px; border-radius: 3px;">
+                ✅ Active Monitoring
+              </span>`
+            }
         </td>
         
         <td class="performance-cell">
@@ -226,7 +222,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             <li><strong>ADG:</strong> <span class="text-primary">${adgDisplay}</span></li>
             <li><strong>Deformities:</strong> <span style="color: ${deformityColor};"> ${deformityText} </span></li>
           </ul>
-          
           <button onclick="recordGrowth('${swine.swine_id}')" class="btn-update-growth">
             Monthly Update
           </button>

@@ -1,5 +1,5 @@
 import { authGuard } from "/js/authGuard.js";
-import { PerformanceHelper } from "/js/performance_helper.js";
+// PerformanceHelper removed
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 🔐 AUTH
@@ -97,21 +97,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       morphBody.innerHTML = rows.length
         ? rows.map(item => {
-            const swineObj = {
-              swine_id: item.swine_tag,
-              sex: item.swine_sex,
-              current_status: item.morphology.stage,
-              performance_records: [{
-                weight: item.morphology.weight,
-                stage: item.morphology.stage,
-                deformities: []
-              }]
-            };
+            const hasDeformity = rawPerformanceData.deformities.some(d => d.swine_tag === item.swine_tag);
+            
+            let suggestionText = "✅ Active Monitoring";
+            let suggestionColor = "#2e7d32";
 
-            const suggestion = PerformanceHelper.getSelectionStatus(
-              swineObj,
-              rawPerformanceData.deformities
-            );
+            if (hasDeformity) {
+              suggestionText = "⚠️ Suggest: Cull/Sell";
+              suggestionColor = "#c62828";
+            } else if (item.morphology.stage === "Final Selection") {
+              if (item.morphology.weight >= 15 && item.morphology.weight <= 25) {
+                suggestionText = item.swine_sex === "Female" ? "⭐ Retain for Breeding" : "⭐ Market Ready";
+                suggestionColor = "#2e7d32";
+              } else if (item.morphology.weight > 25) {
+                suggestionText = "⚠️ Overweight for Selection";
+                suggestionColor = "#e67e22";
+              }
+            }
 
             return `
               <tr>
@@ -120,8 +122,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td>${item.swine_sex}</td>
                 <td>
                   ${item.morphology.stage}<br>
-                  <small style="color:${suggestion.color}">
-                    ${suggestion.suggestion}
+                  <small style="color:${suggestionColor}; font-weight: bold;">
+                    ${suggestionText}
                   </small>
                 </td>
                 <td>⚖️ ${item.morphology.weight}kg</td>
@@ -182,7 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       : `<tr><td colspan="5" class="text-center">No candidates.</td></tr>`;
   }
 
-  // ================= MORTALITY =================
+  // ================= MORTALITY ANALYTICS =================
   async function loadSwine() {
     const res = await fetch(`${BACKEND_URL}/api/swine/all`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -198,22 +200,69 @@ document.addEventListener("DOMContentLoaded", async () => {
     const body = document.getElementById("breedingMortalityTableBody");
     if (!body) return;
 
-    const sows = allSwineData.filter(s =>
-      (s.age_stage === "adult" || s.current_stage === "adult") &&
-      (s.sex === "Female" || s.swine_sex === "Female")
-    );
+    // 1. Expanded Filter: Look for any female that isn't a piglet or weaner
+    let adultSows = allSwineData.filter(s => {
+      const stage = (s.age_stage || s.current_stage || "").toLowerCase();
+      const gender = (s.sex || s.swine_sex || "").toLowerCase();
+      
+      // Included common breeder labels: adult, sow, gilt
+      const isBreederStage = ["adult", "sow", "gilt"].includes(stage);
+      const isFemale = gender === "female";
+      
+      return isFemale && isBreederStage;
+    });
 
-    body.innerHTML = sows.length
-      ? sows.map(sow => `
-        <tr>
-          <td>${resolveFarmerName(sow)}</td>
-          <td>${sow.swine_id || sow.swine_tag}</td>
-          <td class="text-center">—</td>
-          <td class="text-center">—</td>
-          <td class="text-center">—</td>
-        </tr>
-      `).join("")
-      : `<tr><td colspan="5" class="text-center">No sows found.</td></tr>`;
+    // 2. Role-based filtering for Farmers
+    if (user.role.toLowerCase() === "farmer") {
+        const userProfileId = user.farmerProfileId || user._id; 
+        adultSows = adultSows.filter(s => {
+            const fId = s.farmer_id?._id || s.farmer_id;
+            // Check both ID and the name to ensure visibility
+            return fId === userProfileId || resolveFarmerName(s) === `${user.first_name} ${user.last_name}`;
+        });
+    }
+
+    // 3. Search Term filtering
+    const filtered = adultSows.filter(s => {
+      const sId = s.swine_id || s.swine_tag || "";
+      return resolveFarmerName(s).toLowerCase().includes(term) || sId.toLowerCase().includes(term);
+    });
+
+    body.innerHTML = filtered.length
+      ? filtered.map(sow => {
+          const sowId = sow.swine_id || sow.swine_tag;
+          
+          // 4. Calculate Offspring Stats
+          const offspring = allSwineData.filter(child => 
+              child.dam_id === sowId || child.mother_id === sowId
+          );
+          
+          const aliveCount = offspring.filter(child => child.health_status !== "Deceased").length;
+          const deceasedCount = offspring.filter(child => child.health_status === "Deceased").length;
+          const totalBorn = offspring.length;
+
+          let mortalityRate = 0;
+          if (totalBorn > 0) {
+              mortalityRate = ((deceasedCount / totalBorn) * 100).toFixed(1);
+          }
+
+          const rateColor = mortalityRate > 15 ? "#d32f2f" : mortalityRate > 5 ? "#f57c00" : "#2e7d32";
+
+          return `
+            <tr>
+              <td><strong>${resolveFarmerName(sow)}</strong></td>
+              <td><span class="badge-tag">${sowId}</span></td>
+              <td class="text-center"><b>${aliveCount}</b></td>
+              <td class="text-center" style="color: #d32f2f;"><b>${deceasedCount}</b></td>
+              <td class="text-center">
+                  <span style="font-weight:bold; color: ${rateColor};">
+                      ${mortalityRate}%
+                  </span>
+              </td>
+            </tr>
+          `;
+        }).join("")
+      : `<tr><td colspan="5" class="text-center">No registered sows found.</td></tr>`;
   }
 
   // ================= INIT =================
