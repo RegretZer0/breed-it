@@ -183,25 +183,37 @@ router.get("/:id/detail", requireApiLogin, async (req, res) => {
 /* ======================================================
     GET REPORTS FOR SPECIFIC FARMER
 ====================================================== */
-router.get("/farmer/:userId", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
+router.get(
+  "/farmer",
+  requireApiLogin,
+  allowRoles("farmer", "farm_manager", "encoder"),
+  async (req, res) => {
     try {
-        const { userId } = req.params;
-        const farmerProfile = await Farmer.findOne({ user_id: userId }).lean();
-        if (!farmerProfile) {
-            return res.status(404).json({ success: false, message: "Farmer profile not found" });
-        }
-        const reports = await HeatReport.find({ farmer_id: farmerProfile._id })
-            .select("-evidence_url") // Optimization
-            .populate("swine_id", "swine_id breed current_status")
-            .sort({ createdAt: -1 })
-            .lean();
+      const farmerProfileId = req.user.farmerProfileId;
 
-        res.json({ success: true, reports });
+      if (!farmerProfileId) {
+        return res.status(400).json({
+          success: false,
+          message: "Farmer profile not linked to user"
+        });
+      }
+
+      const reports = await HeatReport.find({ farmer_id: farmerProfileId })
+        .select("-evidence_url")
+        .populate("swine_id", "swine_id breed current_status")
+        .sort({ createdAt: -1 })
+        .lean();
+
+      res.json({ success: true, reports });
     } catch (err) {
-        console.error("Get Farmer Reports Error:", err);
-        res.status(500).json({ success: false, message: "Failed to fetch your reports" });
+      console.error("Get Farmer Reports Error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch your reports"
+      });
     }
-});
+  }
+);
 
 /* ======================================================
     APPROVE HEAT REPORT (Starts Breeding Cycle)
