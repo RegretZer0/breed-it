@@ -351,3 +351,11 @@ button, [role="button"], a {
   }
 }
 
+.modal {
+  position: fixed !important;
+  z-index: 9999 !important;
+}
+
+.modal-backdrop {
+  z-index: 9998 !important;
+}

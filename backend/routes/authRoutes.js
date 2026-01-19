@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const validator = require("validator");
 const dns = require("dns").promises;
 const nodemailer = require("nodemailer");
+const mongoose = require("mongoose");
 
 const { JWT_SECRET } = require("../config/jwt");
 

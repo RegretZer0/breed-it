@@ -109,100 +109,18 @@
 
             </div>
 
-            <!-- calendar + audit logs row -->
-            <div class="row mt-3 g-3">
+        <!-- CALENDAR + AUDIT LOGS ROW -->
+        <div class="row g-3 mt-3 dashboard-main-row">
 
-              <!-- LEFT: Calendar -->
-              <div class="col-lg-8">
-                <div class="card page-card large-card h-100">
-                  <div class="card-body">
+          <!-- CALENDAR MODULE (LEFT) -->
+          <%- include("../../partials/farm-manager/calendar_module") %>
 
-                    <!-- Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                      <h5 class="card-title mb-0">
-                        Breeding &amp; Farrowing Schedule
-                      </h5>
+          <!-- AUDIT LOGS MODULE (RIGHT) -->
+          <%- include("../../partials/farm-manager/audit_logs_module") %>
 
-                      <!-- Mobile-only Month View -->
-                      <button
-                        type="button"
-                        id="openCalendarModal"
-                        class="btn btn-outline-secondary btn-sm d-lg-none"
-                      >
-                        Month View
-                      </button>
-                    </div>
-
-                    <!-- Inline calendar -->
-                    <div id="calendar"></div>
-                    <div class="calendar-wrapper">
-                      <div class="calendar-legend">
-                        <div class="legend-item">
-                          <span class="legend-color ai"></span>
-                          <span>AI Due (Insemination Window)</span>
-                        </div>
-
-                        <div class="legend-item">
-                          <span class="legend-color recheck"></span>
-                          <span>Heat Re-check (21–23 Days)</span>
-                        </div>
-
-                        <div class="legend-item">
-                          <span class="legend-color farrowing"></span>
-                          <span>Expected Farrowing</span>
-                        </div>
-
-                        <div class="legend-item">
-                          <span class="legend-color weaning"></span>
-                          <span>Weaning Threshold</span>
-                        </div>
-                      </div>
-
-                      <div id="calendar"></div>
-                    </div>
-
-
-                  </div>
-                </div>
-              </div>
-
-
-              <!-- RIGHT: Audit Logs -->
-              <div class="col-lg-4">
-                <div class="card page-card h-100">
-                  <div class="card-body">
-                    <h5 class="card-title mb-3">Recent Audit Logs</h5>
-
-                    <ul id="loginLogs" class="login-log-list">
-                      <li class="log-loading">Loading activity…</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- =======================
-                MOBILE FULL CALENDAR MODAL
-            ======================= -->
-            <div class="modal fade" id="calendarModal" tabindex="-1">
-              <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-                <div class="modal-content">
-
-                  <div class="modal-header">
-                    <h5 class="modal-title">Monthly Schedule</h5>
-                    <button class="btn-close" data-bs-dismiss="modal"></button>
-                  </div>
-
-                  <div class="modal-body">
-                    <div id="calendarModalBody"></div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
-
+        </div>
+      </div>
+    </main>
 
 
 <%- include("../../partials/farm-manager/footer") %>

@@ -1,0 +1,79 @@
+<!-- =======================
+     CALENDAR MODULE
+======================= -->
+
+<!-- LEFT: Calendar (NO ROW HERE) -->
+<div class="col-lg-8 d-flex">
+  <div class="card page-card large-card h-100 w-100">
+    <div class="card-body">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <h5 class="card-title mb-0">
+          Breeding &amp; Farrowing Schedule
+        </h5>
+
+        <!-- Mobile-only Month View -->
+        <button
+          type="button"
+          id="openCalendarModal"
+          class="btn btn-outline-secondary btn-sm d-lg-none"
+        >
+          Month View
+        </button>
+      </div>
+
+      <!-- MAIN CALENDAR -->
+      <div id="calendar"></div>
+
+      <!-- Legend -->
+      <div class="calendar-legend mt-3">
+        <div class="legend-item">
+          <span class="legend-color ai"></span>
+          <span>AI Due (Insemination Window)</span>
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-color recheck"></span>
+          <span>Heat Re-check (21–23 Days)</span>
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-color farrowing"></span>
+          <span>Expected Farrowing</span>
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-color weaning"></span>
+          <span>Weaning Threshold</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =======================
+     MOBILE FULL CALENDAR MODAL
+======================= -->
+<div
+  class="modal fade"
+  id="calendarModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Monthly Schedule</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="calendarModalBody"></div>
+      </div>
+
+    </div>
+  </div>
+</div>

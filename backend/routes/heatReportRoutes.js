@@ -410,7 +410,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 router.get(
   "/calendar-events",
   requireApiLogin,
-  allowRoles("farmer"),
+  allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
       const farmerProfileId = req.user.farmerProfileId;
