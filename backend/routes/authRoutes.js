@@ -158,7 +158,7 @@ router.post("/login", async (req, res) => {
     req.session.regenerate(async () => {
       req.session.user = {
         id: user._id.toString(),
-        role: role || user.role, // Ensure role is captured
+        role: role || user.role, 
         email: user.email,
         first_name: user.first_name || "",
         last_name: user.last_name || "",
@@ -166,7 +166,7 @@ router.post("/login", async (req, res) => {
         managerId: user.managerId || null,
       };
 
-      // ✅ Audit Log: Login (Captures Farmer login now)
+      // ✅ Audit Log: Login
       await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
 
       res.json({
@@ -260,7 +260,7 @@ router.post("/register", async (req, res) => {
       first_name,
       last_name,
       address,
-      contact_no,
+      contact_info: contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       role: "farm_manager",
@@ -530,7 +530,7 @@ router.put("/update-encoder/:id", requireSessionAndToken, allowRoles("farm_manag
     Object.assign(encoder, req.body);
     await encoder.save();
 
-    // ✅ Audit Log: Update Encoder
+    // ✅ Audit Log: Update Encoder (Added)
     await logAction(req.user.id, "UPDATE_ENCODER", "ACCOUNT_MANAGEMENT", `Updated details for Encoder: ${encoder.email}`, req);
 
     res.json({
@@ -576,29 +576,47 @@ router.get(
       const { limit = 100, skip = 0 } = req.query;
       const user = req.user;
 
-      // Determine the primary manager context
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
       if (!managerId && user.role !== "farm_manager") {
           return res.status(400).json({ success: false, message: "Manager context not found" });
       }
 
-      // Find all team members across both models
       const teamEncoders = await User.find({ managerId }).select("_id");
       const teamFarmers = await Farmer.find({ managerId }).select("_id");
 
-      // Combine IDs: Encoders + Farmers + the Manager themselves
       const teamIds = [
           ...teamEncoders.map(e => e._id),
           ...teamFarmers.map(f => f._id),
           new mongoose.Types.ObjectId(managerId)
       ];
 
-      const logs = await AuditLog.find({ user_id: { $in: teamIds } })
+      let logs = await AuditLog.find({ user_id: { $in: teamIds } })
         .populate("user_id", "first_name last_name role email")
         .sort({ timestamp: -1 })
         .limit(parseInt(limit))
-        .skip(parseInt(skip));
+        .skip(parseInt(skip))
+        .lean(); 
+
+      // ✅ REFINED LOGIC: Re-check Farmer collection for any logs that didn't populate from 'User'
+      for (let log of logs) {
+        if (!log.user_id) {
+            // Fetch the raw user_id since populate failed
+            const rawLog = await AuditLog.findById(log._id).select("user_id").lean();
+            if (rawLog && rawLog.user_id) {
+                const farmer = await Farmer.findById(rawLog.user_id).select("first_name last_name email").lean();
+                if (farmer) {
+                    log.user_id = {
+                        _id: farmer._id,
+                        first_name: farmer.first_name,
+                        last_name: farmer.last_name,
+                        email: farmer.email,
+                        role: "farmer"
+                    };
+                }
+            }
+        }
+      }
 
       const total = await AuditLog.countDocuments({ user_id: { $in: teamIds } });
 

@@ -73,7 +73,9 @@ router.post(
             });
 
             await newBoar.save();
-            await logAction(user.id, "REGISTER_MASTER_BOAR", "SWINE_MANAGEMENT", `Registered Master Boar ${swineId} (${breed})`, req);
+            
+            // ✅ Detailed Audit Log
+            await logAction(user.id, "REGISTER_MASTER_BOAR", "SWINE_MANAGEMENT", `Registered Master Boar ${swineId} (Breed: ${breed || "Native"})`, req);
 
             res.status(201).json({ 
                 success: true, 
@@ -111,7 +113,6 @@ router.post(
 
             // --- START PURE LETTER AUTO-BATCH LOGIC ---
             if (!batch || batch.trim() === "") {
-                // Find all batches that are only letters (A, B, C...)
                 const existingBatches = await Swine.distinct("batch", {
                     batch: { $regex: /^[A-Z]+$/ }
                 });
@@ -126,10 +127,8 @@ router.post(
 
                 let nextIndex = 0;
                 while (usedIndices.includes(nextIndex)) nextIndex++;
-
                 batch = getBatchLetter(nextIndex);
             }
-            // --- END PURE LETTER AUTO-BATCH LOGIC ---
 
             if (farmer_id) {
                 const farmer = await Farmer.findOne({
@@ -197,7 +196,9 @@ router.post(
             });
 
             await newSwine.save();
-            await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Added ${swineId} to batch ${batch}`, req);
+            
+            // ✅ Detailed Audit Log
+            await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered new Swine ${swineId} in Batch ${batch} (${sex}, ${breed})`, req);
 
             res.status(201).json({ success: true, message: "Swine added successfully", swine: newSwine });
 
@@ -209,7 +210,74 @@ router.post(
 );
 
 /* ======================================================
-    REGISTER FARROWING (CLOSES ACTIVE CYCLE)
+    UPDATE SWINE (MODIFIED FOR MONTHLY OVERWRITE)
+====================================================== */
+router.put(
+    "/update/:swineId",
+    requireSessionAndToken,
+    allowRoles("farm_manager", "encoder", "farmer"),
+    async (req, res) => {
+        const { swineId } = req.params;
+        const user = req.user;
+        const updates = req.body;
+
+        try {
+            const swine = await Swine.findOne({ swine_id: swineId });
+            if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+
+            if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
+                return res.status(403).json({ success: false, message: "Access denied" });
+
+            const allowedFields = [
+                "sex", "color", "breed", "birth_date", "health_status", 
+                "sire_id", "dam_id", "date_transfer", 
+                "batch", "age_stage", "current_status", "performance_records",
+                "birth_cycle_number" 
+            ];
+
+            // Performance Record Handling
+            if (updates.performance_records) {
+                const newPerfData = {
+                    ...updates.performance_records,
+                    record_date: new Date(),
+                    recorded_by: user.id
+                };
+
+                if (updates.overwrite_monthly) {
+                    const now = new Date();
+                    const existingIndex = swine.performance_records.findIndex(rec => {
+                        const d = new Date(rec.record_date);
+                        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                    });
+
+                    if (existingIndex !== -1) swine.performance_records[existingIndex] = newPerfData;
+                    else swine.performance_records.push(newPerfData);
+                } else {
+                    swine.performance_records.push(newPerfData);
+                }
+            }
+
+            // Standard Field Updates
+            allowedFields.forEach((field) => {
+                if (updates[field] !== undefined && field !== "performance_records") {
+                    swine[field] = updates[field];
+                }
+            });
+
+            await swine.save();
+            
+            // ✅ Detailed Audit Log
+            await logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated profile/records for Swine ${swineId} (Status: ${swine.current_status})`, req);
+
+            res.json({ success: true, message: "Swine updated successfully", swine });
+        } catch (error) {
+            res.status(500).json({ success: false, message: "Server error" });
+        }
+    }
+);
+
+/* ======================================================
+    REGISTER FARROWING
 ====================================================== */
 router.post(
     "/:swineId/register-farrowing",
@@ -218,7 +286,6 @@ router.post(
     async (req, res) => {
         const { swineId } = req.params;
         const { total_live, mummified, stillborn, farrowing_date } = req.body;
-
         const session = await mongoose.startSession();
         session.startTransaction();
 
@@ -247,12 +314,13 @@ router.post(
                 { session }
             );
 
-            if (updateResult.modifiedCount === 0) throw new Error("No active pregnant cycle found for this sow.");
+            if (updateResult.modifiedCount === 0) throw new Error("No active pregnant cycle found.");
 
             await HeatReport.findOneAndUpdate({ swine_id: sow._id, status: "pregnant" }, { status: "lactating" }, { session });
             await AIRecord.findOneAndUpdate({ swine_id: sow._id, status: "Success" }, { status: "Completed", actual_farrowing_date: actualFarrowingDate }, { session });
 
-            await logAction(req.user.id, "REGISTER_FARROWING", "BREEDING", `Registered farrowing for Sow ${swineId}`, req);
+            // ✅ Detailed Audit Log
+            await logAction(req.user.id, "REGISTER_FARROWING", "BREEDING", `Farrowing recorded for Sow ${swineId}: ${total_live} Live, ${totalPiglets} Total`, req);
 
             await session.commitTransaction();
             res.json({ success: true, message: "Farrowing registered." });
@@ -266,7 +334,7 @@ router.post(
 );
 
 /* ======================================================
-    MANUAL WEANING (Override Route)
+    MANUAL WEANING
 ====================================================== */
 router.patch(
     "/:swineId/manual-weaning",
@@ -289,7 +357,9 @@ router.patch(
 
             await swine.save();
             await HeatReport.findOneAndUpdate({ swine_id: swine._id, status: "lactating" }, { status: "completed" });
-            await logAction(req.user.id, "MANUAL_WEANING", "BREEDING", `Manually weaned Sow ${swineId}.`, req);
+            
+            // ✅ Audit Log
+            await logAction(req.user.id, "MANUAL_WEANING", "BREEDING", `Manually weaned Sow ${swineId} (Status set to Open)`, req);
 
             res.json({ success: true, message: `Swine ${swineId} has been manually weaned.` });
         } catch (error) {
@@ -299,7 +369,32 @@ router.patch(
 );
 
 /* ======================================================
-    GET ALL SWINE (With Lean Optimization)
+    MEDICAL RECORDS
+====================================================== */
+router.post("/:swineId/medical", requireSessionAndToken, allowRoles("farm_manager", "encoder", "farmer"), async (req, res) => {
+    const { treatment_type, medicine_name, dosage, remarks } = req.body;
+    try {
+        const swine = await Swine.findOne({ swine_id: req.params.swineId });
+        if (!swine) return res.status(404).json({ success: false, message: "Not found" });
+        
+        swine.medical_records.push({ 
+            treatment_type, 
+            medicine_name, 
+            dosage, 
+            remarks, 
+            administered_by: req.user.id 
+        });
+        await swine.save();
+        
+        // ✅ Audit Log for Medical Record
+        await logAction(req.user.id, "MEDICAL_TREATMENT", "SWINE_MANAGEMENT", `Medical update for ${req.params.swineId}: ${medicine_name} (${treatment_type})`, req);
+        
+        res.json({ success: true, message: "Medical record added" });
+    } catch (e) { res.status(500).json({ success: false, message: "Server error" }); }
+});
+
+/* ======================================================
+    GET ALL SWINE
 ====================================================== */
 router.get(
     "/all",
@@ -394,74 +489,6 @@ router.get(
 );
 
 /* ======================================================
-    UPDATE SWINE (MODIFIED FOR MONTHLY OVERWRITE)
-====================================================== */
-router.put(
-    "/update/:swineId",
-    requireSessionAndToken,
-    allowRoles("farm_manager", "encoder", "farmer"),
-    async (req, res) => {
-        const { swineId } = req.params;
-        const user = req.user || req.session?.user;
-        if (!user) return res.status(401).json({ success: false, message: "User not authenticated" });
-        
-        const updates = req.body;
-
-        try {
-            const swine = await Swine.findOne({ swine_id: swineId });
-            if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
-
-            if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
-                return res.status(403).json({ success: false, message: "Access denied" });
-
-            const allowedFields = [
-                "sex", "color", "breed", "birth_date", "health_status", 
-                "sire_id", "dam_id", "date_transfer", 
-                "batch", "age_stage", "current_status", "performance_records",
-                "birth_cycle_number" 
-            ];
-
-            if (updates.performance_records) {
-                const newPerfData = {
-                    ...updates.performance_records,
-                    record_date: new Date(),
-                    recorded_by: user.id
-                };
-
-                if (updates.overwrite_monthly) {
-                    const now = new Date();
-                    const currentMonth = now.getMonth();
-                    const currentYear = now.getFullYear();
-
-                    const existingIndex = swine.performance_records.findIndex(rec => {
-                        const d = new Date(rec.record_date);
-                        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                    });
-
-                    if (existingIndex !== -1) swine.performance_records[existingIndex] = newPerfData;
-                    else swine.performance_records.push(newPerfData);
-                } else {
-                    swine.performance_records.push(newPerfData);
-                }
-            }
-
-            allowedFields.forEach((field) => {
-                if (updates[field] !== undefined && field !== "performance_records") {
-                    swine[field] = updates[field];
-                }
-            });
-
-            await swine.save();
-            await logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated Swine ${swineId}`, req);
-
-            res.json({ success: true, message: "Swine updated successfully", swine });
-        } catch (error) {
-            res.status(500).json({ success: false, message: "Server error" });
-        }
-    }
-);
-
-/* ======================================================
     GET AUDIT LOGS
 ====================================================== */
 router.get(
@@ -489,18 +516,9 @@ router.get(
     }
 );
 
-// Include basic medical and farmer profile routes as in your original file...
-router.post("/:swineId/medical", requireSessionAndToken, allowRoles("farm_manager", "encoder", "farmer"), async (req, res) => {
-    const { treatment_type, medicine_name, dosage, remarks } = req.body;
-    try {
-        const swine = await Swine.findOne({ swine_id: req.params.swineId });
-        if (!swine) return res.status(404).json({ success: false, message: "Not found" });
-        swine.medical_records.push({ treatment_type, medicine_name, dosage, remarks, administered_by: req.user.id });
-        await swine.save();
-        res.json({ success: true, message: "Medical record added" });
-    } catch (e) { res.status(500).json({ success: false, message: "Server error" }); }
-});
-
+/* ======================================================
+    FARMER PROFILE SPECIFIC ROUTE
+====================================================== */
 router.get("/farmer", requireApiLogin, allowRoles("farmer"), async (req, res) => {
     try {
         const farmerId = req.user.farmerProfileId;

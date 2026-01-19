@@ -20,31 +20,21 @@ const formatName = (userObj) => {
 };
 
 // ---------------------------------------------------------
-// 1. FETCH AI HISTORY (Updated for Manager-Centric Logic)
+// 1. FETCH AI HISTORY
 // ---------------------------------------------------------
 router.get("/ai-history", requireSessionAndToken, async (req, res) => {
     try {
         const { id: userId, role, farmerProfileId, managerId } = req.user;
         let query = {};
 
-        /**
-         * LOGIC UPDATE:
-         * Your AIRecord model uses 'manager_id' to link to the farm owner.
-         * We query based on role to ensure the right records load.
-         */
         if (role === "farmer") {
-            // Farmers see records specifically linked to their profile
             if (!farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
             query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
         } else {
-            // Managers see records where they are the 'manager_id'
-            // Encoders see records where their supervisor is the 'manager_id'
             const targetManagerId = (role === "farm_manager" || role === "admin") ? userId : managerId;
-            
             if (!targetManagerId) {
                 return res.status(400).json({ success: false, message: "Farm context not found" });
             }
-
             query = { manager_id: new mongoose.Types.ObjectId(targetManagerId) };
         }
 
@@ -56,15 +46,10 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
 
         const formatted = await Promise.all(records.map(async (r) => {
             let name = "Unknown Farmer";
-
-            /**
-             * TRIPLE-CHECK NAME RESOLUTION:
-             * 1. Try finding in Farmer collection
-             * 2. Try finding in User collection (Managers/Admin)
-             * 3. Fallback to the 'farmer_name' snapshot in the AIRecord model
-             */
+            // Check Farmer collection first
             let farmerInfo = await Farmer.findById(r.farmer_id).select("first_name last_name");
             if (!farmerInfo) {
+                // Fallback to User collection
                 farmerInfo = await User.findById(r.farmer_id).select("full_name first_name last_name");
             }
 
@@ -90,7 +75,7 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 2. FETCH PERFORMANCE ANALYTICS (Ownership-Aware)
+// 2. FETCH PERFORMANCE ANALYTICS
 // ---------------------------------------------------------
 router.get("/performance-analytics", requireSessionAndToken, async (req, res) => {
     try {
@@ -108,7 +93,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
             query = {
                 $or: [
                     { farmer_id: { $in: farmerIds } },
-                    { registered_by: effectiveManagerId }
+                    { registered_by: new mongoose.Types.ObjectId(effectiveManagerId) }
                 ]
             };
         }
@@ -130,9 +115,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
             if (swine.performance_records && swine.performance_records.length > 0) {
                 swine.performance_records.forEach(perf => {
                     let cleanTeeth = perf.teeth_count ?? '0';
-                    if (perf.teeth_alignment && 
-                        perf.teeth_alignment.toLowerCase() !== 'n/a' && 
-                        perf.teeth_alignment.trim() !== '') {
+                    if (perf.teeth_alignment && perf.teeth_alignment.toLowerCase() !== 'n/a') {
                         cleanTeeth += ` (${perf.teeth_alignment})`;
                     }
 
@@ -153,9 +136,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
                     });
 
                     if (perf.deformities && perf.deformities.length > 0) {
-                        const realDeformities = perf.deformities.filter(d => 
-                            d && d.toLowerCase() !== "none"
-                        );
+                        const realDeformities = perf.deformities.filter(d => d && d.toLowerCase() !== "none");
                         if (realDeformities.length > 0) {
                             deformityMonitoring.push({
                                 farmer_id: swine.farmer_id,
@@ -178,7 +159,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. SELECTION PROCESS CANDIDATES (Ownership-Aware)
+// 3. SELECTION PROCESS CANDIDATES
 // ---------------------------------------------------------
 router.get("/selection-candidates", requireSessionAndToken, async (req, res) => {
     try {
@@ -195,7 +176,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
             
             query.$or = [
                 { farmer_id: { $in: farmerIds } },
-                { registered_by: effectiveManagerId }
+                { registered_by: new mongoose.Types.ObjectId(effectiveManagerId) }
             ];
         }
 
@@ -208,7 +189,9 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
             .lean();
 
         const formatted = candidates.map(c => {
-            const latestPerf = c.performance_records[c.performance_records.length - 1];
+            const latestPerf = c.performance_records && c.performance_records.length > 0 
+                ? c.performance_records[c.performance_records.length - 1] 
+                : null;
             return {
                 id: c._id,
                 swine_tag: c.swine_id,
@@ -227,7 +210,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
 });
 
 // ---------------------------------------------------------
-// 4. PROCESS SELECTION (Approve/Cull)
+// 4. PROCESS SELECTION
 // ---------------------------------------------------------
 router.put("/process-selection", requireSessionAndToken, async (req, res) => {
     try {
@@ -241,12 +224,9 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
             return res.status(403).json({ success: false, message: "Access denied: Not your swine" });
         }
 
-        let newStatus = "";
-        if (isApproved) {
-            newStatus = swine.current_status === "1st Selection Ongoing" ? "2nd Selection Ongoing" : "Active Breeder";
-        } else {
-            newStatus = "Marked for Sale";
-        }
+        let newStatus = isApproved 
+            ? (swine.current_status === "1st Selection Ongoing" ? "2nd Selection Ongoing" : "Active Breeder")
+            : "Marked for Sale";
 
         swine.current_status = newStatus;
         await swine.save();

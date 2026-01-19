@@ -1,13 +1,40 @@
 import { authGuard } from "/js/authGuard.js";
-// PerformanceHelper removed
 
 document.addEventListener("DOMContentLoaded", async () => {
+  console.time("Reproduction_Load_Time");
+
+  // 🕵️ DEBUG LOGGER
+  const debugLog = (task, data, isError = false) => {
+    const icon = isError ? "❌" : "📡";
+    const color = isError ? "color: #ff4d4d; font-weight: bold;" : "color: #00d1b2; font-weight: bold;";
+    console.log(`%c${icon} [DEBUG: ${task}]`, color, data);
+  };
+
   // 🔐 AUTH
   const user = await authGuard("farmer");
-  if (!user) return;
+  if (!user) {
+    debugLog("AUTH", "No user found, redirecting...", true);
+    return;
+  }
 
-  const BACKEND_URL = "http://localhost:5000";
-  const token = localStorage.getItem("token");
+  // Ensure profileId is captured even if authGuard nested it differently
+  user.farmerProfileId = user.farmerProfileId || user.id || user._id;
+  debugLog("USER_SESSION", { role: user.role, profileId: user.farmerProfileId });
+
+  /**
+   * ✅ GET & SANITIZE TOKEN
+   * Removes any accidental quotes or whitespace that cause 401 errors
+   */
+  const getCleanToken = () => {
+    let token = localStorage.getItem("token");
+    if (token && (token.startsWith('"') || token.startsWith("'"))) {
+      token = token.slice(1, -1);
+    }
+    return token ? token.trim() : null;
+  };
+
+  const token = getCleanToken();
+  console.log("🔑 Current Token:", token ? "Token Found & Sanitized" : "TOKEN MISSING!");
 
   // ================= STATE =================
   let rawAiData = [];
@@ -19,24 +46,77 @@ document.addEventListener("DOMContentLoaded", async () => {
   const resolveFarmerName = (item) => {
     if (item.farmer_name) return item.farmer_name;
     if (item.farmer_id && typeof item.farmer_id === "object") {
-      return `${item.farmer_id.first_name || ""} ${item.farmer_id.last_name || ""}`.trim();
+      const first = item.farmer_id.first_name || item.farmer_id.full_name || "";
+      const last = item.farmer_id.last_name || "";
+      return `${first} ${last}`.trim() || "Unknown Farmer";
     }
     return "Unknown Farmer";
   };
 
   /**
-   * ✅ NEW: SAFE LOADING WRAPPER
-   * This prevents one failing API call from stopping the entire page.
+   * ✅ FIXED CENTRALIZED FETCH HANDLER
+   * Uses Absolute URL to prevent port mismatch and forces sanitized token headers
+   */
+  async function authFetch(endpoint) {
+    const BASE_URL = "http://localhost:5000"; 
+    const isRepro = endpoint.includes("ai-history") || 
+                    endpoint.includes("performance-analytics") || 
+                    endpoint.includes("selection-candidates");
+    
+    // Check if your backend expects /api/reproduction/... or just /api/...
+    const apiPath = isRepro ? `/api/reproduction${endpoint}` : `/api${endpoint}`;
+    const fullUrl = `${BASE_URL}${apiPath}`;
+
+    debugLog("FETCH_START", fullUrl);
+
+    try {
+      const res = await fetch(fullUrl, {
+        method: "GET",
+        headers: { 
+          "Authorization": `Bearer ${getCleanToken()}`
+          // Removed Content-Type and Accept to match the simpler 'me' fetch
+        },
+      });
+
+      debugLog("HTTP_STATUS", { url: apiPath, status: res.status });
+
+      if (res.status === 401) {
+        // If this fails, the backend reproductionRouter.js likely has a bug
+        return { authError: true };
+      }
+
+      return await res.json();
+    } catch (err) {
+      debugLog("FETCH_ERROR", err.message, true);
+      return null;
+    }
+  }
+  
+  /**
+   * ✅ ENHANCED SAFE LOADING
    */
   async function safeLoad(fn, name, tableId) {
+    const body = document.getElementById(tableId);
+    if (!body) {
+      debugLog("DOM_ERROR", `Table ID "${tableId}" not found in HTML!`, true);
+      return;
+    }
+
     try {
-      await fn();
-    } catch (err) {
-      console.error(`Error loading ${name}:`, err);
-      const body = document.getElementById(tableId);
-      if (body) {
-        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load ${name} data. Please refresh.</td></tr>`;
+      const result = await fn();
+      
+      if (result && result.authError) {
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-warning"><b>Session Invalid/Expired.</b><br>Please log in again.</td></tr>`;
+        return;
       }
+
+      if (!result || result.success === false) {
+        debugLog("API_LOGIC_ERROR", { name, message: result?.message || "Success field is false" }, true);
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">No data available for ${name}</td></tr>`;
+      }
+    } catch (err) {
+      debugLog("RENDER_ERROR", { name, error: err.message }, true);
+      body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error rendering ${name}.</td></tr>`;
     }
   }
 
@@ -54,16 +134,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderMortality(term);
   }
 
-  // ================= AI HISTORY =================
+  // ================= 1. AI HISTORY =================
   async function loadAIRecords() {
-    const res = await fetch(`${BACKEND_URL}/api/reproduction/ai-history`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (data.success) {
+    const data = await authFetch("/ai-history");
+    if (data && data.success) {
       rawAiData = data.data || [];
       renderAIRecords();
     }
+    return data;
   }
 
   function renderAIRecords(term = "") {
@@ -72,33 +150,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const filtered = rawAiData.filter(r =>
       resolveFarmerName(r).toLowerCase().includes(term) ||
-      r.sow_tag?.toLowerCase().includes(term) ||
-      r.boar_tag?.toLowerCase().includes(term)
+      (r.sow_tag || "").toLowerCase().includes(term) ||
+      (r.boar_tag || "").toLowerCase().includes(term)
     );
 
     body.innerHTML = filtered.length
       ? filtered.map(r => `
         <tr>
           <td><strong>${resolveFarmerName(r)}</strong></td>
-          <td>${r.sow_tag}</td>
-          <td>${r.boar_tag}</td>
-          <td>${new Date(r.date).toLocaleDateString()}</td>
-        </tr>
-      `).join("")
-      : `<tr><td colspan="4" class="text-center">No records found.</td></tr>`;
+          <td><span class="badge bg-info text-dark">${r.sow_tag || "N/A"}</span></td>
+          <td>${r.boar_tag || "N/A"}</td>
+          <td>${r.date ? new Date(r.date).toLocaleDateString() : "N/A"}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="4" class="text-center">No AI records found.</td></tr>`;
   }
 
-  // ================= PERFORMANCE & DEFORMITIES =================
+  // ================= 2. PERFORMANCE & DEFORMITIES =================
   async function loadPerformance() {
-    const res = await fetch(`${BACKEND_URL}/api/reproduction/performance-analytics`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (data.success) {
+    const data = await authFetch("/performance-analytics");
+    if (data && data.success) {
       rawPerformanceData.morphology = data.morphology || [];
       rawPerformanceData.deformities = data.deformities || [];
       renderPerformance();
     }
+    return data;
   }
 
   function renderPerformance(term = "") {
@@ -108,25 +183,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (morphBody) {
       const rows = rawPerformanceData.morphology.filter(m =>
         resolveFarmerName(m).toLowerCase().includes(term) ||
-        m.swine_tag?.toLowerCase().includes(term)
+        (m.swine_tag || "").toLowerCase().includes(term)
       );
 
       morphBody.innerHTML = rows.length
         ? rows.map(item => {
             const hasDeformity = rawPerformanceData.deformities.some(d => d.swine_tag === item.swine_tag);
-            
             let suggestionText = "✅ Active Monitoring";
             let suggestionColor = "#2e7d32";
 
             if (hasDeformity) {
               suggestionText = "⚠️ Suggest: Cull/Sell";
               suggestionColor = "#c62828";
-            } else if (item.morphology.stage === "Final Selection") {
-              if (item.morphology.weight >= 15 && item.morphology.weight <= 25) {
-                suggestionText = item.swine_sex === "Female" ? "⭐ Retain for Breeding" : "⭐ Market Ready";
+            } else if (item.morphology?.stage?.toLowerCase().includes("selection")) {
+              const weight = item.morphology.weight || 0;
+              if (weight >= 15 && weight <= 25) {
+                suggestionText = item.swine_sex === "Female" ? "⭐ Retain" : "⭐ Market Ready";
                 suggestionColor = "#2e7d32";
-              } else if (item.morphology.weight > 25) {
-                suggestionText = "⚠️ Overweight for Selection";
+              } else if (weight > 25) {
+                suggestionText = "⚠️ Overweight";
                 suggestionColor = "#e67e22";
               }
             }
@@ -136,162 +211,108 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <td>${resolveFarmerName(item)}</td>
                 <td><strong>${item.swine_tag}</strong></td>
                 <td>${item.swine_sex}</td>
-                <td>
-                  ${item.morphology.stage}<br>
-                  <small style="color:${suggestionColor}; font-weight: bold;">
-                    ${suggestionText}
-                  </small>
-                </td>
-                <td>⚖️ ${item.morphology.weight}kg</td>
-                <td>${item.morphology.teeth}</td>
-                <td>${new Date(item.morphology.date).toLocaleDateString()}</td>
-              </tr>
-            `;
+                <td>${item.morphology?.stage || "N/A"}<br><small style="color:${suggestionColor}; font-weight: bold;">${suggestionText}</small></td>
+                <td>⚖️ ${item.morphology?.weight || 0}kg</td>
+                <td>🦷 ${item.morphology?.teeth || 0}</td>
+                <td>${item.morphology?.date ? new Date(item.morphology.date).toLocaleDateString() : "N/A"}</td>
+              </tr>`;
           }).join("")
-        : `<tr><td colspan="7" class="text-center">No data found.</td></tr>`;
+        : `<tr><td colspan="7" class="text-center">No performance data found.</td></tr>`;
     }
 
     if (deformityList) {
       const defs = rawPerformanceData.deformities.filter(d =>
-        resolveFarmerName(d).toLowerCase().includes(term)
+        resolveFarmerName(d).toLowerCase().includes(term) || (d.swine_tag || "").toLowerCase().includes(term)
       );
-
-      deformityList.innerHTML = defs.length
-        ? defs.map(d => `
-          <div class="deformity-item">
-            <strong>${d.swine_tag}</strong>: ${d.deformity_types}
-          </div>
-        `).join("")
-        : `<div class="text-success">✅ No deformities found.</div>`;
+      deformityList.innerHTML = defs.length ? defs.map(d => `
+          <div class="deformity-item" style="padding: 10px; border-left: 4px solid #c62828; background: #fff5f5; margin-bottom: 5px;">
+            <strong>${d.swine_tag}</strong>: ${d.deformity_types} <br>
+            <small class="text-muted">Farmer: ${resolveFarmerName(d)} | Detected: ${new Date(d.date_detected).toLocaleDateString()}</small>
+          </div>`).join("") : `<div class="text-success">✅ No deformities found.</div>`;
     }
   }
 
-  // ================= SELECTION (READ-ONLY FOR FARMER) =================
+  // ================= 3. SELECTION CANDIDATES =================
   async function loadSelection() {
-    const res = await fetch(`${BACKEND_URL}/api/reproduction/selection-candidates`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (data.success) {
+    const data = await authFetch("/selection-candidates");
+    if (data && data.success) {
       rawSelectionData = data.data || [];
       renderSelection();
     }
+    return data;
   }
 
   function renderSelection(term = "") {
     const body = document.getElementById("selectionTableBody");
     if (!body) return;
-
-    const rows = rawSelectionData.filter(r =>
-      resolveFarmerName(r).toLowerCase().includes(term) ||
-      r.swine_tag?.toLowerCase().includes(term)
-    );
-
-    body.innerHTML = rows.length
-      ? rows.map(r => `
+    const rows = rawSelectionData.filter(r => resolveFarmerName(r).toLowerCase().includes(term) || (r.swine_tag || "").toLowerCase().includes(term));
+    body.innerHTML = rows.length ? rows.map(r => `
         <tr>
-          <td>${r.swine_tag}</td>
+          <td><span class="badge bg-dark">${r.swine_tag}</span></td>
           <td>${resolveFarmerName(r)}</td>
           <td>${r.current_stage}</td>
-          <td>${r.system_suggestion || "Pending review"}</td>
-          <td><em>Manager review</em></td>
-        </tr>
-      `).join("")
-      : `<tr><td colspan="5" class="text-center">No candidates.</td></tr>`;
+          <td><strong>${r.recommendation || "Pending"}</strong></td>
+          <td><span class="badge bg-light text-dark border">Manager Review</span></td>
+        </tr>`).join("") : `<tr><td colspan="5" class="text-center">No selection candidates found.</td></tr>`;
   }
 
-  // ================= MORTALITY ANALYTICS =================
+  // ================= 4. MORTALITY ANALYTICS =================
   async function loadSwine() {
-    const res = await fetch(`${BACKEND_URL}/api/swine/all`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (data.success) {
-      allSwineData = data.swine || [];
+    const data = await authFetch("/swine/all");
+    if (data && data.success) {
+      allSwineData = data.swine || data.data || [];
       renderMortality();
     }
+    return data;
   }
 
   function renderMortality(term = "") {
     const body = document.getElementById("breedingMortalityTableBody");
     if (!body) return;
+    
+    const fId = user.farmerProfileId || user.id || user._id;
 
-    // 1. Expanded Filter: Look for any female that isn't a piglet or weaner
     let adultSows = allSwineData.filter(s => {
-      const stage = (s.age_stage || s.current_stage || "").toLowerCase();
-      const gender = (s.sex || s.swine_sex || "").toLowerCase();
+      const stage = (s.age_stage || s.current_status || s.current_stage || "").toLowerCase();
+      const isBreeder = ["adult", "pregnant", "lactating", "farrowing", "sow"].some(tag => stage.includes(tag));
+      const ownerId = s.farmer_id?._id || s.farmer_id;
+      const isMine = ownerId && fId && ownerId.toString() === fId.toString();
       
-      const isBreederStage = ["adult", "sow", "gilt"].includes(stage);
-      const isFemale = gender === "female";
-      
-      return isFemale && isBreederStage;
+      return (s.sex || "").toLowerCase() === "female" && isBreeder && (user.role === "farm_manager" || user.role === "admin" ? true : isMine);
     });
 
-    // 2. Role-based filtering for Farmers
-    if (user.role.toLowerCase() === "farmer") {
-        const userProfileId = user.farmerProfileId || user._id; 
-        adultSows = adultSows.filter(s => {
-            const fId = s.farmer_id?._id || s.farmer_id;
-            return fId === userProfileId || resolveFarmerName(s) === `${user.first_name} ${user.last_name}`;
-        });
-    }
-
-    // 3. Search Term filtering
     const filtered = adultSows.filter(s => {
       const sId = s.swine_id || s.swine_tag || "";
-      return resolveFarmerName(s).toLowerCase().includes(term) || sId.toLowerCase().includes(term);
+      const name = resolveFarmerName(s).toLowerCase();
+      return name.includes(term) || sId.toLowerCase().includes(term);
     });
 
-    body.innerHTML = filtered.length
-      ? filtered.map(sow => {
+    body.innerHTML = filtered.length ? filtered.map(sow => {
           const sowId = sow.swine_id || sow.swine_tag;
-          
-          const offspring = allSwineData.filter(child => 
-              child.dam_id === sowId || child.mother_id === sowId
-          );
-          
-          const aliveCount = offspring.filter(child => child.health_status !== "Deceased").length;
-          const deceasedCount = offspring.filter(child => child.health_status === "Deceased").length;
+          const offspring = allSwineData.filter(child => child.dam_id === sowId || child.mother_id === sowId);
+          const deceasedCount = offspring.filter(child => (child.health_status || "").includes("Deceased")).length;
           const totalBorn = offspring.length;
-
-          let mortalityRate = 0;
-          if (totalBorn > 0) {
-              mortalityRate = ((deceasedCount / totalBorn) * 100).toFixed(1);
-          }
-
-          const rateColor = mortalityRate > 15 ? "#d32f2f" : mortalityRate > 5 ? "#f57c00" : "#2e7d32";
-
-          return `
-            <tr>
+          let mortalityRate = totalBorn > 0 ? ((deceasedCount / totalBorn) * 100).toFixed(1) : 0;
+          
+          return `<tr>
               <td><strong>${resolveFarmerName(sow)}</strong></td>
-              <td><span class="badge-tag">${sowId}</span></td>
-              <td class="text-center"><b>${aliveCount}</b></td>
+              <td><span class="badge bg-secondary">${sowId}</span></td>
+              <td class="text-center"><b>${totalBorn - deceasedCount}</b></td>
               <td class="text-center" style="color: #d32f2f;"><b>${deceasedCount}</b></td>
-              <td class="text-center">
-                  <span style="font-weight:bold; color: ${rateColor};">
-                      ${mortalityRate}%
-                  </span>
-              </td>
-            </tr>
-          `;
-        }).join("")
-      : `<tr><td colspan="5" class="text-center">No registered sows found.</td></tr>`;
+              <td class="text-center"><b>${mortalityRate}%</b></td>
+            </tr>`;
+        }).join("") : `<tr><td colspan="5" class="text-center">No breeder sows found.</td></tr>`;
   }
 
   // ================= INIT =================
-  /**
-   * ✅ FIXED INIT BLOCK
-   * We wrap the calls in a global try/catch and use safeLoad.
-   * This ensures that even if one endpoint fails, the others still render.
-   */
   try {
-    await Promise.all([
-      safeLoad(loadAIRecords, "AI History", "aiTableBody"),
-      safeLoad(loadPerformance, "Performance", "morphTableBody"),
-      safeLoad(loadSelection, "Selection", "selectionTableBody"),
-      safeLoad(loadSwine, "Swine Data", "breedingMortalityTableBody")
-    ]);
+    debugLog("INIT", "Starting Sequential Load...");
+    await safeLoad(loadAIRecords, "AI History", "aiTableBody");
+    await safeLoad(loadPerformance, "Performance", "morphTableBody");
+    await safeLoad(loadSelection, "Selection", "selectionTableBody");
+    await safeLoad(loadSwine, "Swine Data", "breedingMortalityTableBody");
+    console.timeEnd("Reproduction_Load_Time");
   } catch (err) {
-    console.error("Critical error during initialization:", err);
+    debugLog("CRITICAL_INIT_FAILURE", err.message, true);
   }
 });
