@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       first_name: document.getElementById("first_name").value.trim(),
       last_name: document.getElementById("last_name").value.trim(),
       address: document.getElementById("address").value.trim(),
-      contact_no: document.getElementById("contact_info").value.trim(),
+      contact_no: document.getElementById("contact_no").value.trim(),
       email: document.getElementById("email").value.trim(),
       password: document.getElementById("password").value,
       managerId,

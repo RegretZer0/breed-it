@@ -288,7 +288,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_info,
+      contact_no,
       email,
       password,
       managerId,
@@ -322,7 +322,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_no: contact_info,
+      contact_no: contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       managerId,
@@ -569,7 +569,7 @@ router.get("/encoders/single/:id", async (req, res) => {
 router.get(
   "/audit-logs",
   requireSessionAndToken,
-  allowRoles("farm_manager"),
+  allowRoles("farm_manager", "farmer", "encoder"),
   async (req, res) => {
     try {
       const { limit = 100, skip = 0 } = req.query;
