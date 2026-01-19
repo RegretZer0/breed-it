@@ -4,7 +4,7 @@ module.exports = function otpEmailTemplate({ otp }) {
   <html>
   <head>
     <meta charset="UTF-8" />
-    <title>breedIT Email Verification</title>
+    <title>BreedIT Email Verification</title>
   </head>
   <body style="margin:0; padding:0; background:#f4f6f8; font-family: Arial, sans-serif;">
     <table width="100%" cellpadding="0" cellspacing="0">
@@ -16,7 +16,7 @@ module.exports = function otpEmailTemplate({ otp }) {
             <tr>
               <td align="center" style="padding-bottom:16px;">
                <img
-                  src="http://localhost:5000/images/logo.png"
+                  src="https://res.cloudinary.com/dzwe878ps/image/upload/v1768866138/logo_a4umyp.png"
                   alt="breedIT"
                   width="120"
                />
@@ -74,7 +74,7 @@ module.exports = function otpEmailTemplate({ otp }) {
             <!-- Footer -->
             <tr>
               <td style="padding-top:24px; font-size:11px; color:#aaa;" align="center">
-                © ${new Date().getFullYear()} breedIT. All rights reserved.
+                © ${new Date().getFullYear()} BreedIT. All rights reserved.
               </td>
             </tr>
 
