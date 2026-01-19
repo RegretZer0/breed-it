@@ -190,6 +190,50 @@ button, [role="button"], a {
   box-shadow: none;
 }
 
+/* =========================
+   OTP BUTTON – NAVY BLUE
+========================= */
+
+#sendOtpBtn {
+  white-space: nowrap;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #0d3b66; /* navy */
+  background-color: #0d3b66;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover */
+#sendOtpBtn:hover:not(:disabled) {
+  background-color: #092c4c;
+  border-color: #092c4c;
+}
+
+/* Active */
+#sendOtpBtn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Disabled / Cooldown */
+#sendOtpBtn:disabled {
+  background-color: #8faac2;
+  border-color: #8faac2;
+  color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+/* Mobile friendly */
+@media (max-width: 576px) {
+  #sendOtpBtn {
+    width: 100%;
+  }
+}
+
+
 /* ========== Responsive ========== */
 @media (max-width: 1100px){
   .grid-form{
@@ -227,3 +271,35 @@ button, [role="button"], a {
     font-size: 18px;
   }
 }
+
+/* =========================
+   BOOTSTRAP MODAL FIX
+========================= */
+
+/* Ensure modal is above everything */
+.modal {
+  z-index: 1055 !important;
+}
+
+/* Backdrop should stay below modal */
+.modal-backdrop {
+  z-index: 1050 !important;
+}
+
+/* Allow clicks inside modal */
+.modal-dialog,
+.modal-content {
+  pointer-events: auto;
+}
+
+/* Prevent layout containers from blocking clicks */
+.app-shell,
+.main-content,
+.container-fluid {
+  position: static !important;
+}
+
+.farmer-preview {
+  display: none;
+}
+

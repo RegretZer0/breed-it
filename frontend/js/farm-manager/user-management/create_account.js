@@ -1,50 +1,96 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
+  if (!token) return console.error("No token found");
 
-  if (!token) {
-    console.error("No token found");
-    return;
-  }
-
-  // 🔐 Get logged-in user
+  /* =========================
+     GET LOGGED-IN MANAGER
+  ========================= */
   const meRes = await fetch("/api/auth/me", {
     credentials: "include",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 
-  if (!meRes.ok) {
-    console.error("Failed to fetch /me");
-    return;
-  }
+  if (!meRes.ok) return console.error("Failed to fetch /me");
 
   const meData = await meRes.json();
   const managerId = meData.user.id;
 
   const form = document.getElementById("createAccountForm");
   const accountTypeSelect = document.getElementById("accountType");
-  const messageEl = document.getElementById("formMessage");
+  const alertBox = document.getElementById("formAlert");
+  const sendOtpBtn = document.getElementById("sendOtpBtn");
+  const otpInput = document.getElementById("otp");
+
+  let pendingPayload = null;
+  let pendingEndpoint = null;
+  let otpSent = false;
 
   /* =========================
      ALERT HELPERS
   ========================= */
-  const alertBox = document.getElementById("formAlert");
-
   function showAlert(type, message) {
-    if (!alertBox) return;
     alertBox.className = `alert alert-${type} mt-3`;
     alertBox.textContent = message;
     alertBox.classList.remove("d-none");
   }
 
   function hideAlert() {
-    if (!alertBox) return;
     alertBox.classList.add("d-none");
   }
 
-  let pendingPayload = null;
-  let pendingEndpoint = null;
+  /* =========================
+     SEND OTP
+  ========================= */
+  sendOtpBtn?.addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+
+    if (!email) {
+      showAlert("danger", "Please enter an email first.");
+      return;
+    }
+
+    try {
+      sendOtpBtn.disabled = true;
+      showAlert("info", "Sending OTP...");
+
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType?.includes("application/json")) {
+        throw new Error("Server error while sending OTP.");
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to send OTP.");
+      }
+
+      otpSent = true;
+      showAlert("success", "OTP sent to email.");
+
+      // cooldown
+      let cooldown = 30;
+      sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+
+      const timer = setInterval(() => {
+        cooldown--;
+        sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+        if (cooldown <= 0) {
+          clearInterval(timer);
+          sendOtpBtn.disabled = false;
+          sendOtpBtn.textContent = "Send OTP";
+        }
+      }, 1000);
+
+    } catch (err) {
+      sendOtpBtn.disabled = false;
+      showAlert("danger", err.message);
+    }
+  });
 
   /* =========================
      MEMBERSHIP DATE (PH)
@@ -53,13 +99,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const input = document.getElementById("membership_date");
     if (!input) return;
 
-    const todayPH = new Date().toLocaleDateString("en-CA", {
+    input.value = new Date().toLocaleDateString("en-CA", {
       timeZone: "Asia/Manila",
     });
-
-    input.value = todayPH;
   }
-
   setMembershipDatePH();
 
   /* =========================
@@ -67,41 +110,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================= */
   function toggleFarmerFields() {
     const isFarmer = accountTypeSelect.value === "farmer";
-
     document.querySelectorAll(".farmer-only").forEach(el => {
       el.style.display = isFarmer ? "" : "none";
     });
   }
-
   accountTypeSelect.addEventListener("change", toggleFarmerFields);
   toggleFarmerFields();
-
-  /* =========================
-     PREVIEW HELPERS
-  ========================= */
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value ?? "—";
-  }
-
-  function fillPreview(payload, accountType) {
-    setText("preview_account_type", accountType.toUpperCase());
-    setText("preview_name", `${payload.first_name} ${payload.last_name}`);
-    setText("preview_email", payload.email);
-    setText("preview_contact", payload.contact_no);
-    setText("preview_address", payload.address);
-
-    document.querySelectorAll(".farmer-preview").forEach(el => {
-      el.style.display = accountType === "farmer" ? "" : "none";
-    });
-
-    if (accountType === "farmer") {
-      setText("preview_production", payload.production_type);
-      setText("preview_pens", payload.num_of_pens);
-      setText("preview_capacity", payload.pen_capacity);
-      setText("preview_membership", payload.membership_date);
-    }
-  }
 
   /* =========================
      FORM SUBMIT (PREVIEW)
@@ -109,6 +123,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     hideAlert();
+
+    const otp = otpInput.value.trim();
+    if (!otpSent || !otp) {
+      showAlert("danger", "Please send and enter OTP first.");
+      return;
+    }
 
     const accountType = accountTypeSelect.value;
 
@@ -120,6 +140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       email: document.getElementById("email").value.trim(),
       password: document.getElementById("password").value,
       managerId,
+      otp, // ✅ OTP INCLUDED
     };
 
     let endpoint = "/api/auth/register-encoder";
@@ -139,8 +160,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     pendingPayload = payload;
     pendingEndpoint = endpoint;
 
-    fillPreview(payload, accountType);
-
     new bootstrap.Modal(
       document.getElementById("confirmModal")
     ).show();
@@ -152,10 +171,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   document
     .getElementById("confirmSubmitBtn")
     .addEventListener("click", async () => {
-
       if (!pendingPayload || !pendingEndpoint) return;
 
-      showAlert("info", "Creating account, please wait...");
+      showAlert("info", "Creating account...");
 
       try {
         const res = await fetch(pendingEndpoint, {
@@ -168,7 +186,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
 
         const data = await res.json();
-
         if (!res.ok || !data.success) {
           throw new Error(data.message || "Registration failed");
         }
@@ -177,12 +194,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           .getInstance(document.getElementById("confirmModal"))
           .hide();
 
-        showAlert(
-          "success",
-          "✅ Account created successfully!"
-        );
+        showAlert("success", "✅ Account created successfully!");
 
         form.reset();
+        otpSent = false;
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = "Send OTP";
         toggleFarmerFields();
         setMembershipDatePH();
 
