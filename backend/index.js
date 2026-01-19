@@ -69,6 +69,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/images", express.static(path.join(__dirname, "../frontend/images")));
 app.use("/css", express.static(path.join(__dirname, "../frontend/css")));
 app.use("/js", express.static(path.join(__dirname, "../frontend/js")));
+app.use('/uploads', express.static(path.join(__dirname, "uploads")));
 
 // ✅ UPDATED: Serve the frontend root to allow access to audit_logs.html and others
 app.use(express.static(path.join(__dirname, "../frontend")));

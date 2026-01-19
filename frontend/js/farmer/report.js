@@ -6,7 +6,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!user) return;
 
   const token = localStorage.getItem("token");
-  const userId = user.id; // farmer ID
+  
+  /**
+   * ✅ UPDATE: Robust ID Selection
+   * Matches the backend route: router.get("/farmer/:userId", ...) 
+   * which expects the User Model ID.
+   */
+  const userId = user.id || user._id; 
   const BACKEND_URL = "http://localhost:5000";
 
   const swineSelect = document.getElementById("swineSelect");
@@ -133,7 +139,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const eligibleSows = swineList.filter(sw => {
         let status = (sw.current_status || "Open").toLowerCase();
         
-        // Stats Logic
         if (status === "pregnant" && sw.expected_farrowing && today >= new Date(sw.expected_farrowing)) status = "farrowing";
         if (status === "lactating") {
           const lastCycle = sw.breeding_cycles?.[sw.breeding_cycles.length - 1];
@@ -144,31 +149,29 @@ document.addEventListener("DOMContentLoaded", async () => {
         else if (status === "pregnant") stats.pregnant++;
         else stats.farrowing++;
 
-        // Dropdown eligibility
-        const isFemale = sw.sex?.toLowerCase() === "female";
-        if (isFemale && status === "open") return true;
-        if (isFemale && status === "lactating") {
-          const last = sw.breeding_cycles?.[sw.breeding_cycles.length - 1];
-          return last?.actual_farrowing_date && new Date(last.actual_farrowing_date) <= thirtyDaysAgo;
-        }
+        const isFemale = sw.sex?.toLowerCase() === "female" || sw.swine_sex?.toLowerCase() === "female";
+        if (isFemale && (status === "open" || status === "lactating")) return true;
         return false;
       });
 
-      // Update UI Stats
       if (document.getElementById("countOpen")) document.getElementById("countOpen").textContent = stats.open;
       if (document.getElementById("countPregnant")) document.getElementById("countPregnant").textContent = stats.pregnant;
       if (document.getElementById("countFarrowing")) document.getElementById("countFarrowing").textContent = stats.farrowing;
 
+      /**
+       * ✅ UPDATE: We use sw.swine_id for the value because your backend 
+       * uses Swine.findOne({ swine_id: swineId }) in /add
+       */
       swineSelect.innerHTML = eligibleSows.length 
         ? '<option value="">-- Select Swine --</option>' + eligibleSows.map(sw => `<option value="${sw.swine_id}">${sw.swine_id} - ${sw.breed} (${sw.current_status})</option>`).join("")
         : '<option value="">No eligible sows available</option>';
     } catch (err) { console.error(err); }
   }
 
-  // ---------------- LOAD REPORTS (OPTIMIZED RENDERING) ----------------
+  // ---------------- LOAD REPORTS ----------------
   async function loadReports() {
     try {
-      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/farmer/${userId}`);
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/farmer`);
       if (!res) return;
       const data = await res.json();
 
@@ -180,9 +183,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const now = new Date();
       const pigSet = new Set();
 
-      // Build table as a single string to prevent UI stuttering
       reportsTableBody.innerHTML = data.reports.map(r => {
-        const swineDisplay = r.swine_id?.swine_id || r.swine_id || "Unknown";
+        const swineDisplay = r.swine_id?.swine_id || "Unknown";
         pigSet.add(swineDisplay);
 
         const rawStatus = (r.status || "pending").toLowerCase().trim().replace(/\s+/g, "_");
@@ -203,7 +205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               </div>
               <button class="btn-view-evidence" onclick="viewEvidence('${r._id}')" style="margin-top:5px; padding:2px 8px; font-size:0.7em; cursor:pointer;">View Evidence</button>
               ${isProcessed ? `<div style="margin-top:4px;font-size:0.75em;color:#27ae60;opacity:0.8;">Update: ${new Date(r.updatedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>` : ""}
-              ${isRejected && (r.rejection_message || r.reason) ? `<div class="rejection-note" style="margin-top:8px;padding:8px;background:#fff5f5;border:1px solid #feb2b2;border-radius:4px;font-size:0.8em;color:#c53030;"><strong>Reason:</strong><br>"${r.rejection_message || r.reason}"</div>` : ""}
+              ${isRejected && r.rejection_message ? `<div class="rejection-note" style="margin-top:8px;padding:8px;background:#fff5f5;border:1px solid #feb2b2;border-radius:4px;font-size:0.8em;color:#c53030;"><strong>Reason:</strong><br>"${r.rejection_message}"</div>` : ""}
             </td>
             <td>
               ${heatCheckDate ? `<b>${rawStatus === "approved" ? "AI Date" : "Check Date"}:</b> ${heatCheckDate.toLocaleDateString()} <span class="next-heat" data-date="${r.next_heat_check}">-</span>` : "-"}
@@ -221,7 +223,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           </tr>`;
       }).join("");
 
-      // Update Pig Filter
       const currentVal = pigFilter.value;
       pigFilter.innerHTML = '<option value="">All pigs</option>' + [...pigSet].sort().map(p => `<option value="${p}">${p}</option>`).join("");
       pigFilter.value = currentVal;
@@ -230,7 +231,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { console.error("Load Reports Error:", err); }
   }
 
-  // ---------------- VIEW EVIDENCE MODAL/HELPER ----------------
+  // ---------------- VIEW EVIDENCE MODAL ----------------
   window.viewEvidence = async (reportId) => {
     try {
       const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/detail`);
@@ -239,18 +240,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const report = data.report;
       const evidenceHtml = report.evidence_url.map(url => {
-        // Handle both full URLs, relative paths, and legacy Base64
         const src = (url.startsWith('data:') || url.startsWith('http')) ? url : `${BACKEND_URL}${url}`;
-        return `<img src="${src}" style="width:100%; max-width:200px; border-radius:8px; margin:5px;" />`;
+        // Support for both video and image playback
+        return url.match(/\.(mp4|mov|webm)$/i)
+          ? `<video src="${src}" controls style="width:100%; max-width:250px; border-radius:8px; margin:5px;"></video>`
+          : `<img src="${src}" style="width:100%; max-width:200px; border-radius:8px; margin:5px;" />`;
       }).join('');
 
-      // Quick simple overlay for viewing images
       const modal = document.createElement('div');
       modal.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;";
       modal.innerHTML = `
         <div style="background:white; padding:20px; border-radius:12px; max-width:90%; max-height:90%; overflow-y:auto; position:relative;">
           <button style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:24px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">×</button>
-          <h3>Evidence for ${report.swine_id.swine_id}</h3>
+          <h3>Evidence for ${report.swine_id?.swine_id || "Swine"}</h3>
           <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">${evidenceHtml}</div>
           <p style="margin-top:15px;"><strong>Signs:</strong> ${report.signs.join(', ')}</p>
         </div>
@@ -308,7 +310,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const formData = new FormData();
     formData.append("swineId", swineSelect.value);
-    // Best practice: get farmer ID from authenticated user object
     formData.append("farmerId", userId); 
     formData.append("signs", JSON.stringify(selectedSigns));
     selectedFiles.forEach(f => formData.append("evidence", f));
@@ -332,7 +333,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     submitBtn.disabled = false;
   });
 
-  // ---------------- FILTER LOGIC (OPTIMIZED) ----------------
+  // ---------------- FILTER LOGIC ----------------
   searchBtn?.addEventListener("click", () => {
     const s = statusFilter.value, d = dateFilter.value, p = pigFilter.value;
     reportsTableBody.querySelectorAll("tr").forEach(row => {

@@ -166,7 +166,7 @@ async function resolveManagerId() {
         <td>${acc.first_name} ${acc.last_name}</td>
         <td>${role}</td>
         <td>${acc.address || "-"}</td>
-        <td>${acc.contact_no || acc.contact_info || "-"}</td>
+        <td>${acc.contact_no || "-"}</td>
         <td>${isFarmer ? acc.num_of_pens ?? "-" : "-"}</td>
         <td>${isFarmer ? acc.pen_capacity ?? "-" : "-"}</td>
         <td>${acc.status || "active"}</td>

@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const colorSelect = document.getElementById("colorSelect");
   const otherColorGroup = document.getElementById("otherColorGroup");
   const otherColorInput = document.getElementById("otherColorInput");
+  const batchInput = document.getElementById("batch");
 
   // ================= LOCK BREED =================
   const breedInput = document.getElementById("breed");
@@ -50,7 +51,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       teatGroup.classList.remove("d-none");
     } else {
       teatGroup.classList.add("d-none");
-      document.getElementById("teatCount").value = "";
+      const teatInput = document.getElementById("teatCount");
+      if (teatInput) teatInput.value = "";
     }
   }
 
@@ -95,7 +97,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!list.length) {
       farmerOptions.innerHTML =
-        `<div class="text-muted small">No farmers found</div>`;
+        `<div class="text-muted small p-2">No farmers found</div>`;
       return;
     }
 
@@ -107,8 +109,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       div.onclick = () => {
         farmerDropdownBtn.textContent = div.textContent;
         document.getElementById("farmerSelect").value = f._id;
-
-        updateSows(f._id); // 👈 existing cascade
+        updateSows(f._id); 
       };
 
       farmerOptions.appendChild(div);
@@ -159,21 +160,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  farmerSelect.addEventListener("change", e => updateSows(e.target.value));
+  // Use the hidden input to trigger changes since dropdown selection updates it
+  // This ensures cascade works when clicking custom items
+  const observer = new MutationObserver(() => {
+     updateSows(farmerSelect.value);
+  });
+  // Note: Standard event listeners are better if you call them inside div.onclick
+  // I have kept the original cascade logic call inside div.onclick above for reliability.
+
   damSelect.addEventListener("change", e => {
     updateBoars(e.target.value);
     updateBatchField();
   });
 
-  // ================= BATCH AUTO =================
+  // ================= BATCH AUTO (UPDATED) =================
   function updateBatchField() {
-    const batchInput = document.getElementById("batch");
     if (ageStageSelect.value === "piglet" && damSelect.value) {
-      const today = new Date().toISOString().split("T")[0].replace(/-/g, "");
+      // Piglets: ID based on Dam (Letter logic is for adult batches)
       batchInput.readOnly = true;
-      batchInput.value = `${damSelect.value}-${today}`;
+      batchInput.value = `${damSelect.value}`;
+      batchInput.placeholder = "";
     } else {
+      // Adults: Pure alphabetical (A, B, C...) handled by backend
       batchInput.readOnly = false;
+      batchInput.value = ""; 
+      batchInput.placeholder = "Auto (A, B, C...)";
     }
   }
 
@@ -191,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const payload = {
       farmer_id: farmerSelect.value || null,
-      batch: document.getElementById("batch").value.trim(),
+      batch: batchInput.value.trim(), 
       sex: sexSelect.value,
       age_stage: ageStageSelect.value,
       breed: "Native",
@@ -207,7 +218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       bodyLength: document.getElementById("bodyLength").value,
       heartGirth: document.getElementById("heartGirth").value,
       teethCount: document.getElementById("teethCount").value,
-      teatCount: document.getElementById("teatCount").value || null,
+      teatCount: document.getElementById("teatCount") ? document.getElementById("teatCount").value : null,
       deformities: deformities.length ? deformities : ["None"],
       managerId
     };
@@ -222,14 +233,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const data = await res.json();
+    
+    // UI Feedback
+    messageEl.className = data.success ? "text-success fw-bold" : "text-danger fw-bold";
     messageEl.textContent = data.success
       ? "✅ Pig registered successfully"
-      : data.message;
+      : "❌ " + data.message;
 
-    if (data.success) form.reset();
+    if (data.success) {
+        form.reset();
+        // Reset custom dropdown text
+        if(farmerDropdownBtn) farmerDropdownBtn.textContent = "Search/Select Farmer";
+        // Reset Breed (since reset() clears it)
+        breedInput.value = "Native";
+        // Recalculate UI toggles
+        handleColorChange();
+        toggleTeatField();
+        toggleDeformities();
+        updateBatchField();
+    }
   });
 
   await loadFarmers();
   toggleTeatField();
   toggleDeformities();
+  updateBatchField();
 });

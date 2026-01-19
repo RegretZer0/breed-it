@@ -24,6 +24,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "Unknown Farmer";
   };
 
+  /**
+   * ✅ NEW: SAFE LOADING WRAPPER
+   * This prevents one failing API call from stopping the entire page.
+   */
+  async function safeLoad(fn, name, tableId) {
+    try {
+      await fn();
+    } catch (err) {
+      console.error(`Error loading ${name}:`, err);
+      const body = document.getElementById(tableId);
+      if (body) {
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Failed to load ${name} data. Please refresh.</td></tr>`;
+      }
+    }
+  }
+
   // ================= SEARCH =================
   const searchInput = document.getElementById("reproductionSearch");
   searchInput?.addEventListener("input", (e) => {
@@ -205,7 +221,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const stage = (s.age_stage || s.current_stage || "").toLowerCase();
       const gender = (s.sex || s.swine_sex || "").toLowerCase();
       
-      // Included common breeder labels: adult, sow, gilt
       const isBreederStage = ["adult", "sow", "gilt"].includes(stage);
       const isFemale = gender === "female";
       
@@ -217,7 +232,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const userProfileId = user.farmerProfileId || user._id; 
         adultSows = adultSows.filter(s => {
             const fId = s.farmer_id?._id || s.farmer_id;
-            // Check both ID and the name to ensure visibility
             return fId === userProfileId || resolveFarmerName(s) === `${user.first_name} ${user.last_name}`;
         });
     }
@@ -232,7 +246,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? filtered.map(sow => {
           const sowId = sow.swine_id || sow.swine_tag;
           
-          // 4. Calculate Offspring Stats
           const offspring = allSwineData.filter(child => 
               child.dam_id === sowId || child.mother_id === sowId
           );
@@ -266,10 +279,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ================= INIT =================
-  await Promise.all([
-    loadAIRecords(),
-    loadPerformance(),
-    loadSelection(),
-    loadSwine()
-  ]);
+  /**
+   * ✅ FIXED INIT BLOCK
+   * We wrap the calls in a global try/catch and use safeLoad.
+   * This ensures that even if one endpoint fails, the others still render.
+   */
+  try {
+    await Promise.all([
+      safeLoad(loadAIRecords, "AI History", "aiTableBody"),
+      safeLoad(loadPerformance, "Performance", "morphTableBody"),
+      safeLoad(loadSelection, "Selection", "selectionTableBody"),
+      safeLoad(loadSwine, "Swine Data", "breedingMortalityTableBody")
+    ]);
+  } catch (err) {
+    console.error("Critical error during initialization:", err);
+  }
 });

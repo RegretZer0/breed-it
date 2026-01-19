@@ -158,7 +158,7 @@ router.post("/login", async (req, res) => {
     req.session.regenerate(async () => {
       req.session.user = {
         id: user._id.toString(),
-        role,
+        role: role || user.role, // Ensure role is captured
         email: user.email,
         first_name: user.first_name || "",
         last_name: user.last_name || "",
@@ -166,14 +166,14 @@ router.post("/login", async (req, res) => {
         managerId: user.managerId || null,
       };
 
-      // ✅ Audit Log: Login
-      await logAction(user._id, "LOGIN", "USER_AUTH", "User successfully logged into the system", req);
+      // ✅ Audit Log: Login (Captures Farmer login now)
+      await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
 
       res.json({
         success: true,
         message: "Login successful",
         user: req.session.user,
-        role,
+        role: role || user.role,
         token: generateToken(user),
       });
     });
@@ -573,11 +573,25 @@ router.get(
   async (req, res) => {
     try {
       const { limit = 100, skip = 0 } = req.query;
+      const user = req.user;
 
-      // Find all team members (Manager + Encoders)
-      const teamEncoders = await User.find({ managerId: req.user.id }).select("_id");
-      const teamIds = teamEncoders.map(e => e._id);
-      teamIds.push(new mongoose.Types.ObjectId(req.user.id));
+      // Determine the primary manager context
+      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+
+      if (!managerId && user.role !== "farm_manager") {
+          return res.status(400).json({ success: false, message: "Manager context not found" });
+      }
+
+      // Find all team members across both models
+      const teamEncoders = await User.find({ managerId }).select("_id");
+      const teamFarmers = await Farmer.find({ managerId }).select("_id");
+
+      // Combine IDs: Encoders + Farmers + the Manager themselves
+      const teamIds = [
+          ...teamEncoders.map(e => e._id),
+          ...teamFarmers.map(f => f._id),
+          new mongoose.Types.ObjectId(managerId)
+      ];
 
       const logs = await AuditLog.find({ user_id: { $in: teamIds } })
         .populate("user_id", "first_name last_name role email")
