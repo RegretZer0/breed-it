@@ -240,7 +240,7 @@ router.get("/me", (req, res) => {
     REGISTER FARM MANAGER
 ====================== */
 router.post("/register", async (req, res) => {
-  const { first_name, last_name, address, contact_info, email, password, otp } = req.body;
+  const { first_name, last_name, address, contact_no, email, password, otp } = req.body;
 
   try {
     if (!first_name || !last_name || !email || !password || !otp) {
