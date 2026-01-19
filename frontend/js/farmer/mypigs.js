@@ -18,6 +18,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     pigModal.classList.add("hidden");
   });
 
+  const modalContent = pigModal.querySelector(".modal-content");
+    modalContent.addEventListener("click", e => {
+      e.stopPropagation();
+    });
+
+
+  pigModal.addEventListener("click", (e) => {
+    if (e.target === pigModal) {
+      pigModal.classList.add("hidden");
+    }
+  });
+
   /* =========================
      HELPERS (FROM PROTOTYPE)
   ========================= */
@@ -87,64 +99,159 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Server error while updating health status.");
     }
   }
+  //   const swine = currentSwineData.find(s => s.swine_id === swineId);
+  //   if (!swine) return;
 
-  /* =========================
-     MONTHLY UPDATE (ACTION)
-  ========================= */
-  window.recordGrowth = async (swineId) => {
-    const swine = currentSwineData.find(s => s.swine_id === swineId);
-    if (!swine) return;
+  //   const weight = prompt("Enter Weight (kg):");
+  //   if (weight === null) return;
 
-    const weight = prompt("Enter Weight (kg):");
-    if (weight === null) return;
+  //   const length = prompt("Enter Body Length (cm):");
+  //   const girth = prompt("Enter Heart Girth (cm):");
+  //   const teeth = prompt("Enter Teeth Count:");
+  //   const deformity = prompt("Enter Deformities (leave blank for 'None'):") || "None";
 
-    const length = prompt("Enter Body Length (cm):");
-    const girth = prompt("Enter Heart Girth (cm):");
-    const teeth = prompt("Enter Teeth Count:");
-    const deformity = prompt("Enter Deformities (leave blank for 'None'):") || "None";
+  //   const payload = {
+  //     performance_records: {
+  //       weight: parseFloat(weight),
+  //       body_length: parseFloat(length),
+  //       heart_girth: parseFloat(girth),
+  //       teeth_count: parseInt(teeth),
+  //       deformities: [deformity],
+  //       stage: swine.current_status,
+  //       record_date: new Date()
+  //     }
+  //   };
 
-    const payload = {
-      performance_records: {
-        weight: parseFloat(weight),
-        body_length: parseFloat(length),
-        heart_girth: parseFloat(girth),
-        teeth_count: parseInt(teeth),
-        deformities: [deformity],
-        stage: swine.current_status,
-        record_date: new Date()
+  //   try {
+  //     const res = await fetch(
+  //       `http://localhost:5000/api/swine/update/${swineId}`,
+  //       {
+  //         method: "PUT",
+  //         credentials: "include", // 🔑 REQUIRED
+  //         headers: {
+  //           "Authorization": `Bearer ${token}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
+
+  //     const data = await res.json();
+
+  //     if (data.success) {
+  //       alert(`Monthly update saved for ${swineId}!`);
+  //       location.reload();
+  //     } else {
+  //       alert("Error: " + data.message);
+  //     }
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("Failed to save growth record.");
+  //   }
+  // };
+
+  function openMonthlyUpdateModal(pig) {
+    modalBody.innerHTML = `
+      <h3>Monthly Growth Update</h3>
+      <p><strong>${pig.swine_id}</strong></p>
+      <hr />
+
+      <form id="growthForm" class="growth-form">
+        <label>
+          Weight (kg)
+          <input type="number" step="0.01" required name="weight" />
+        </label>
+
+        <label>
+          Body Length (cm)
+          <input type="number" step="0.1" required name="body_length" />
+        </label>
+
+        <label>
+          Heart Girth (cm)
+          <input type="number" step="0.1" required name="heart_girth" />
+        </label>
+
+        <label>
+          Teeth Count
+          <input type="number" required name="teeth_count" />
+        </label>
+
+        <label>
+          Deformities
+          <input type="text" name="deformities" placeholder="None" />
+        </label>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">
+            Save Monthly Update
+          </button>
+          <button type="button" class="btn-secondary" id="cancelGrowth">
+            Cancel
+          </button>
+        </div>
+      </form>
+    `;
+
+    // Cancel
+    modalBody.querySelector("#cancelGrowth").onclick = () => {
+      pigModal.classList.add("hidden");
+    };
+
+    // Submit
+    modalBody.querySelector("#growthForm").onsubmit = async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+
+      const payload = {
+        performance_records: {
+          weight: Number(form.weight.value),
+          body_length: Number(form.body_length.value),
+          heart_girth: Number(form.heart_girth.value),
+          teeth_count: Number(form.teeth_count.value),
+          deformities: [form.deformities.value.trim() || "None"],
+          stage: pig.current_status // ✅ SAME AS OLD VERSION
+        }
+      };
+
+      try {
+        const res = await fetch(
+          `${BACKEND_URL}/api/swine/update/${pig.swine_id}`,
+          {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          alert(data.message || "Failed to save update");
+          return;
+        }
+
+        alert("Monthly update saved!");
+        pigModal.classList.add("hidden");
+        // location.reload();
+
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save monthly update.");
       }
     };
 
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/swine/update/${swineId}`,
-        {
-          method: "PUT",
-          credentials: "include", // 🔑 REQUIRED
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+    pigModal.classList.remove("hidden");
+  }
 
-      const data = await res.json();
-
-      if (data.success) {
-        alert(`Monthly update saved for ${swineId}!`);
-        location.reload();
-      } else {
-        alert("Error: " + data.message);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save growth record.");
-    }
-  };
 
   /* =========================
-     LOAD SWINE
+    LOAD SWINE
   ========================= */
   try {
     loadingMessage.textContent = "Loading your pigs...";
@@ -177,10 +284,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.innerHTML = `
         <div class="pig-left">
           <img 
-              src="${pig.image_url || '/images/default-pig.png'}"
-              alt="Pig"
-              onerror="this.src='/images/default-pig.png'"
-            />
+            src="${pig.image_url || '/images/default-pig.png'}"
+            alt="Pig"
+            onerror="this.src='/images/default-pig.png'"
+          />
           <span class="pig-tag">${pig.swine_id}</span>
         </div>
 
@@ -188,7 +295,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           <p><strong>Breed:</strong> ${pig.breed}</p>
           <p><strong>Age Stage:</strong> ${formatStageDisplay(pig.age_stage)}</p>
           <p><strong>Health:</strong> ${pig.health_status}</p>
-
           <p><strong>Status:</strong> ${pig.current_status}</p>
         </div>
 
@@ -221,17 +327,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             <li><strong>Deformities:</strong> ${formatDeformities(latest.deformities)}</li>
           </ul>
 
-          <button class="btn-update-growth"
-            onclick="recordGrowth('${pig.swine_id}')">
+          <button class="btn-update-growth" id="monthlyUpdateBtn">
             Monthly Update
           </button>
         `;
 
-        modalBody.querySelector("#healthSelect")
-          .addEventListener("change", e =>
+        // Monthly update button
+        const monthlyUpdateBtn = modalBody.querySelector("#monthlyUpdateBtn");
+        if (monthlyUpdateBtn) {
+          monthlyUpdateBtn.onclick = () => openMonthlyUpdateModal(pig);
+        }
+
+        // Health status update
+        const healthSelect = modalBody.querySelector("#healthSelect");
+        if (healthSelect) {
+          healthSelect.addEventListener("change", e =>
             updateHealthStatus(pig.swine_id, e.target.value)
           );
+        }
 
+        // Show modal ONCE
         pigModal.classList.remove("hidden");
       };
 

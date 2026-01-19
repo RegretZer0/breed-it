@@ -158,6 +158,14 @@ html, body {
   flex: 1;
 }
 
+.side-panel {
+  pointer-events: none;
+}
+
+.side-panel.active {
+  pointer-events: auto;
+}
+
 /* =========================
    SETTINGS PANEL UI
 ========================= */

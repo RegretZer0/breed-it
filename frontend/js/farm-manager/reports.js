@@ -16,7 +16,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const countPregnant = document.getElementById("countPregnant");
   const countFarrowingReady = document.getElementById("countFarrowingReady");
 
-  const reportDetails = document.getElementById("reportDetails");
+  const reportDetailsModal = document.getElementById("reportDetailsModal");
+  const closeReportModal = document.getElementById("closeReportModal");
+  const closeReportModalBtn = document.getElementById("closeReportModalBtn");
+
   const reportSwine = document.getElementById("reportSwine");
   const reportFarmer = document.getElementById("reportFarmer");
   const reportSigns = document.getElementById("reportSigns");
@@ -30,9 +33,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   const confirmAIBtn = document.getElementById("confirmAIBtn");
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
 
-const aiConfirmModal = document.getElementById("aiConfirmModal");
-const boarSelect = document.getElementById("boarSelect");
-const submitAIBtn = document.getElementById("submitAI");
+  const aiConfirmModal = document.getElementById("aiConfirmModal");
+  const boarSelect = document.getElementById("boarSelect");
+  const submitAIBtn = document.getElementById("submitAI");
+
+
+  // ---------------- MODAL HELPERS ----------------
+  function closeReportDetails() {
+    reportDetailsModal.style.display = "none";
+    document.body.style.overflow = "";
+  }
+
+  // Close buttons
+  closeReportModal.onclick = closeReportDetails;
+  closeReportModalBtn.onclick = closeReportDetails;
+
+  // Click outside modal to close
+  reportDetailsModal.addEventListener("click", e => {
+    if (e.target === reportDetailsModal) {
+      closeReportDetails();
+    }
+  });
 
 
   let allReports = [];
@@ -218,7 +239,9 @@ const submitAIBtn = document.getElementById("submitAI");
     confirmPregnancyBtn.style.display =
       r.status === "waiting_heat_check" ? "inline-block" : "none";
 
-    reportDetails.style.display = "block";
+    reportDetailsModal.style.display = "flex";
+      document.body.style.overflow = "hidden"; // lock background scroll
+
   }
 
   // ---------------- ACTION HANDLER ----------------
@@ -242,7 +265,7 @@ const submitAIBtn = document.getElementById("submitAI");
       if (!res.ok) throw new Error(data.message || "Action failed");
 
       alert(message);
-      reportDetails.style.display = "none";
+      closeReportDetails();
       loadReports();
     } catch (err) {
       alert("Action failed");

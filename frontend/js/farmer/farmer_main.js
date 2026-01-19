@@ -1,3 +1,6 @@
+import { authGuard } from "/js/authGuard.js";
+import { initNotifications } from "/js/notifications.js";
+
 document.addEventListener("DOMContentLoaded", () => {
 
   /* =========================
@@ -16,6 +19,16 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileMenu.classList.remove("active");
     document.body.style.overflow = "";
   });
+
+
+  /* =========================
+   RESET PANELS ON LOAD
+  ========================= */
+  document.querySelectorAll(".side-panel").forEach(panel => {
+    panel.classList.remove("active");
+  });
+  document.body.style.overflow = "";
+
 
   /* =========================
      BACK BUTTON
@@ -188,7 +201,7 @@ if (changeAvatarBtn && avatarInput) {
   });
 }
 
-
+  
   /* =========================
      TRANSLATIONS
   ========================= */
@@ -274,4 +287,31 @@ if (changeAvatarBtn && avatarInput) {
   });
 
   loadSettings();
+
+  /* =========================
+     NOTIFICATIONS (GLOBAL)
+  ========================= */
+  const notificationContainer = document.getElementById("notificationContainer");
+  const notificationBadge = document.getElementById("notificationBadge");
+  const openNotificationsBtn = document.getElementById("openNotifications");
+
+  // Only run notification logic if UI exists on the page
+  if (notificationContainer && openNotificationsBtn) {
+    (async () => {
+      const user = await authGuard("farmer");
+      if (!user) return;
+
+      const farmerId = user.id;
+
+      // Init notifications (same as dashboard prototype)
+      initNotifications(farmerId);
+
+      // Open notifications panel
+      openNotificationsBtn.addEventListener("click", () => {
+        document.getElementById("notificationsPanel")?.classList.add("active");
+        document.body.style.overflow = "hidden";
+      });
+    })();
+  }
+
 });

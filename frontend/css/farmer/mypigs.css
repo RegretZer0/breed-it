@@ -158,8 +158,9 @@
 
 /* Close button */
 #closeModal {
-  position: sticky;
+  position: absolute;
   top: 0;
+  z-index: 10;
   margin-left: auto;
   display: block;
 
@@ -175,6 +176,15 @@
 /* =========================
    MODAL CONTENT FORMATTING
 ========================= */
+.growth-form input,
+.growth-form textarea,
+.growth-form select {
+  pointer-events: auto;
+  position: relative;
+  z-index: 1;
+}
+
+
 #modalBody h3 {
   margin-top: 0;
   margin-bottom: 12px;
@@ -241,6 +251,7 @@
   .modal-content {
     max-height: 95vh;
     padding: 18px 16px 22px;
+    pointer-events: auto;
   }
 
   #modalBody h3 {
@@ -249,5 +260,39 @@
 
   #modalBody h4 {
     font-size: 15px;
+  }
+}
+
+.growth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.growth-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.growth-form input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    width: 95%;
   }
 }

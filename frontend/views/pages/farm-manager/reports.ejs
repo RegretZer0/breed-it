@@ -145,56 +145,50 @@
 
           </div>
         </div>
-
-        <!-- REPORT DETAILS CARD -->
-        <div
-          id="reportDetails"
-          class="card page-card report-details-card"
-          style="display:none; margin-top: 24px;"
-        >
-          <div class="card-body">
-
-            <div class="card-header-row">
-              <h5 class="card-title">Report Details</h5>
-            </div>
-
-            <!-- DETAILS GRID -->
-            <div class="detail-grid">
-              <p id="reportSwine"></p>
-              <p id="reportFarmer"></p>
-              <p id="reportProbability"></p>
-              <p id="reportStatus"><strong>Status:</strong> --</p>
-              <p id="reportSigns" style="grid-column: span 2;"></p>
-            </div>
-
-            <!-- MEDIA SECTION -->
-            <div class="media-wrapper">
-              <video id="reportVideo" controls style="display:none;"></video>
-              <img id="reportImage" style="display:none;" />
-            </div>
-
-            <!-- ACTION BUTTONS -->
-            <div class="report-actions">
-              <button id="approveBtn" style="display:none;">Approve</button>
-              <button id="rejectBtn" style="display:none;">Reject</button>
-              <button id="confirmAIBtn" style="display:none;">Confirm AI</button>
-              <button id="confirmPregnancyBtn" style="display:none;">Confirm Pregnancy</button>
-              <button
-                class="secondary"
-                onclick="document.getElementById('reportDetails').style.display='none'">
-                Close
-              </button>
-            </div>
-
-          </div>
-        </div>
-
-
        
       </div>
     </div>
   </div>
 </main>
+
+  <!-- REPORT DETAILS MODAL -->
+  <div id="reportDetailsModal" class="modal-overlay">
+    <div class="modal-panel">
+
+      <div class="modal-header">
+        <h5>Report Details</h5>
+        <button class="modal-close" id="closeReportModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- DETAILS GRID -->
+        <div class="detail-grid">
+          <p id="reportSwine"></p>
+          <p id="reportFarmer"></p>
+          <p id="reportProbability"></p>
+          <p id="reportStatus"></p>
+          <p id="reportSigns" style="grid-column: span 2;"></p>
+        </div>
+
+        <!-- MEDIA -->
+        <div class="media-wrapper">
+          <video id="reportVideo" controls style="display:none;"></video>
+          <img id="reportImage" style="display:none;" />
+        </div>
+      </div>
+
+      <div class="modal-footer report-actions">
+        <button id="approveBtn" style="display:none;">Approve</button>
+        <button id="rejectBtn" style="display:none;">Reject</button>
+        <button id="confirmAIBtn" style="display:none;">Confirm AI</button>
+        <button id="confirmPregnancyBtn" style="display:none;">Confirm Pregnancy</button>
+        <button class="secondary" id="closeReportModalBtn">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+
  <!-- AI CONFIRMATION MODAL (REQUIRED FOR CONFIRM AI FLOW) -->
         <div id="aiConfirmModal" class="modal">
           <div class="modal-content">

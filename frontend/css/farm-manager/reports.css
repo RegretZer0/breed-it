@@ -424,3 +424,71 @@ body.modal-open {
 .btn-nav.secondary:hover {
   background: #d1d5db;
 }
+
+/* ===== REPORT DETAILS MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 12px;
+}
+
+.modal-panel {
+  background: #fff;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.media-wrapper img,
+.media-wrapper video {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+  .modal-panel {
+    max-height: 95vh;
+  }
+
+  .modal-footer button {
+    flex: 1 1 100%;
+  }
+}
