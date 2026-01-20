@@ -340,11 +340,17 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
 router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id).populate("swine_id");
+    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+
     report.status = "pregnant";
     
-    const baseDate = report.ai_confirmed_at || new Date();
-    const farrowingDate = new Date(baseDate);
-    farrowingDate.setDate(farrowingDate.getDate() + 114); 
+    // Requirement: Start exactly today (setting to midnight for consistent math)
+    const confirmationDate = new Date();
+    confirmationDate.setHours(0, 0, 0, 0); 
+    
+    // Requirement: Exactly 115 days from the confirmation moment
+    const farrowingDate = new Date(confirmationDate);
+    farrowingDate.setDate(confirmationDate.getDate() + 115); 
     
     report.expected_farrowing = farrowingDate;
     report.next_heat_check = null; 
@@ -361,19 +367,21 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
         { 
           $set: { 
             "breeding_cycles.$.is_pregnant": true,
-            "breeding_cycles.$.pregnancy_check_date": new Date(),
+            "breeding_cycles.$.pregnancy_check_date": confirmationDate,
             "breeding_cycles.$.expected_farrowing_date": report.expected_farrowing,
             current_status: "Pregnant" 
           }
         }
     );
 
-    // ✅ AUDIT LOG: CONFIRM PREGNANCY
-    await logAction(req.user.id, "CONFIRM_PREGNANCY", "BREEDING", `Confirmed pregnancy for Swine ${report.swine_id.swine_id}. Expected farrowing: ${farrowingDate.toLocaleDateString()}`, req);
+    res.json({ 
+        success: true, 
+        expected_farrowing: report.expected_farrowing 
+    });
 
-    res.json({ success: true, message: "Pregnancy confirmed. Expected farrowing date set." });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+  } catch (error) {
+    console.error("[CONFIRM PREGNANCY ERROR]:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 });
 

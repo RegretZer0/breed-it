@@ -7,15 +7,12 @@
 
     <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
 
-    <!-- PAGE HEADER -->
     <div class="card page-card mb-3"></div>
 
-    <!-- FILTER CARD -->
     <div class="card page-card mb-4">
       <div class="card-body">
         <form id="filtersForm" class="row g-2 align-items-end">
 
-          <!-- FARMER FILTER -->
           <div class="col-md-4 position-relative">
             <label class="form-label small">Farmer</label>
             <div class="dropdown w-100">
@@ -36,7 +33,6 @@
             </div>
           </div>
 
-          <!-- STATUS -->
           <div class="col-md-2">
             <label class="form-label small">Pig Status</label>
             <select id="filterStatus" class="form-select form-select-sm">
@@ -48,7 +44,6 @@
             </select>
           </div>
 
-          <!-- SEX -->
           <div class="col-md-2">
             <label class="form-label small">Sex</label>
             <select id="filterSex" class="form-select form-select-sm">
@@ -58,7 +53,6 @@
             </select>
           </div>
 
-          <!-- TYPE -->
           <div class="col-md-2">
             <label class="form-label small">Type</label>
             <select id="filterType" class="form-select form-select-sm">
@@ -70,7 +64,6 @@
             </select>
           </div>
 
-          <!-- TAG -->
           <div class="col-md-3">
             <label class="form-label small">Tag Number</label>
             <input id="filterTag"
@@ -78,7 +71,6 @@
               placeholder="Search by tag">
           </div>
 
-          <!-- ACTIONS -->
           <div class="col-md-1 d-grid">
             <button class="btn btn-sm btn-success">Search</button>
           </div>
@@ -93,7 +85,6 @@
       </div>
     </div>
 
-    <!-- FILTER RESULT TABLE -->
     <div class="mt-3 d-none" id="filterResultWrap">
       <h6 class="mb-2 text-muted">Filtered Result</h6>
       <div class="table-responsive">
@@ -113,32 +104,9 @@
     </div>
 
 
-    <!-- SWINE INVENTORY TABLE -->
     <div class="card page-card">
       <div class="card-body">
-
         <h5 class="mb-3">Swine Inventory List</h5>
-
-        <!-- LOCAL FILTERS -->
-        <!-- <div class="row g-3 mb-3">
-          <div class="col-md-4">
-            <label class="form-label small">Search Batch ID</label>
-            <input type="text"
-              id="filterBatch"
-              class="form-control form-control-sm"
-              placeholder="Enter Batch ID...">
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label small">Filter by Farmer</label>
-            <select id="filterFarmer"
-              class="form-select form-select-sm">
-              <option value="">All Farmers / Owners</option>
-            </select>
-          </div>
-        </div> -->
-
-        <!-- TABLE -->
         <div class="table-responsive">
           <table class="table table-sm table-bordered align-middle"
             id="swineTable">
@@ -163,55 +131,63 @@
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
 
-    <!-- FULL SWINE HISTORY MODAL -->
     <div class="modal fade" id="swineModal" tabindex="-1">
       <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
 
           <div class="modal-header">
-            <h5 class="modal-title" id="modalSwineId">
-              Swine History Card
-            </h5>
-            <button class="btn-close"
-              data-bs-dismiss="modal"></button>
+            <h5 class="modal-title" id="modalSwineId">Swine History Card</h5>
+            <button class="btn-close" data-bs-dismiss="modal"></button>
           </div>
 
           <div class="modal-body">
 
-            <!-- LIFETIME REPRODUCTIVE SUMMARY -->
-            <div id="reproSummarySection"
-              class="mb-4"
-              style="display:none;">
+            <div id="reproSummarySection" class="mb-4" style="display:none;">
               <h6>Lifetime Reproductive Summary</h6>
-              <div class="row text-center">
+              <div class="row text-center border rounded p-3 bg-light mx-0">
                 <div class="col">
-                  <label>Total Cycles</label>
-                  <div id="statCycles">0</div>
+                  <label class="small text-muted d-block">Total Cycles</label>
+                  <div id="statCycles" class="fw-bold fs-5">0</div>
                 </div>
                 <div class="col">
-                  <label>Total Piglets Born</label>
-                  <div id="statTotalBorn">0</div>
+                  <label class="small text-muted d-block">Total Piglets Born</label>
+                  <div id="statTotalBorn" class="fw-bold fs-5">0</div>
                 </div>
                 <div class="col">
-                  <label>Avg. Litter Size</label>
-                  <div id="statAvgLitter">0</div>
+                  <label class="small text-muted d-block">Avg. Litter Size</label>
+                  <div id="statAvgLitter" class="fw-bold fs-5">0</div>
                 </div>
                 <div class="col">
-                  <label>Total Live</label>
-                  <div id="statTotalLive">0</div>
+                  <label class="small text-muted d-block">Total Live</label>
+                  <div id="statTotalLive" class="fw-bold fs-5">0</div>
                 </div>
               </div>
             </div>
 
-            <!-- BREEDING HISTORY -->
+            <div id="offspringSection" class="mb-4" style="display:none;">
+                <h6>Offspring Inventory (Direct Descendants)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tag ID</th>
+                                <th>Sex</th>
+                                <th>Stage</th>
+                                <th>Current Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offspringListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <h6>Breeding & Farrowing History</h6>
             <div class="table-responsive mb-4">
-              <table class="table table-sm table-bordered"
-                id="repoTable">
+              <table class="table table-sm table-bordered" id="repoTable">
                 <thead class="table-light">
                   <tr>
                     <th>Cycle</th>
@@ -226,11 +202,9 @@
               </table>
             </div>
 
-            <!-- PERFORMANCE -->
             <h6>Growth & Performance Timeline</h6>
             <div class="table-responsive">
-              <table class="table table-sm table-bordered"
-                id="perfTable">
+              <table class="table table-sm table-bordered" id="perfTable">
                 <thead class="table-light">
                   <tr>
                     <th>Date</th>
@@ -249,67 +223,37 @@
       </div>
     </div>
 
-    <!-- EDIT PERFORMANCE MODAL -->
-<div class="modal fade" id="editPerformanceModal" tabindex="-1">
-  <div class="modal-dialog modal-md modal-dialog-centered">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Edit Swine Performance</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-        <form id="editPerformanceForm">
-
-          <input type="hidden" id="editSwineId">
-
-          <div class="mb-3">
-            <label class="form-label">Weight (kg)</label>
-            <input
-              type="number"
-              step="0.1"
-              class="form-control"
-              id="editWeight"
-              required>
+    <div class="modal fade" id="editPerformanceModal" tabindex="-1">
+      <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Swine Performance</h5>
+            <button class="btn-close" data-bs-dismiss="modal"></button>
           </div>
-
-          <div class="mb-3">
-            <label class="form-label">Body Length (cm)</label>
-            <input
-              type="number"
-              step="0.1"
-              class="form-control"
-              id="editBodyLength"
-              required>
+          <div class="modal-body">
+            <form id="editPerformanceForm">
+              <input type="hidden" id="editSwineId">
+              <div class="mb-3">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" step="0.1" class="form-control" id="editWeight" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Body Length (cm)</label>
+                <input type="number" step="0.1" class="form-control" id="editBodyLength" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Heart Girth (cm)</label>
+                <input type="number" step="0.1" class="form-control" id="editHeartGirth" required>
+              </div>
+            </form>
           </div>
-
-          <div class="mb-3">
-            <label class="form-label">Heart Girth (cm)</label>
-            <input
-              type="number"
-              step="0.1"
-              class="form-control"
-              id="editHeartGirth"
-              required>
+          <div class="modal-footer">
+            <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-primary" id="savePerformanceBtn">Save Changes</button>
           </div>
-
-        </form>
+        </div>
       </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
-          Cancel
-        </button>
-        <button class="btn btn-primary" id="savePerformanceBtn">
-          Save Changes
-        </button>
-      </div>
-
     </div>
-  </div>
-</div>
-
 
   </div>
 </main>

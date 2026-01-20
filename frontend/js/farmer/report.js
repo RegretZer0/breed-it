@@ -6,8 +6,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!user) return;
 
   const token = localStorage.getItem("token");
-  
-  // Use user.id as the reference for the logged-in account
   const userId = user.id || user._id; 
   const BACKEND_URL = "http://localhost:5000";
 
@@ -51,14 +49,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     mediaPreview.innerHTML = "";
 
     if (selectedFiles.length === 0) {
-      if (fileCountBadge) fileCountBadge.style.display = "none";
+      fileCountBadge.style.display = "none";
       return;
     }
 
-    if (fileCountBadge) {
-        fileCountBadge.textContent = selectedFiles.length;
-        fileCountBadge.style.display = "inline-flex";
-    }
+    fileCountBadge.textContent = selectedFiles.length;
+    fileCountBadge.style.display = "inline-flex";
 
     selectedFiles.forEach((file, index) => {
       const wrapper = document.createElement("div");
@@ -77,7 +73,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const mediaUrl = URL.createObjectURL(file);
       const mediaEl = file.type.startsWith("image") ? document.createElement("img") : document.createElement("video");
       mediaEl.src = mediaUrl;
-      if (file.type.startsWith("video")) mediaEl.controls = true;
+      if (file.type.startsWith("video")) {
+        mediaEl.controls = true;
+        mediaEl.style.maxHeight = "100px"; // Ensure video fits preview
+      }
       mediaEl.onload = () => URL.revokeObjectURL(mediaUrl);
       
       wrapper.append(removeBtn, mediaEl);
@@ -132,24 +131,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       const stats = { open: 0, pregnant: 0, farrowing: 0 };
       const today = new Date();
-      const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+      today.setHours(0, 0, 0, 0);
 
       const eligibleSows = swineList.filter(sw => {
         let status = (sw.current_status || "Open").toLowerCase();
+        const farrowDate = sw.expected_farrowing_date || sw.expected_farrowing;
         
-        if (status === "pregnant" && sw.expected_farrowing && today >= new Date(sw.expected_farrowing)) status = "farrowing";
-        if (status === "lactating") {
-          const lastCycle = sw.breeding_cycles?.[sw.breeding_cycles.length - 1];
-          if (lastCycle?.actual_farrowing_date && new Date(lastCycle.actual_farrowing_date) <= thirtyDaysAgo) status = "open"; 
+        if (status === "pregnant" && farrowDate) {
+            const target = new Date(farrowDate);
+            target.setHours(0,0,0,0);
+            const diffTime = target - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays <= 7) status = "farrowing";
         }
         
         if (status === "open") stats.open++;
         else if (status === "pregnant") stats.pregnant++;
-        else stats.farrowing++;
+        else if (status === "farrowing" || status === "farrowing ready") stats.farrowing++;
 
-        const isFemale = sw.sex?.toLowerCase() === "female" || sw.swine_sex?.toLowerCase() === "female";
-        if (isFemale && (status === "open" || status === "lactating")) return true;
-        return false;
+        const isFemale = (sw.sex || sw.swine_sex || "").toLowerCase() === "female";
+        return isFemale && (status === "open" || status === "lactating");
       });
 
       if (document.getElementById("countOpen")) document.getElementById("countOpen").textContent = stats.open;
@@ -175,6 +176,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       const now = new Date();
+      now.setHours(0,0,0,0);
       const pigSet = new Set();
 
       reportsTableBody.innerHTML = data.reports.map(r => {
@@ -185,11 +187,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const displayStatus = (r.status || "pending").replace(/_/g, " ");
         const isRejected = rawStatus === "rejected";
         const isProcessed = rawStatus !== "pending" && !isRejected;
+        
         const heatCheckDate = r.next_heat_check ? new Date(r.next_heat_check) : null;
         const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
+        
+        if (heatCheckDate) heatCheckDate.setHours(0,0,0,0);
         const isReadyForPregnancy = rawStatus === "under_observation" && heatCheckDate && now >= heatCheckDate;
 
-        // Note: The "View Evidence" button has been removed from the Status column
         return `
           <tr data-status="${rawStatus}" data-swine="${swineDisplay}" data-date="${r.createdAt.split('T')[0]}">
             <td>${swineDisplay}</td>
@@ -198,14 +202,15 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div style="text-transform: capitalize; font-weight: bold; color: ${isRejected ? "#e74c3c" : isProcessed ? "#27ae60" : "#2c3e50"};">
                 ${displayStatus === "approved" ? "AI Scheduled" : displayStatus}
               </div>
+              <button class="btn-view-evidence" onclick="viewEvidence('${r._id}')" style="margin-top:5px; padding:2px 8px; font-size:0.7em; cursor:pointer;">View Evidence</button>
               ${isProcessed ? `<div style="margin-top:4px;font-size:0.75em;color:#27ae60;opacity:0.8;">Update: ${new Date(r.updatedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>` : ""}
               ${isRejected && r.rejection_message ? `<div class="rejection-note" style="margin-top:8px;padding:8px;background:#fff5f5;border:1px solid #feb2b2;border-radius:4px;font-size:0.8em;color:#c53030;"><strong>Reason:</strong><br>"${r.rejection_message}"</div>` : ""}
             </td>
             <td>
-              ${heatCheckDate ? `<b>${rawStatus === "approved" ? "AI Date" : "Check Date"}:</b> ${heatCheckDate.toLocaleDateString()} <span class="next-heat" data-date="${r.next_heat_check}">-</span>` : "-"}
+              ${heatCheckDate ? `<b>${rawStatus === "approved" ? "AI Date" : "Check Date"}:</b> ${heatCheckDate.toLocaleDateString()} <br><span class="next-heat" data-date="${r.next_heat_check}" style="font-size: 0.85em; color: #3498db;">-</span>` : "-"}
             </td>
             <td>
-              ${farrowingDate ? `<b>Target:</b> ${farrowingDate.toLocaleDateString()} <span class="farrowing" data-date="${r.expected_farrowing}">-</span>` : "-"}
+              ${farrowingDate ? `<b>Target:</b> ${farrowingDate.toLocaleDateString()} <br><span class="farrowing" data-date="${r.expected_farrowing}" style="font-size: 0.85em; color: #27ae60; font-weight:bold;">-</span>` : "-"}
             </td>
             <td>
               ${["waiting_heat_check", "under_observation", "approved"].includes(rawStatus) ? `
@@ -225,13 +230,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (err) { console.error("Load Reports Error:", err); }
   }
 
+  // ---------------- VIEW EVIDENCE MODAL ----------------
+  window.viewEvidence = async (reportId) => {
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/detail`);
+      if (!res) return;
+      const data = await res.json();
+      if (!data.success) return alert("Could not load details");
+
+      const report = data.report;
+      const evidenceHtml = report.evidence_url.map(url => {
+        const src = (url.startsWith('data:') || url.startsWith('http')) ? url : `${BACKEND_URL}${url}`;
+        return url.match(/\.(mp4|mov|webm)$/i)
+          ? `<video src="${src}" controls style="width:100%; max-width:250px; border-radius:8px; margin:5px;"></video>`
+          : `<img src="${src}" style="width:100%; max-width:200px; border-radius:8px; margin:5px;" />`;
+      }).join('');
+
+      const modal = document.createElement('div');
+      modal.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;";
+      modal.innerHTML = `
+        <div style="background:white; padding:20px; border-radius:12px; max-width:90%; max-height:90%; overflow-y:auto; position:relative;">
+          <button style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:24px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">×</button>
+          <h3>Evidence for ${report.swine_id?.swine_id || "Swine"}</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">${evidenceHtml}</div>
+          <p style="margin-top:15px;"><strong>Signs:</strong> ${report.signs.join(', ')}</p>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    } catch (err) { console.error(err); }
+  };
+
   // ---------------- HELPERS ----------------
   function formatCountdown(targetDate) {
-    if (!targetDate) return "N/A";
-    const diffMs = new Date(targetDate) - new Date();
-    if (diffMs <= 0) return "Ready/Due";
-    const days = Math.floor(diffMs / 86400000);
-    return days === 0 ? "Due Tomorrow" : `${days} day${days > 1 ? 's' : ''} left`;
+    if (!targetDate) return "";
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const target = new Date(targetDate);
+    target.setHours(0,0,0,0);
+    
+    const diffTime = target - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return "Overdue";
+    if (diffDays === 0) return "TODAY";
+    if (diffDays === 1) return "Tomorrow";
+    return `${diffDays} days left`;
   }
 
   function updateCountdowns() {
@@ -252,12 +295,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   window.confirmPregnancy = async (id, swineId) => {
-    if (!confirm(`Confirm pregnancy for ${swineId}?`)) return;
+    if (!confirm(`Confirm pregnancy for ${swineId}? Farrowing date will be set to 115 days from today.`)) return;
     const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${id}/confirm-pregnancy`, { 
       method: "POST", headers: { "Content-Type": "application/json" }
     });
     if (res?.ok) {
-      alert("Pregnancy confirmed!");
+      alert("Pregnancy confirmed! Gestation started (115 days).");
       await sendAdminNotification("Pregnancy Confirmed", `${swineId} confirmed pregnant by ${user.first_name}.`, "success");
       await Promise.all([loadReports(), refreshSwineData()]);
     } else {
@@ -266,7 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
-  // ---------------- FORM SUBMIT ----------------
+  // ---------------- FORM SUBMIT (FIXED FOR VIDEOS) ----------------
   reportForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const selectedSigns = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map(cb => cb.value);
@@ -276,12 +319,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.append("swineId", swineSelect.value);
     formData.append("farmerId", userId); 
     formData.append("signs", JSON.stringify(selectedSigns));
+    
+    // Explicitly append files
     selectedFiles.forEach(f => formData.append("evidence", f));
 
     submitBtn.disabled = true;
+    reportMessage.textContent = "Uploading report and media...";
+    reportMessage.style.color = "blue";
+
     try {
-      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/add`, { method: "POST", body: formData });
-      if (res?.ok) {
+      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/add`, { 
+        method: "POST", 
+        body: formData 
+        // Note: Do NOT set Content-Type header here; browser does it for FormData
+      });
+
+      if (!res) throw new Error("No response from server");
+
+      // Handle cases where server sends HTML error instead of JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textError = await res.text();
+        console.error("Server returned non-JSON:", textError);
+        throw new Error("Server error (Check file size or backend logs)");
+      }
+
+      const data = await res.json();
+      if (res.ok) {
         reportMessage.style.color = "green";
         reportMessage.textContent = "Heat report submitted!";
         await sendAdminNotification("New Heat Report", `Farmer ${user.first_name} submitted a new report for ${swineSelect.value}.`, "info");
@@ -290,11 +354,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderMediaPreview();
         await Promise.all([loadReports(), refreshSwineData()]);
       } else {
-          const err = await res.json();
-          alert(err.message || "Error submitting report");
+        alert(data.message || "Error submitting report");
       }
-    } catch (err) { console.error(err); }
-    submitBtn.disabled = false;
+    } catch (err) { 
+      console.error("Submission Error:", err);
+      alert(err.message || "Failed to submit report. Video might be too large.");
+    } finally {
+      submitBtn.disabled = false;
+    }
   });
 
   // ---------------- FILTER LOGIC ----------------
@@ -316,8 +383,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "login.html";
   });
 
-  // Initial Data Load
   await Promise.all([refreshSwineData(), loadReports()]);
-  setInterval(updateCountdowns, 3600000);
+  setInterval(updateCountdowns, 30000); 
   setInterval(loadReports, 60000);
 });

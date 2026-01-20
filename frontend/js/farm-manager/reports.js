@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const approveBtn = document.getElementById("approveBtn");
   const rejectBtn = document.getElementById("rejectBtn");
   const confirmAIBtn = document.getElementById("confirmAIBtn");
+  const confirmFarrowingBtn = document.getElementById("confirmFarrowingBtn"); // Added for Farrowing
 
   const aiConfirmModal = document.getElementById("aiConfirmModal");
   const boarSelect = document.getElementById("boarSelect");
@@ -38,18 +39,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- MODAL HELPERS ----------------
   function closeReportDetails() {
-  reportDetailsModal.style.display = "none";
-  document.body.style.overflow = "";
+    reportDetailsModal.style.display = "none";
+    document.body.style.overflow = "";
 
-  const videos = reportDetailsModal.querySelectorAll("video");
-  videos.forEach(v => {
-    v.pause();
-    v.currentTime = 0;
-  });
+    const videos = reportDetailsModal.querySelectorAll("video");
+    videos.forEach(v => {
+      v.pause();
+      v.currentTime = 0;
+    });
 
-  evidenceGallery.innerHTML = "";
-}
-
+    evidenceGallery.innerHTML = "";
+  }
 
   closeReportModal.onclick = closeReportDetails;
   if (closeReportModalBtn) closeReportModalBtn.onclick = closeReportDetails;
@@ -68,10 +68,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     today.setHours(0, 0, 0, 0);
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
+    
     const diff = target - today;
-    if (diff < 0) return "Overdue";
-    if (diff === 0) return "TODAY";
-    return `${Math.ceil(diff / (1000 * 60 * 60 * 24))} days`;
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    
+    if (days < 0) return "Overdue";
+    if (days === 0) return "TODAY";
+    return `${days} days`;
   }
 
   // ---------------- FETCH REPORTS ----------------
@@ -105,13 +108,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (countInHeat) countInHeat.textContent = reports.filter(r => ["pending", "approved"].includes(r.status)).length;
     if (countAwaitingRecheck) countAwaitingRecheck.textContent = reports.filter(r => ["under_observation", "waiting_heat_check"].includes(r.status)).length;
     if (countPregnant) countPregnant.textContent = reports.filter(r => r.status === "pregnant").length;
-    if (countFarrowingReady) countFarrowingReady.textContent = reports.filter(r => 
-      r.status === "pregnant" && r.expected_farrowing && 
-      (() => {
-        const days = getDaysLeft(r.expected_farrowing);
-        return days !== "-" && days !== "Overdue" && parseInt(days) <= 7;
-      })()
-    ).length;
+    
+    if (countFarrowingReady) {
+      countFarrowingReady.textContent = reports.filter(r => {
+        if (r.status !== "pregnant" || !r.expected_farrowing) return false;
+        const daysStr = getDaysLeft(r.expected_farrowing);
+        if (daysStr === "Overdue" || daysStr === "TODAY") return true;
+        const daysNum = parseInt(daysStr);
+        return !isNaN(daysNum) && daysNum <= 7;
+      }).length;
+    }
   }
 
   // ---------------- TABLE ----------------
@@ -138,7 +144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <small class="text-muted">(Swine: ${swineStatus})</small>
         </td>
         <td>${["under_observation", "waiting_heat_check"].includes(r.status) && r.next_heat_check ? `<strong>${getDaysLeft(r.next_heat_check)}</strong>` : "-"}</td>
-        <td>${r.status === "pregnant" && r.expected_farrowing ? `<strong>${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
+        <td>${r.status === "pregnant" && r.expected_farrowing ? `<strong style="color: #27ae60;">${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
         <td><button class="btn-view" data-id="${r._id}">View</button></td>
       `;
       tableBody.appendChild(row);
@@ -149,7 +155,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // ---------------- VIEW DETAILS (FIXED EVIDENCE LOADING) ----------------
+  // ---------------- VIEW DETAILS ----------------
   async function viewReport(id) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
@@ -168,64 +174,46 @@ document.addEventListener("DOMContentLoaded", async () => {
       reportSigns.innerHTML = `<strong>Signs:</strong> ${(r.signs || []).join(", ") || "None"}`;
       reportProbability.innerHTML = `<strong>Probability:</strong> ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}`;
 
-      // ---------------- MEDIA GALLERY ----------------
+      // Media Gallery logic
       evidenceGallery.innerHTML = "";
-
-      const evidences = Array.isArray(r.evidence_url)
-        ? r.evidence_url
-        : r.evidence_url ? [r.evidence_url] : [];
+      const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : r.evidence_url ? [r.evidence_url] : [];
 
       if (!evidences.length) {
-        evidenceGallery.innerHTML =
-          "<p class='text-muted'><em>No media evidence provided.</em></p>";
+        evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
       } else {
         evidences.forEach(path => {
           if (!path) return;
-
           const cleanPath = path.replace(/\\/g, "/");
-          const fullUrl = cleanPath.startsWith("http")
-            ? cleanPath
-            : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
-
+          const fullUrl = cleanPath.startsWith("http") ? cleanPath : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
           const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
-
           const wrapper = document.createElement("div");
           wrapper.className = "dynamic-media";
-
           if (isVideo) {
-            wrapper.innerHTML = `
-              <video controls preload="metadata">
-                <source src="${fullUrl}">
-                Your browser does not support video.
-              </video>
-              <small><a href="${fullUrl}" target="_blank">Open video</a></small>
-            `;
+            wrapper.innerHTML = `<video controls preload="metadata"><source src="${fullUrl}">Your browser does not support video.</video><small><a href="${fullUrl}" target="_blank">Open video</a></small>`;
           } else {
-            wrapper.innerHTML = `
-              <img src="${fullUrl}"
-                  alt="Evidence"
-                  onclick="window.open('${fullUrl}', '_blank')"
-                  onerror="this.src='https://placehold.co/400x300?text=Load+Error'">
-              <small>Click to enlarge</small>
-            `;
+            wrapper.innerHTML = `<img src="${fullUrl}" alt="Evidence" onclick="window.open('${fullUrl}', '_blank')" onerror="this.src='https://placehold.co/400x300?text=Load+Error'"><small>Click to enlarge</small>`;
           }
-
           evidenceGallery.appendChild(wrapper);
         });
       }
 
-            // --- BUTTON CONTROLS ---
-            approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-            if (rejectBtn) rejectBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-            confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
+      // --- BUTTON CONTROLS (Updated for Farrowing) ---
+      approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
+      if (rejectBtn) rejectBtn.style.display = r.status === "pending" ? "inline-block" : "none";
+      confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
+      
+      // ✅ Show Farrowing button ONLY if pregnant
+      if (confirmFarrowingBtn) {
+          confirmFarrowingBtn.style.display = r.status === "pregnant" ? "inline-block" : "none";
+      }
 
-            reportDetailsModal.style.display = "flex";
-            document.body.style.overflow = "hidden";
-          } catch (err) {
-            console.error(err);
-            alert("Error loading report details.");
-          }
-        }
+      reportDetailsModal.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    } catch (err) {
+      console.error(err);
+      alert("Error loading report details.");
+    }
+  }
 
   // ---------------- ACTION HANDLER ----------------
   async function action(endpoint, message, extraBody = {}) {
@@ -271,10 +259,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       const data = await res.json();
       if (!data.success || !data.swine?.length) return alert("No adult boars found.");
-
       const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
       if (!masterBoars.length) return alert("No Master Boars available.");
-
       boarSelect.innerHTML = masterBoars.map(b => `<option value="${b._id}">${b.swine_id}</option>`).join("");
       aiConfirmModal.style.display = "flex";
     } catch (err) {
@@ -289,6 +275,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
     aiConfirmModal.style.display = "none";
   };
+
+  // ✅ NEW: Confirm Farrowing Action
+  if (confirmFarrowingBtn) {
+    confirmFarrowingBtn.onclick = () => {
+        if (!confirm("Are you sure you want to confirm farrowing? This will update the swine status to Lactating and increment parity.")) return;
+        action("confirm-farrowing", "Farrowing confirmed! Swine is now in Lactation.");
+    };
+  }
 
   // ---------------- FILTERING ----------------
   const filterSwine = document.getElementById("filterSwine");
