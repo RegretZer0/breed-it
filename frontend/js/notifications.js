@@ -156,13 +156,15 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       EVENTS
   ========================= */
   viewAllBtn?.addEventListener("click", () => {
-    const modalElement = document.getElementById("notificationHistoryModal");
-    if (modalElement) {
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
-      renderHistory();
-    }
+    const panel = document.getElementById("notificationHistoryModal");
+    if (!panel) return;
+
+    panel.classList.add("active");
+    document.body.style.overflow = "hidden";
+
+    renderHistory(); // ✅ THIS WAS MISSING
   });
+
 
   typeFilter?.addEventListener("change", renderHistory);
   timeFilter?.addEventListener("change", renderHistory);

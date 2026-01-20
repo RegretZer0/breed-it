@@ -316,13 +316,11 @@ if (changeAvatarBtn && avatarInput) {
      NOTIFICATIONS (GLOBAL)
     ========================= */
     (async () => {
-      const notificationContainer = document.getElementById("notificationContainer");
-      if (!notificationContainer) return; // panel not on this page
+      if (!document.getElementById("notificationsPanel")) return;
 
       const user = await authGuard("farmer");
       if (!user) return;
 
-      // ✅ Always initialize notifications (same as prototype)
       initNotifications(user.id);
     })();
 
