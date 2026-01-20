@@ -95,7 +95,7 @@ const swineSchema = new mongoose.Schema({
   }],
 
   // ------------------- Growth & Selection (UPDATED ENUM) -------------------
-  performance_records: [{
+ performance_records: [{
     stage: { 
       type: String, 
       enum: [
@@ -106,15 +106,16 @@ const swineSchema = new mongoose.Schema({
         "Final Selection", 
         "Market Check", 
         "Routine",
-        "Pregnant",
-        "Monthly Update",
-        "Under Observation", // Added to fix validation error
-        "Manual Weaning",    // Added to support manual override route
+        "Open",             // ✅ Added this
         "In-Heat",
+        "Under Observation",
         "Bred",
-        "Lactating",
+        "Pregnant",
         "Farrowing",
-        "Market-Ready"
+        "Lactating",
+        "Market-Ready",
+        "Monthly Update",   // ✅ Ensure this matches what frontend sends
+        "Manual Weaning"
       ] 
     },
     record_date: { type: Date, default: Date.now },

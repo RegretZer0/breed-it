@@ -153,12 +153,15 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    
+    // ✅ FIXED: Removed .select("-evidence_url") so images ARE included
+    // ✅ FIXED: Removed restriction that was causing "Invalid Date" and "N/A"
     const reports = await HeatReport.find({ manager_id: managerId })
-      .select("-evidence_url") 
       .populate("swine_id", "swine_id breed current_status")
       .populate("farmer_id", "first_name last_name farmer_id user_id")
       .sort({ createdAt: -1 })
       .lean();
+      
     res.json({ success: true, reports });
   } catch (err) {
     console.error("Get Reports Error:", err);
@@ -200,8 +203,8 @@ router.get(
         });
       }
 
+      // ✅ FIXED: Removed .select("evidence_url") which was hiding other fields
       const reports = await HeatReport.find({ farmer_id: farmerProfileId })
-        .select("-evidence_url")
         .populate("swine_id", "swine_id breed current_status")
         .sort({ createdAt: -1 })
         .lean();
@@ -442,29 +445,43 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 });
 
 /* ======================================================
-    GET CALENDAR EVENTS
+    GET CALENDAR EVENTS (FIXED FOR FARMERS & MANAGERS)
 ====================================================== */
 router.get(
   "/calendar-events",
   requireApiLogin,
-  allowRoles("farm_manager", "encoder"),
+  allowRoles("farm_manager", "encoder", "farmer"), 
   async (req, res) => {
     try {
-      const farmerProfileId = req.user.farmerProfileId;
-
-      const reports = await HeatReport.find({
-        farmer_id: farmerProfileId,
+      const user = req.user;
+      let query = {
         status: { $in: ["approved", "under_observation", "pregnant", "lactating"] }
-      })
+      };
+
+      if (user.role === "farmer") {
+        if (!user.farmerProfileId) {
+          return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+        }
+        query.farmer_id = user.farmerProfileId;
+      } else {
+        const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+        query.manager_id = managerId;
+      }
+
+      const reports = await HeatReport.find(query)
         .populate("swine_id", "swine_id")
         .lean();
 
       const events = [];
 
       reports.forEach(r => {
+        const eventId = r._id;
+        const swineCode = r.swine_id?.swine_id || 'Unknown';
+
         if (r.status === "approved" && r.next_heat_check) {
           events.push({
-            title: `💉 AI Due: ${r.swine_id?.swine_id}`,
+            id: eventId,
+            title: `💉 AI Due: ${swineCode}`,
             start: r.next_heat_check.toISOString().split("T")[0],
             backgroundColor: "#3498db",
             allDay: true
@@ -473,7 +490,8 @@ router.get(
 
         if (r.status === "under_observation" && r.next_heat_check) {
           events.push({
-            title: `🔍 Heat Re-Check: ${r.swine_id?.swine_id}`,
+            id: eventId,
+            title: `🔍 Heat Re-check: ${swineCode}`,
             start: r.next_heat_check.toISOString().split("T")[0],
             backgroundColor: "#f39c12",
             allDay: true
@@ -482,19 +500,22 @@ router.get(
 
         if (r.status === "pregnant" && r.expected_farrowing) {
           events.push({
-            title: `🐷 Farrowing: ${r.swine_id?.swine_id}`,
+            id: eventId,
+            title: `🐷 Farrowing: ${swineCode}`,
             start: r.expected_farrowing.toISOString().split("T")[0],
             backgroundColor: "#27ae60",
             allDay: true
           });
         }
 
-        if (r.status === "lactating" && r.expected_farrowing) {
-          const weaningDate = new Date(r.expected_farrowing);
+        const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
+        if (r.status === "lactating" && farrowDate) {
+          const weaningDate = new Date(farrowDate);
           weaningDate.setDate(weaningDate.getDate() + 30);
 
           events.push({
-            title: `🍼 Weaning: ${r.swine_id?.swine_id}`,
+            id: eventId,
+            title: `🍼 Weaning: ${swineCode}`,
             start: weaningDate.toISOString().split("T")[0],
             backgroundColor: "#9b59b6",
             allDay: true

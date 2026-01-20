@@ -7,11 +7,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const token = localStorage.getItem("token");
   
-  /**
-   * ✅ UPDATE: Robust ID Selection
-   * Matches the backend route: router.get("/farmer/:userId", ...) 
-   * which expects the User Model ID.
-   */
+  // Use user.id as the reference for the logged-in account
   const userId = user.id || user._id; 
   const BACKEND_URL = "http://localhost:5000";
 
@@ -55,12 +51,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     mediaPreview.innerHTML = "";
 
     if (selectedFiles.length === 0) {
-      fileCountBadge.style.display = "none";
+      if (fileCountBadge) fileCountBadge.style.display = "none";
       return;
     }
 
-    fileCountBadge.textContent = selectedFiles.length;
-    fileCountBadge.style.display = "inline-flex";
+    if (fileCountBadge) {
+        fileCountBadge.textContent = selectedFiles.length;
+        fileCountBadge.style.display = "inline-flex";
+    }
 
     selectedFiles.forEach((file, index) => {
       const wrapper = document.createElement("div");
@@ -158,10 +156,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (document.getElementById("countPregnant")) document.getElementById("countPregnant").textContent = stats.pregnant;
       if (document.getElementById("countFarrowing")) document.getElementById("countFarrowing").textContent = stats.farrowing;
 
-      /**
-       * ✅ UPDATE: We use sw.swine_id for the value because your backend 
-       * uses Swine.findOne({ swine_id: swineId }) in /add
-       */
       swineSelect.innerHTML = eligibleSows.length 
         ? '<option value="">-- Select Swine --</option>' + eligibleSows.map(sw => `<option value="${sw.swine_id}">${sw.swine_id} - ${sw.breed} (${sw.current_status})</option>`).join("")
         : '<option value="">No eligible sows available</option>';
@@ -195,6 +189,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
         const isReadyForPregnancy = rawStatus === "under_observation" && heatCheckDate && now >= heatCheckDate;
 
+        // Note: The "View Evidence" button has been removed from the Status column
         return `
           <tr data-status="${rawStatus}" data-swine="${swineDisplay}" data-date="${r.createdAt.split('T')[0]}">
             <td>${swineDisplay}</td>
@@ -203,7 +198,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               <div style="text-transform: capitalize; font-weight: bold; color: ${isRejected ? "#e74c3c" : isProcessed ? "#27ae60" : "#2c3e50"};">
                 ${displayStatus === "approved" ? "AI Scheduled" : displayStatus}
               </div>
-              <button class="btn-view-evidence" onclick="viewEvidence('${r._id}')" style="margin-top:5px; padding:2px 8px; font-size:0.7em; cursor:pointer;">View Evidence</button>
               ${isProcessed ? `<div style="margin-top:4px;font-size:0.75em;color:#27ae60;opacity:0.8;">Update: ${new Date(r.updatedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>` : ""}
               ${isRejected && r.rejection_message ? `<div class="rejection-note" style="margin-top:8px;padding:8px;background:#fff5f5;border:1px solid #feb2b2;border-radius:4px;font-size:0.8em;color:#c53030;"><strong>Reason:</strong><br>"${r.rejection_message}"</div>` : ""}
             </td>
@@ -230,36 +224,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateCountdowns();
     } catch (err) { console.error("Load Reports Error:", err); }
   }
-
-  // ---------------- VIEW EVIDENCE MODAL ----------------
-  window.viewEvidence = async (reportId) => {
-    try {
-      const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/detail`);
-      const data = await res.json();
-      if (!data.success) return alert("Could not load details");
-
-      const report = data.report;
-      const evidenceHtml = report.evidence_url.map(url => {
-        const src = (url.startsWith('data:') || url.startsWith('http')) ? url : `${BACKEND_URL}${url}`;
-        // Support for both video and image playback
-        return url.match(/\.(mp4|mov|webm)$/i)
-          ? `<video src="${src}" controls style="width:100%; max-width:250px; border-radius:8px; margin:5px;"></video>`
-          : `<img src="${src}" style="width:100%; max-width:200px; border-radius:8px; margin:5px;" />`;
-      }).join('');
-
-      const modal = document.createElement('div');
-      modal.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;";
-      modal.innerHTML = `
-        <div style="background:white; padding:20px; border-radius:12px; max-width:90%; max-height:90%; overflow-y:auto; position:relative;">
-          <button style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:24px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">×</button>
-          <h3>Evidence for ${report.swine_id?.swine_id || "Swine"}</h3>
-          <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">${evidenceHtml}</div>
-          <p style="margin-top:15px;"><strong>Signs:</strong> ${report.signs.join(', ')}</p>
-        </div>
-      `;
-      document.body.appendChild(modal);
-    } catch (err) { console.error(err); }
-  };
 
   // ---------------- HELPERS ----------------
   function formatCountdown(targetDate) {

@@ -266,12 +266,16 @@ router.put(
 
             await swine.save();
             
-            // ✅ Detailed Audit Log
-            await logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated profile/records for Swine ${swineId} (Status: ${swine.current_status})`, req);
+            // ✅ Safety Log: We use .catch() to ensure that a logging error 
+            // doesn't send a 500 error back to the user if the pig saved successfully.
+            logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated profile/records for Swine ${swineId} (Status: ${swine.current_status})`, req)
+                .catch(err => console.error("Logging failed but pig was saved:", err));
 
             res.json({ success: true, message: "Swine updated successfully", swine });
         } catch (error) {
-            res.status(500).json({ success: false, message: "Server error" });
+            // This captures the exact error in your terminal
+            console.error("[UPDATE SWINE ERROR]:", error); 
+            res.status(500).json({ success: false, message: "Server error", error: error.message });
         }
     }
 );
