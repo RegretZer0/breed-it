@@ -149,3 +149,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
+
+/* =======================
+   CHANGE PASSWORD (MODAL TOGGLE)
+======================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const openChangeBtn = document.getElementById("openChangePassword");
+  const closeChangeBtn = document.getElementById("closeChangePassword");
+  const changeModal = document.getElementById("changePasswordModal");
+
+  if (!openChangeBtn || !changeModal) return;
+
+  openChangeBtn.addEventListener("click", () => {
+    changeModal.classList.remove("hidden");
+  });
+
+  closeChangeBtn?.addEventListener("click", () => {
+    changeModal.classList.add("hidden");
+  });
+});

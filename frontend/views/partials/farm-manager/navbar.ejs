@@ -249,14 +249,81 @@
         <p><strong>Email:</strong> <%= user?.email || "—" %></p>
         <p><strong>Role:</strong> <%= user?.role || "—" %></p>
 
-        <button class="btn btn-outline-primary w-100 mt-3" disabled>
-          Change Password (Coming Soon)
+        <button
+          class="btn btn-outline-primary w-100 mt-3"
+          data-bs-toggle="modal"
+          data-bs-target="#changePasswordModal"
+        >
+          Change Password
         </button>
+
       </div>
 
     </div>
   </div>
 </div>
+
+<!-- =======================
+     CHANGE PASSWORD MODAL
+======================= -->
+<div
+  class="modal fade"
+  id="changePasswordModal"
+  tabindex="-1"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Change Password</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- STEP 1: REQUEST OTP -->
+        <button
+          class="btn btn-outline-secondary w-100 mb-3"
+          id="requestChangeOtpBtn"
+        >
+          Send OTP to Email
+        </button>
+
+        <!-- STEP 2: CONFIRM -->
+        <form id="changePasswordForm">
+          <div class="mb-3">
+            <label class="form-label small">OTP</label>
+            <input
+              type="text"
+              class="form-control otp-input"
+              id="changeOtp"
+              required
+            />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small">New Password</label>
+            <input
+              type="password"
+              class="form-control"
+              id="changeNewPassword"
+              required
+            />
+          </div>
+
+          <button class="btn btn-primary w-100">
+            Change Password
+          </button>
+        </form>
+
+        <p id="changePasswordMessage" class="small text-center mt-3"></p>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 <!-- =======================
      HELP MODAL

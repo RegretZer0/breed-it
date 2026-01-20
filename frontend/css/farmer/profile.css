@@ -264,3 +264,95 @@ button:focus-visible {
     width: 100%;
   }
 }
+
+
+/* =======================
+   CHANGE PASSWORD MODAL
+======================= */
+
+.change-password-modal {
+  width: 100%;
+  max-width: 380px;
+  padding: 24px;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+}
+
+.modal-title {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #555;
+}
+
+.form-control {
+  padding: 10px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.otp-input {
+  letter-spacing: 4px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: #2fb23f;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #28a837;
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 2px solid #ff5c5c;
+  color: #ff5c5c;
+  padding: 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #ff5c5c;
+  color: #fff;
+}
+
+.modal-message {
+  font-size: 13px;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Utility */
+.w-100 {
+  width: 100%;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-3 {
+  margin-top: 12px;
+}

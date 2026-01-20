@@ -282,59 +282,175 @@ router.post("/login", async (req, res) => {
 
   /* ======================
    RESET PASSWORD
+  ====================== */
+  router.post("/reset-password", async (req, res) => {
+    const { email, otp, password } = req.body;
+
+    try {
+      if (!email || !otp || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email, OTP, and new password are required.",
+        });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 8 characters long.",
+        });
+      }
+
+      // Verify OTP (shared logic)
+      await verifyOTPInternal(email, otp);
+
+      // Find user (User or Farmer)
+      const user =
+        (await User.findOne({ email })) ||
+        (await Farmer.findOne({ email }));
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user.password = hashedPassword;
+
+      await user.save();
+
+      res.json({
+        success: true,
+        message: "Password reset successful.",
+      });
+
+    } catch (error) {
+      console.error("Reset Password Error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Password reset failed.",
+      });
+    }
+  });
+
+
+/* ======================
+   CHANGE PASSWORD - REQUEST OTP
 ====================== */
-router.post("/reset-password", async (req, res) => {
-  const { email, otp, password } = req.body;
+router.post(
+  "/change-password/request",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      const email =
+        req.user?.email ||
+        req.session?.user?.email;
 
-  try {
-    if (!email || !otp || !password) {
-      return res.status(400).json({
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "User email not found.",
+        });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await bcrypt.hash(otp, 10);
+
+      otpStore.set(email, {
+        otp: hashedOtp,
+        expires: Date.now() + 10 * 60 * 1000,
+      });
+
+      await transporter.sendMail({
+        from: `"breedIT" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "breedIT Change Password Verification Code",
+        html: otpEmailTemplate({ otp }),
+      });
+
+      res.json({
+        success: true,
+        message: "OTP sent to your email.",
+      });
+
+    } catch (error) {
+      console.error("Change Password OTP Error:", error);
+      res.status(500).json({
         success: false,
-        message: "Email, OTP, and new password are required.",
+        message: "Failed to send OTP.",
       });
     }
-
-    if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 8 characters long.",
-      });
-    }
-
-    // Verify OTP (shared logic)
-    await verifyOTPInternal(email, otp);
-
-    // Find user (User or Farmer)
-    const user =
-      (await User.findOne({ email })) ||
-      (await Farmer.findOne({ email }));
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found.",
-      });
-    }
-
-    // Hash new password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user.password = hashedPassword;
-
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "Password reset successful.",
-    });
-
-  } catch (error) {
-    console.error("Reset Password Error:", error);
-    res.status(400).json({
-      success: false,
-      message: error.message || "Password reset failed.",
-    });
   }
-});
+);
+
+/* ======================
+   CHANGE PASSWORD - CONFIRM
+====================== */
+router.post(
+  "/change-password/confirm",
+  requireSessionAndToken,
+  async (req, res) => {
+    const { otp, newPassword } = req.body;
+
+    try {
+      if (!otp || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "OTP and new password are required.",
+        });
+      }
+
+      validatePassword(newPassword);
+
+      const email =
+        req.user?.email ||
+        req.session?.user?.email;
+
+
+      // Verify OTP
+      await verifyOTPInternal(email, otp);
+
+      // Find user (User or Farmer)
+      const user =
+        (await User.findById(req.user.id)) ||
+        (await Farmer.findById(req.user.id));
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+
+      // ✅ Audit log
+      await logAction(
+        user._id,
+        "CHANGE_PASSWORD",
+        "USER_AUTH",
+        "User changed password with OTP verification",
+        req
+      );
+
+      res.json({
+        success: true,
+        message: "Password changed successfully.",
+      });
+
+    } catch (error) {
+      console.error("Change Password Error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message || "Password change failed.",
+      });
+    }
+  }
+);
 
 
 /* ======================
