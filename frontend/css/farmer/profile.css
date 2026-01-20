@@ -31,7 +31,7 @@
 ========================= */
 .profile-card {
   border: 1.5px solid #cfcfcf;
-  border-radius: 18px;
+  border-radius: 14px;
   padding: 20px;
   text-align: center;
 }
@@ -90,7 +90,7 @@
   color: #ffffff;
   border: none;
   padding: 12px 24px;
-  border-radius: 24px;
+  border-radius: 20px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -177,7 +177,7 @@
   color: #ffffff;
   border: none;
   padding: 12px 26px;
-  border-radius: 24px;
+  border-radius: 20px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -187,7 +187,7 @@
   border: 2px solid #ff6b6b;
   color: #ff6b6b;
   padding: 12px 26px;
-  border-radius: 24px;
+  border-radius: 20px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -274,7 +274,7 @@ button:focus-visible {
   width: 100%;
   max-width: 380px;
   padding: 24px;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
   text-align: left;
 }
@@ -314,7 +314,7 @@ button:focus-visible {
   color: #fff;
   border: none;
   padding: 12px;
-  border-radius: 999px;
+  border-radius: 18px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -328,7 +328,7 @@ button:focus-visible {
   border: 2px solid #ff5c5c;
   color: #ff5c5c;
   padding: 10px;
-  border-radius: 999px;
+  border-radius: 18px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -344,6 +344,8 @@ button:focus-visible {
   margin-top: 10px;
 }
 
+
+
 /* Utility */
 .w-100 {
   width: 100%;
@@ -355,4 +357,54 @@ button:focus-visible {
 
 .mt-3 {
   margin-top: 12px;
+}
+
+.change-password-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.change-password-actions button {
+  flex: 1;
+}
+
+.btn-otp {
+  background: #ffffff;
+  color: #1e88e5;
+  border: 2px solid #1e88e5;
+  padding: 12px;
+  border-radius: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 
+    background 0.25s ease,
+    color 0.25s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-otp:hover {
+  background: #1e88e5;
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(30, 136, 229, 0.25);
+}
+
+.btn-otp:active {
+  transform: scale(0.97);
+}
+
+.modal-content {
+  animation: modalPop 0.25s ease-out;
+}
+
+@keyframes modalPop {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

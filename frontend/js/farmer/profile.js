@@ -23,6 +23,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const editEmail = document.getElementById("editEmail");
   const editContact = document.getElementById("editContact_no");
   const editAddress = document.getElementById("editAddress");
+  const editNumPens = document.getElementById("editNumPens");
+  const editPenCapacity = document.getElementById("editPenCapacity");
 
   const editBtn = document.getElementById("editProfileBtn");
   const cancelBtn = document.getElementById("cancelEdit");
@@ -36,6 +38,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const previewEmail = document.getElementById("previewEmail");
   const previewContact = document.getElementById("previewContact");
   const previewAddress = document.getElementById("previewAddress");
+  const previewNumPens = document.getElementById("previewNumPens");
+  const previewPenCapacity = document.getElementById("previewPenCapacity");
   const previewCancel = document.getElementById("previewCancel");
   const previewConfirm = document.getElementById("previewConfirm");
 
@@ -81,6 +85,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     editEmail.value = farmerData.email || "";
     editContact.value = farmerData.contact_no || "";
     editAddress.value = farmerData.address || "";
+    editNumPens.value = farmerData.num_of_pens ?? 0;
+    editPenCapacity.value = farmerData.pen_capacity ?? 0;
 
     viewSection.classList.add("hidden");
     editSection.classList.remove("hidden");
@@ -99,6 +105,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     previewEmail.textContent = editEmail.value;
     previewContact.textContent = editContact.value;
     previewAddress.textContent = editAddress.value;
+    previewNumPens.textContent = editNumPens.value;
+    previewPenCapacity.textContent = editPenCapacity.value;
 
     previewModal.classList.remove("hidden");
   });
@@ -114,6 +122,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         email: editEmail.value,
         contact_no: editContact.value,
         address: editAddress.value,
+        num_of_pens: Number(editNumPens.value),
+        pen_capacity: Number(editPenCapacity.value),
       };
 
       const res = await fetch("/api/farmer/profile", {
@@ -134,6 +144,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       emailEl.textContent = farmer.email;
       contactEl.textContent = farmer.contact_no;
       addressEl.textContent = farmer.address;
+      numPensEl.textContent = farmer.num_of_pens ?? "0";
+      penCapacityEl.textContent = farmer.pen_capacity ?? "0";
+
 
       farmerData = farmer;
 
@@ -169,3 +182,5 @@ document.addEventListener("DOMContentLoaded", () => {
     changeModal.classList.add("hidden");
   });
 });
+
+
