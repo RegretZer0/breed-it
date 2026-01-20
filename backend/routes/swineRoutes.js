@@ -14,8 +14,9 @@ const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
 /* ======================================================
-    UTILITY: BATCH LETTER GENERATOR (A, B... Z, AA...)
+    UTILITIES: ID GENERATORS
 ====================================================== */
+
 function getBatchLetter(index) {
     let label = "";
     while (index >= 0) {
@@ -25,8 +26,60 @@ function getBatchLetter(index) {
     return label;
 }
 
+function getManagerPrefix(managerId) {
+    const idStr = managerId.toString();
+    return idStr.substring(idStr.length - 4).toUpperCase();
+}
+
 /* ======================================================
-    ADD MASTER BOAR (Maintenance Page Only)
+    PREVIEW ENDPOINTS: GET NEXT IDs (FOR FRONTEND)
+====================================================== */
+
+router.get("/preview/next-boar-id", requireSessionAndToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+        const prefix = getManagerPrefix(managerId);
+        
+        const count = await Swine.countDocuments({ 
+            registered_by: managerId,
+            swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
+        });
+        const nextId = `${prefix}-BOAR-${String(count + 1).padStart(4, "0")}`;
+        res.json({ success: true, nextId });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+
+        const existingBatches = await Swine.distinct("batch", {
+            registered_by: managerId,
+            batch: { $regex: /^[A-Z]+$/ }
+        });
+
+        const usedIndices = existingBatches.map(b => {
+            let num = 0;
+            for (let i = 0; i < b.length; i++) {
+                num = num * 26 + (b.charCodeAt(i) - 64);
+            }
+            return num - 1;
+        }).filter(n => !isNaN(n));
+
+        let nextIndex = 0;
+        while (usedIndices.includes(nextIndex)) nextIndex++;
+        res.json({ success: true, nextLetter: getBatchLetter(nextIndex) });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+/* ======================================================
+    ADD MASTER BOAR
 ====================================================== */
 router.post(
     "/add-master-boar",
@@ -42,12 +95,14 @@ router.post(
         try {
             const user = req.user;
             const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
+            const prefix = getManagerPrefix(registeredBy);
 
             const boarCount = await Swine.countDocuments({ 
-                swine_id: { $regex: /^BOAR-/ } 
+                registered_by: registeredBy,
+                swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
             });
-            const nextNumber = boarCount + 1;
-            const swineId = `BOAR-${String(nextNumber).padStart(4, "0")}`;
+            
+            const swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
 
             const newBoar = new Swine({
                 swine_id: swineId,
@@ -73,24 +128,18 @@ router.post(
             });
 
             await newBoar.save();
-            
-            // ✅ Detailed Audit Log
-            await logAction(user.id, "REGISTER_MASTER_BOAR", "SWINE_MANAGEMENT", `Registered Master Boar ${swineId} (Breed: ${breed || "Native"})`, req);
+            await logAction(user.id, "REGISTER_MASTER_BOAR", "SWINE_MANAGEMENT", `Registered Master Boar ${swineId}`, req);
 
-            res.status(201).json({ 
-                success: true, 
-                message: "Master Boar registered with ID: " + swineId, 
-                swine: newBoar 
-            });
+            res.status(201).json({ success: true, message: "Master Boar registered: " + swineId, swine: newBoar });
         } catch (error) {
-            console.error("[ADD MASTER BOAR ERROR]:", error);
+            if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID. Please refresh." });
             res.status(500).json({ success: false, message: "Server error", error: error.message });
         }
     }
 );
 
 /* ======================================================
-    ADD NEW SWINE (Farmer/Transaction)
+    ADD NEW SWINE (UPDATED ID LOGIC)
 ====================================================== */
 router.post(
     "/add",
@@ -110,53 +159,62 @@ router.post(
 
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+            const prefix = getManagerPrefix(managerId);
 
-            // --- START PURE LETTER AUTO-BATCH LOGIC ---
+            // 1. Resolve Auto-batch letter if empty
             if (!batch || batch.trim() === "") {
                 const existingBatches = await Swine.distinct("batch", {
+                    registered_by: managerId,
                     batch: { $regex: /^[A-Z]+$/ }
                 });
-
                 const usedIndices = existingBatches.map(b => {
                     let num = 0;
-                    for (let i = 0; i < b.length; i++) {
-                        num = num * 26 + (b.charCodeAt(i) - 64);
-                    }
+                    for (let i = 0; i < b.length; i++) num = num * 26 + (b.charCodeAt(i) - 64);
                     return num - 1;
                 }).filter(n => !isNaN(n));
-
                 let nextIndex = 0;
                 while (usedIndices.includes(nextIndex)) nextIndex++;
                 batch = getBatchLetter(nextIndex);
             }
 
+            // 2. Farmer authorization check
             if (farmer_id) {
                 const farmer = await Farmer.findOne({
                     _id: farmer_id,
-                    $or: [
-                        { managerId: managerId },
-                        { registered_by: managerId },
-                        { user_id: managerId }
-                    ]
+                    $or: [{ managerId: managerId }, { registered_by: managerId }, { user_id: managerId }]
                 });
-                if (!farmer) return res.status(400).json({ success: false, message: "Farmer not found or unauthorized" });
+                if (!farmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
             }
 
+            // 3. GENERATE ID (Continuous Increment Logic)
             let swineId;
             if (batch === "BOAR" || (sex.toLowerCase() === "male" && age_stage === "adult")) {
-                const boarCount = await Swine.countDocuments({ swine_id: { $regex: /^BOAR-/ } });
-                swineId = `BOAR-${String(boarCount + 1).padStart(4, "0")}`;
+                const boarCount = await Swine.countDocuments({ 
+                    registered_by: managerId,
+                    swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
+                });
+                swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
             } else {
-                const lastSwine = await Swine.find({ batch }).sort({ swine_id: -1 }).limit(1);
+                // Find the latest swine in THIS batch by THIS manager
+                const lastSwineInBatch = await Swine.find({ 
+                    batch: batch, 
+                    registered_by: managerId 
+                })
+                .sort({ swine_id: -1 }) // Get the highest existing ID
+                .limit(1);
+
                 let nextNumber = 1;
-                if (lastSwine.length && lastSwine[0].swine_id) {
-                    const parts = lastSwine[0].swine_id.split("-");
+                if (lastSwineInBatch.length && lastSwineInBatch[0].swine_id) {
+                    const parts = lastSwineInBatch[0].swine_id.split("-");
                     const lastNum = parseInt(parts[parts.length - 1]);
                     if (!isNaN(lastNum)) nextNumber = lastNum + 1;
                 }
-                swineId = `${batch}-${String(nextNumber).padStart(4, "0")}`;
+                
+                // Result: PREFIX-BATCH-NUMBER (e.g., LIPA-A-0002)
+                swineId = `${prefix}-${batch}-${String(nextNumber).padStart(4, "0")}`;
             }
 
+            // 4. Set Initial Status
             let initialStatus = current_status; 
             let initialPerfStage = "Registration";
 
@@ -196,37 +254,32 @@ router.post(
             });
 
             await newSwine.save();
-            
-            // ✅ Detailed Audit Log
-            await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered new Swine ${swineId} in Batch ${batch} (${sex}, ${breed})`, req);
-
-            res.status(201).json({ success: true, message: "Swine added successfully", swine: newSwine });
+            await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId}`, req);
+            res.status(201).json({ success: true, message: "Swine added", swine: newSwine });
 
         } catch (error) {
-            console.error("[ADD SWINE ERROR]:", error);
-            res.status(500).json({ success: false, message: "Server error", error: error.message });
+            if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID collision." });
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 );
 
 /* ======================================================
-    ADD PERFORMANCE RECORD (Specific Endpoint)
+    ADD PERFORMANCE RECORD
 ====================================================== */
 router.post(
     "/performance/add/:id",
     requireSessionAndToken,
     allowRoles("farm_manager", "encoder"),
     async (req, res) => {
-        const { id } = req.params; // This is the MongoDB _id
+        const { id } = req.params; 
         const { weight, bodyLength, heartGirth, stage, remarks } = req.body;
         const user = req.user;
 
         try {
-            // Find by MongoDB _id
             const swine = await Swine.findById(id);
             if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-            // Create the new performance record object
             const newRecord = {
                 stage: stage || "Routine",
                 record_date: new Date(),
@@ -237,25 +290,19 @@ router.post(
                 recorded_by: user.id
             };
 
-            // Add to the array
             swine.performance_records.push(newRecord);
-
             await swine.save();
+            await logAction(user.id, "ADD_PERFORMANCE", "SWINE_MANAGEMENT", `Added record for ${swine.swine_id}`, req);
 
-            // Log the action
-            await logAction(user.id, "ADD_PERFORMANCE", "SWINE_MANAGEMENT", `Added performance record for ${swine.swine_id}`, req)
-                .catch(err => console.error("Log failed:", err));
-
-            res.json({ success: true, message: "Performance record added successfully", swine });
+            res.json({ success: true, message: "Performance record added", swine });
         } catch (error) {
-            console.error("[ADD PERFORMANCE ERROR]:", error);
-            res.status(500).json({ success: false, message: "Server error", error: error.message });
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 );
 
 /* ======================================================
-    UPDATE SWINE (MODIFIED FOR MONTHLY OVERWRITE)
+    UPDATE SWINE
 ====================================================== */
 router.put(
     "/update/:swineId",
@@ -280,7 +327,6 @@ router.put(
                 "birth_cycle_number" 
             ];
 
-            // Performance Record Handling
             if (updates.performance_records) {
                 const newPerfData = {
                     ...updates.performance_records,
@@ -302,7 +348,6 @@ router.put(
                 }
             }
 
-            // Standard Field Updates
             allowedFields.forEach((field) => {
                 if (updates[field] !== undefined && field !== "performance_records") {
                     swine[field] = updates[field];
@@ -310,17 +355,10 @@ router.put(
             });
 
             await swine.save();
-            
-            // ✅ Safety Log: We use .catch() to ensure that a logging error 
-            // doesn't send a 500 error back to the user if the pig saved successfully.
-            logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated profile/records for Swine ${swineId} (Status: ${swine.current_status})`, req)
-                .catch(err => console.error("Logging failed but pig was saved:", err));
-
+            logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated ${swineId}`, req);
             res.json({ success: true, message: "Swine updated successfully", swine });
         } catch (error) {
-            // This captures the exact error in your terminal
-            console.error("[UPDATE SWINE ERROR]:", error); 
-            res.status(500).json({ success: false, message: "Server error", error: error.message });
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 );
@@ -368,8 +406,7 @@ router.post(
             await HeatReport.findOneAndUpdate({ swine_id: sow._id, status: "pregnant" }, { status: "lactating" }, { session });
             await AIRecord.findOneAndUpdate({ swine_id: sow._id, status: "Success" }, { status: "Completed", actual_farrowing_date: actualFarrowingDate }, { session });
 
-            // ✅ Detailed Audit Log
-            await logAction(req.user.id, "REGISTER_FARROWING", "BREEDING", `Farrowing recorded for Sow ${swineId}: ${total_live} Live, ${totalPiglets} Total`, req);
+            await logAction(req.user.id, "REGISTER_FARROWING", "BREEDING", `Farrowing recorded for Sow ${swineId}`, req);
 
             await session.commitTransaction();
             res.json({ success: true, message: "Farrowing registered." });
@@ -394,25 +431,23 @@ router.patch(
         try {
             const swine = await Swine.findOne({ swine_id: swineId });
             if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
-            if (swine.current_status !== "Lactating") return res.status(400).json({ success: false, message: "Only lactating swine can be weaned." });
+            if (swine.current_status !== "Lactating") return res.status(400).json({ success: false, message: "Not lactating." });
 
             swine.current_status = "Open";
             swine.performance_records.push({
                 stage: "Manual Weaning",
                 record_date: new Date(),
                 recorded_by: req.user.id,
-                remarks: "Manual override used to set status to Open."
+                remarks: "Manual override to Open."
             });
 
             await swine.save();
             await HeatReport.findOneAndUpdate({ swine_id: swine._id, status: "lactating" }, { status: "completed" });
-            
-            // ✅ Audit Log
-            await logAction(req.user.id, "MANUAL_WEANING", "BREEDING", `Manually weaned Sow ${swineId} (Status set to Open)`, req);
+            await logAction(req.user.id, "MANUAL_WEANING", "BREEDING", `Manually weaned Sow ${swineId}`, req);
 
             res.json({ success: true, message: `Swine ${swineId} has been manually weaned.` });
         } catch (error) {
-            res.status(500).json({ success: false, message: "Server error during weaning." });
+            res.status(500).json({ success: false, message: "Server error." });
         }
     }
 );
@@ -427,17 +462,10 @@ router.post("/:swineId/medical", requireSessionAndToken, allowRoles("farm_manage
         if (!swine) return res.status(404).json({ success: false, message: "Not found" });
         
         swine.medical_records.push({ 
-            treatment_type, 
-            medicine_name, 
-            dosage, 
-            remarks, 
-            administered_by: req.user.id 
+            treatment_type, medicine_name, dosage, remarks, administered_by: req.user.id 
         });
         await swine.save();
-        
-        // ✅ Audit Log for Medical Record
-        await logAction(req.user.id, "MEDICAL_TREATMENT", "SWINE_MANAGEMENT", `Medical update for ${req.params.swineId}: ${medicine_name} (${treatment_type})`, req);
-        
+        await logAction(req.user.id, "MEDICAL_TREATMENT", "SWINE_MANAGEMENT", `Medical update for ${req.params.swineId}`, req);
         res.json({ success: true, message: "Medical record added" });
     } catch (e) { res.status(500).json({ success: false, message: "Server error" }); }
 });
@@ -463,11 +491,13 @@ router.get(
                 }).select("_id");
                 
                 const farmerIds = farmers.map((f) => f._id);
+                const prefix = getManagerPrefix(managerId);
+                
                 query = {
                     $or: [
                         { farmer_id: { $in: farmerIds } },
                         { registered_by: managerId, farmer_id: null },
-                        { swine_id: { $regex: /^BOAR-/ } }
+                        { swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } }
                     ]
                 };
             }
@@ -477,7 +507,6 @@ router.get(
             if (req.query.farmer_id) query.farmer_id = req.query.farmer_id;
 
             const swine = await Swine.find(query).populate("farmer_id", "first_name last_name").lean();
-
             const swineData = swine.map(s => ({
                 ...s,
                 farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}` : "ADMIN/MASTER",
@@ -518,15 +547,16 @@ router.get(
 
             const farmers = await Farmer.find({ $or: [{ managerId: managerId }, { registered_by: managerId }] }).select("_id");
             const farmerIds = farmers.map(f => f._id);
+            const prefix = getManagerPrefix(managerId);
 
             const allActiveBoars = await Swine.find({
                 sex: { $regex: /^male$/i },
                 age_stage: { $regex: /^adult$/i },
                 current_status: { $ne: "Culled/Sold" },
                 $or: [
+                    { swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } },
                     { registered_by: managerId },
-                    { farmer_id: { $in: farmerIds } },
-                    { farmer_id: null } 
+                    { farmer_id: { $in: farmerIds } }
                 ]
             }).select("swine_id breed").lean();
 
@@ -560,7 +590,7 @@ router.get(
             const total = await AuditLog.countDocuments(query);
             res.json({ success: true, total, logs });
         } catch (error) {
-            res.status(500).json({ success: false, message: "Error retrieving audit logs" });
+            res.status(500).json({ success: false, message: "Audit retrieval error" });
         }
     }
 );

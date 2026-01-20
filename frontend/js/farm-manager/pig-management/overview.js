@@ -131,7 +131,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const offspringSec = document.getElementById("offspringSection");
     const offspringBody = document.getElementById("offspringListBody");
     
-    // Check if Swine is an Adult Parent
     const isAdult = sw.age_stage && sw.age_stage.toLowerCase().includes("adult");
     const isParent = isAdult || sw.age_stage === "Final Selection" || sw.age_stage === "Pregnant" || sw.age_stage === "Lactating" || sw.is_external_boar;
 
@@ -140,7 +139,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       offspringSec.style.display = "block";
       const cycles = sw.breeding_cycles || [];
 
-      // ✅ LOAD OFFSPRING LIST (SIRE OR DAM MATCH)
       const actualOffspring = allSwine.filter(child => {
           const currentId = sw.swine_id.trim().toLowerCase();
           const childDamId = (child.dam_id || "").trim().toLowerCase();
@@ -149,8 +147,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
       
       const inventoryCount = actualOffspring.length;
-
-      // Stats Calculations
       const cycleTotalBorn = cycles.reduce((a, c) => a + (Number(c.farrowing_results?.total_born) || 0), 0);
       const cycleLiveBorn = cycles.reduce((a, c) => a + (Number(c.farrowing_results?.live_born) || 0), 0);
 
@@ -165,7 +161,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       document.getElementById("statTotalLive").textContent = finalTotalLive;
 
-      // ✅ RENDER OFFSPRING ROWS
       if (offspringBody) {
           if (actualOffspring.length > 0) {
               offspringBody.innerHTML = actualOffspring.map(child => `
@@ -182,13 +177,11 @@ document.addEventListener("DOMContentLoaded", async () => {
               offspringBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No direct descendants found in inventory.</td></tr>`;
           }
       }
-
     } else {
       repro.style.display = "none";
       offspringSec.style.display = "none";
     }
 
-    // Breeding History Table
     const repoBody = document.getElementById("reproductiveHistoryBody");
     repoBody.innerHTML = (sw.breeding_cycles || []).map(c => `
       <tr>
@@ -200,7 +193,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>${c.status || "—"}</td>
       </tr>`).join("");
 
-    // Performance Timeline Table
     const perfBody = document.getElementById("performanceTimelineBody");
     perfBody.innerHTML = (sw.performance_records || []).map(p => `
       <tr>
@@ -237,7 +229,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim() : "OFFICE / MASTER";
       const perf = getLatestPerf(sw);
       
-      // Calculate offspring count for table display
       const offspringCount = allSwine.filter(child => {
           const currentId = sw.swine_id.trim().toLowerCase();
           return (child.dam_id || "").trim().toLowerCase() === currentId || 
@@ -308,7 +299,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      allSwine = data.swine || [];
+      const rawSwine = data.swine || [];
+
+      // Only show farmers that belong to THIS manager
+      const validFarmerIds = farmers.map(f => f._id.toString());
+
+      allSwine = rawSwine.filter(sw => {
+        // Condition 1: Pig belongs to one of my farmers
+        if (sw.farmer_id) {
+          const fid = typeof sw.farmer_id === "object" ? sw.farmer_id._id : sw.farmer_id;
+          if (validFarmerIds.includes(fid.toString())) return true;
+        }
+
+        // Condition 2: Pig is a Boar/Office pig registered by ME (the manager)
+        if (sw.registered_by) {
+            const rid = typeof sw.registered_by === "object" ? sw.registered_by._id : sw.registered_by;
+            if (rid.toString() === managerId.toString()) return true;
+        }
+
+        return false;
+      });
+
       renderTable(allSwine);
     } catch (err) { console.error("Load swine failed", err); }
   }
