@@ -8,17 +8,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   const BACKEND_URL = "http://localhost:5000";
   const token = localStorage.getItem("token");
 
+  // ================= RESOLVE MANAGER ID =================
+  // Scoping IDs to the manager ensures BOAR-0001 starts at 1 for every new farm.
+  const managerId = user.role === "farm_manager" ? (user.id || user._id) : user.managerId;
+
   // ================= DOM =================
   const form = document.getElementById("registerBoarForm");
   const messageEl = document.getElementById("boarMessage");
-
   const breedInput = document.getElementById("breed");
-
   const colorSelect = document.getElementById("colorSelect");
   const otherColorGroup = document.getElementById("otherColorGroup");
   const otherColorInput = document.getElementById("otherColorInput");
-
   const dateTransferInput = document.getElementById("dateTransfer");
+  
+  // Optional: If you have a span or input to show the next ID
+  const nextIdPreview = document.getElementById("nextBoarIdPreview");
 
   // ================= LOCK BREED =================
   breedInput.value = "Native";
@@ -27,13 +31,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ================= DEFAULT DATE =================
   dateTransferInput.value = new Date().toISOString().split("T")[0];
 
-  // ================= COLOR LOGIC (EXACT register_pig BEHAVIOR) =================
+  // ================= ID PREVIEW LOGIC =================
+  async function updateNextBoarId() {
+    if (!nextIdPreview) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/swine/next-boar-id?managerId=${managerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        nextIdPreview.textContent = `Next ID: ${data.nextId}`;
+      }
+    } catch (err) {
+      console.error("Error fetching next Boar ID", err);
+    }
+  }
+
+  // ================= COLOR LOGIC =================
   function handleColorChange() {
     if (colorSelect.value === "Other") {
       otherColorGroup.classList.remove("d-none");
-
-      // 🔧 Force layout reflow (important!)
-      void otherColorGroup.offsetHeight;
+      void otherColorGroup.offsetHeight; // Force layout reflow
     } else {
       otherColorGroup.classList.add("d-none");
       otherColorInput.value = "";
@@ -42,13 +60,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   colorSelect.addEventListener("change", handleColorChange);
 
-  // 🔑 CRITICAL: Run once on load
+  // Initial UI Setup
   handleColorChange();
+  updateNextBoarId();
 
   // ================= SUBMIT =================
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    messageEl.textContent = "";
+    messageEl.textContent = "Registering...";
+    messageEl.style.color = "blue";
 
     const finalColor =
       colorSelect.value === "Other"
@@ -73,9 +93,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         new Date().toISOString().split("T")[0],
       health_status: "Healthy",
       current_status: "Active",
-
-      // ✅ ADD THIS (from maintenance.js)
-      manager_id: user.id || user._id
+      
+      // ✅ SCOPING: Use the resolved managerId so the backend knows
+      // which sequence (Farm A or Farm B) to increment.
+      managerId: managerId 
     };
 
     try {
@@ -94,12 +115,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       messageEl.textContent = `✅ Master Boar Registered (ID: ${data.swine.swine_id})`;
       messageEl.style.color = "green";
 
+      // Reset Form
       form.reset();
       breedInput.value = "Native";
       dateTransferInput.value = new Date().toISOString().split("T")[0];
 
-      // 🔑 Re-apply color UI after reset
+      // Re-apply UI states
       handleColorChange();
+      
+      // Update the ID preview for the next registration after a short delay
+      setTimeout(updateNextBoarId, 500);
 
     } catch (err) {
       messageEl.textContent = err.message || "Registration failed";

@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = userData.user;
   const managerId =
     user.role === "farm_manager" ? user.id : user.managerId;
+  const BACKEND_URL = "http://localhost:5000"; // Ensure this matches your setup
 
   // ================= DOM =================
   const form = document.getElementById("registerSwineForm");
@@ -160,31 +161,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Use the hidden input to trigger changes since dropdown selection updates it
-  // This ensures cascade works when clicking custom items
-  const observer = new MutationObserver(() => {
-     updateSows(farmerSelect.value);
-  });
-  // Note: Standard event listeners are better if you call them inside div.onclick
-  // I have kept the original cascade logic call inside div.onclick above for reliability.
-
   damSelect.addEventListener("change", e => {
     updateBoars(e.target.value);
     updateBatchField();
   });
 
-  // ================= BATCH AUTO (UPDATED) =================
-  function updateBatchField() {
-    if (ageStageSelect.value === "piglet" && damSelect.value) {
-      // Piglets: ID based on Dam (Letter logic is for adult batches)
+  // ================= BATCH AUTO (UPDATED FOR A-0002 LOGIC) =================
+  async function updateBatchField() {
+    const isAdult = ageStageSelect.value === "adult";
+    const isPiglet = ageStageSelect.value === "piglet";
+    
+    if (isPiglet && damSelect.value) {
+      // Extract the Mother's Batch Letter from her full ID (e.g., "LIPA-A-0001" -> "A")
+      const idParts = damSelect.value.split("-");
+      if (idParts.length >= 2) {
+        // If the ID structure is PREFIX-BATCH-NUMBER, index 1 is the batch letter
+        batchInput.value = idParts[1]; 
+      } else {
+        batchInput.value = damSelect.value; // Fallback to full ID if parts not found
+      }
       batchInput.readOnly = true;
-      batchInput.value = `${damSelect.value}`;
-      batchInput.placeholder = "";
+    } else if (isAdult) {
+      batchInput.readOnly = true;
+      batchInput.placeholder = "Generating...";
+      
+      try {
+        // Fetch the next letter specifically for THIS manager
+        const res = await fetch(`/api/swine/preview/next-batch-letter`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          batchInput.value = data.nextLetter; 
+        } else {
+          batchInput.value = "A";
+        }
+      } catch (err) {
+        console.error("Batch generation error:", err);
+        batchInput.value = "";
+        batchInput.readOnly = false;
+      }
     } else {
-      // Adults: Pure alphabetical (A, B, C...) handled by backend
       batchInput.readOnly = false;
-      batchInput.value = ""; 
-      batchInput.placeholder = "Auto (A, B, C...)";
+      batchInput.value = "";
+      batchInput.placeholder = "Enter Batch ID";
     }
   }
 
@@ -234,7 +255,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const data = await res.json();
     
-    // UI Feedback
     messageEl.className = data.success ? "text-success fw-bold" : "text-danger fw-bold";
     messageEl.textContent = data.success
       ? "✅ Pig registered successfully"
@@ -242,15 +262,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (data.success) {
         form.reset();
-        // Reset custom dropdown text
         if(farmerDropdownBtn) farmerDropdownBtn.textContent = "Search/Select Farmer";
-        // Reset Breed (since reset() clears it)
         breedInput.value = "Native";
-        // Recalculate UI toggles
         handleColorChange();
         toggleTeatField();
         toggleDeformities();
-        updateBatchField();
+        // Delay to ensure DB updates before we calculate the next sequence
+        setTimeout(updateBatchField, 500);
     }
   });
 
