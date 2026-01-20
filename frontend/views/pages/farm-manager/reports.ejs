@@ -180,8 +180,14 @@
       <div class="modal-footer report-actions">
         <button id="approveBtn" style="display:none;">Approve</button>
         <button id="rejectBtn" style="display:none;">Reject</button>
-        <button id="confirmAIBtn" style="display:none;">Confirm AI</button>
-        <button id="confirmPregnancyBtn" style="display:none;">Confirm Pregnancy</button>
+
+        <button id="confirmAIBtn" style="display:none;">💉 Confirm AI</button>
+        <button id="confirmPregnancyBtn" style="display:none;">🤰 Confirm Pregnancy</button>
+
+        <!-- NEW -->
+        <button id="followUpBtn" style="display:none;">🔄 Cycle Failed</button>
+        <button id="confirmFarrowingBtn" style="display:none;">🐷 Confirm Farrowing</button>
+
         <button class="secondary" id="closeReportModalBtn">Close</button>
       </div>
 
@@ -213,6 +219,48 @@
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- FARROWING CONFIRMATION MODAL -->
+        <div id="farrowingModal" class="modal">
+          <div class="modal-content" style="width: 450px;">
+            <h3 style="margin-top:0;">🐷 Register Farrowing Results</h3>
+
+            <form id="farrowingForm">
+              <label>Actual Farrowing Date</label>
+              <input type="date" id="farrowingDateInput" required>
+
+              <div class="count-grid">
+                <div>
+                  <label>Live</label>
+                  <input type="number" id="liveCount" min="0" value="0" required>
+                </div>
+
+                <div>
+                  <label>Mummy</label>
+                  <input type="number" id="mummyCount" min="0" value="0">
+                </div>
+
+                <div>
+                  <label>Stillborn</label>
+                  <input type="number" id="stillCount" min="0" value="0">
+                </div>
+              </div>
+
+              <div style="display:flex; gap:10px; margin-top:15px;">
+                <button type="submit" class="btn-nav" style="flex:1;">
+                  Confirm Farrowing
+                </button>
+                <button
+                  type="button"
+                  class="btn-nav secondary"
+                  style="flex:1;"
+                  onclick="document.getElementById('farrowingModal').style.display='none'">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 

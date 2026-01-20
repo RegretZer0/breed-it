@@ -25,6 +25,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportSigns = document.getElementById("reportSigns");
   const reportProbability = document.getElementById("reportProbability");
 
+  const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
+  const followUpBtn = document.getElementById("followUpBtn");
+
+  // Farrowing modal
+  const farrowingModal = document.getElementById("farrowingModal");
+  const farrowingForm = document.getElementById("farrowingForm");
+
+
   // Media Elements
   const evidenceGallery = document.getElementById("evidenceGallery");
 
@@ -111,7 +119,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     if (countFarrowingReady) {
       countFarrowingReady.textContent = reports.filter(r => {
-        if (r.status !== "pregnant" || !r.expected_farrowing) return false;
+        if (!["pregnant", "farrowing_ready"].includes(r.status) || !r.expected_farrowing) {
+           return false;
+        }
         const daysStr = getDaysLeft(r.expected_farrowing);
         if (daysStr === "Overdue" || daysStr === "TODAY") return true;
         const daysNum = parseInt(daysStr);
@@ -144,7 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <small class="text-muted">(Swine: ${swineStatus})</small>
         </td>
         <td>${["under_observation", "waiting_heat_check"].includes(r.status) && r.next_heat_check ? `<strong>${getDaysLeft(r.next_heat_check)}</strong>` : "-"}</td>
-        <td>${r.status === "pregnant" && r.expected_farrowing ? `<strong style="color: #27ae60;">${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
+        <td>${["pregnant", "farrowing_ready"].includes(r.status) && r.expected_farrowing ? `<strong style="color: #27ae60;">${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
         <td><button class="btn-view" data-id="${r._id}">View</button></td>
       `;
       tableBody.appendChild(row);
@@ -197,15 +207,50 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
       }
 
-      // --- BUTTON CONTROLS (Updated for Farrowing) ---
-      approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-      if (rejectBtn) rejectBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-      confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
-      
-      // ✅ Show Farrowing button ONLY if pregnant
-      if (confirmFarrowingBtn) {
-          confirmFarrowingBtn.style.display = r.status === "pregnant" ? "inline-block" : "none";
+      // --- BUTTON CONTROLS (FULL STATUS LOGIC) ---
+
+      // Hide all buttons first
+      approveBtn.style.display = "none";
+      if (rejectBtn) rejectBtn.style.display = "none";
+      confirmAIBtn.style.display = "none";
+      if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
+      if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
+      if (followUpBtn) followUpBtn.style.display = "none";
+
+      // Show based on status
+      switch (r.status) {
+        case "pending":
+          approveBtn.style.display = "inline-block";
+          if (rejectBtn) rejectBtn.style.display = "inline-block";
+          break;
+
+        case "approved":
+          confirmAIBtn.style.display = "inline-block";
+          break;
+
+        case "ai_confirmed":
+        case "under_observation":
+          if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
+          if (followUpBtn) followUpBtn.style.display = "inline-block";
+          break;
+
+        case "pregnant":
+        case "farrowing_ready": {
+          if (!r.expected_farrowing) break;
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const farrowDate = new Date(r.expected_farrowing);
+          farrowDate.setHours(0, 0, 0, 0);
+
+          if (today >= farrowDate) {
+            confirmFarrowingBtn.style.display = "inline-block";
+          }
+          break;
+        }
       }
+
 
       reportDetailsModal.style.display = "flex";
       document.body.style.overflow = "hidden";
@@ -276,13 +321,61 @@ document.addEventListener("DOMContentLoaded", async () => {
     aiConfirmModal.style.display = "none";
   };
 
-  // ✅ NEW: Confirm Farrowing Action
-  if (confirmFarrowingBtn) {
-    confirmFarrowingBtn.onclick = () => {
-        if (!confirm("Are you sure you want to confirm farrowing? This will update the swine status to Lactating and increment parity.")) return;
-        action("confirm-farrowing", "Farrowing confirmed! Swine is now in Lactation.");
+  // ✅ Confirm Pregnancy Action
+  if (confirmPregnancyBtn) {
+    confirmPregnancyBtn.onclick = () => {
+      if (!confirm("Confirm pregnancy for this sow?")) return;
+      action(
+        "confirm-pregnancy",
+        "Pregnancy confirmed. Expected farrowing date calculated."
+      );
     };
   }
+
+  // 🔄 FIX 5: Cycle Failed / Return to Heat
+  if (followUpBtn) {
+    followUpBtn.onclick = () => {
+      if (!confirm("Mark cycle as failed and return sow to heat?")) return;
+      action(
+        "cycle-failed",
+        "Cycle failed. Sow returned to In-Heat status."
+      );
+    };
+  }
+
+  // ✅ FIX 4: Open Farrowing Modal
+if (confirmFarrowingBtn) {
+  confirmFarrowingBtn.onclick = () => {
+    if (!farrowingModal) return;
+    farrowingModal.style.display = "flex";
+    document.getElementById("farrowingDateInput").valueAsDate = new Date();
+  };
+}
+
+// ✅ FIX 4: Submit Farrowing Data
+if (farrowingForm) {
+  farrowingForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      farrowing_date: document.getElementById("farrowingDateInput").value,
+      total_live: Number(document.getElementById("liveCount").value),
+      mummified: Number(document.getElementById("mummyCount").value),
+      stillborn: Number(document.getElementById("stillCount").value),
+    };
+
+    action(
+      "confirm-farrowing",
+      "Farrowing registered! Sow is now Lactating.",
+      payload
+    );
+
+
+    farrowingModal.style.display = "none";
+    farrowingForm.reset();
+  });
+}
+
 
   // ---------------- FILTERING ----------------
   const filterSwine = document.getElementById("filterSwine");

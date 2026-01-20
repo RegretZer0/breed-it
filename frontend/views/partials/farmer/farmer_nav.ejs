@@ -51,10 +51,10 @@
   </div>
 
   <ul class="menu-list">
-    <li data-action="notifications">
+    <!-- <li data-action="notifications">
         <i class="fa-solid fa-bell"></i>
         <span data-i18n="notifications">Notifications</span>
-    </li>
+    </li> -->
 
     <li data-action="settings">
         <i class="fa-solid fa-gear"></i>
@@ -82,9 +82,19 @@
     <% } %>
   </div>
 
-  <button class="menu-btn" id="openMenu">
-    <i class="fa-solid fa-bars"></i>
-  </button>
+  <!-- RIGHT SIDE ICONS -->
+  <div class="nav-right">
+    <!-- 🔔 Notifications -->
+    <button class="icon-btn" id="openNotifications" aria-label="Notifications">
+      <i class="fa-solid fa-bell"></i>
+      <span id="notificationBadge" class="notification-badge" style="display:none;"></span>
+    </button>
+
+    <!-- ☰ Burger menu -->
+    <button class="menu-btn" id="openMenu" aria-label="Menu">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+  </div>
 </header>
 
 <!-- =========================
