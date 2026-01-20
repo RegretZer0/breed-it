@@ -374,40 +374,48 @@ const sw = allSwine.find(s => s._id === btn.dataset.id);
 });
 
 // SAVE PERFORMANCE UPDATE
-document.getElementById("savePerformanceBtn").addEventListener("click", async () => {
-  const swineId = editSwineIdInput.value; // now holds Mongo _id
+document
+  .getElementById("savePerformanceBtn")
+  .addEventListener("click", async () => {
 
-  const payload = {
-    weight: editWeightInput.value,
-    bodyLength: editBodyLengthInput.value,
-    heartGirth: editHeartGirthInput.value
-  };
+    const swineId = editSwineIdInput.value;
 
-  try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/swine/performance/add/${swineId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      }
-    );
+    if (!swineId) {
+      alert("Invalid swine ID");
+      return;
+    }
 
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
+    const payload = {
+      weight: Number(editWeightInput.value) || null,
+      bodyLength: Number(editBodyLengthInput.value) || null,
+      heartGirth: Number(editHeartGirthInput.value) || null,
+      remarks: "Updated via overview"
+    };
 
-    // Refresh table + modal data
-    await loadSwine();
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/swine/performance/add/${swineId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        }
+      );
 
-    editModal.hide();
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
 
-  } catch (err) {
-    alert(err.message || "Failed to update performance");
-  }
-});
+      await loadSwine();        // refresh table
+      editModal.hide();         // close modal
+
+    } catch (err) {
+      alert(err.message || "Failed to update performance");
+    }
+  });
+
 
 
   // ================= FILTER SUBMIT (PREVIEW ONLY) =================

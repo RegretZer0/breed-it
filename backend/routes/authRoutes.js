@@ -224,6 +224,119 @@ router.post("/login", async (req, res) => {
   }
 });
 
+  /* ======================
+   FORGOT PASSWORD OTP
+  ====================== */
+  router.post("/forgot-password", async (req, res) => {
+    const { email } = req.body;
+
+    try {
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is required.",
+        });
+      }
+
+      // Email MUST exist
+      const user =
+        (await User.findOne({ email })) ||
+        (await Farmer.findOne({ email }));
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "No account found with this email.",
+        });
+      }
+
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await bcrypt.hash(otp, 10);
+
+      otpStore.set(email, {
+        otp: hashedOtp,
+        expires: Date.now() + 10 * 60 * 1000, // 10 min
+      });
+
+      await transporter.sendMail({
+        from: `"breedIT" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "breedIT Password Reset Code",
+        html: otpEmailTemplate({ otp }),
+      });
+
+      res.json({
+        success: true,
+        message: "Password reset OTP sent to your email.",
+      });
+
+    } catch (error) {
+      console.error("Forgot Password OTP Error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error while sending OTP.",
+      });
+    }
+  });
+
+  /* ======================
+   RESET PASSWORD
+====================== */
+router.post("/reset-password", async (req, res) => {
+  const { email, otp, password } = req.body;
+
+  try {
+    if (!email || !otp || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, OTP, and new password are required.",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    // Verify OTP (shared logic)
+    await verifyOTPInternal(email, otp);
+
+    // Find user (User or Farmer)
+    const user =
+      (await User.findOne({ email })) ||
+      (await Farmer.findOne({ email }));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password reset successful.",
+    });
+
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Password reset failed.",
+    });
+  }
+});
+
+
 /* ======================
     LOGOUT
 ====================== */

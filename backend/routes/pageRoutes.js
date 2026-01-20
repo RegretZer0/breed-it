@@ -32,6 +32,14 @@ router.get("/login", (req, res) => {
   });
 });
 
+// Forgot Password
+router.get("/forgot_password", (req, res) => {
+  res.render("pages/auth/forgot_password", {
+    page_title: "Forgot Password",
+    current_page: "forgot_password",
+  });
+});
+
 // Register
 router.get("/register", (req, res) => {
   res.render("pages/auth/register", {
