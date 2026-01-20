@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       mediaEl.src = mediaUrl;
       if (file.type.startsWith("video")) {
         mediaEl.controls = true;
-        mediaEl.style.maxHeight = "100px"; // Ensure video fits preview
+        mediaEl.style.maxHeight = "100px"; 
       }
       mediaEl.onload = () => URL.revokeObjectURL(mediaUrl);
       
@@ -93,13 +93,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- FETCH HELPER ----------------
   async function fetchWithAuth(url, options = {}) {
-    options.headers = { ...options.headers, Authorization: `Bearer ${token}` };
+    options.headers = { 
+        ...options.headers, 
+        Authorization: `Bearer ${localStorage.getItem("token")}` 
+    };
     options.credentials = "include";
 
     try {
       const res = await fetch(url, options);
       if (res.status === 401) {
-        alert("Session expired. Please log in again.");
+        alert("Authorization Error: Session expired or system clock changed. Please log in again.");
         localStorage.clear();
         window.location.href = "login.html";
         return null;
@@ -115,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await fetch(`${BACKEND_URL}/api/notifications/admin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
         body: JSON.stringify({ title, message, type })
       });
     } catch (err) { console.error("Failed to notify admin:", err); }
@@ -140,8 +143,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (status === "pregnant" && farrowDate) {
             const target = new Date(farrowDate);
             target.setHours(0,0,0,0);
-            const diffTime = target - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffTime = target.getTime() - today.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             if (diffDays <= 7) status = "farrowing";
         }
         
@@ -150,7 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         else if (status === "farrowing" || status === "farrowing ready") stats.farrowing++;
 
         const isFemale = (sw.sex || sw.swine_sex || "").toLowerCase() === "female";
-        return isFemale && (status === "open" || status === "lactating");
+        return isFemale && (status === "open");
       });
 
       if (document.getElementById("countOpen")) document.getElementById("countOpen").textContent = stats.open;
@@ -190,9 +193,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         const heatCheckDate = r.next_heat_check ? new Date(r.next_heat_check) : null;
         const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
+        const actualFarrowDate = r.actual_farrowing_date ? new Date(r.actual_farrowing_date) : farrowingDate;
         
         if (heatCheckDate) heatCheckDate.setHours(0,0,0,0);
-        const isReadyForPregnancy = rawStatus === "under_observation" && heatCheckDate && now >= heatCheckDate;
+        const isReadyForPregnancy = rawStatus === "under_observation" && heatCheckDate && now.getTime() >= heatCheckDate.getTime();
+
+        // WEANING LOGIC: Ready if status is lactating and 30 days passed since farrowing
+        const isLactating = rawStatus === "lactating";
+        let isReadyToWean = false;
+        if (isLactating && actualFarrowDate) {
+            const weanThreshold = new Date(actualFarrowDate);
+            weanThreshold.setDate(weanThreshold.getDate() + 30);
+            isReadyToWean = now.getTime() >= weanThreshold.getTime();
+        }
 
         return `
           <tr data-status="${rawStatus}" data-swine="${swineDisplay}" data-date="${r.createdAt.split('T')[0]}">
@@ -213,10 +226,12 @@ document.addEventListener("DOMContentLoaded", async () => {
               ${farrowingDate ? `<b>Target:</b> ${farrowingDate.toLocaleDateString()} <br><span class="farrowing" data-date="${r.expected_farrowing}" style="font-size: 0.85em; color: #27ae60; font-weight:bold;">-</span>` : "-"}
             </td>
             <td>
-              ${["waiting_heat_check", "under_observation", "approved"].includes(rawStatus) ? `
+              ${["waiting_heat_check", "under_observation", "approved", "lactating"].includes(rawStatus) ? `
                 <div style="display:flex;flex-direction:column;gap:8px;">
-                  ${rawStatus !== "approved" ? `<button class="btn-followup" onclick="submitFollowUp('${r._id}','${swineDisplay}')">Back in Heat</button>` : `<span style="font-size:0.8em;color:#3498db;">Waiting for Admin</span>`}
+                  ${rawStatus !== "approved" && !isLactating ? `<button class="btn-followup" onclick="submitFollowUp('${r._id}','${swineDisplay}')">Back in Heat</button>` : ""}
                   ${rawStatus === "under_observation" ? `<button class="btn-pregnant" ${!isReadyForPregnancy ? "disabled" : ""} onclick="confirmPregnancy('${r._id}','${swineDisplay}')">Confirm Pregnant</button>` : ""}
+                  ${isLactating ? `<button class="btn-wean" ${!isReadyToWean ? "disabled" : ""} onclick="confirmWeaning('${r._id}','${swineDisplay}')" style="background-color:#9b59b6; color:white; border:none; padding:5px; border-radius:4px; cursor:${isReadyToWean ? 'pointer' : 'not-allowed'}; opacity:${isReadyToWean ? '1' : '0.6'};">Confirm Weaning</button>` : ""}
+                  ${rawStatus === "approved" ? `<span style="font-size:0.8em;color:#3498db;">Waiting for Admin</span>` : ""}
                 </div>` : isRejected ? `<span style="color:#e74c3c;font-weight:bold;">Report Denied</span>` : `<span style="color:#888;">No Action Needed</span>`}
             </td>
           </tr>`;
@@ -268,8 +283,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const target = new Date(targetDate);
     target.setHours(0,0,0,0);
     
-    const diffTime = target - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) return "Overdue";
     if (diffDays === 0) return "TODAY";
@@ -297,19 +312,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   window.confirmPregnancy = async (id, swineId) => {
     if (!confirm(`Confirm pregnancy for ${swineId}? Farrowing date will be set to 115 days from today.`)) return;
     const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${id}/confirm-pregnancy`, { 
-      method: "POST", headers: { "Content-Type": "application/json" }
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }
     });
-    if (res?.ok) {
+    
+    if (res && res.ok) {
       alert("Pregnancy confirmed! Gestation started (115 days).");
       await sendAdminNotification("Pregnancy Confirmed", `${swineId} confirmed pregnant by ${user.first_name}.`, "success");
       await Promise.all([loadReports(), refreshSwineData()]);
-    } else {
+    } else if (res) {
       const errData = await res.json();
       alert("Failed to confirm: " + (errData.message || "Unknown error"));
     }
   };
 
-  // ---------------- FORM SUBMIT (FIXED FOR VIDEOS) ----------------
+  // NEW FEATURE: CONFIRM WEANING
+  window.confirmWeaning = async (id, swineId) => {
+    if (!confirm(`Confirm weaning for ${swineId}? This will move the sow back to "Open" status.`)) return;
+    const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/${id}/confirm-weaning`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }
+    });
+    
+    if (res && res.ok) {
+      alert("Weaning confirmed! The sow is now back to Open status.");
+      await sendAdminNotification("Sow Weaned", `${swineId} has been weaned by ${user.first_name}.`, "info");
+      await Promise.all([loadReports(), refreshSwineData()]);
+    } else if (res) {
+      const errData = await res.json();
+      alert("Failed to wean: " + (errData.message || "Unknown error"));
+    }
+  };
+
+  // ---------------- FORM SUBMIT ----------------
   reportForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const selectedSigns = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map(cb => cb.value);
@@ -320,7 +355,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     formData.append("farmerId", userId); 
     formData.append("signs", JSON.stringify(selectedSigns));
     
-    // Explicitly append files
     selectedFiles.forEach(f => formData.append("evidence", f));
 
     submitBtn.disabled = true;
@@ -331,12 +365,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await fetchWithAuth(`${BACKEND_URL}/api/heat/add`, { 
         method: "POST", 
         body: formData 
-        // Note: Do NOT set Content-Type header here; browser does it for FormData
       });
 
       if (!res) throw new Error("No response from server");
 
-      // Handle cases where server sends HTML error instead of JSON
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const textError = await res.text();

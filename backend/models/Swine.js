@@ -66,15 +66,16 @@ const swineSchema = new mongoose.Schema({
     
     pregnancy_check_date: { type: Date }, 
     is_pregnant: { type: Boolean, default: false },
-    farrowed: { type: Boolean, default: false }, // Logic update: Track birth completion
+    farrowed: { type: Boolean, default: false }, 
     expected_farrowing_date: { type: Date },
     actual_farrowing_date: { type: Date },
+    weaning_date: { type: Date }, // ✅ Added to track end of lactation for this cycle
     
     cycle_sire_id: { type: String },
 
     farrowing_results: {
       total_piglets: { type: Number, default: 0 },
-      live_piglets: { type: Number, default: 0 }, // Logic update: Stores the live count
+      live_piglets: { type: Number, default: 0 }, 
       male_count: { type: Number, default: 0 },
       female_count: { type: Number, default: 0 },
       mortality_count: { type: Number, default: 0 }
@@ -94,8 +95,8 @@ const swineSchema = new mongoose.Schema({
     administered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
   }],
 
-  // ------------------- Growth & Selection (UPDATED ENUM) -------------------
- performance_records: [{
+  // ------------------- Growth & Selection -------------------
+  performance_records: [{
     stage: { 
       type: String, 
       enum: [
@@ -106,7 +107,7 @@ const swineSchema = new mongoose.Schema({
         "Final Selection", 
         "Market Check", 
         "Routine",
-        "Open",             // ✅ Added this
+        "Open",
         "In-Heat",
         "Under Observation",
         "Bred",
@@ -114,7 +115,7 @@ const swineSchema = new mongoose.Schema({
         "Farrowing",
         "Lactating",
         "Market-Ready",
-        "Monthly Update",   // ✅ Ensure this matches what frontend sends
+        "Monthly Update",
         "Manual Weaning"
       ] 
     },
@@ -133,7 +134,8 @@ const swineSchema = new mongoose.Schema({
   // ------------------- Metadata -------------------
   is_external_boar: { type: Boolean, default: false }, 
   date_transfer: { type: Date },
-  date_registered: { type: Date, default: Date.now }
+  date_registered: { type: Date, default: Date.now },
+  parity: { type: Number, default: 0 } // ✅ Ensures parity tracking is available for increments
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
@@ -162,7 +164,7 @@ swineSchema.virtual('current_adg').get(function() {
   return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
 });
 
-// Virtual to calculate total mortality count for display in tables
+// Virtual to calculate total mortality count
 swineSchema.virtual('total_mortality_count').get(function() {
   if (!this.breeding_cycles) return 0;
   return this.breeding_cycles.reduce((acc, cycle) => {
@@ -185,12 +187,14 @@ swineSchema.virtual('selection_suggestion').get(function() {
   return "Monitoring";
 });
 
+// Pre-save hook for gestation calculation
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
     
+    // Updated to 115 days to match your routes
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
-      const gestationDays = 114;
+      const gestationDays = 115; 
       const farrowDate = new Date(latestCycle.ai_service_date);
       farrowDate.setDate(farrowDate.getDate() + gestationDays);
       latestCycle.expected_farrowing_date = farrowDate;

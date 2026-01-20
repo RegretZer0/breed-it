@@ -78,7 +78,6 @@ const heatReportSchema = new mongoose.Schema(
       default: null
     },
 
-    // Inside your HeatReportSchema
     rejection_message: { 
         type: String, 
         default: "" 
@@ -97,7 +96,7 @@ const heatReportSchema = new mongoose.Schema(
         "farrowing_ready",    // Ready for farrowing
         "farrowed",           // Successfully farrowed
         "lactating",         // Currently lactating
-        "completed"           // Cycle ended
+        "completed"           // Cycle ended (Weaned)
       ],
       default: "pending"
     },
@@ -116,6 +115,18 @@ const heatReportSchema = new mongoose.Schema(
 
     // 114–115 days countdown
     expected_farrowing: {
+      type: Date,
+      default: null
+    },
+
+    // Actual date farrowing occurred (Used for weaning calculations)
+    actual_farrowing_date: {
+      type: Date,
+      default: null
+    },
+
+    // Date the piglets were weaned and the cycle was closed
+    weaning_date: {
       type: Date,
       default: null
     },
