@@ -65,6 +65,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       "Monthly Update": "Routine Update",
       "Routine": "Routine",
       "Market-Ready": "Market Ready",
+      "Open": "Adult",
+      "Pregnant": "Pregnant",
+      "Lactating": "Lactating",
+      "In-Heat": "In Heat",
+      "Under Observation": "Under Observation",
+      "Bred": "Bred",
+      "Farrowing": "Farrowing",
+      
       // adult: "Adult",
       // piglet: "Piglet",
     };
