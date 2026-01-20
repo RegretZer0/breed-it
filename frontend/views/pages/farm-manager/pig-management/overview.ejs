@@ -10,270 +10,299 @@
     <!-- PAGE HEADER -->
     <div class="card page-card mb-3"></div>
 
-      <!-- FILTER CARD -->
-      <div class="card page-card mb-4">
-        <div class="card-body">
+    <!-- FILTER CARD -->
+    <div class="card page-card mb-4">
+      <div class="card-body">
+        <form id="filtersForm" class="row g-2 align-items-end">
 
-          <form id="filtersForm" class="row g-2 align-items-end">
-
-            <!-- FARMER FILTER -->
-            <div class="col-md-4 position-relative">
-              <label class="form-label small">Farmer</label>
-
-              <div class="dropdown w-100">
-                <button
-                  class="form-select form-select-sm text-start"
-                  type="button"
-                  id="farmerDropdownBtn"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Select Farmer
-                </button>
-
-                <div class="dropdown-menu w-100 p-2" style="max-height: 260px; overflow-y: auto;">
-                  <input
-                    type="text"
-                    id="farmerSearch"
-                    class="form-control form-control-sm mb-2"
-                    placeholder="Search farmer..."
-                  />
-
-                  <div id="farmerOptions">
-                    <div class="text-muted small">Loading farmers...</div>
-                  </div>
+          <!-- FARMER FILTER -->
+          <div class="col-md-4 position-relative">
+            <label class="form-label small">Farmer</label>
+            <div class="dropdown w-100">
+              <button class="form-select form-select-sm text-start"
+                type="button" id="farmerDropdownBtn"
+                data-bs-toggle="dropdown">
+                Select Farmer
+              </button>
+              <div class="dropdown-menu w-100 p-2"
+                style="max-height:260px;overflow-y:auto;">
+                <input id="farmerSearch"
+                  class="form-control form-control-sm mb-2"
+                  placeholder="Search farmer...">
+                <div id="farmerOptions">
+                  <div class="text-muted small">Loading farmers...</div>
                 </div>
               </div>
             </div>
-
-            <!-- STATUS -->
-            <div class="col-md-2">
-              <label class="form-label small">Pig Status</label>
-              <select id="filterStatus" class="form-select form-select-sm">
-                <option value="">All</option>
-                <option value="Healthy">Healthy</option>
-                <option value="Market-Ready">Market-Ready</option>
-                <option value="Pregnant">Pregnant</option>
-                <option value="In-Heat">In-Heat</option>
-              </select>
-            </div>
-
-            <!-- SEX -->
-            <div class="col-md-2">
-              <label class="form-label small">Sex</label>
-              <select id="filterSex" class="form-select form-select-sm">
-                <option value="">All</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-
-            <!-- TYPE -->
-            <div class="col-md-2">
-              <label class="form-label small">Type</label>
-              <select id="filterType" class="form-select form-select-sm">
-                <option value="">All</option>
-                <option value="piglet">Piglets</option>
-                <option value="sow">Sows</option>
-                <option value="boar">Boars</option>
-                <option value="master">Master / Maintenance Boars</option>
-              </select>
-            </div>
-
-
-            <!-- TAG -->
-            <div class="col-md-3">
-              <label class="form-label small">Tag Number</label>
-              <input
-                id="filterTag"
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Search by tag"
-              />
-            </div>
-
-            <!-- ACTIONS -->
-            <div class="col-md-1 d-grid">
-              <button type="submit" class="btn btn-sm btn-success">
-                Search
-              </button>
-            </div>
-
-            <div class="col-md-1 d-grid">
-              <button type="button" id="resetFilters" class="btn btn-sm btn-outline-secondary">
-                Reset
-              </button>
-            </div>
-
-          </form>
-
-          <!-- FILTER RESULT TABLE -->
-          <div class="mt-3 d-none" id="filterResultWrap">
-            <h6 class="mb-2 text-muted">Filtered Result</h6>
-
-            <div class="table-responsive">
-              <table class="table table-sm table-bordered mb-0">
-                <thead>
-                  <tr>
-                    <th>Tag</th>
-                    <th>Farmer</th>
-                    <th>Status</th>
-                    <th>Batch</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="filterResultBody"></tbody>
-              </table>
-            </div>
           </div>
 
-        </div>
-      </div>
+          <!-- STATUS -->
+          <div class="col-md-2">
+            <label class="form-label small">Pig Status</label>
+            <select id="filterStatus" class="form-select form-select-sm">
+              <option value="">All</option>
+              <option value="Healthy">Healthy</option>
+              <option value="Market-Ready">Market-Ready</option>
+              <option value="Pregnant">Pregnant</option>
+              <option value="In-Heat">In-Heat</option>
+            </select>
+          </div>
 
-    <!-- TABLE CARD -->
+          <!-- SEX -->
+          <div class="col-md-2">
+            <label class="form-label small">Sex</label>
+            <select id="filterSex" class="form-select form-select-sm">
+              <option value="">All</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+
+          <!-- TYPE -->
+          <div class="col-md-2">
+            <label class="form-label small">Type</label>
+            <select id="filterType" class="form-select form-select-sm">
+              <option value="">All</option>
+              <option value="piglet">Piglets</option>
+              <option value="sow">Sows</option>
+              <option value="boar">Boars</option>
+              <option value="master">Master / Maintenance Boars</option>
+            </select>
+          </div>
+
+          <!-- TAG -->
+          <div class="col-md-3">
+            <label class="form-label small">Tag Number</label>
+            <input id="filterTag"
+              class="form-control form-control-sm"
+              placeholder="Search by tag">
+          </div>
+
+          <!-- ACTIONS -->
+          <div class="col-md-1 d-grid">
+            <button class="btn btn-sm btn-success">Search</button>
+          </div>
+          <div class="col-md-1 d-grid">
+            <button type="button"
+              id="resetFilters"
+              class="btn btn-sm btn-outline-secondary">
+              Reset
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- FILTER RESULT TABLE -->
+    <div class="mt-3 d-none" id="filterResultWrap">
+      <h6 class="mb-2 text-muted">Filtered Result</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered mb-0">
+          <thead>
+            <tr>
+              <th>Tag</th>
+              <th>Farmer</th>
+              <th>Status</th>
+              <th>Batch</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="filterResultBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <!-- SWINE INVENTORY TABLE -->
     <div class="card page-card">
-      <div class="card-body p-0">
-        <div class="table-wrap">
-          <table class="table table-sm mb-0">
-            <thead>
+      <div class="card-body">
+
+        <h5 class="mb-3">Swine Inventory List</h5>
+
+        <!-- LOCAL FILTERS -->
+        <!-- <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label small">Search Batch ID</label>
+            <input type="text"
+              id="filterBatch"
+              class="form-control form-control-sm"
+              placeholder="Enter Batch ID...">
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label small">Filter by Farmer</label>
+            <select id="filterFarmer"
+              class="form-select form-select-sm">
+              <option value="">All Farmers / Owners</option>
+            </select>
+          </div>
+        </div> -->
+
+        <!-- TABLE -->
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle"
+            id="swineTable">
+            <thead class="table-light">
               <tr>
-                <th>YEAR</th>
-                <th>TAG (ID)</th>
-                <th>SEX</th>
-                <th>COLOR</th>
-                <th>BREED</th>
-                <th>BIRTH DATE</th>
-                <th>AGE</th>
-                <th>FARMER</th>
-                <th>STATUS</th>
-                <th>BATCH</th>
-                <th>ACTION</th>
+                <th>ID / Batch</th>
+                <th>Owner</th>
+                <th>Breed & Age</th>
+                <th>Status / Health</th>
+                <th>Sire / Dam</th>
+                <th>Repro Summary</th>
+                <th>Latest Perf</th>
               </tr>
             </thead>
             <tbody id="swineTableBody">
               <tr>
-                <td colspan="10" class="text-center text-muted">
+                <td colspan="7"
+                  class="text-center text-muted">
                   Loading swine records...
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
- 
-    <!-- MODALS -->
-     <div class="modal fade" id="pigModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+
+    <!-- FULL SWINE HISTORY MODAL -->
+    <div class="modal fade" id="swineModal" tabindex="-1">
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalSwineId">
+              Swine History Card
+            </h5>
+            <button class="btn-close"
+              data-bs-dismiss="modal"></button>
+          </div>
+
+          <div class="modal-body">
+
+            <!-- LIFETIME REPRODUCTIVE SUMMARY -->
+            <div id="reproSummarySection"
+              class="mb-4"
+              style="display:none;">
+              <h6>Lifetime Reproductive Summary</h6>
+              <div class="row text-center">
+                <div class="col">
+                  <label>Total Cycles</label>
+                  <div id="statCycles">0</div>
+                </div>
+                <div class="col">
+                  <label>Total Piglets Born</label>
+                  <div id="statTotalBorn">0</div>
+                </div>
+                <div class="col">
+                  <label>Avg. Litter Size</label>
+                  <div id="statAvgLitter">0</div>
+                </div>
+                <div class="col">
+                  <label>Total Live</label>
+                  <div id="statTotalLive">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- BREEDING HISTORY -->
+            <h6>Breeding & Farrowing History</h6>
+            <div class="table-responsive mb-4">
+              <table class="table table-sm table-bordered"
+                id="repoTable">
+                <thead class="table-light">
+                  <tr>
+                    <th>Cycle</th>
+                    <th>Service Date</th>
+                    <th>Farrowing Date</th>
+                    <th>Total Born</th>
+                    <th>Live / Dead</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="reproductiveHistoryBody"></tbody>
+              </table>
+            </div>
+
+            <!-- PERFORMANCE -->
+            <h6>Growth & Performance Timeline</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered"
+                id="perfTable">
+                <thead class="table-light">
+                  <tr>
+                    <th>Date</th>
+                    <th>Weight</th>
+                    <th>L x G</th>
+                    <th>Stage</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="performanceTimelineBody"></tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT PERFORMANCE MODAL -->
+<div class="modal fade" id="editPerformanceModal" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered">
     <div class="modal-content">
 
       <div class="modal-header">
-        <h5 class="modal-title">Pig Details</h5>
+        <h5 class="modal-title">Edit Swine Performance</h5>
         <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
       <div class="modal-body">
-        <form id="pigForm" class="row g-3">
+        <form id="editPerformanceForm">
 
-          <!-- TAG -->
-          <div class="col-md-4">
-            <label class="form-label small">Tag ID</label>
-            <input id="pigTag" class="form-control form-control-sm" disabled>
-          </div>
+          <input type="hidden" id="editSwineId">
 
-          <!-- SEX -->
-          <div class="col-md-4">
-            <label class="form-label small">Sex</label>
-            <select id="pigSex" class="form-select form-select-sm" disabled>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-          </div>
-
-          <!-- AGE STAGE -->
-          <div class="col-md-4">
-            <label class="form-label small">Age Stage</label>
-            <select id="pigAgeStage" class="form-select form-select-sm" disabled>
-              <option value="piglet">Piglet</option>
-              <option value="adult">Adult</option>
-            </select>
-          </div>
-
-          <!-- CONDITIONAL TEAT COUNT -->
-          <div class="col-md-4 d-none" id="pigTeatCountGroup">
-            <label class="form-label small">Teat Count (Adult Female)</label>
+          <div class="mb-3">
+            <label class="form-label">Weight (kg)</label>
             <input
               type="number"
-              id="pigTeatCount"
-              class="form-control form-control-sm"
-              disabled
-            >
+              step="0.1"
+              class="form-control"
+              id="editWeight"
+              required>
           </div>
 
-          <!-- BREED (LOCKED) -->
-          <div class="col-md-4">
-            <label class="form-label small">Breed</label>
+          <div class="mb-3">
+            <label class="form-label">Body Length (cm)</label>
             <input
-              id="pigBreed"
-              class="form-control form-control-sm"
-              value="Native"
-              readonly
-            >
+              type="number"
+              step="0.1"
+              class="form-control"
+              id="editBodyLength"
+              required>
           </div>
 
-          <!-- COLOR (DROPDOWN) -->
-          <div class="col-md-4">
-            <label class="form-label small">Color</label>
-            <select id="pigColor" class="form-select form-select-sm" disabled>
-              <option value="Black">Black</option>
-              <option value="Black with White Markings">Black with White Markings</option>
-              <option value="Brown">Brown</option>
-              <option value="Reddish Brown">Reddish Brown</option>
-              <option value="Spotted (Black & White)">Spotted (Black & White)</option>
-              <option value="Gray">Gray</option>
-            </select>
-          </div>
-
-          <!-- BIRTH DATE -->
-          <div class="col-md-4">
-            <label class="form-label small">Birth Date</label>
+          <div class="mb-3">
+            <label class="form-label">Heart Girth (cm)</label>
             <input
-              id="pigBirthDate"
-              type="date"
-              class="form-control form-control-sm"
-              disabled
-            >
-          </div>
-
-          <!-- STATUS -->
-          <div class="col-md-4">
-            <label class="form-label small">Health / Production Status</label>
-            <select id="pigStatus" class="form-select form-select-sm" disabled>
-              <option value="Healthy">Healthy</option>
-              <option value="In-Heat">In-Heat</option>
-              <option value="Pregnant">Pregnant</option>
-              <option value="Market-Ready">Market-Ready</option>
-            </select>
-          </div>
-
-          <!-- BATCH -->
-          <div class="col-md-4">
-            <label class="form-label small">Batch</label>
-            <input id="pigBatch" class="form-control form-control-sm" disabled>
+              type="number"
+              step="0.1"
+              class="form-control"
+              id="editHeartGirth"
+              required>
           </div>
 
         </form>
       </div>
 
       <div class="modal-footer">
-        <button id="editPigBtn" class="btn btn-outline-primary btn-sm">
-          Edit
-        </button>
-        <button id="cancelEditBtn" class="btn btn-outline-secondary btn-sm d-none">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
           Cancel
         </button>
-        <button id="savePigBtn" class="btn btn-success btn-sm d-none">
-          Save
+        <button class="btn btn-primary" id="savePerformanceBtn">
+          Save Changes
         </button>
       </div>
 

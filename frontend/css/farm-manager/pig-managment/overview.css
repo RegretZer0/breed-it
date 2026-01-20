@@ -1,6 +1,5 @@
 /* =========== Root tokens =========== */
 :root{
-  /* palette */
   --bg: #ffffff;
   --muted-border: #e9e9e9;
   --card-border: #e6e6e6;
@@ -9,15 +8,16 @@
   --text-dark: #222222;
   --muted-text: #6c6c6c;
 
-  --accent-green: #17c14f;
+  --accent-blue: #0d6efd;
+  --accent-teal: #0aa2c0;
+  --accent-gray: #6c757d;
   --danger: #f55b66;
 
-  /* sizing */
   --gutter: 18px;
-  --radius: 8px;
+  --radius: 10px;
 }
 
-/* =========== Global reset / basics =========== */
+/* =========== Global reset =========== */
 *, *::before, *::after{
   box-sizing: border-box;
 }
@@ -27,178 +27,189 @@ html, body{
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
-  line-height: 1.4;
   background: var(--bg);
   color: var(--text-dark);
 }
 
-/* =========== Shell layout =========== */
-.app-shell{
-  display: flex;
-  min-height: 100vh;
-  gap: var(--gutter);
-  padding: var(--gutter);
-  align-items: flex-start;
-}
-
-/* =========== Main content =========== */
-.main-content{
-  flex: 1;
-  min-width: 0;
-  padding: var(--gutter);
-  background: var(--bg);
-}
-
-/* =========== Cards =========== */
-.page-card{
-  background: var(--bg);
-  border: 1px solid var(--card-border);
+/* =========================
+   MODAL BASE
+========================= */
+.modal-content{
   border-radius: var(--radius);
-  box-shadow: none;
 }
 
-.page-title{
-  font-size: 20px;
+.modal-header{
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.modal-title{
+  font-size: 18px;
   font-weight: 700;
-  margin: 0 0 14px 0;
 }
 
-/* =========== Table wrapper =========== */
-.table-wrap{
-  width: 100%;
-  overflow-x: auto;
-  border-radius: var(--radius);
+.modal-body{
+  padding: 20px 24px 26px;
 }
 
 /* =========================
-   TABLE HEADER
+   SECTION HEADERS
 ========================= */
-.table thead th{
-  padding: 12px 14px;
+#swineModal h6{
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  margin-top: 22px;
+}
+
+/* =========================
+   REPRODUCTIVE SUMMARY
+========================= */
+#reproSummarySection{
+  margin-top: 12px;
+}
+
+#reproSummarySection .row{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 0;
+}
+
+/* CARD BASE */
+#reproSummarySection .col{
+  border-radius: var(--radius);
+  padding: 16px 14px;
+  text-align: center;
+  border: 1px solid var(--card-border);
+}
+
+/* LABEL */
+#reproSummarySection label{
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+/* VALUE */
+#reproSummarySection div[id^="stat"]{
+  font-size: 20px;
+  font-weight: 800;
+}
+
+/* =========================
+   INDIVIDUAL CARD COLORS
+========================= */
+
+/* TOTAL CYCLES */
+#statCycles{
+  color: var(--accent-gray);
+}
+#statCycles{
+  background: rgba(108,117,125,0.12);
+}
+#statCycles::before{
+  content: "";
+}
+
+/* TOTAL PIGLETS BORN */
+#statTotalBorn{
+  color: var(--accent-green);
+}
+#statTotalBorn{
+  background: rgba(25,135,84,0.14);
+}
+
+/* AVG LITTER SIZE */
+#statAvgLitter{
+  color: var(--accent-blue);
+}
+#statAvgLitter{
+  background: rgba(13,110,253,0.14);
+}
+
+/* TOTAL LIVE */
+#statTotalLive{
+  color: var(--accent-teal);
+}
+#statTotalLive{
+  background: rgba(10,162,192,0.14);
+}
+
+/* APPLY COLOR TO CARD (NOT JUST TEXT) */
+#statCycles,
+#statTotalBorn,
+#statAvgLitter,
+#statTotalLive{
+  display: block;
+  padding: 0;
+}
+
+#statCycles,
+#statTotalBorn,
+#statAvgLitter,
+#statTotalLive{
+  border-radius: 6px;
+}
+
+/* MOVE BACKGROUND TO PARENT CARD */
+#reproSummarySection .col:has(#statCycles){
+  background: rgba(108,117,125,0.08);
+}
+#reproSummarySection .col:has(#statTotalBorn){
+  background: rgba(25,135,84,0.08);
+}
+#reproSummarySection .col:has(#statAvgLitter){
+  background: rgba(13,110,253,0.08);
+}
+#reproSummarySection .col:has(#statTotalLive){
+  background: rgba(10,162,192,0.08);
+}
+
+/* =========================
+   TABLES
+========================= */
+#swineModal table{
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+#swineModal thead th{
   background: #fafafa;
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-dark);
+  padding: 10px 12px;
   border-bottom: 1px solid var(--panel-border);
-  white-space: nowrap;
-  text-align: left;
 }
 
-/* =========================
-   TABLE BODY
-========================= */
-.table tbody td{
-  padding: 14px;
+#swineModal tbody td{
+  padding: 12px;
   font-size: 13px;
-  color: var(--text-dark);
   border-bottom: 1px solid var(--panel-border);
-  white-space: nowrap;
-  vertical-align: middle;
 }
 
-.table tbody td:first-child{
-  font-weight: 700;
-}
-
-.table tbody tr:hover td{
-  background: #fffaf6;
-}
-
-.table tbody td[colspan]{
-  text-align: center;
-  color: var(--muted-text);
-  padding: 32px 14px;
+#swineModal tbody tr:last-child td{
   border-bottom: none;
 }
 
 /* =========================
-   COLUMN WIDTH CONTROL
+   TABLE RESPONSIVE
 ========================= */
-.table th:nth-child(1),
-.table td:nth-child(1){ min-width: 110px; }
-
-.table th:nth-child(2),
-.table td:nth-child(2){ min-width: 160px; }
-
-.table th:nth-child(3),
-.table td:nth-child(3){ min-width: 90px; }
-
-.table th:nth-child(4),
-.table td:nth-child(4){ min-width: 220px; }
-
-.table th:nth-child(5),
-.table td:nth-child(5){ min-width: 140px; }
-
-.table th:nth-child(9),
-.table td:nth-child(9){ min-width: 100px; }
-
-.table th:last-child,
-.table td:last-child{
-  min-width: 100px;
-  text-align: center;
+#swineModal .table-responsive{
+  border-radius: var(--radius);
 }
 
 /* =========================
-   STATUS BADGES
+   BOOTSTRAP MODAL FIX
 ========================= */
-.status-badge{
-  display: inline-block;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 999px;
-  background: rgba(23,193,79,0.12);
-  color: var(--accent-green);
+.modal{
+  z-index: 1055 !important;
 }
 
-.status-inactive{
-  background: rgba(245,91,102,0.15);
-  color: var(--danger);
-}
-
-/* =========================
-   ACTION BUTTON
-========================= */
-.table .btn-outline-primary{
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 6px;
-  border: 1px solid rgba(13,110,253,0.2);
-  background: transparent;
-  color: #0d6efd;
-  transition: background 0.15s ease;
-}
-
-.table .btn-outline-primary:hover{
-  background: rgba(13,110,253,0.06);
-}
-
-/* =========================
-   RESPONSIVE TABLE SCROLL
-========================= */
-@media (max-width: 1100px){
-  .table{ min-width: 900px; }
-}
-
-@media (max-width: 880px){
-  .table{ min-width: 760px; }
-}
-
-@media (max-width: 720px){
-  .table{ min-width: 680px; }
-}
-
-@media (max-width: 520px){
-  .table{ min-width: 560px; }
-
-  .table thead th{
-    font-size: 11px;
-    padding: 10px;
-  }
-
-  .table tbody td{
-    font-size: 12px;
-    padding: 10px;
-  }
+.modal-backdrop{
+  z-index: 1050 !important;
 }
