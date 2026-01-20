@@ -492,3 +492,26 @@ body.modal-open {
     flex: 1 1 100%;
   }
 }
+
+.evidence-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.dynamic-media {
+  background: #f9f9f9;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.dynamic-media img,
+.dynamic-media video {
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #000;
+}

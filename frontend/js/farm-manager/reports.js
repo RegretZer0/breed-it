@@ -38,16 +38,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------------- MODAL HELPERS ----------------
   function closeReportDetails() {
-    reportDetailsModal.style.display = "none";
-    document.body.style.overflow = "";
-    
-    // Stop any playing videos before closing
-    const videos = reportDetailsModal.querySelectorAll("video");
-    videos.forEach(v => { v.pause(); v.src = ""; });
+  reportDetailsModal.style.display = "none";
+  document.body.style.overflow = "";
 
-    // Remove dynamically created gallery items
-    if (evidenceGallery) evidenceGallery.innerHTML = "";
-  }
+  const videos = reportDetailsModal.querySelectorAll("video");
+  videos.forEach(v => {
+    v.pause();
+    v.currentTime = 0;
+  });
+
+  evidenceGallery.innerHTML = "";
+}
+
 
   closeReportModal.onclick = closeReportDetails;
   if (closeReportModalBtn) closeReportModalBtn.onclick = closeReportDetails;
@@ -166,61 +168,64 @@ document.addEventListener("DOMContentLoaded", async () => {
       reportSigns.innerHTML = `<strong>Signs:</strong> ${(r.signs || []).join(", ") || "None"}`;
       reportProbability.innerHTML = `<strong>Probability:</strong> ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}`;
 
-      // --- RENDER MEDIA GALLERY ---
-      if (evidenceGallery) {
-        evidenceGallery.innerHTML = "";
-        
-        // Ensure evidence_url is handled as an array
-        const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : (r.evidence_url ? [r.evidence_url] : []);
-        
-        if (evidences.length === 0) {
-          evidenceGallery.innerHTML = "<p class='dynamic-media text-muted' style='padding:20px;'><em>No media evidence provided.</em></p>";
-        } else {
-          evidences.forEach(pathStr => {
-            if (!pathStr) return;
+      // ---------------- MEDIA GALLERY ----------------
+      evidenceGallery.innerHTML = "";
 
-            // 1. Clean up the path (Standardize slashes)
-            let cleanPath = pathStr.replace(/\\/g, '/');
-            
-            // 2. Build the full URL properly
-            // If the path already has http, use it. Otherwise, prepend BACKEND_URL
-            const fullUrl = cleanPath.startsWith('http') ? cleanPath : `${BACKEND_URL}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+      const evidences = Array.isArray(r.evidence_url)
+        ? r.evidence_url
+        : r.evidence_url ? [r.evidence_url] : [];
 
-            const isVideo = cleanPath.match(/\.(mp4|mov|webm)$/i);
-            const mediaWrapper = document.createElement("div");
-            mediaWrapper.className = "dynamic-media";
-            mediaWrapper.style = "margin-bottom: 20px; text-align: center; background: #f9f9f9; padding: 10px; border-radius: 8px;";
-            
-            if (isVideo) {
-              mediaWrapper.innerHTML = `
-                <video src="${fullUrl}" controls style="width:100%; max-height:350px; border-radius:5px; background:#000;"></video>
-                <div style="font-size: 11px; margin-top:5px;"><a href="${fullUrl}" target="_blank">Open Video in New Tab</a></div>
-              `;
-            } else {
-              mediaWrapper.innerHTML = `
-                <img src="${fullUrl}" style="width:100%; max-height:450px; object-fit: contain; border-radius:5px; cursor: zoom-in;" 
-                     onerror="this.onerror=null; this.src='https://placehold.co/600x400?text=Image+Load+Error';"
-                     onclick="window.open('${fullUrl}', '_blank')" />
-                <div style="font-size: 11px; margin-top:5px;">Click image to expand</div>
-              `;
-            }
-            evidenceGallery.appendChild(mediaWrapper);
-          });
-        }
+      if (!evidences.length) {
+        evidenceGallery.innerHTML =
+          "<p class='text-muted'><em>No media evidence provided.</em></p>";
+      } else {
+        evidences.forEach(path => {
+          if (!path) return;
+
+          const cleanPath = path.replace(/\\/g, "/");
+          const fullUrl = cleanPath.startsWith("http")
+            ? cleanPath
+            : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
+
+          const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "dynamic-media";
+
+          if (isVideo) {
+            wrapper.innerHTML = `
+              <video controls preload="metadata">
+                <source src="${fullUrl}">
+                Your browser does not support video.
+              </video>
+              <small><a href="${fullUrl}" target="_blank">Open video</a></small>
+            `;
+          } else {
+            wrapper.innerHTML = `
+              <img src="${fullUrl}"
+                  alt="Evidence"
+                  onclick="window.open('${fullUrl}', '_blank')"
+                  onerror="this.src='https://placehold.co/400x300?text=Load+Error'">
+              <small>Click to enlarge</small>
+            `;
+          }
+
+          evidenceGallery.appendChild(wrapper);
+        });
       }
 
-      // --- BUTTON CONTROLS ---
-      approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-      if (rejectBtn) rejectBtn.style.display = r.status === "pending" ? "inline-block" : "none";
-      confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
+            // --- BUTTON CONTROLS ---
+            approveBtn.style.display = r.status === "pending" ? "inline-block" : "none";
+            if (rejectBtn) rejectBtn.style.display = r.status === "pending" ? "inline-block" : "none";
+            confirmAIBtn.style.display = r.status === "approved" ? "inline-block" : "none";
 
-      reportDetailsModal.style.display = "flex";
-      document.body.style.overflow = "hidden";
-    } catch (err) {
-      console.error(err);
-      alert("Error loading report details.");
-    }
-  }
+            reportDetailsModal.style.display = "flex";
+            document.body.style.overflow = "hidden";
+          } catch (err) {
+            console.error(err);
+            alert("Error loading report details.");
+          }
+        }
 
   // ---------------- ACTION HANDLER ----------------
   async function action(endpoint, message, extraBody = {}) {
