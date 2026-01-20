@@ -61,7 +61,12 @@ router.get(
   async (req, res) => {
     try {
       const { userIds } = req.params;
-      if (!userIds) return res.status(400).json({ success: false, message: "No user IDs provided" });
+      if (!userIds) {
+        return res.status(400).json({
+          success: false,
+          message: "No user IDs provided"
+        });
+      }
 
       const idsArray = userIds
         .split(",")
@@ -70,26 +75,41 @@ router.get(
         .map(id => new mongoose.Types.ObjectId(id));
 
       if (idsArray.length === 0) {
-        return res.status(400).json({ success: false, message: "No valid user IDs provided" });
+        return res.status(400).json({
+          success: false,
+          message: "No valid user IDs provided"
+        });
       }
 
-      let notifications = await Notification.find({ user_id: { $in: idsArray } })
+      let notifications = await Notification.find({
+        user_id: { $in: idsArray }
+      })
         .sort({ created_at: -1 })
         .lean();
 
-      // Map read status per user
+      // ✅ FIX: Proper ObjectId → string comparison
+      const userIdStrs = idsArray.map(id => id.toString());
+
       notifications = notifications.map(n => ({
         ...n,
-        is_read: n.read_by?.some(uid => idsArray.includes(uid.toString())) || false
+        is_read: n.read_by?.some(uid =>
+          userIdStrs.includes(uid.toString())
+        ) || false
       }));
 
       res.json({ success: true, notifications });
+
     } catch (err) {
       console.error("Fetch notifications error:", err);
-      res.status(500).json({ success: false, message: "Server error" });
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
     }
   }
 );
+
+
 
 /* ======================================================
    MARK NOTIFICATION AS READ

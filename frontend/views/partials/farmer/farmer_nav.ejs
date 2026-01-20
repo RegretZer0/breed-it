@@ -148,18 +148,37 @@
 <div class="side-panel" id="notificationsPanel">
   <div class="panel-header">
     <h3>Notifications</h3>
-    <button class="close-panel" data-close="notificationsPanel">
+    <button class="close-panel" data-close="notificationsPanel">×</button>
+  </div>
+
+  <div class="panel-content">
+    <ul id="notificationsList" class="list-group list-group-flush"></ul>
+
+    <button
+      id="viewAllNotificationsBtn"
+      class="btn btn-primary w-100 mt-2">
+      View All
+    </button>
+  </div>
+</div>
+
+<!-- =========================
+     NOTIFICATION HISTORY PANEL
+========================= -->
+<div class="side-panel" id="notificationHistoryModal">
+  <div class="panel-header">
+    <h3>Notification History</h3>
+    <button class="close-panel" data-close="notificationHistoryModal">
       <i class="fa-solid fa-xmark"></i>
     </button>
   </div>
 
-  <!-- This mirrors farmer_dashboard prototype -->
   <div class="panel-content">
-    <div id="notificationContainer">
-      <div class="notification empty">
-        You have no notifications yet.
-      </div>
-    </div>
+    <ul id="notificationHistoryList" class="list-group list-group-flush">
+      <li class="list-group-item text-muted text-center">
+        No notifications yet
+      </li>
+    </ul>
   </div>
 </div>
 

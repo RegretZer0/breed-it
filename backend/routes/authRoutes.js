@@ -550,72 +550,108 @@ router.post("/register", async (req, res) => {
 });
 
 /* ======================
-    REGISTER FARMER
+    REGISTER FARMER (FIXED)
 ====================== */
-router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
-  try {
-    const {
-      first_name,
-      last_name,
-      address,
-      contact_no,
-      email,
-      password,
-      managerId,
-      num_of_pens = 0,
-      pen_capacity = 0,
-      production_type,
-      membership_date,
-    } = req.body;
+router.post(
+  "/register-farmer",
+  requireSessionAndToken,
+  allowRoles("farm_manager"),
+  async (req, res) => {
+    try {
+      const {
+        first_name,
+        last_name,
+        address,
+        contact_no,
+        email,
+        password,
+        managerId,
+        num_of_pens = 0,
+        pen_capacity = 0,
+        production_type,
+        membership_date,
+      } = req.body;
 
+      if (!email || !password || !managerId) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields"
+        });
+      }
 
-    if (!email || !password || !managerId) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+      validatePassword(password);
+      await validateEmailLegitimacy(email);
+
+      const existing =
+        (await User.findOne({ email })) ||
+        (await Farmer.findOne({ email }));
+
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use"
+        });
+      }
+
+      // 1️⃣ CREATE USER ACCOUNT (CRITICAL)
+      const user = await User.create({
+        first_name,
+        last_name,
+        email,
+        password: await bcrypt.hash(password, 10),
+        role: "farmer",
+        managerId,
+      });
+
+      // Generate farmer_id
+      const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
+      const nextNum = lastFarmer
+        ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
+        : 1;
+
+      const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
+
+      // 2️⃣ CREATE FARMER PROFILE LINKED TO USER
+      const farmer = await Farmer.create({
+        farmer_id: farmerId,
+        first_name,
+        last_name,
+        address,
+        contact_no,
+        email,
+        password: user.password,
+        managerId,
+        num_of_pens,
+        pen_capacity,
+        production_type,
+        membership_date,
+        user_id: user._id, // 🔑 THIS FIXES NOTIFICATIONS
+      });
+
+      // ✅ Audit Log: Register Farmer
+      await logAction(
+        req.user.id,
+        "REGISTER_FARMER",
+        "ACCOUNT_MANAGEMENT",
+        `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`,
+        req
+      );
+
+      res.status(201).json({
+        success: true,
+        message: "Farmer registered successfully",
+        farmer,
+      });
+
+    } catch (error) {
+      console.error("Register farmer error:", error);
+      res.status(400).json({
+        success: false,
+        message: error.message
+      });
     }
-
-    validatePassword(password);
-    await validateEmailLegitimacy(email);
-
-    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Email already in use" });
-    }
-
-    const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
-    const nextNum = lastFarmer
-      ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
-      : 1;
-
-    const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
-
-    const farmer = await Farmer.create({
-      farmer_id: farmerId,
-      first_name,
-      last_name,
-      address,
-      contact_no: contact_no,
-      email,
-      password: await bcrypt.hash(password, 10),
-      managerId,
-      num_of_pens,
-      pen_capacity,
-      production_type,
-      membership_date,
-    });
-
-    // ✅ Audit Log: Register Farmer
-    await logAction(req.user.id, "REGISTER_FARMER", "ACCOUNT_MANAGEMENT", `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`, req);
-
-    res.status(201).json({
-      success: true,
-      message: "Farmer registered successfully",
-      farmer,
-    });
-  } catch (error) {
-    console.error("Register farmer error:", error);
-    res.status(400).json({ success: false, message: error.message });
   }
-});
+);
 
 /* ======================
     GET FARMERS

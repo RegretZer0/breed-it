@@ -102,6 +102,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = "hidden";
   });
 
+  /* =========================
+   VIEW ALL NOTIFICATIONS (FARMER)
+  ========================= */
+  const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
+
+  viewAllBtn?.addEventListener("click", () => {
+    const modal = document.getElementById("notificationHistoryModal");
+    if (!modal) return;
+
+    modal.classList.add("active");
+    document.body.style.overflow = "hidden";
+  });
+
 
   /* =========================
      REPORT TABS
