@@ -3,7 +3,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   const token = localStorage.getItem("token");
   if (!token) return;
 
-  const recentList = document.getElementById("notificationContainer");
+  const recentList = document.getElementById("notificationsList");
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
   const historyList = document.getElementById("notificationHistoryList");
   const typeFilter = document.getElementById("notifFilterType");
@@ -36,7 +36,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       RENDER RECENT (LIMIT 8)
   ========================= */
   function renderRecent() {
-    recentList.innerHTML = ""; // clears "You have no notifications yet."
+    recentList.innerHTML = "";
     const recent = allNotifications.slice(0, 8);
 
     // Update Badge Visibility (Show if any notification is unread)
@@ -47,29 +47,33 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
     if (!recent.length) {
       recentList.innerHTML =
-        `<div class="notification empty">No notifications</div>`;
+        `<li class="list-group-item text-muted text-center">No notifications</li>`;
       return;
     }
 
     recent.forEach(n => {
-      const item = document.createElement("div");
-      item.className = `notification ${!n.is_read ? "unread" : ""}`;
-      item.style.cursor = "pointer";
+      const li = document.createElement("li");
+      // Add 'bg-light' or a custom class if the notification is unread
+      li.className = `list-group-item ${!n.is_read ? "fw-bold border-start border-primary border-4" : ""}`;
+      li.style.cursor = "pointer";
 
-      item.innerHTML = `
-        <div class="notification-title">${n.title}</div>
-        <div class="notification-message">${n.message}</div>
-        <div class="notification-time">
-          ${new Date(n.created_at).toLocaleString()}
+      li.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <strong>${n.title}</strong>
+            <div class="small text-dark">${n.message}</div>
+            <div class="text-muted small mt-1">
+              ${new Date(n.created_at).toLocaleString()}
+            </div>
+          </div>
+          ${!n.is_read ? '<span class="badge rounded-pill bg-primary" style="font-size: 0.6rem;">NEW</span>' : ''}
         </div>
-        ${!n.is_read ? '<span class="notification-new">NEW</span>' : ''}
       `;
 
-      item.onclick = () => markAsRead(n._id);
-      recentList.appendChild(item);
+      li.onclick = () => markAsRead(n._id);
+      recentList.appendChild(li);
     });
   }
-
 
   /* =========================
       HISTORY (Modal View)
