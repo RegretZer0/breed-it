@@ -210,6 +210,51 @@ router.post(
 );
 
 /* ======================================================
+    ADD PERFORMANCE RECORD (Specific Endpoint)
+====================================================== */
+router.post(
+    "/performance/add/:id",
+    requireSessionAndToken,
+    allowRoles("farm_manager", "encoder"),
+    async (req, res) => {
+        const { id } = req.params; // This is the MongoDB _id
+        const { weight, bodyLength, heartGirth, stage, remarks } = req.body;
+        const user = req.user;
+
+        try {
+            // Find by MongoDB _id
+            const swine = await Swine.findById(id);
+            if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+
+            // Create the new performance record object
+            const newRecord = {
+                stage: stage || "Routine",
+                record_date: new Date(),
+                weight: Number(weight) || 0,
+                body_length: Number(bodyLength) || 0,
+                heart_girth: Number(heartGirth) || 0,
+                remarks: remarks || "Manual update",
+                recorded_by: user.id
+            };
+
+            // Add to the array
+            swine.performance_records.push(newRecord);
+
+            await swine.save();
+
+            // Log the action
+            await logAction(user.id, "ADD_PERFORMANCE", "SWINE_MANAGEMENT", `Added performance record for ${swine.swine_id}`, req)
+                .catch(err => console.error("Log failed:", err));
+
+            res.json({ success: true, message: "Performance record added successfully", swine });
+        } catch (error) {
+            console.error("[ADD PERFORMANCE ERROR]:", error);
+            res.status(500).json({ success: false, message: "Server error", error: error.message });
+        }
+    }
+);
+
+/* ======================================================
     UPDATE SWINE (MODIFIED FOR MONTHLY OVERWRITE)
 ====================================================== */
 router.put(
