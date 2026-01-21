@@ -6,8 +6,9 @@ const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
 const AIRecord = require("../models/AIRecord");
 const HeatReport = require("../models/HeatReports");
-const AuditLog = require("../models/AuditLog"); 
-const logAction = require("../middleware/logger"); 
+const AuditLog = require("../models/AuditLog");
+const Notification = require("../models/Notifications"); // ✅ Added Notification Model
+const logAction = require("../middleware/logger");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
@@ -40,10 +41,10 @@ router.get("/preview/next-boar-id", requireSessionAndToken, async (req, res) => 
         const user = req.user;
         const managerId = user.role === "farm_manager" ? user.id : user.managerId;
         const prefix = getManagerPrefix(managerId);
-        
-        const count = await Swine.countDocuments({ 
+
+        const count = await Swine.countDocuments({
             registered_by: managerId,
-            swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
+            swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
         });
         const nextId = `${prefix}-BOAR-${String(count + 1).padStart(4, "0")}`;
         res.json({ success: true, nextId });
@@ -87,9 +88,9 @@ router.post(
     allowRoles("farm_manager", "encoder", "admin"),
     async (req, res) => {
         const {
-            color, weight, bodyLength, heartGirth, 
+            color, weight, bodyLength, heartGirth,
             teethCount, date_transfer, health_status, current_status, breed,
-            manager_id 
+            manager_id
         } = req.body;
 
         try {
@@ -97,22 +98,22 @@ router.post(
             const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
             const prefix = getManagerPrefix(registeredBy);
 
-            const boarCount = await Swine.countDocuments({ 
+            const boarCount = await Swine.countDocuments({
                 registered_by: registeredBy,
-                swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
+                swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
             });
-            
+
             const swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
 
             const newBoar = new Swine({
                 swine_id: swineId,
-                registered_by: registeredBy, 
-                farmer_id: null, 
+                registered_by: registeredBy,
+                farmer_id: null,
                 sex: "Male",
-                breed: breed || "Native", 
+                breed: breed || "Native",
                 color: color || "Unknown",
                 age_stage: "adult",
-                is_external_boar: true, 
+                is_external_boar: true,
                 date_transfer: date_transfer || new Date(),
                 health_status: health_status || "Healthy",
                 current_status: current_status || "Active",
@@ -123,7 +124,7 @@ router.post(
                     body_length: Number(bodyLength) || 0,
                     heart_girth: Number(heartGirth) || 0,
                     teeth_count: Number(teethCount) || 0,
-                    recorded_by: user.id 
+                    recorded_by: user.id
                 }]
             });
 
@@ -139,7 +140,7 @@ router.post(
 );
 
 /* ======================================================
-    ADD NEW SWINE (UPDATED ID LOGIC)
+    ADD NEW SWINE (UPDATED ID LOGIC + NOTIFICATION)
 ====================================================== */
 router.post(
     "/add",
@@ -151,7 +152,7 @@ router.post(
             sire_id, dam_id, date_transfer, batch,
             age_stage, weight, bodyLength, heartGirth, teethCount,
             leg_conformation, deformities, teat_count, current_status,
-            birth_cycle_number 
+            birth_cycle_number
         } = req.body;
 
         try {
@@ -178,29 +179,29 @@ router.post(
             }
 
             // 2. Farmer authorization check
+            let targetFarmer = null;
             if (farmer_id) {
-                const farmer = await Farmer.findOne({
+                targetFarmer = await Farmer.findOne({
                     _id: farmer_id,
                     $or: [{ managerId: managerId }, { registered_by: managerId }, { user_id: managerId }]
                 });
-                if (!farmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
+                if (!targetFarmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
             }
 
-            // 3. GENERATE ID (Continuous Increment Logic)
+            // 3. GENERATE ID
             let swineId;
             if (batch === "BOAR" || (sex.toLowerCase() === "male" && age_stage === "adult")) {
-                const boarCount = await Swine.countDocuments({ 
+                const boarCount = await Swine.countDocuments({
                     registered_by: managerId,
-                    swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) } 
+                    swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
                 });
                 swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
             } else {
-                // Find the latest swine in THIS batch by THIS manager
-                const lastSwineInBatch = await Swine.find({ 
-                    batch: batch, 
-                    registered_by: managerId 
+                const lastSwineInBatch = await Swine.find({
+                    batch: batch,
+                    registered_by: managerId
                 })
-                .sort({ swine_id: -1 }) // Get the highest existing ID
+                .sort({ swine_id: -1 })
                 .limit(1);
 
                 let nextNumber = 1;
@@ -209,22 +210,20 @@ router.post(
                     const lastNum = parseInt(parts[parts.length - 1]);
                     if (!isNaN(lastNum)) nextNumber = lastNum + 1;
                 }
-                
-                // Result: PREFIX-BATCH-NUMBER (e.g., LIPA-A-0002)
                 swineId = `${prefix}-${batch}-${String(nextNumber).padStart(4, "0")}`;
             }
 
             // 4. Set Initial Status
-            let initialStatus = current_status; 
+            let initialStatus = current_status;
             let initialPerfStage = "Registration";
 
             if (!initialStatus) {
                 if (age_stage === "piglet" || age_stage === "Monitoring (Day 1-30)") {
                     initialStatus = "Monitoring (Day 1-30)";
-                    initialPerfStage = "Monitoring (Day 1-30)"; 
+                    initialPerfStage = "Monitoring (Day 1-30)";
                 } else {
                     initialStatus = (sex.toLowerCase() === "female") ? "Open" : "Market-Ready";
-                    initialPerfStage = "Routine"; 
+                    initialPerfStage = "Routine";
                 }
             }
 
@@ -254,6 +253,17 @@ router.post(
             });
 
             await newSwine.save();
+
+            // ✅ NEW FEATURE: NOTIFY FARMER
+            if (targetFarmer && targetFarmer.user_id) {
+                await Notification.create({
+                    user_id: targetFarmer.user_id,
+                    title: "New Swine Registered",
+                    message: `A new ${breed} ${sex} (ID: ${swineId}) has been assigned to your profile.`,
+                    type: "success"
+                });
+            }
+
             await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId}`, req);
             res.status(201).json({ success: true, message: "Swine added", swine: newSwine });
 
@@ -272,7 +282,7 @@ router.post(
     requireSessionAndToken,
     allowRoles("farm_manager", "encoder"),
     async (req, res) => {
-        const { id } = req.params; 
+        const { id } = req.params;
         const { weight, bodyLength, heartGirth, stage, remarks } = req.body;
         const user = req.user;
 
@@ -321,10 +331,10 @@ router.put(
                 return res.status(403).json({ success: false, message: "Access denied" });
 
             const allowedFields = [
-                "sex", "color", "breed", "birth_date", "health_status", 
-                "sire_id", "dam_id", "date_transfer", 
+                "sex", "color", "breed", "birth_date", "health_status",
+                "sire_id", "dam_id", "date_transfer",
                 "batch", "age_stage", "current_status", "performance_records",
-                "birth_cycle_number" 
+                "birth_cycle_number"
             ];
 
             if (updates.performance_records) {
@@ -385,8 +395,8 @@ router.post(
 
             const updateResult = await Swine.updateOne(
                 { _id: sow._id, "breeding_cycles.is_pregnant": true },
-                { 
-                    $set: { 
+                {
+                    $set: {
                         "breeding_cycles.$.farrowed": true,
                         "breeding_cycles.$.is_pregnant": false,
                         "breeding_cycles.$.actual_farrowing_date": actualFarrowingDate,
@@ -460,9 +470,9 @@ router.post("/:swineId/medical", requireSessionAndToken, allowRoles("farm_manage
     try {
         const swine = await Swine.findOne({ swine_id: req.params.swineId });
         if (!swine) return res.status(404).json({ success: false, message: "Not found" });
-        
-        swine.medical_records.push({ 
-            treatment_type, medicine_name, dosage, remarks, administered_by: req.user.id 
+
+        swine.medical_records.push({
+            treatment_type, medicine_name, dosage, remarks, administered_by: req.user.id
         });
         await swine.save();
         await logAction(req.user.id, "MEDICAL_TREATMENT", "SWINE_MANAGEMENT", `Medical update for ${req.params.swineId}`, req);
@@ -486,13 +496,13 @@ router.get(
             if (user.role === "farmer") {
                 query.farmer_id = user.farmerProfileId;
             } else {
-                const farmers = await Farmer.find({ 
-                    $or: [{ managerId: managerId }, { registered_by: managerId }] 
+                const farmers = await Farmer.find({
+                    $or: [{ managerId: managerId }, { registered_by: managerId }]
                 }).select("_id");
-                
+
                 const farmerIds = farmers.map((f) => f._id);
                 const prefix = getManagerPrefix(managerId);
-                
+
                 query = {
                     $or: [
                         { farmer_id: { $in: farmerIds } },
@@ -531,7 +541,7 @@ router.get(
     allowRoles("farm_manager", "encoder"),
     async (req, res) => {
         try {
-            const { swineId } = req.params; 
+            const { swineId } = req.params;
             const user = req.user;
             const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
@@ -541,7 +551,7 @@ router.get(
             const aiHistory = await AIRecord.find({ swine_id: sow._id }).populate("male_swine_id", "swine_id breed").lean();
             const historicalBoars = aiHistory
                 .map(record => record.male_swine_id)
-                .filter((boar, index, self) => 
+                .filter((boar, index, self) =>
                     boar && self.findIndex(b => b.swine_id === boar.swine_id) === index
                 );
 
