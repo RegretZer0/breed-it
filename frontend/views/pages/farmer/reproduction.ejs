@@ -3,134 +3,137 @@
 <div class="app-root">
   <main class="reproduction-container">
     <h2 class="page-title">REPRODUCTION AND MONITORING PIPELINE</h2>
-        <p style="color: #666; margin-top: 5px;">
-        Manage the full lifecycle from Insemination through Monitoring (Day 1–30),
-        Weaning, and Final Selection.
-        </p>
+    <p style="color: #666; margin-top: 5px;">
+      Manage the full lifecycle from Insemination through Monitoring (Day 1–30),
+      Weaning, and Final Selection.
+    </p>
 
-    <!-- SEARCH -->
     <div class="search-container">
-        <input
+      <input
         type="text"
         id="reproductionSearch"
         class="search-input"
-        placeholder="Search by Farmer, Swine Tag, or Stage..."
-        />
+        placeholder="Search by Swine Tag or Stage..."
+      />
     </div>
 
-    <!-- AI HISTORY -->
     <div class="section-card" style="border-top-color: #3498db;">
-        <h2 class="section-title">
+      <h2 class="section-title">
         Artificial Insemination History
         <span class="badge badge-info">Read-only</span>
-        </h2>
+      </h2>
 
-        <div class="table-responsive">
+      <div class="table-responsive">
         <table>
-            <thead>
+          <thead>
             <tr>
-                <th>Farmer / Owner</th>
-                <th>Sow Tag</th>
-                <th>Boar Tag</th>
-                <th>Insemination Date</th>
+              <th>Sow Tag</th>
+              <th>Boar Tag</th>
+              <th>Insemination Date</th>
             </tr>
-            </thead>
-            <tbody id="aiTableBody">
+          </thead>
+          <tbody id="aiTableBody">
             <tr>
-                <td colspan="4" class="text-center">Initializing records...</td>
+              <td colspan="3" class="text-center">Initializing records...</td>
             </tr>
-            </tbody>
+          </tbody>
         </table>
-        </div>
+      </div>
     </div>
 
-    <!-- BREEDING PERFORMANCE -->
     <div class="section-card" style="border-top-color: #1abc9c;">
-        <h2 class="section-title">
+      <h2 class="section-title">
         Breeding Performance &amp; Mortality
         <span class="badge badge-success">Live</span>
-        </h2>
+      </h2>
 
-        <div class="table-responsive">
+      <div class="table-responsive">
         <table>
-            <thead>
+          <thead>
             <tr>
-                <th>Farmer</th>
-                <th>Sow Tag</th>
-                <th class="text-center">Alive</th>
-                <th class="text-center">Deceased</th>
-                <th class="text-center">Mortality %</th>
+              <th>Sow Tag</th>
+              <th class="text-center">Alive</th>
+              <th class="text-center">Deceased</th>
+              <th class="text-center">Mortality %</th>
             </tr>
-            </thead>
-            <tbody id="breedingMortalityTableBody">
+          </thead>
+          <tbody id="breedingMortalityTableBody">
             <tr>
-                <td colspan="5" class="text-center">Calculating offspring data...</td>
+              <td colspan="4" class="text-center">Calculating offspring data...</td>
             </tr>
-            </tbody>
+          </tbody>
         </table>
-        </div>
+      </div>
     </div>
 
-    <!-- GROWTH MONITORING -->
     <div class="section-card" style="border-top-color: #9b59b6;">
-        <h2 class="section-title">Growth Monitoring &amp; Trait Evaluation</h2>
+      <h2 class="section-title">Growth Monitoring &amp; Trait Evaluation</h2>
 
-        <div class="table-responsive">
+      <div class="filter-group" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #eee;">
+        <label for="pigletSelect" style="display: block; font-weight: bold; margin-bottom: 8px; color: #444;">
+          <i class="fa-solid fa-filter me-2"></i>Filter by My Piglets:
+        </label>
+        <select id="pigletSelect" class="search-input" style="width: 100%; max-width: 400px; cursor: pointer;">
+          <option value="">-- Loading Piglets... --</option>
+        </select>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 5px;">
+          Only piglets you own (Day 1-30 & Weaning) are listed here.
+        </p>
+      </div>
+
+      <div class="table-responsive">
         <table>
-            <thead>
+          <thead>
             <tr>
-                <th>Farmer</th>
-                <th>Swine Tag</th>
-                <th>Sex</th>
-                <th>Stage</th>
-                <th>Traits</th>
-                <th>Teeth</th>
-                <th>Date</th>
+              <th>Swine Tag</th>
+              <th>Sex</th>
+              <th>Stage</th>
+              <th>Traits</th>
+              <th>Teeth</th>
+              <th>Date</th>
             </tr>
-            </thead>
-            <tbody id="morphTableBody">
+          </thead>
+          <tbody id="morphTableBody">
             <tr>
-                <td colspan="7" class="text-center">Loading growth metrics...</td>
+              <td colspan="6" class="text-center">Loading growth metrics...</td>
             </tr>
-            </tbody>
+          </tbody>
         </table>
-        </div>
+      </div>
     </div>
 
-    <!-- DEFORMITIES -->
     <div class="section-card" style="border-top-color: #e74c3c;">
-        <h2 class="section-title">Deformities Monitoring</h2>
-        <div id="deformityList">
+      <h2 class="section-title">Deformities Monitoring</h2>
+      <div id="deformityList">
         <p class="text-muted">Scanning for deformity reports...</p>
-        </div>
+      </div>
     </div>
 
-    <!-- SELECTION -->
     <div class="section-card" style="border-top-color: #f39c12;">
-        <h2 class="section-title">Selection Process (Retention &amp; Culling)</h2>
+      <h2 class="section-title">Selection Process (Retention &amp; Culling)</h2>
 
-        <div class="table-responsive">
+      <div class="table-responsive">
         <table>
-            <thead>
+          <thead>
             <tr>
-                <th>Swine Tag</th>
-                <th>Farmer</th>
-                <th>Stage</th>
-                <th>System Suggestion</th>
-                <th>Actions</th>
+              <th>Swine Tag</th>
+              <th>Stage</th>
+              <th>System Suggestion</th>
+              <th>Actions</th>
             </tr>
-            </thead>
-            <tbody id="selectionTableBody">
+          </thead>
+          <tbody id="selectionTableBody">
             <tr>
-                <td colspan="5" class="text-center">
+              <td colspan="4" class="text-center">
                 Searching for selection candidates...
-                </td>
+              </td>
             </tr>
-            </tbody>
+          </tbody>
         </table>
-        </div>
+      </div>
     </div>
 
+  </main>
 </div>
 
 <%- include("../../partials/farmer/farmer_footer") %>

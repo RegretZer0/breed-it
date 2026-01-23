@@ -17,14 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Ensure profileId is captured even if authGuard nested it differently
+  // Ensure profileId is captured
   user.farmerProfileId = user.farmerProfileId || user.id || user._id;
   debugLog("USER_SESSION", { role: user.role, profileId: user.farmerProfileId });
 
-  /**
-   * ✅ GET & SANITIZE TOKEN
-   * Removes any accidental quotes or whitespace that cause 401 errors
-   */
   const getCleanToken = () => {
     let token = localStorage.getItem("token");
     if (token && (token.startsWith('"') || token.startsWith("'"))) {
@@ -34,7 +30,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   const token = getCleanToken();
-  console.log("🔑 Current Token:", token ? "Token Found & Sanitized" : "TOKEN MISSING!");
 
   // ================= STATE =================
   let rawAiData = [];
@@ -43,48 +38,58 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allSwineData = [];
 
   // ================= HELPERS =================
-  const resolveFarmerName = (item) => {
-    if (item.farmer_name) return item.farmer_name;
-    if (item.farmer_id && typeof item.farmer_id === "object") {
-      const first = item.farmer_id.first_name || item.farmer_id.full_name || "";
-      const last = item.farmer_id.last_name || "";
-      return `${first} ${last}`.trim() || "Unknown Farmer";
-    }
-    return "Unknown Farmer";
+  const isMySwine = (item) => {
+    const ownerId = item.farmer_id?._id || item.farmer_id;
+    return ownerId && user.farmerProfileId && ownerId.toString() === user.farmerProfileId.toString();
   };
 
-  /**
-   * ✅ FIXED CENTRALIZED FETCH HANDLER
-   * Uses Absolute URL to prevent port mismatch and forces sanitized token headers
-   */
+  // ================= PIGLET DRILL-DOWN =================
+  const pigletSelect = document.getElementById("pigletSelect");
+
+  function populatePigletDropdown() {
+    if (!pigletSelect) return;
+
+    const seenTags = new Set();
+    const uniquePiglets = [];
+
+    rawPerformanceData.morphology.forEach(m => {
+      const stage = (m.morphology?.stage || "").toLowerCase();
+      const isPigletStage = stage.includes("day 1-30") || stage.includes("weaning");
+      
+      if (isPigletStage && !seenTags.has(m.swine_tag)) {
+        seenTags.add(m.swine_tag);
+        uniquePiglets.push(m);
+      }
+    });
+
+    uniquePiglets.sort((a, b) => a.swine_tag.localeCompare(b.swine_tag));
+
+    pigletSelect.innerHTML = '<option value="">-- Choose a Piglet to View Performance --</option>' + 
+      uniquePiglets.map(p => `<option value="${p.swine_tag}">${p.swine_tag} (${p.swine_sex})</option>`).join("");
+  }
+
+  pigletSelect?.addEventListener("change", (e) => {
+    const selectedTag = e.target.value.toLowerCase();
+    renderPerformance(selectedTag);
+  });
+
+  // ================= FETCH HANDLER =================
   async function authFetch(endpoint) {
     const BASE_URL = "http://localhost:5000"; 
     const isRepro = endpoint.includes("ai-history") || 
                     endpoint.includes("performance-analytics") || 
                     endpoint.includes("selection-candidates");
     
-    // Check if your backend expects /api/reproduction/... or just /api/...
     const apiPath = isRepro ? `/api/reproduction${endpoint}` : `/api${endpoint}`;
     const fullUrl = `${BASE_URL}${apiPath}`;
-
-    debugLog("FETCH_START", fullUrl);
 
     try {
       const res = await fetch(fullUrl, {
         method: "GET",
-        headers: { 
-          "Authorization": `Bearer ${getCleanToken()}`
-          // Removed Content-Type and Accept to match the simpler 'me' fetch
-        },
+        headers: { "Authorization": `Bearer ${getCleanToken()}` },
       });
 
-      debugLog("HTTP_STATUS", { url: apiPath, status: res.status });
-
-      if (res.status === 401) {
-        // If this fails, the backend reproductionRouter.js likely has a bug
-        return { authError: true };
-      }
-
+      if (res.status === 401) return { authError: true };
       return await res.json();
     } catch (err) {
       debugLog("FETCH_ERROR", err.message, true);
@@ -92,30 +97,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
   
-  /**
-   * ✅ ENHANCED SAFE LOADING
-   */
   async function safeLoad(fn, name, tableId) {
     const body = document.getElementById(tableId);
-    if (!body) {
-      debugLog("DOM_ERROR", `Table ID "${tableId}" not found in HTML!`, true);
-      return;
-    }
+    if (!body) return;
 
     try {
       const result = await fn();
-      
       if (result && result.authError) {
-        body.innerHTML = `<tr><td colspan="10" class="text-center text-warning"><b>Session Invalid/Expired.</b><br>Please log in again.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-warning"><b>Session Invalid.</b></td></tr>`;
         return;
       }
-
       if (!result || result.success === false) {
-        debugLog("API_LOGIC_ERROR", { name, message: result?.message || "Success field is false" }, true);
-        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">No data available for ${name}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">No data for ${name}</td></tr>`;
       }
     } catch (err) {
-      debugLog("RENDER_ERROR", { name, error: err.message }, true);
       body.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error rendering ${name}.</td></tr>`;
     }
   }
@@ -134,11 +129,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderMortality(term);
   }
 
-  // ================= 1. AI HISTORY =================
+  // ================= 1. AI HISTORY (SORTED LATEST FIRST) =================
   async function loadAIRecords() {
     const data = await authFetch("/ai-history");
     if (data && data.success) {
-      rawAiData = data.data || [];
+      rawAiData = (data.data || []).filter(isMySwine);
+      rawAiData.sort((a, b) => new Date(b.date) - new Date(a.date));
       renderAIRecords();
     }
     return data;
@@ -149,7 +145,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!body) return;
 
     const filtered = rawAiData.filter(r =>
-      resolveFarmerName(r).toLowerCase().includes(term) ||
       (r.sow_tag || "").toLowerCase().includes(term) ||
       (r.boar_tag || "").toLowerCase().includes(term)
     );
@@ -157,21 +152,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     body.innerHTML = filtered.length
       ? filtered.map(r => `
         <tr>
-          <td><strong>${resolveFarmerName(r)}</strong></td>
           <td><span class="badge bg-info text-dark">${r.sow_tag || "N/A"}</span></td>
           <td>${r.boar_tag || "N/A"}</td>
           <td>${r.date ? new Date(r.date).toLocaleDateString() : "N/A"}</td>
         </tr>`).join("")
-      : `<tr><td colspan="4" class="text-center">No AI records found.</td></tr>`;
+      : `<tr><td colspan="3" class="text-center">No AI records found.</td></tr>`;
   }
 
-  // ================= 2. PERFORMANCE & DEFORMITIES =================
+  // ================= 2. PERFORMANCE & DEFORMITIES (UPDATED: HEART GIRTH ADDED) =================
   async function loadPerformance() {
     const data = await authFetch("/performance-analytics");
     if (data && data.success) {
-      rawPerformanceData.morphology = data.morphology || [];
-      rawPerformanceData.deformities = data.deformities || [];
-      renderPerformance();
+      rawPerformanceData.morphology = (data.morphology || []).filter(isMySwine);
+      rawPerformanceData.deformities = (data.deformities || []).filter(isMySwine);
+      
+      rawPerformanceData.morphology.sort((a, b) => new Date(b.morphology?.date) - new Date(a.morphology?.date));
+      rawPerformanceData.deformities.sort((a, b) => new Date(b.date_detected) - new Date(a.date_detected));
+
+      populatePigletDropdown();
+      renderPerformance(""); 
     }
     return data;
   }
@@ -179,11 +178,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderPerformance(term = "") {
     const morphBody = document.getElementById("morphTableBody");
     const deformityList = document.getElementById("deformityList");
+    
+    const selectedDropdownValue = pigletSelect?.value.toLowerCase();
+    
+    if (!selectedDropdownValue && !term) {
+      if (morphBody) morphBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Please select a piglet from the dropdown to view performance data.</td></tr>`;
+      if (deformityList) deformityList.innerHTML = `<div class="text-muted">Select a piglet to check for deformities.</div>`;
+      return;
+    }
+
+    const activeFilter = selectedDropdownValue || term;
 
     if (morphBody) {
       const rows = rawPerformanceData.morphology.filter(m =>
-        resolveFarmerName(m).toLowerCase().includes(term) ||
-        (m.swine_tag || "").toLowerCase().includes(term)
+        (m.swine_tag || "").toLowerCase().includes(activeFilter)
       );
 
       morphBody.innerHTML = rows.length
@@ -208,27 +216,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             return `
               <tr>
-                <td>${resolveFarmerName(item)}</td>
                 <td><strong>${item.swine_tag}</strong></td>
-                <td>${item.swine_sex}</td>
-                <td>${item.morphology?.stage || "N/A"}<br><small style="color:${suggestionColor}; font-weight: bold;">${suggestionText}</small></td>
-                <td>⚖️ ${item.morphology?.weight || 0}kg</td>
-                <td>🦷 ${item.morphology?.teeth || 0}</td>
+                <td><span style="color: ${item.swine_sex === 'Female' ? '#e91e63' : '#2196f3'}; font-weight: bold;">${item.swine_sex}</span></td>
+                <td>
+                  ${item.morphology?.stage || "N/A"}<br>
+                  <small style="color:${suggestionColor}; font-weight: bold;">${suggestionText}</small>
+                </td>
+                <td>
+                  <small><strong>Weight:</strong> ${item.morphology?.weight || 0}kg</small><br>
+                  <small><strong>Heart Girth:</strong> ${item.morphology?.heart_girth || 0}cm</small><br>
+                  <small><strong>Body Length:</strong> ${item.morphology?.body_length || 0}cm</small>
+                </td>
+                <td><small><strong>Teeth:</strong> ${item.morphology?.teeth || 0}</small></td>
                 <td>${item.morphology?.date ? new Date(item.morphology.date).toLocaleDateString() : "N/A"}</td>
               </tr>`;
           }).join("")
-        : `<tr><td colspan="7" class="text-center">No performance data found.</td></tr>`;
+        : `<tr><td colspan="6" class="text-center">No performance data matches "${activeFilter}".</td></tr>`;
     }
 
     if (deformityList) {
       const defs = rawPerformanceData.deformities.filter(d =>
-        resolveFarmerName(d).toLowerCase().includes(term) || (d.swine_tag || "").toLowerCase().includes(term)
+        (d.swine_tag || "").toLowerCase().includes(activeFilter)
       );
       deformityList.innerHTML = defs.length ? defs.map(d => `
           <div class="deformity-item" style="padding: 10px; border-left: 4px solid #c62828; background: #fff5f5; margin-bottom: 5px;">
             <strong>${d.swine_tag}</strong>: ${d.deformity_types} <br>
-            <small class="text-muted">Farmer: ${resolveFarmerName(d)} | Detected: ${new Date(d.date_detected).toLocaleDateString()}</small>
-          </div>`).join("") : `<div class="text-success">✅ No deformities found.</div>`;
+            <small class="text-muted">Detected: ${new Date(d.date_detected).toLocaleDateString()}</small>
+          </div>`).join("") : `<div class="text-success">✅ No deformities found for this selection.</div>`;
     }
   }
 
@@ -236,7 +250,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadSelection() {
     const data = await authFetch("/selection-candidates");
     if (data && data.success) {
-      rawSelectionData = data.data || [];
+      rawSelectionData = (data.data || []).filter(isMySwine);
+      rawSelectionData.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
       renderSelection();
     }
     return data;
@@ -245,22 +260,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderSelection(term = "") {
     const body = document.getElementById("selectionTableBody");
     if (!body) return;
-    const rows = rawSelectionData.filter(r => resolveFarmerName(r).toLowerCase().includes(term) || (r.swine_tag || "").toLowerCase().includes(term));
+    const rows = rawSelectionData.filter(r => (r.swine_tag || "").toLowerCase().includes(term));
     body.innerHTML = rows.length ? rows.map(r => `
         <tr>
           <td><span class="badge bg-dark">${r.swine_tag}</span></td>
-          <td>${resolveFarmerName(r)}</td>
           <td>${r.current_stage}</td>
           <td><strong>${r.recommendation || "Pending"}</strong></td>
           <td><span class="badge bg-light text-dark border">Manager Review</span></td>
-        </tr>`).join("") : `<tr><td colspan="5" class="text-center">No selection candidates found.</td></tr>`;
+        </tr>`).join("") : `<tr><td colspan="4" class="text-center">No selection candidates found.</td></tr>`;
   }
 
   // ================= 4. MORTALITY ANALYTICS =================
   async function loadSwine() {
     const data = await authFetch("/swine/all");
     if (data && data.success) {
-      allSwineData = data.swine || data.data || [];
+      allSwineData = (data.swine || data.data || []).filter(isMySwine);
       renderMortality();
     }
     return data;
@@ -269,22 +283,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderMortality(term = "") {
     const body = document.getElementById("breedingMortalityTableBody");
     if (!body) return;
-    
-    const fId = user.farmerProfileId || user.id || user._id;
 
     let adultSows = allSwineData.filter(s => {
       const stage = (s.age_stage || s.current_status || s.current_stage || "").toLowerCase();
       const isBreeder = ["adult", "pregnant", "lactating", "farrowing", "sow"].some(tag => stage.includes(tag));
-      const ownerId = s.farmer_id?._id || s.farmer_id;
-      const isMine = ownerId && fId && ownerId.toString() === fId.toString();
-      
-      return (s.sex || "").toLowerCase() === "female" && isBreeder && (user.role === "farm_manager" || user.role === "admin" ? true : isMine);
+      return (s.sex || "").toLowerCase() === "female" && isBreeder;
     });
 
     const filtered = adultSows.filter(s => {
       const sId = s.swine_id || s.swine_tag || "";
-      const name = resolveFarmerName(s).toLowerCase();
-      return name.includes(term) || sId.toLowerCase().includes(term);
+      return sId.toLowerCase().includes(term);
     });
 
     body.innerHTML = filtered.length ? filtered.map(sow => {
@@ -295,18 +303,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           let mortalityRate = totalBorn > 0 ? ((deceasedCount / totalBorn) * 100).toFixed(1) : 0;
           
           return `<tr>
-              <td><strong>${resolveFarmerName(sow)}</strong></td>
               <td><span class="badge bg-secondary">${sowId}</span></td>
               <td class="text-center"><b>${totalBorn - deceasedCount}</b></td>
               <td class="text-center" style="color: #d32f2f;"><b>${deceasedCount}</b></td>
               <td class="text-center"><b>${mortalityRate}%</b></td>
             </tr>`;
-        }).join("") : `<tr><td colspan="5" class="text-center">No breeder sows found.</td></tr>`;
+        }).join("") : `<tr><td colspan="4" class="text-center">No breeder sows found.</td></tr>`;
   }
 
   // ================= INIT =================
   try {
-    debugLog("INIT", "Starting Sequential Load...");
+    debugLog("INIT", "Starting Load...");
     await safeLoad(loadAIRecords, "AI History", "aiTableBody");
     await safeLoad(loadPerformance, "Performance", "morphTableBody");
     await safeLoad(loadSelection, "Selection", "selectionTableBody");
