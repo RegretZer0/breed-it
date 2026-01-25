@@ -1,6 +1,9 @@
 import { authGuard } from "/js/authGuard.js";
 import { PerformanceHelper } from "/js/performance_helper.js";
 
+// Global variable to store the Bootstrap modal instance
+let bsFarrowingModal;
+
 document.addEventListener("DOMContentLoaded", async () => {
     // 1. Authenticate and Role Check
     const user = await authGuard();
@@ -9,11 +12,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     const BACKEND_URL = "http://localhost:5000";
     const token = localStorage.getItem("token");
 
+    // --- MODAL INITIALIZATION FIX ---
+    const modalEl = document.getElementById('farrowingModal');
+    if (modalEl) {
+        // Move the modal element to the end of the body to prevent "shadow trap" issues
+        document.body.appendChild(modalEl);
+        // Initialize the official Bootstrap modal controller
+        bsFarrowingModal = new bootstrap.Modal(modalEl);
+    }
+
     // Local State
     let rawAiData = [];
     let rawPerformanceData = { morphology: [], deformities: [] };
     let rawSelectionData = [];
     let allSwineData = []; 
+    let dueForFarrowingData = []; 
     let activeFilters = {search: "", stage: "", sex: ""};
 
     /**
@@ -30,9 +43,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     /**
-     * OWNERSHIP FILTER: Ensures Farm Managers only see farmers they registered.
+     * OWNERSHIP FILTER
      */
     const isOwner = (item) => {
+        if (!item) return false;
         if (user.role.toLowerCase() === "farm-manager") {
             const farmerObj = item.farmer_id;
             if (!farmerObj) return false;
@@ -43,8 +57,48 @@ document.addEventListener("DOMContentLoaded", async () => {
             const farmerId = item.farmer_id?._id || item.farmer_id;
             return farmerId === user.farmerProfileId;
         }
-        return true; // Default for Admin
+        return true; 
     };
+
+    // ---------------------------------------------------------
+    // FETCH & RENDER DUE FOR FARROWING
+    // ---------------------------------------------------------
+    async function loadDueForFarrowing() {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/reproduction/due-for-farrowing`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await res.json();
+            if (result.success && Array.isArray(result.data)) {
+                dueForFarrowingData = result.data;
+                renderDueForFarrowing();
+            }
+        } catch (err) { console.error("Farrowing Load Error:", err); }
+    }
+
+    function renderDueForFarrowing(term = "") {
+        const tableBody = document.getElementById("farrowingTableBody");
+        if (!tableBody) return;
+
+        const filtered = dueForFarrowingData.filter(s => 
+            s.swine_tag.toLowerCase().includes(term.toLowerCase())
+        );
+
+        tableBody.innerHTML = filtered.length > 0 ? filtered.map(sow => `
+            <tr>
+                <td><strong>${sow.swine_tag}</strong></td>
+                <td>${sow.breed}</td>
+                <td>Parity: ${sow.parity || 1}</td>
+                <td>${sow.expected_date ? new Date(sow.expected_date).toLocaleDateString() : 'TBD'}</td>
+                <td>
+                    <button class="action-btn" 
+                        onclick="openFarrowingModal('${sow.swine_tag}', '${sow.ai_record_id}', '${sow.breed}', '${sow.farmer_id?._id || sow.farmer_id || ''}', '${sow.sire_id || ''}')" 
+                        style="background:#6a1b9a; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">
+                        Register Birth
+                    </button>
+                </td>
+            </tr>`).join('') : '<tr><td colspan="5" style="text-align:center; padding: 20px;">No sows currently due for farrowing.</td></tr>';
+    }
 
     // ---------------------------------------------------------
     // DRILL-DOWN SELECTORS
@@ -102,87 +156,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     // SEARCH & FILTER LOGIC
     // ---------------------------------------------------------
     const filterSearch = document.getElementById("filterSearch");
-    const filterStage  = document.getElementById("filterStage");
-    const filterSex    = document.getElementById("filterSex");
     const applyBtn = document.getElementById("applyFilterBtn");
     const resetBtn = document.getElementById("resetFilterBtn");
 
-    function hasActiveFilters() {
-        return !!(activeFilters.search || activeFilters.stage || activeFilters.sex);
-    }
-
     applyBtn?.addEventListener("click", (e) => {
         e.preventDefault();
-        activeFilters.search = filterSearch.value.trim().toLowerCase();
-        activeFilters.stage  = filterStage.value;
-        activeFilters.sex    = filterSex.value;
-
-        if (!hasActiveFilters()) {
-            const card = document.getElementById("filteredResultCard");
-            if (card) card.style.display = "none";
-            return;
-        }
-
-        renderFilteredResults();
-        const term = activeFilters.search;
+        const term = filterSearch.value.trim().toLowerCase();
         renderAIRecords(term);
         renderPerformanceAnalytics(term);
         renderSelectionProcess(term);
         renderBreedingMortalityTable(term);
+        renderDueForFarrowing(term); 
     });
 
     resetBtn?.addEventListener("click", (e) => {
         e.preventDefault();
-        activeFilters = { search: "", stage: "", sex: "" };
         filterSearch.value = "";
-        filterStage.value  = "";
-        filterSex.value    = "";
-        if (farmerSelect) farmerSelect.value = "";
-        if (pigletSelect) pigletSelect.innerHTML = '<option value="">-- Select Farmer First --</option>';
-
-        const card = document.getElementById("filteredResultCard");
-        if (card) card.style.display = "none";
-        
         renderAIRecords("");
         renderPerformanceAnalytics("");
         renderSelectionProcess("");
         renderBreedingMortalityTable("");
+        renderDueForFarrowing("");
     });
 
-    function renderFilteredResults() {
-        const tbody = document.getElementById("filteredResultTableBody");
-        const card  = document.getElementById("filteredResultCard");
-        if (!hasActiveFilters() || !tbody) {
-            if (card) card.style.display = "none";
-            return;
-        }
-
-        const results = rawPerformanceData.morphology.filter(m => {
-            if (!isOwner(m)) return false;
-            if (activeFilters.stage && m.morphology.stage !== activeFilters.stage) return false;
-            if (activeFilters.sex && m.swine_sex !== activeFilters.sex) return false;
-            const term = activeFilters.search;
-            return resolveFarmerName(m).toLowerCase().includes(term) || m.swine_tag?.toLowerCase().includes(term);
-        });
-
-        results.sort((a, b) => new Date(b.morphology.date) - new Date(a.morphology.date));
-
-        tbody.innerHTML = results.length
-            ? results.map(r => `
-                <tr>
-                  <td>${resolveFarmerName(r)}</td>
-                  <td><strong>${r.swine_tag}</strong></td>
-                  <td>${r.swine_sex}</td>
-                  <td>${r.morphology.stage}</td>
-                  <td>⚖️ ${r.morphology.weight}kg</td>
-                </tr>`).join("")
-            : `<tr><td colspan="5" class="text-center py-4">No matches found.</td></tr>`;
-
-        if (card) card.style.display = "block";
-    }
-
     // ---------------------------------------------------------
-    // 1. AI RECORDS (DESCENDING)
+    // 1. AI RECORDS 
     // ---------------------------------------------------------
     async function loadAIRecords() {
         try {
@@ -190,12 +188,18 @@ document.addEventListener("DOMContentLoaded", async () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await res.json();
-            if (result.success) {
+            if (result.success && Array.isArray(result.data)) {
                 rawAiData = result.data.filter(isOwner);
                 rawAiData.sort((a, b) => new Date(b.date) - new Date(a.date));
                 renderAIRecords();
+            } else {
+                rawAiData = []; 
+                renderAIRecords();
             }
-        } catch (err) { console.error("AI Load Error:", err); }
+        } catch (err) { 
+            console.error("AI Load Error:", err);
+            document.getElementById("aiTableBody").innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading records.</td></tr>';
+        }
     }
 
     function renderAIRecords(term = "") {
@@ -218,7 +222,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------------------------------------------------
-    // 2. PERFORMANCE & DEFORMITIES (UPDATED: TEXT LABELS)
+    // 2. PERFORMANCE & DEFORMITIES
     // ---------------------------------------------------------
     async function loadPerformanceAnalytics() {
         try {
@@ -227,11 +231,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
             const result = await res.json();
             if (result.success) {
-                rawPerformanceData.morphology = result.morphology
+                rawPerformanceData.morphology = (result.morphology || [])
                     .filter(isOwner)
                     .sort((a, b) => new Date(b.morphology.date) - new Date(a.morphology.date));
                 
-                rawPerformanceData.deformities = result.deformities
+                rawPerformanceData.deformities = (result.deformities || [])
                     .filter(isOwner)
                     .sort((a, b) => new Date(b.date_detected) - new Date(a.date_detected));
                 
@@ -316,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ---------------------------------------------------------
-    // 3. SELECTION PROCESS (DESCENDING)
+    // 3. SELECTION PROCESS
     // ---------------------------------------------------------
     async function loadSelectionProcess() {
         try {
@@ -324,9 +328,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await res.json();
-            if (result.success) {
+            if (result.success && Array.isArray(result.data)) {
                 rawSelectionData = result.data.filter(isOwner);
-                rawSelectionData.sort((a, b) => new Date(b.updatedAt || b.date) - new Date(a.updatedAt || a.date));
                 renderSelectionProcess();
             }
         } catch (err) { console.error("Selection Load Error:", err); }
@@ -399,8 +402,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         tableBody.innerHTML = filtered.length > 0 ? filtered.map(sow => {
             const sowId = sow.swine_id || sow.swine_tag;
             const offspring = allSwineData.filter(child => child.dam_id === sowId || child.mother_id === sowId);
-            const aliveCount = offspring.filter(child => child.health_status !== "Deceased").length;
-            const deceasedCount = offspring.filter(child => child.health_status === "Deceased").length;
+            const aliveCount = offspring.filter(child => child.health_status !== "Deceased (Before Weaning)" && child.health_status !== "Deceased").length;
+            const deceasedCount = offspring.filter(child => child.health_status === "Deceased (Before Weaning)" || child.health_status === "Deceased").length;
             const mortalityRate = offspring.length > 0 ? ((deceasedCount / offspring.length) * 100).toFixed(1) : 0;
             const rateColor = mortalityRate > 15 ? "#d32f2f" : mortalityRate > 5 ? "#f57c00" : "#2e7d32";
 
@@ -416,9 +419,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Initial Data Fetch
-    await Promise.all([loadAIRecords(), loadPerformanceAnalytics(), loadSelectionProcess(), fetchAllSwine()]);
+    await Promise.all([
+        loadAIRecords(), 
+        loadPerformanceAnalytics(), 
+        loadSelectionProcess(), 
+        fetchAllSwine(),
+        loadDueForFarrowing()
+    ]);
 });
 
+/**
+ * GLOBAL FUNCTIONS FOR BUTTONS
+ */
+
+// 1. Selection Button Logic
 window.processSelection = async (swineId, isApproved) => {
     const actionText = isApproved ? 'RETAIN this swine for breeding' : 'CULL this swine for market/sale';
     if (!confirm(`Confirm Action: Are you sure you want to ${actionText}?`)) return;
@@ -432,4 +446,102 @@ window.processSelection = async (swineId, isApproved) => {
         const data = await res.json();
         if (data.success) { alert(data.message); location.reload(); } else { alert("Error: " + data.message); }
     } catch (err) { alert("Network error. Please try again."); }
+};
+
+// --- FARROWING MODAL LOGIC ---
+window.openFarrowingModal = (sowTag, aiRecordId, breed, farmerId, sireId) => {
+    // Reset form
+    document.getElementById("farrowingForm").reset();
+    
+    // Set values in the hidden fields
+    document.getElementById("farrowing_sow_id").value = sowTag;
+    document.getElementById("farrowing_ai_record_id").value = aiRecordId;
+    document.getElementById("farrowing_breed").value = breed || "";
+    document.getElementById("farrowing_farmer_id").value = farmerId || "";
+    document.getElementById("farrowing_sire_id").value = sireId || "";
+    document.getElementById("farrowing_date").value = new Date().toISOString().split('T')[0];
+    
+    // Show the modal using the Bootstrap API
+    if (bsFarrowingModal) {
+        bsFarrowingModal.show();
+    }
+};
+
+window.closeFarrowingModal = () => {
+    if (bsFarrowingModal) {
+        bsFarrowingModal.hide();
+    }
+};
+
+// --- UPDATED BATCH REGISTRATION SUBMIT (ADDED STILLBIRTH & MUMMIFIED) ---
+window.submitFarrowing = async () => {
+    const btn = document.getElementById("submitFarrowingBtn");
+    
+    const farrowingDate = document.getElementById("farrowing_date").value;
+    const numMales = parseInt(document.getElementById("num_males").value) || 0;
+    const numFemales = parseInt(document.getElementById("num_females").value) || 0;
+    
+    // NEW FIELDS
+    const numStillborn = parseInt(document.getElementById("num_stillborn")?.value) || 0;
+    const numMummified = parseInt(document.getElementById("num_mummified")?.value) || 0;
+
+    if (!farrowingDate) {
+        alert("Please select the farrowing date.");
+        return;
+    }
+
+    const totalLive = numMales + numFemales;
+    const totalBorn = totalLive + numStillborn + numMummified;
+
+    if (totalBorn <= 0) {
+        alert("Please enter the number of piglets born (Alive, Stillborn, or Mummified).");
+        return;
+    }
+
+    const confirmMsg = `Confirm Litter Registration:\n\nTotal Born: ${totalBorn}\n- Alive: ${totalLive} (${numMales}M, ${numFemales}F)\n- Stillborn: ${numStillborn}\n- Mummified: ${numMummified}\n\nContinue?`;
+    if (!confirm(confirmMsg)) return;
+
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+
+    const payload = {
+        dam_id: document.getElementById("farrowing_sow_id").value,
+        sire_id: document.getElementById("farrowing_sire_id")?.value || null,
+        farmer_id: document.getElementById("farrowing_farmer_id")?.value || null,
+        ai_record_id: document.getElementById("farrowing_ai_record_id").value,
+        farrowing_date: farrowingDate,
+        num_males: numMales,
+        num_females: numFemales,
+        num_stillborn: numStillborn,   // Included in payload
+        num_mummified: numMummified,   // Included in payload
+        breed: document.getElementById("farrowing_breed").value,
+        avg_weight: parseFloat(document.getElementById("avg_weight").value) || 0
+    };
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/swine/batch-register-litter`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${localStorage.getItem("token")}` 
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            alert("Success! Litter registered. Sow status updated to Lactating.");
+            closeFarrowingModal(); 
+            location.reload();
+        } else {
+            alert("Error: " + data.message);
+            btn.disabled = false;
+            btn.innerText = "Register Litter";
+        }
+    } catch (err) {
+        console.error("Submission Error:", err);
+        alert("Failed to connect to server.");
+        btn.disabled = false;
+        btn.innerText = "Register Litter";
+    }
 };

@@ -2,180 +2,154 @@
 <%- include("../../partials/farm-manager/navbar") %>
 <%- include("../../partials/farm-manager/sidepanel") %>
 
-<!-- Main content -->
 <main class="main-content">
   <div class="container-fluid">
-    <!-- <div class="card page-card"> -->
-        <div class="card page-card overview-card">
-          <div class="card-body">
-              <h4 class="page-title">FARMER REPORTS</h4>
+    <div class="card page-card overview-card">
+      <div class="card-body">
+        <h4 class="page-title">FARMER REPORTS</h4>
 
-
-            <!-- STATS GRID -->
-            <div class="row g-3 stats-grid">
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">In-Heat</div>
-                    <div class="stat-number" id="countInHeat">0</div>
-                  </div>
-                  <div class="stat-icon orange">
-                    <i class="fa-solid fa-fire"></i>
-                  </div>
-                </div>
+        <div class="row g-3 stats-grid">
+          <div class="col-md-6 col-lg-3">
+            <div class="stat-card d-flex justify-content-between align-items-center">
+              <div>
+                <div class="stat-label">In-Heat</div>
+                <div class="stat-number" id="countInHeat">0</div>
               </div>
-
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">Under Observation</div>
-                    <div class="stat-number" id="countAwaitingRecheck">0</div>
-                  </div>
-                  <div class="stat-icon blue">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">Pregnant</div>
-                    <div class="stat-number" id="countPregnant">0</div>
-                  </div>
-                  <div class="stat-icon green">
-                    <i class="fa-solid fa-piggy-bank"></i>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-6 col-lg-3">
-                <div class="stat-card d-flex justify-content-between align-items-center">
-                  <div>
-                    <div class="stat-label">Farrowing Soon</div>
-                    <div class="stat-number" id="countFarrowingReady">0</div>
-                  </div>
-                  <div class="stat-icon red">
-                    <i class="fa-solid fa-warehouse"></i>
-                  </div>
-                </div>
+              <div class="stat-icon orange">
+                <i class="fa-solid fa-fire"></i>
               </div>
             </div>
+          </div>
 
-            <!-- DIVIDER -->
-            <hr style="margin: 24px 0;">
-
-            <!-- FILTER SECTION -->
-            <h5 class="card-title">Filter Reports</h5>
-
-            <div class="filter-row">
-              <input type="text" id="filterSwine" placeholder="Swine ID">
-
-              <select id="filterStatus">
-                <option value="">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="waiting_heat_check">Under Observation</option>
-                <option value="pregnant">Pregnant</option>
-              </select>
-
-              <button id="applyFilter">Apply</button>
-              <button id="clearFilter" class="secondary">Clear</button>
-            </div>
-
-            <!-- FILTERED RESULTS (INSIDE SAME CARD) -->
-            <div
-              id="filteredResultsCard"
-              style="display:none; margin-top: 24px;"
-            >
-              <hr style="margin: 24px 0;">
-
-              <h5 class="card-title">Filtered Results</h5>
-
-              <div class="table-responsive">
-                <table class="reports-table">
-                  <thead>
-                    <tr>
-                      <th>Swine ID</th>
-                      <th>Farmer</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="filteredTableBody"></tbody>
-                </table>
+          <div class="col-md-6 col-lg-3">
+            <div class="stat-card d-flex justify-content-between align-items-center">
+              <div>
+                <div class="stat-label">Under Observation</div>
+                <div class="stat-number" id="countAwaitingRecheck">0</div>
+              </div>
+              <div class="stat-icon blue">
+                <i class="fa-solid fa-clock-rotate-left"></i>
               </div>
             </div>
+          </div>
 
+          <div class="col-md-6 col-lg-3">
+            <div class="stat-card d-flex justify-content-between align-items-center">
+              <div>
+                <div class="stat-label">Pregnant</div>
+                <div class="stat-number" id="countPregnant">0</div>
+              </div>
+              <div class="stat-icon green">
+                <i class="fa-solid fa-piggy-bank"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3">
+            <div class="stat-card d-flex justify-content-between align-items-center">
+              <div>
+                <div class="stat-label">Farrowing Soon</div>
+                <div class="stat-number" id="countFarrowingReady">0</div>
+              </div>
+              <div class="stat-icon red">
+                <i class="fa-solid fa-warehouse"></i>
+              </div>
+            </div>
           </div>
         </div>
 
+        <hr style="margin: 24px 0;">
 
+        <h5 class="card-title">Filter Reports</h5>
 
-        <!-- REPORTS TABLE CARD -->
-        <div class="card page-card reports-card" style="margin-top: 20px;">
-          <div class="card-body">
+        <div class="filter-row">
+          <input type="text" id="filterSwine" placeholder="Swine ID">
 
-            <div class="card-header-row">
-              <h5 class="card-title">Heat Reports</h5>
-            </div>
+          <select id="filterStatus">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="under_observation">Under Observation</option>
+            <option value="pregnant">Pregnant</option>
+            <option value="farrowed">Farrowed</option>
+            <option value="lactating">Lactating</option>
+          </select>
 
-            <div class="table-responsive">
-              <table class="reports-table">
-                <thead>
-                  <tr>
-                    <th>Swine ID</th>
-                    <th>Farmer</th>
-                    <th>Date Reported</th>
-                    <th>Probability</th>
-                    <th>Status</th>
-                    <th>Next Heat</th>
-                    <th>Expected Farrowing</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="reportsTableBody">
-                  <tr>
-                    <td colspan="8">Loading reports...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <button id="applyFilter">Apply</button>
+          <button id="clearFilter" class="secondary">Clear</button>
+        </div>
 
+        <div id="filteredResultsCard" style="display:none; margin-top: 24px;">
+          <hr style="margin: 24px 0;">
+          <h5 class="card-title">Filtered Results</h5>
+          <div class="table-responsive">
+            <table class="reports-table">
+              <thead>
+                <tr>
+                  <th>Swine ID</th>
+                  <th>Farmer</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="filteredTableBody"></tbody>
+            </table>
           </div>
         </div>
-       
+      </div>
+    </div>
+
+    <div class="card page-card reports-card" style="margin-top: 20px;">
+      <div class="card-body">
+        <div class="card-header-row">
+          <h5 class="card-title">Heat Reports</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>Swine ID</th>
+                <th>Farmer</th>
+                <th>Date Reported</th>
+                <th>Probability</th>
+                <th>Status</th>
+                <th>Next Heat</th>
+                <th>Expected Farrowing</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <tr>
+                <td colspan="8">Loading reports...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </main>
 
-  <!-- REPORT DETAILS MODAL -->
-  <div id="reportDetailsModal" class="modal-overlay">
-    <div class="modal-panel">
+<div id="reportDetailsModal" class="modal-overlay">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h5>Report Details</h5>
+      <button class="modal-close" id="closeReportModal">&times;</button>
+    </div>
 
-      <div class="modal-header">
-        <h5>Report Details</h5>
-        <button class="modal-close" id="closeReportModal">&times;</button>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <p id="reportSwine"></p>
+        <p id="reportFarmer"></p>
+        <p id="reportProbability"></p>
+        <p id="reportStatus"></p>
+        <p id="reportSigns" style="grid-column: span 2;"></p>
       </div>
 
-      <div class="modal-body">
-        <!-- DETAILS GRID -->
-        <div class="detail-grid">
-          <p id="reportSwine"></p>
-          <p id="reportFarmer"></p>
-          <p id="reportProbability"></p>
-          <p id="reportStatus"></p>
-          <p id="reportSigns" style="grid-column: span 2;"></p>
-        </div>
-
-        <!-- MEDIA GALLERY -->
-        <div class="media-wrapper">
-          <div id="evidenceGallery" class="evidence-gallery"></div>
-        </div>
-
-
+      <div class="media-wrapper">
+        <div id="evidenceGallery" class="evidence-gallery"></div>
+      </div>
 
       <div class="modal-footer report-actions">
         <button id="approveBtn" style="display:none;">Approve</button>
@@ -184,85 +158,61 @@
         <button id="confirmAIBtn" style="display:none;">💉 Confirm AI</button>
         <button id="confirmPregnancyBtn" style="display:none;">🤰 Confirm Pregnancy</button>
 
-        <!-- NEW -->
         <button id="followUpBtn" style="display:none;">🔄 Cycle Failed</button>
         <button id="confirmFarrowingBtn" style="display:none;">🐷 Confirm Farrowing</button>
+        
+        <button id="confirmWeaningBtn" style="display:none; background-color: #6f42c1; color: white;">🍼 Confirm Weaning</button>
 
         <button class="secondary" id="closeReportModalBtn">Close</button>
       </div>
-
     </div>
   </div>
+</div>
 
+<div id="aiConfirmModal" class="modal">
+  <div class="modal-content">
+    <h3>💉 Confirm AI Service</h3>
+    <label for="boarSelect">Select Sire (Boar)</label>
+    <select id="boarSelect"></select>
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button id="submitAI" class="btn-nav" style="flex: 1; background: var(--stat-blue); color: #fff;">Confirm AI</button>
+      <button type="button" class="btn-nav secondary" style="flex: 1;" onclick="document.getElementById('aiConfirmModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
 
- <!-- AI CONFIRMATION MODAL (REQUIRED FOR CONFIRM AI FLOW) -->
-        <div id="aiConfirmModal" class="modal">
-          <div class="modal-content">
-            <h3>💉 Confirm AI Service</h3>
-
-            <label for="boarSelect">Select Sire (Boar)</label>
-            <select id="boarSelect"></select>
-
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-              <button
-                id="submitAI"
-                class="btn-nav"
-                style="flex: 1; background: var(--stat-blue); color: #fff;">
-                Confirm AI
-              </button>
-
-              <button
-                type="button"
-                class="btn-nav secondary"
-                style="flex: 1;"
-                onclick="document.getElementById('aiConfirmModal').style.display='none'">
-                Cancel
-              </button>
-            </div>
-          </div>
+<div id="farrowingModal" class="modal">
+  <div class="modal-content" style="width: 500px;">
+    <h3 style="margin-top:0;">🐷 Register Farrowing Results</h3>
+    <form id="farrowingForm">
+      <label>Actual Farrowing Date</label>
+      <input type="date" id="farrowingDateInput" required>
+      
+      <div class="count-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+        <div>
+          <label style="color: #007bff; font-weight: bold;">Live Males</label>
+          <input type="number" id="liveMaleCount" min="0" value="0" required>
         </div>
-
-        <!-- FARROWING CONFIRMATION MODAL -->
-        <div id="farrowingModal" class="modal">
-          <div class="modal-content" style="width: 450px;">
-            <h3 style="margin-top:0;">🐷 Register Farrowing Results</h3>
-
-            <form id="farrowingForm">
-              <label>Actual Farrowing Date</label>
-              <input type="date" id="farrowingDateInput" required>
-
-              <div class="count-grid">
-                <div>
-                  <label>Live</label>
-                  <input type="number" id="liveCount" min="0" value="0" required>
-                </div>
-
-                <div>
-                  <label>Mummy</label>
-                  <input type="number" id="mummyCount" min="0" value="0">
-                </div>
-
-                <div>
-                  <label>Stillborn</label>
-                  <input type="number" id="stillCount" min="0" value="0">
-                </div>
-              </div>
-
-              <div style="display:flex; gap:10px; margin-top:15px;">
-                <button type="submit" class="btn-nav" style="flex:1;">
-                  Confirm Farrowing
-                </button>
-                <button
-                  type="button"
-                  class="btn-nav secondary"
-                  style="flex:1;"
-                  onclick="document.getElementById('farrowingModal').style.display='none'">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+        <div>
+          <label style="color: #e83e8c; font-weight: bold;">Live Females</label>
+          <input type="number" id="liveFemaleCount" min="0" value="0" required>
         </div>
+        <div>
+          <label>Mummy</label>
+          <input type="number" id="mummyCount" min="0" value="0">
+        </div>
+        <div>
+          <label>Stillborn</label>
+          <input type="number" id="stillCount" min="0" value="0">
+        </div>
+      </div>
 
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button type="submit" class="btn-nav" style="flex:1;">Confirm & Generate IDs</button>
+        <button type="button" class="btn-nav secondary" style="flex:1;" onclick="document.getElementById('farrowingModal').style.display='none'">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <%- include("../../partials/farm-manager/footer") %>

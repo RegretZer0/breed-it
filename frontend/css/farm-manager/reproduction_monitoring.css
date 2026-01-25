@@ -1,5 +1,5 @@
 /* =========== Root tokens =========== */
-:root{
+:root {
   /* palette */
   --bg: #ffffff;
   --muted-border: #e9e9e9;
@@ -18,11 +18,11 @@
 }
 
 /* =========== Global reset / basics =========== */
-*, *::before, *::after{
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-html, body{
+html, body {
   height: 100%;
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -33,7 +33,7 @@ html, body{
 }
 
 /* =========== Shell layout =========== */
-.app-shell{
+.app-shell {
   display: flex;
   min-height: 100vh;
   gap: var(--gutter);
@@ -42,7 +42,7 @@ html, body{
 }
 
 /* =========== Main content =========== */
-.main-content{
+.main-content {
   flex: 1;
   min-width: 0;
   padding: var(--gutter);
@@ -50,14 +50,14 @@ html, body{
 }
 
 /* =========== Cards =========== */
-.page-card{
+.page-card {
   background: var(--bg);
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   box-shadow: none;
 }
 
-.page-title{
+.page-title {
   font-size: 20px;
   font-weight: 700;
   margin: 0 0 14px 0;
@@ -67,7 +67,7 @@ html, body{
    FILTER PANEL
 ========================= */
 
-.filter-panel{
+.filter-panel {
   border: 1px solid var(--panel-border);
   border-radius: var(--radius);
   background: #fff;
@@ -75,7 +75,7 @@ html, body{
 }
 
 /* Labels */
-.filter-panel .form-label{
+.filter-panel .form-label {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-dark);
@@ -84,7 +84,7 @@ html, body{
 
 /* Inputs */
 .filter-panel .form-control,
-.filter-panel .form-select{
+.filter-panel .form-select {
   font-size: 13px;
   border-radius: 6px;
   border: 1px solid var(--muted-border);
@@ -93,7 +93,7 @@ html, body{
 
 /* Focus state */
 .filter-panel .form-control:focus,
-.filter-panel .form-select:focus{
+.filter-panel .form-select:focus {
   border-color: var(--accent-green);
   box-shadow: 0 0 0 0.12rem rgba(23,193,79,0.18);
 }
@@ -102,12 +102,12 @@ html, body{
    FILTER ACTION BUTTONS
 ========================= */
 
-.filter-actions{
+.filter-actions {
   display: flex;
   gap: 8px;
 }
 
-.filter-actions .btn{
+.filter-actions .btn {
   font-size: 12px;
   font-weight: 700;
   padding: 10px 14px;
@@ -116,18 +116,18 @@ html, body{
 }
 
 /* Primary */
-.filter-actions .btn-primary{
+.filter-actions .btn-primary {
   background: var(--accent-green);
   border-color: var(--accent-green);
 }
 
-.filter-actions .btn-primary:hover{
+.filter-actions .btn-primary:hover {
   background: #13a842;
   border-color: #13a842;
 }
 
 /* Secondary */
-.filter-actions .btn-outline-secondary{
+.filter-actions .btn-outline-secondary {
   border-color: var(--muted-border);
 }
 
@@ -135,18 +135,18 @@ html, body{
    ACTIVE FILTER PANEL
 ========================= */
 
-.filter-result-panel{
+.filter-result-panel {
   border: 1px dashed var(--panel-border);
   border-radius: var(--radius);
   background: #fafafa;
   padding: 12px 14px;
 }
 
-.filter-result-panel strong{
+.filter-result-panel strong {
   font-size: 12px;
 }
 
-.filter-result-panel .badge{
+.filter-result-panel .badge {
   font-size: 11px;
   font-weight: 700;
   padding: 6px 10px;
@@ -157,58 +157,91 @@ html, body{
    SECTION CARD ENHANCEMENT
 ========================= */
 
-.section-card{
+.section-card {
   border-radius: var(--radius);
   background: #fff;
   padding: 0;
 }
 
-.section-title{
+.section-title {
   font-size: 15px;
   font-weight: 700;
   margin-bottom: 14px;
 }
 
-.section-card{
+.section-card {
   border-left: 4px solid transparent;
+}
+
+/* =========================
+   MODAL FIXES (Anti-Dimming/Stuck)
+========================= */
+
+/* Ensure the backdrop is always behind the modal */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+/* Force the modal to sit on top of everything */
+.modal {
+  z-index: 1050 !important;
+}
+
+/* Clean up modal header for consistent styling */
+.modal-header .btn-close-white {
+  filter: brightness(0) invert(1);
+}
+
+.modal-content {
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.badge-tag {
+  background: #f1f3f5;
+  color: #495057;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 600;
 }
 
 /* =========================
    MOBILE RESPONSIVENESS
 ========================= */
 
-@media (max-width: 768px){
-
+@media (max-width: 768px) {
   /* Stack filters vertically */
-  .filter-panel .row{
+  .filter-panel .row {
     row-gap: 14px;
   }
 
   /* Full-width inputs */
   .filter-panel .col-md-4,
   .filter-panel .col-md-3,
-  .filter-panel .col-md-2{
+  .filter-panel .col-md-2 {
     width: 100%;
   }
 
   /* Buttons side-by-side but full width */
-  .filter-actions{
+  .filter-actions {
     flex-direction: row;
   }
 
-  .filter-actions .btn{
+  .filter-actions .btn {
     flex: 1;
   }
 
   /* Reduce table font size */
   .table th,
-  .table td{
+  .table td {
     font-size: 12px;
     white-space: nowrap;
   }
 
   /* Card spacing */
-  .card{
+  .card {
     margin-bottom: 14px;
   }
 }
@@ -217,21 +250,20 @@ html, body{
    EXTRA SMALL DEVICES
 ========================= */
 
-@media (max-width: 480px){
-
-  .section-title{
+@media (max-width: 480px) {
+  .section-title {
     font-size: 14px;
   }
 
-  .filter-panel{
+  .filter-panel {
     padding: 12px;
   }
 
-  .filter-actions{
+  .filter-actions {
     flex-direction: column;
   }
 
-  .filter-actions .btn{
+  .filter-actions .btn {
     width: 100%;
   }
 }

@@ -13,9 +13,9 @@ const aiRecordSchema = new mongoose.Schema(
       ref: "Swine",
       required: true
     },
+    // Changed to String to support both Swine ObjectIds and External Boar/Batch codes
     male_swine_id: {
-      type: mongoose.Schema.Types.ObjectId, // Usually the Boar or Semen Batch ID
-      ref: "Swine",
+      type: String, 
       required: true
     },
     manager_id: {
@@ -63,10 +63,14 @@ const aiRecordSchema = new mongoose.Schema(
     farrowing_date: {
       type: Date
     },
-    // Status can help filter "Successful" vs "Failed" inseminations
+    remarks: {
+      type: String,
+      default: ""
+    },
+    // Added "Completed" to match weaning logic in routes
     status: {
       type: String,
-      enum: ["Ongoing", "Success", "Failed", "Aborted"],
+      enum: ["Ongoing", "Success", "Failed", "Aborted", "Completed"],
       default: "Ongoing"
     }
   },

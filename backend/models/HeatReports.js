@@ -21,6 +21,12 @@ const heatReportSchema = new mongoose.Schema(
       required: false 
     },
 
+    // Tracking which cycle this report belongs to for the Sow
+    breeding_cycle_number: {
+      type: Number,
+      default: 1
+    },
+
     // ---------------- HEAT DETAILS ----------------
     signs: [
       {
@@ -91,11 +97,11 @@ const heatReportSchema = new mongoose.Schema(
         "approved",           // Manager confirmed (In-Heat)
         "rejected",           // Manager denied
         "ai_service",         // Artificial Insemination performed
-        "under_observation", // 23-day observation period
+        "under_observation",  // 23-day observation period
         "pregnant",           // Passed 23-day check
         "farrowing_ready",    // Ready for farrowing
         "farrowed",           // Successfully farrowed
-        "lactating",         // Currently lactating
+        "lactating",          // Currently lactating
         "completed"           // Cycle ended (Weaned)
       ],
       default: "pending"
