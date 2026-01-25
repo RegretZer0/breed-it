@@ -606,6 +606,138 @@ router.get(
 );
 
 /* ======================================================
+    BATCH REGISTER PIGLETS (LITTER BIRTH) - UPDATED
+====================================================== */
+router.post("/batch-register-litter", requireSessionAndToken, async (req, res) => {
+    const { 
+        dam_id, 
+        sire_id, 
+        farrowing_date, 
+        num_males, 
+        num_females,
+        num_stillborn,    // Added
+        num_mummified,   // Added
+        breed,
+        avg_weight,
+        farmer_id,
+        ai_record_id 
+    } = req.body;
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const user = req.user;
+        const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+        const prefix = getManagerPrefix(managerId);
+        
+        // 1. Resolve Batch Letter
+        const existingBatches = await Swine.distinct("batch", { registered_by: managerId });
+        let batchLetter = getBatchLetter(existingBatches.length);
+
+        const totalLive = Number(num_males || 0) + Number(num_females || 0);
+        const totalDead = Number(num_stillborn || 0) + Number(num_mummified || 0);
+        const grandTotal = totalLive + totalDead;
+        
+        const piglets = [];
+
+        // 2. Prepare Piglet Array (Loop through all categories)
+        for (let i = 0; i < grandTotal; i++) {
+            let sex = "Female"; 
+            let health_status = "Healthy";
+            let current_status = "Monitoring (Day 1-30)";
+
+            // Determine Sex and Health Status based on index
+            if (i < Number(num_males)) {
+                sex = "Male";
+            } else if (i < totalLive) {
+                sex = "Female";
+            } else if (i < (totalLive + Number(num_stillborn))) {
+                // Stillborn category
+                sex = (i % 2 === 0) ? "Male" : "Female"; // Alternating or default
+                health_status = "Deceased (Before Weaning)";
+                current_status = "Inactive"; 
+            } else {
+                // Mummified category
+                sex = (i % 2 === 0) ? "Male" : "Female";
+                health_status = "Deceased (Before Weaning)";
+                current_status = "Inactive";
+            }
+
+            piglets.push({
+                swine_id: `${prefix}-${batchLetter}-${String(i + 1).padStart(4, "0")}`,
+                registered_by: managerId,
+                farmer_id: farmer_id || null,
+                sex: sex,
+                breed: breed || "Native",
+                age_stage: "piglet",
+                current_status: current_status,
+                health_status: health_status,
+                birth_date: farrowing_date || new Date(),
+                dam_id: dam_id,
+                sire_id: sire_id,
+                batch: batchLetter,
+                performance_records: [{
+                    stage: "Monitoring (Day 1-30)",
+                    weight: Number(avg_weight) || 0,
+                    recorded_by: user.id,
+                    record_date: farrowing_date || new Date(),
+                    remarks: health_status === "Healthy" ? "Initial Registration" : "Registered as Deceased (Farrowing)"
+                }]
+            });
+        }
+
+        // 3. DATABASE UPDATES
+        // A. Bulk Insert Piglets
+        if (piglets.length > 0) {
+            await Swine.insertMany(piglets, { session });
+        }
+
+        // B. Update Sow's Breeding Cycle & Status
+        await Swine.updateOne(
+            { swine_id: dam_id, "breeding_cycles.is_pregnant": true }, 
+            { 
+                $set: { 
+                    "breeding_cycles.$.farrowed": true,
+                    "breeding_cycles.$.is_pregnant": false,
+                    "breeding_cycles.$.actual_farrowing_date": farrowing_date || new Date(),
+                    "breeding_cycles.$.farrowing_results": {
+                        total_piglets: grandTotal,
+                        live_piglets: totalLive,
+                        male_count: Number(num_males),
+                        female_count: Number(num_females),
+                        mortality_count: totalDead
+                    },
+                    current_status: "Lactating"
+                },
+                $inc: { parity: 1 } 
+            },
+            { session }
+        );
+
+        // C. Update AI Record status
+        if (ai_record_id) {
+            await AIRecord.findByIdAndUpdate(ai_record_id, {
+                status: "Completed",
+                actual_farrowing_date: farrowing_date || new Date()
+            }, { session });
+        }
+
+        await session.commitTransaction();
+        res.status(201).json({ 
+            success: true, 
+            message: `Farrowing successful. Batch ${batchLetter} created with ${totalLive} live and ${totalDead} deceased records.` 
+        });
+
+    } catch (error) {
+        if (session.inTransaction()) await session.abortTransaction();
+        res.status(500).json({ success: false, message: error.message });
+    } finally {
+        session.endSession();
+    }
+});
+
+/* ======================================================
     FARMER PROFILE SPECIFIC ROUTE
 ====================================================== */
 router.get("/farmer", requireApiLogin, allowRoles("farmer"), async (req, res) => {

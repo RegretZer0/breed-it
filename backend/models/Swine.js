@@ -5,6 +5,9 @@ const swineSchema = new mongoose.Schema({
   swine_id: { type: String, required: true, unique: true },
   registered_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   
+  // manager_id is needed for the farm hierarchy and piglet ownership
+  manager_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false }, 
+  
   // farmer_id is optional for Master/Maintenance Boars
   farmer_id: { type: mongoose.Schema.Types.ObjectId, ref: "Farmer", required: false }, 
   
@@ -26,7 +29,7 @@ const swineSchema = new mongoose.Schema({
       "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", 
       "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
-      "Active", "Inactive", "Under Monitoring", "Routine Monitoring"
+      "Active", "Inactive", "Under Monitoring", "Routine Monitoring", "Completed"
     ],
     default: "Monitoring (Day 1-30)" 
   },
@@ -69,7 +72,7 @@ const swineSchema = new mongoose.Schema({
     farrowed: { type: Boolean, default: false }, 
     expected_farrowing_date: { type: Date },
     actual_farrowing_date: { type: Date },
-    weaning_date: { type: Date }, // ✅ Added to track end of lactation for this cycle
+    weaning_date: { type: Date }, 
     
     cycle_sire_id: { type: String },
 
@@ -135,7 +138,7 @@ const swineSchema = new mongoose.Schema({
   is_external_boar: { type: Boolean, default: false }, 
   date_transfer: { type: Date },
   date_registered: { type: Date, default: Date.now },
-  parity: { type: Number, default: 0 } // ✅ Ensures parity tracking is available for increments
+  parity: { type: Number, default: 0 } 
 }, { 
   timestamps: true,
   toJSON: { virtuals: true },
@@ -192,9 +195,9 @@ swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
     
-    // Updated to 115 days to match your routes
+    // Aligned to 114 days (3 months, 3 weeks, 3 days) - standard gestation
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
-      const gestationDays = 115; 
+      const gestationDays = 114; 
       const farrowDate = new Date(latestCycle.ai_service_date);
       farrowDate.setDate(farrowDate.getDate() + gestationDays);
       latestCycle.expected_farrowing_date = farrowDate;

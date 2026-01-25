@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
   const followUpBtn = document.getElementById("followUpBtn");
+  const confirmWeaningBtn = document.getElementById("confirmWeaningBtn");
 
   const rejectReasonModal = document.getElementById("rejectReasonModal");
   const rejectReasonInput = document.getElementById("rejectReasonInput");
@@ -47,14 +48,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const farrowingModal = document.getElementById("farrowingModal");
   const farrowingForm = document.getElementById("farrowingForm");
 
-
   // Media Elements
   const evidenceGallery = document.getElementById("evidenceGallery");
 
   const approveBtn = document.getElementById("approveBtn");
   const rejectBtn = document.getElementById("rejectBtn");
   const confirmAIBtn = document.getElementById("confirmAIBtn");
-  const confirmFarrowingBtn = document.getElementById("confirmFarrowingBtn"); // Added for Farrowing
+  const confirmFarrowingBtn = document.getElementById("confirmFarrowingBtn"); 
 
   const aiConfirmModal = document.getElementById("aiConfirmModal");
   const boarSelect = document.getElementById("boarSelect");
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     evidenceGallery.innerHTML = "";
   }
 
-  closeReportModal.onclick = closeReportDetails;
+  if (closeReportModal) closeReportModal.onclick = closeReportDetails;
   if (closeReportModalBtn) closeReportModalBtn.onclick = closeReportDetails;
 
   reportDetailsModal.addEventListener("click", e => {
@@ -140,14 +140,12 @@ let currentReportId = null;
   // ---------------- STATS ----------------
   function renderStats(reports) {
     if (countInHeat) countInHeat.textContent = reports.filter(r => ["pending", "approved"].includes(r.status)).length;
-    if (countAwaitingRecheck) countAwaitingRecheck.textContent = reports.filter(r => ["under_observation", "waiting_heat_check"].includes(r.status)).length;
+    if (countAwaitingRecheck) countAwaitingRecheck.textContent = reports.filter(r => r.status === "under_observation").length;
     if (countPregnant) countPregnant.textContent = reports.filter(r => r.status === "pregnant").length;
     
     if (countFarrowingReady) {
       countFarrowingReady.textContent = reports.filter(r => {
-        if (!["pregnant", "farrowing_ready"].includes(r.status) || !r.expected_farrowing) {
-           return false;
-        }
+        if (!["pregnant", "farrowing_ready"].includes(r.status) || !r.expected_farrowing) return false;
         const daysStr = getDaysLeft(r.expected_farrowing);
         if (daysStr === "Overdue" || daysStr === "TODAY") return true;
         const daysNum = parseInt(daysStr);
@@ -360,9 +358,9 @@ async function viewReport(id) {
 
   // ---------------- ACTION HANDLER ----------------
   async function action(endpoint, message, extraBody = {}) {
-    if (!currentReportId) return;
+    if (!currentReportData?._id) return;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/${currentReportId}/${endpoint}`, {
+      const res = await fetch(`${BACKEND_URL}/api/heat/${currentReportData._id}/${endpoint}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -400,12 +398,11 @@ async function viewReport(id) {
       });
       const data = await res.json();
       if (!data.success || !data.swine?.length) return alert("No adult boars found.");
-      const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
+      const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || !b.farmer_id);
       if (!masterBoars.length) return alert("No Master Boars available.");
-      boarSelect.innerHTML = masterBoars.map(b => `<option value="${b._id}">${b.swine_id}</option>`).join("");
+      boarSelect.innerHTML = masterBoars.map(b => `<option value="${b.swine_id}">${b.swine_id}</option>`).join("");
       aiConfirmModal.style.display = "flex";
     } catch (err) {
-      console.error(err);
       alert("Failed to load boars.");
     }
   };
@@ -441,75 +438,75 @@ async function viewReport(id) {
   if (confirmPregnancyBtn) {
     confirmPregnancyBtn.onclick = () => {
       if (!confirm("Confirm pregnancy for this sow?")) return;
-      action(
-        "confirm-pregnancy",
-        "Pregnancy confirmed. Expected farrowing date calculated."
-      );
+      action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.");
     };
   }
 
-  // 🔄 FIX 5: Cycle Failed / Return to Heat
   if (followUpBtn) {
     followUpBtn.onclick = () => {
-      if (!confirm("Mark cycle as failed and return sow to heat?")) return;
-      action(
-        "cycle-failed",
-        "Cycle failed. Sow returned to In-Heat status."
-      );
+      if (!confirm("Mark AI as failed? Swine will return to Heat status.")) return;
+      action("still-heat", "AI failed. Sow returned to In-Heat status.");
     };
   }
 
-  // ✅ FIX 4: Open Farrowing Modal
-if (confirmFarrowingBtn) {
-  confirmFarrowingBtn.onclick = () => {
-    if (!farrowingModal) return;
-    farrowingModal.style.display = "flex";
-    document.getElementById("farrowingDateInput").valueAsDate = new Date();
-  };
-}
-
-// ✅ FIX 4: Submit Farrowing Data
-if (farrowingForm) {
-  farrowingForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const payload = {
-      farrowing_date: document.getElementById("farrowingDateInput").value,
-      total_live: Number(document.getElementById("liveCount").value),
-      mummified: Number(document.getElementById("mummyCount").value),
-      stillborn: Number(document.getElementById("stillCount").value),
+  if (confirmFarrowingBtn) {
+    confirmFarrowingBtn.onclick = () => {
+      if (!farrowingModal) return;
+      farrowingModal.style.display = "flex";
+      document.getElementById("farrowingDateInput").valueAsDate = new Date();
     };
+  }
 
-    action(
-      "confirm-farrowing",
-      "Farrowing registered! Sow is now Lactating.",
-      payload
-    );
+  // UPDATED: Added 'naming_style' to force the backend to use simple incrementing without timestamps
+  if (farrowingForm) {
+    farrowingForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      const numMales = Number(document.getElementById("liveMaleCount").value);
+      const numFemales = Number(document.getElementById("liveFemaleCount").value);
+      
+      const payload = {
+        dam_id: currentReportData.swine_id?.swine_id,
+        sire_id: currentReportData.sire_id || "Unknown",
+        farmer_id: currentReportData.farmer_id?._id,
+        farrowing_date: document.getElementById("farrowingDateInput").value,
+        num_males: numMales,
+        num_females: numFemales,
+        total_live: numMales + numFemales,
+        mummified: Number(document.getElementById("mummyCount").value),
+        stillborn: Number(document.getElementById("stillCount").value),
+        breed: currentReportData.swine_id?.breed || "Native",
+        naming_style: "simple_increment" // FORCE BACKEND TO INCREMENT THE MOTHER ID ONLY
+      };
 
+      try {
+          const res = await fetch(`${BACKEND_URL}/api/swine/batch-register-litter`, {
+              method: "POST",
+              headers: { 
+                  Authorization: `Bearer ${token}`, 
+                  "Content-Type": "application/json" 
+              },
+              body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if(!data.success) throw new Error(data.message);
 
-      farrowingModal.style.display = "none";
-      farrowingForm.reset();
+          await action("confirm-farrowing", "Litter registered! IDs incremented from Mother's ID.", payload);
+          
+          farrowingModal.style.display = "none";
+          farrowingForm.reset();
+      } catch (err) {
+          alert("Litter Registration Error: " + err.message);
+      }
     });
   }
 
-    filteredPrevBtn.onclick = () => {
-    if (filteredPage > 1) {
-      filteredPage--;
-      renderFilteredTable();
-    }
-  };
-
-  filteredNextBtn.onclick = () => {
-    const totalPages = Math.ceil(
-      currentFilteredResults.length / FILTERED_ROWS_PER_PAGE
-    );
-
-    if (filteredPage < totalPages) {
-      filteredPage++;
-      renderFilteredTable();
-    }
-  };
-
+  if (confirmWeaningBtn) {
+    confirmWeaningBtn.onclick = () => {
+      if (!confirm("Are the piglets weaned? This will complete the breeding cycle.")) return;
+      action("confirm-weaning", "Weaning confirmed! Sow is now Open for the next cycle.");
+    };
+  }
 
   // ---------------- FILTERING ----------------
   const filterSwine = document.getElementById("filterSwine");
