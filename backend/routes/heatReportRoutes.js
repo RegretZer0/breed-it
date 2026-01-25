@@ -35,22 +35,28 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
+/**
+ * UPDATED: logic to cap score at 100
+ */
 const calculateProbability = (signs) => {
     const weights = {
         "Reddened Vulva": 10,
-        "Swollen Vulva": 10,
+        "Swollen Vulva": 60,
         "Mucous Discharge": 15,
         "Seeking the Boar": 20,
-        "Perked/Twitching Ears": 15,
-        "Standing Reflex": 30,
+        "Perked/Twitching Ears": 40,
+        "Standing Reflex": 50,
         "Back Pressure Test": 30
     };
     let score = 0;
     const parsedSigns = Array.isArray(signs) ? signs : [];
+    
     parsedSigns.forEach(sign => {
         if (weights[sign]) score += weights[sign];
     });
-    return Math.min(score, 100);
+
+    // Ensures it never exceeds 100
+    return score > 100 ? 100 : score;
 };
 
 const notifyBreedingTeam = async (managerId, farmerUserId, title, message, type = "info") => {
