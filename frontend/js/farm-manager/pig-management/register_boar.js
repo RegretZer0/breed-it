@@ -9,20 +9,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
 
   // ================= RESOLVE MANAGER ID =================
-  // Scoping IDs to the manager ensures BOAR-0001 starts at 1 for every new farm.
-  const managerId = user.role === "farm_manager" ? (user.id || user._id) : user.managerId;
+  const managerId =
+    user.role === "farm_manager" ? (user.id || user._id) : user.managerId;
 
   // ================= DOM =================
   const form = document.getElementById("registerBoarForm");
   const messageEl = document.getElementById("boarMessage");
+
   const breedInput = document.getElementById("breed");
   const colorSelect = document.getElementById("colorSelect");
   const otherColorGroup = document.getElementById("otherColorGroup");
   const otherColorInput = document.getElementById("otherColorInput");
   const dateTransferInput = document.getElementById("dateTransfer");
-  
-  // Optional: If you have a span or input to show the next ID
+
+  // Preview modal
+  const previewModalEl = document.getElementById("previewBoarModal");
+  const previewContent = document.getElementById("previewBoarContent");
+  const confirmBoarBtn = document.getElementById("confirmBoarBtn");
+
+  // Success modal
+  const successModalEl = document.getElementById("successBoarModal");
+  const successBoarIdEl = document.getElementById("successBoarId");
+
+  // Optional ID preview
   const nextIdPreview = document.getElementById("nextBoarIdPreview");
+
+  // ================= UTIL: SAFE MODAL CLEANUP =================
+  function forceModalCleanup() {
+    document.body.classList.remove("modal-open");
+    document.body.style.overflow = "";
+    document.querySelectorAll(".modal-backdrop").forEach(b => b.remove());
+  }
 
   // ================= LOCK BREED =================
   breedInput.value = "Native";
@@ -31,13 +48,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ================= DEFAULT DATE =================
   dateTransferInput.value = new Date().toISOString().split("T")[0];
 
-  // ================= ID PREVIEW LOGIC =================
+  // ================= ID PREVIEW =================
   async function updateNextBoarId() {
     if (!nextIdPreview) return;
     try {
-      const res = await fetch(`${BACKEND_URL}/api/swine/next-boar-id?managerId=${managerId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(
+        `${BACKEND_URL}/api/swine/next-boar-id?managerId=${managerId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       const data = await res.json();
       if (data.success) {
         nextIdPreview.textContent = `Next ID: ${data.nextId}`;
@@ -51,7 +69,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   function handleColorChange() {
     if (colorSelect.value === "Other") {
       otherColorGroup.classList.remove("d-none");
-      void otherColorGroup.offsetHeight; // Force layout reflow
     } else {
       otherColorGroup.classList.add("d-none");
       otherColorInput.value = "";
@@ -60,15 +77,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   colorSelect.addEventListener("change", handleColorChange);
 
-  // Initial UI Setup
+  // ================= PREVIEW HELPERS =================
+  function previewRow(label, value) {
+    return `
+      <div class="preview-row d-flex justify-content-between">
+        <span class="text-muted">${label}</span>
+        <span class="fw-semibold">${value || "-"}</span>
+      </div>
+    `;
+  }
+
+  // ================= INITIAL UI =================
   handleColorChange();
   updateNextBoarId();
 
-  // ================= SUBMIT =================
-  form.addEventListener("submit", async (e) => {
+  // ================= FORM SUBMIT (SHOW PREVIEW) =================
+  form.addEventListener("submit", e => {
     e.preventDefault();
-    messageEl.textContent = "Registering...";
-    messageEl.style.color = "blue";
+    messageEl.textContent = "";
 
     const finalColor =
       colorSelect.value === "Other"
@@ -77,9 +103,44 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!finalColor) {
       messageEl.textContent = "Please select or specify a color.";
-      messageEl.style.color = "red";
+      messageEl.className = "text-danger fw-bold";
       return;
     }
+
+    previewContent.innerHTML = `
+      <div class="preview-section">Boar Information</div>
+      ${previewRow("Breed", "Native")}
+      ${previewRow("Color", finalColor)}
+      ${previewRow("Date Registered", dateTransferInput.value)}
+
+      <div class="preview-section mt-3">Initial Measurements</div>
+      ${previewRow("Weight (kg)", document.getElementById("weight").value)}
+      ${previewRow("Body Length (cm)", document.getElementById("bodyLength").value)}
+      ${previewRow("Heart Girth (cm)", document.getElementById("heartGirth").value)}
+      ${previewRow("Teeth Count", document.getElementById("teethCount").value)}
+    `;
+
+    // 🔑 Ensure clean state before opening preview
+    forceModalCleanup();
+
+    let previewModal = bootstrap.Modal.getInstance(previewModalEl);
+    if (!previewModal) {
+      previewModal = new bootstrap.Modal(previewModalEl, {
+        backdrop: "static",
+        keyboard: false
+      });
+    }
+    previewModal.show();
+  });
+
+  // ================= CONFIRM & SAVE =================
+  confirmBoarBtn.addEventListener("click", async () => {
+    confirmBoarBtn.disabled = true;
+
+    const finalColor =
+      colorSelect.value === "Other"
+        ? otherColorInput.value.trim()
+        : colorSelect.value;
 
     const payload = {
       breed: "Native",
@@ -88,15 +149,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       bodyLength: parseFloat(document.getElementById("bodyLength").value),
       heartGirth: parseFloat(document.getElementById("heartGirth").value),
       teethCount: parseInt(document.getElementById("teethCount").value),
-      date_transfer:
-        dateTransferInput.value ||
-        new Date().toISOString().split("T")[0],
+      date_transfer: dateTransferInput.value,
       health_status: "Healthy",
       current_status: "Active",
-      
-      // ✅ SCOPING: Use the resolved managerId so the backend knows
-      // which sequence (Farm A or Farm B) to increment.
-      managerId: managerId 
+      managerId
     };
 
     try {
@@ -112,23 +168,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
 
-      messageEl.textContent = `✅ Master Boar Registered (ID: ${data.swine.swine_id})`;
-      messageEl.style.color = "green";
+      // Close preview modal cleanly
+      bootstrap.Modal.getInstance(previewModalEl).hide();
+      forceModalCleanup();
 
-      // Reset Form
+      // Show success modal
+      successBoarIdEl.textContent = `Boar ID: ${data.swine.swine_id}`;
+      new bootstrap.Modal(successModalEl).show();
+
+      // Reset form
       form.reset();
       breedInput.value = "Native";
       dateTransferInput.value = new Date().toISOString().split("T")[0];
-
-      // Re-apply UI states
       handleColorChange();
-      
-      // Update the ID preview for the next registration after a short delay
+
       setTimeout(updateNextBoarId, 500);
 
     } catch (err) {
       messageEl.textContent = err.message || "Registration failed";
-      messageEl.style.color = "red";
+      messageEl.className = "text-danger fw-bold";
+    } finally {
+      confirmBoarBtn.disabled = false;
     }
   });
+
+  // Cleanup ONLY after success modal closes
+  successModalEl.addEventListener("hidden.bs.modal", forceModalCleanup);
 });

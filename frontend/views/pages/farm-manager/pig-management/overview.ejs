@@ -72,7 +72,7 @@
           </div>
 
           <div class="col-md-1 d-grid">
-            <button class="btn btn-sm btn-success">Search</button>
+            <button type="submit" class="btn btn-sm btn-success">Search</button>
           </div>
           <div class="col-md-1 d-grid">
             <button type="button"
@@ -85,55 +85,106 @@
       </div>
     </div>
 
-    <div class="mt-3 d-none" id="filterResultWrap">
-      <h6 class="mb-2 text-muted">Filtered Result</h6>
+  <!-- ================= FILTERED RESULT ================= -->
+  <div class="mt-3 d-none" id="filterResultWrap">
+    <h6 class="mb-2 text-muted">Filtered Result</h6>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered mb-0">
+        <thead>
+          <tr>
+            <th>Tag</th>
+            <th>Farmer</th>
+            <th>Status</th>
+            <th>Batch</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="filterResultBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ✅ FILTER PREVIEW PAGINATION -->
+    <div
+      class="d-flex justify-content-between align-items-center mt-2"
+      id="filterPreviewPagination">
+
+      <button
+        id="filterPreviewPrev"
+        class="btn btn-sm btn-outline-secondary">
+        Prev
+      </button>
+
+      <span
+        id="filterPreviewIndicator"
+        class="small fw-semibold text-muted">
+      </span>
+
+      <button
+        id="filterPreviewNext"
+        class="btn btn-sm btn-outline-secondary">
+        Next
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= SWINE TABLE ================= -->
+  <div class="card page-card">
+    <div class="card-body">
+      <h5 class="mb-3">Swine Inventory List</h5>
+
       <div class="table-responsive">
-        <table class="table table-sm table-bordered mb-0">
-          <thead>
+        <table
+          class="table table-sm table-bordered align-middle"
+          id="swineTable">
+
+          <thead class="table-light">
             <tr>
-              <th>Tag</th>
-              <th>Farmer</th>
-              <th>Status</th>
-              <th>Batch</th>
-              <th>Action</th>
+              <th>ID / Batch</th>
+              <th>Owner</th>
+              <th>Breed & Age</th>
+              <th>Status / Health</th>
+              <th>Sire / Dam</th>
+              <th>Repro Summary</th>
+              <th>Latest Perf</th>
             </tr>
           </thead>
-          <tbody id="filterResultBody"></tbody>
+
+          <tbody id="swineTableBody">
+            <tr>
+              <td colspan="7" class="text-center text-muted">
+                Loading swine records...
+              </td>
+            </tr>
+          </tbody>
+
         </table>
       </div>
-    </div>
 
+      <!-- ✅ SWINE TABLE PAGINATION (SINGLE SOURCE OF TRUTH) -->
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <button
+          id="swinePrevBtn"
+          class="btn btn-sm btn-outline-secondary">
+          Prev
+        </button>
 
-    <div class="card page-card">
-      <div class="card-body">
-        <h5 class="mb-3">Swine Inventory List</h5>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered align-middle"
-            id="swineTable">
-            <thead class="table-light">
-              <tr>
-                <th>ID / Batch</th>
-                <th>Owner</th>
-                <th>Breed & Age</th>
-                <th>Status / Health</th>
-                <th>Sire / Dam</th>
-                <th>Repro Summary</th>
-                <th>Latest Perf</th>
-              </tr>
-            </thead>
-            <tbody id="swineTableBody">
-              <tr>
-                <td colspan="7"
-                  class="text-center text-muted">
-                  Loading swine records...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <span
+          id="swinePageIndicator"
+          class="small fw-semibold text-muted">
+        </span>
+
+        <button
+          id="swineNextBtn"
+          class="btn btn-sm btn-outline-secondary">
+          Next
+        </button>
       </div>
     </div>
+  </div>
 
+
+    <!-- ================= SWINE MODAL ================= -->
     <div class="modal fade" id="swineModal" tabindex="-1">
       <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">

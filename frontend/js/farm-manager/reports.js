@@ -24,9 +24,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportFarmer = document.getElementById("reportFarmer");
   const reportSigns = document.getElementById("reportSigns");
   const reportProbability = document.getElementById("reportProbability");
+  const reportStatus = document.getElementById("reportStatus");
 
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
   const followUpBtn = document.getElementById("followUpBtn");
+
+  const rejectReasonModal = document.getElementById("rejectReasonModal");
+  const rejectReasonInput = document.getElementById("rejectReasonInput");
+  const confirmRejectBtn = document.getElementById("confirmRejectBtn");
+
+  const prevPageBtn = document.getElementById("prevPageBtn");
+  const nextPageBtn = document.getElementById("nextPageBtn");
+  const pageIndicator = document.getElementById("pageIndicator");
+
+  const filteredPrevBtn = document.getElementById("filteredPrevBtn");
+  const filteredNextBtn = document.getElementById("filteredNextBtn");
+  const filteredPageIndicator = document.getElementById("filteredPageIndicator");
+
+
 
   // Farrowing modal
   const farrowingModal = document.getElementById("farrowingModal");
@@ -66,8 +81,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === reportDetailsModal) closeReportDetails();
   });
 
-  let allReports = [];
-  let currentReportId = null;
+let allReports = [];
+
+// ===== MAIN TABLE PAGINATION =====
+let currentPage = 1;
+const ROWS_PER_PAGE = 10;
+
+// ===== FILTERED PAGINATION STATE =====
+let filteredPage = 1;
+const FILTERED_ROWS_PER_PAGE = 5;
+let currentFilteredResults = [];
+
+let currentReportId = null;
+
 
   // ---------------- HELPERS ----------------
   function getDaysLeft(targetDate) {
@@ -131,15 +157,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ---------------- TABLE ----------------
-  function renderTable(reports) {
-    if (!tableBody) return;
-    tableBody.innerHTML = "";
-    if (!reports.length) {
-      tableBody.innerHTML = `<tr><td colspan="8">No reports found</td></tr>`;
-      return;
-    }
+function renderTable(reports) {
+  if (!tableBody) return;
 
-    reports.forEach(r => {
+  tableBody.innerHTML = "";
+
+  const totalPages = Math.ceil(reports.length / ROWS_PER_PAGE);
+  if (currentPage > totalPages) currentPage = totalPages || 1;
+
+  const start = (currentPage - 1) * ROWS_PER_PAGE;
+  const end = start + ROWS_PER_PAGE;
+  const paginatedReports = reports.slice(start, end);
+
+  if (!paginatedReports.length) {
+    tableBody.innerHTML = `<tr><td colspan="8">No reports found</td></tr>`;
+  } else {
+    paginatedReports.forEach(r => {
       const swineStatus = r.swine_id?.current_status || "Unknown";
       const statusLabel = (r.status || "pending").replace(/_/g, " ");
 
@@ -150,115 +183,180 @@ document.addEventListener("DOMContentLoaded", async () => {
         <td>${new Date(r.createdAt).toLocaleDateString()}</td>
         <td style="font-weight:bold;">${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}</td>
         <td>
-          <span style="text-transform:capitalize; font-weight:600;">${statusLabel}</span><br>
-          <small class="text-muted">(Swine: ${swineStatus})</small>
+          <span class="report-status" data-status="${r.status}">
+            ${statusLabel}
+          </span>
         </td>
         <td>${["under_observation", "waiting_heat_check"].includes(r.status) && r.next_heat_check ? `<strong>${getDaysLeft(r.next_heat_check)}</strong>` : "-"}</td>
-        <td>${["pregnant", "farrowing_ready"].includes(r.status) && r.expected_farrowing ? `<strong style="color: #27ae60;">${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
+        <td>${["pregnant", "farrowing_ready"].includes(r.status) && r.expected_farrowing ? `<strong>${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
         <td><button class="btn-view" data-id="${r._id}">View</button></td>
       `;
       tableBody.appendChild(row);
     });
-
-    document.querySelectorAll(".btn-view").forEach(btn => {
-      btn.addEventListener("click", () => viewReport(btn.dataset.id));
-    });
   }
 
-  // ---------------- VIEW DETAILS ----------------
-  async function viewReport(id) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error("Could not load report details");
+  // Pagination UI
+  pageIndicator.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+  prevPageBtn.disabled = currentPage === 1;
+  nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
 
-      const r = data.report;
-      currentReportId = id;
+  document.querySelectorAll(".btn-view").forEach(btn => {
+    btn.addEventListener("click", () => viewReport(btn.dataset.id));
+  });
+}
 
-      reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"} 
-                               <span style="margin-left:8px;font-size:0.8em; color:#666;">Status: ${r.swine_id?.current_status || "N/A"}</span>`;
-      reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
-      reportSigns.innerHTML = `<strong>Signs:</strong> ${(r.signs || []).join(", ") || "None"}`;
-      reportProbability.innerHTML = `<strong>Probability:</strong> ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}`;
-
-      // Media Gallery logic
-      evidenceGallery.innerHTML = "";
-      const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : r.evidence_url ? [r.evidence_url] : [];
-
-      if (!evidences.length) {
-        evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
-      } else {
-        evidences.forEach(path => {
-          if (!path) return;
-          const cleanPath = path.replace(/\\/g, "/");
-          const fullUrl = cleanPath.startsWith("http") ? cleanPath : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
-          const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
-          const wrapper = document.createElement("div");
-          wrapper.className = "dynamic-media";
-          if (isVideo) {
-            wrapper.innerHTML = `<video controls preload="metadata"><source src="${fullUrl}">Your browser does not support video.</video><small><a href="${fullUrl}" target="_blank">Open video</a></small>`;
-          } else {
-            wrapper.innerHTML = `<img src="${fullUrl}" alt="Evidence" onclick="window.open('${fullUrl}', '_blank')" onerror="this.src='https://placehold.co/400x300?text=Load+Error'"><small>Click to enlarge</small>`;
-          }
-          evidenceGallery.appendChild(wrapper);
-        });
-      }
-
-      // --- BUTTON CONTROLS (FULL STATUS LOGIC) ---
-
-      // Hide all buttons first
-      approveBtn.style.display = "none";
-      if (rejectBtn) rejectBtn.style.display = "none";
-      confirmAIBtn.style.display = "none";
-      if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
-      if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
-      if (followUpBtn) followUpBtn.style.display = "none";
-
-      // Show based on status
-      switch (r.status) {
-        case "pending":
-          approveBtn.style.display = "inline-block";
-          if (rejectBtn) rejectBtn.style.display = "inline-block";
-          break;
-
-        case "approved":
-          confirmAIBtn.style.display = "inline-block";
-          break;
-
-        case "ai_confirmed":
-        case "under_observation":
-          if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
-          if (followUpBtn) followUpBtn.style.display = "inline-block";
-          break;
-
-        case "pregnant":
-        case "farrowing_ready": {
-          if (!r.expected_farrowing) break;
-
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const farrowDate = new Date(r.expected_farrowing);
-          farrowDate.setHours(0, 0, 0, 0);
-
-          if (today >= farrowDate) {
-            confirmFarrowingBtn.style.display = "inline-block";
-          }
-          break;
-        }
-      }
-
-
-      reportDetailsModal.style.display = "flex";
-      document.body.style.overflow = "hidden";
-    } catch (err) {
-      console.error(err);
-      alert("Error loading report details.");
+  // ================= MAIN TABLE PAGINATION CONTROLS =================
+  prevPageBtn?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTable(allReports);
     }
+  });
+
+  nextPageBtn?.addEventListener("click", () => {
+    const totalPages = Math.ceil(allReports.length / ROWS_PER_PAGE);
+    if (currentPage < totalPages) {
+      currentPage++;
+      renderTable(allReports);
+    }
+  });
+
+
+// ---------------- VIEW DETAILS ----------------
+async function viewReport(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include"
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error("Could not load report details");
+
+    const r = data.report;
+    currentReportId = id;
+
+    // ================= BASIC INFO =================
+    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+
+    // ✅ REPORT STATUS (CAPSULE)
+    const status = r.status || "pending";
+    const statusLabel = status.replace(/_/g, " ");
+
+    reportStatus.textContent = statusLabel;
+    reportStatus.setAttribute("data-status", status);
+
+    reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
+
+    reportProbability.innerHTML = `
+      <strong>Probability:</strong>
+      ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}
+    `;
+
+    // ================= OBSERVED SIGNS =================
+    if (Array.isArray(r.signs) && r.signs.length) {
+      reportSigns.innerHTML = r.signs
+        .map(sign => `<span class="sign-chip">${sign}</span>`)
+        .join("");
+    } else {
+      reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
+    }
+
+    // ================= MEDIA GALLERY =================
+    evidenceGallery.innerHTML = "";
+    const evidences = Array.isArray(r.evidence_url)
+      ? r.evidence_url
+      : r.evidence_url
+      ? [r.evidence_url]
+      : [];
+
+    if (!evidences.length) {
+      evidenceGallery.innerHTML =
+        "<p class='text-muted'><em>No media evidence provided.</em></p>";
+    } else {
+      evidences.forEach(path => {
+        if (!path) return;
+
+        const cleanPath = path.replace(/\\/g, "/");
+        const fullUrl = cleanPath.startsWith("http")
+          ? cleanPath
+          : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
+
+        const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
+        const wrapper = document.createElement("div");
+        wrapper.className = "dynamic-media";
+
+        if (isVideo) {
+          wrapper.innerHTML = `
+            <video controls preload="metadata">
+              <source src="${fullUrl}">
+              Your browser does not support video.
+            </video>
+            <small><a href="${fullUrl}" target="_blank">Open video</a></small>
+          `;
+        } else {
+          wrapper.innerHTML = `
+            <img src="${fullUrl}" alt="Evidence"
+                 onclick="window.open('${fullUrl}', '_blank')"
+                 onerror="this.src='https://placehold.co/400x300?text=Load+Error'">
+            <small>Click to enlarge</small>
+          `;
+        }
+
+        evidenceGallery.appendChild(wrapper);
+      });
+    }
+
+    // ================= ACTION BUTTONS =================
+    approveBtn.style.display = "none";
+    if (rejectBtn) rejectBtn.style.display = "none";
+    confirmAIBtn.style.display = "none";
+    if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
+    if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
+    if (followUpBtn) followUpBtn.style.display = "none";
+
+    switch (r.status) {
+      case "pending":
+        approveBtn.style.display = "inline-block";
+        if (rejectBtn) rejectBtn.style.display = "inline-block";
+        break;
+
+      case "approved":
+        confirmAIBtn.style.display = "inline-block";
+        break;
+
+      case "ai_confirmed":
+      case "under_observation":
+        if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
+        if (followUpBtn) followUpBtn.style.display = "inline-block";
+        break;
+
+      case "pregnant":
+      case "farrowing_ready": {
+        if (!r.expected_farrowing) break;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const farrowDate = new Date(r.expected_farrowing);
+        farrowDate.setHours(0, 0, 0, 0);
+
+        if (today >= farrowDate) {
+          confirmFarrowingBtn.style.display = "inline-block";
+        }
+        break;
+      }
+    }
+
+    // ================= SHOW MODAL =================
+    reportDetailsModal.style.display = "flex";
+    document.body.style.overflow = "hidden";
+
+  } catch (err) {
+    console.error(err);
+    alert("Error loading report details.");
   }
+}
+
 
   // ---------------- ACTION HANDLER ----------------
   async function action(endpoint, message, extraBody = {}) {
@@ -289,10 +387,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (rejectBtn) {
     rejectBtn.onclick = () => {
-      const reason = prompt("Enter reason for rejection:");
-      if (reason === null) return;
-      if (!reason.trim()) return alert("Rejection reason is required.");
-      action("reject", "Report rejected successfully.", { reason: reason });
+      rejectReasonInput.value = "";
+      rejectReasonModal.style.display = "flex";
     };
   }
 
@@ -320,6 +416,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
     aiConfirmModal.style.display = "none";
   };
+
+  // ✅ Confirm Reject Action
+    confirmRejectBtn.onclick = () => {
+    const reason = rejectReasonInput.value.trim();
+
+    if (!reason) {
+      alert("Rejection reason is required.");
+      return;
+    }
+
+    action(
+      "reject",
+      "Report rejected successfully.",
+      { reason }
+    );
+
+    rejectReasonModal.style.display = "none";
+    rejectReasonInput.value = "";
+  };
+
 
   // ✅ Confirm Pregnancy Action
   if (confirmPregnancyBtn) {
@@ -371,10 +487,28 @@ if (farrowingForm) {
     );
 
 
-    farrowingModal.style.display = "none";
-    farrowingForm.reset();
-  });
-}
+      farrowingModal.style.display = "none";
+      farrowingForm.reset();
+    });
+  }
+
+    filteredPrevBtn.onclick = () => {
+    if (filteredPage > 1) {
+      filteredPage--;
+      renderFilteredTable();
+    }
+  };
+
+  filteredNextBtn.onclick = () => {
+    const totalPages = Math.ceil(
+      currentFilteredResults.length / FILTERED_ROWS_PER_PAGE
+    );
+
+    if (filteredPage < totalPages) {
+      filteredPage++;
+      renderFilteredTable();
+    }
+  };
 
 
   // ---------------- FILTERING ----------------
@@ -388,44 +522,81 @@ if (farrowingForm) {
   applyFilterBtn?.addEventListener("click", () => {
     const swineTerm = filterSwine.value.trim().toLowerCase();
     const statusTerm = filterStatus.value;
-    const filtered = allReports.filter(r => {
-      const swineMatch = !swineTerm || (r.swine_id?.swine_id || "").toLowerCase().includes(swineTerm);
+
+    currentFilteredResults = allReports.filter(r => {
+      const swineMatch =
+        !swineTerm ||
+        (r.swine_id?.swine_id || "").toLowerCase().includes(swineTerm);
       const statusMatch = !statusTerm || r.status === statusTerm;
       return swineMatch && statusMatch;
     });
-    renderFilteredTable(filtered);
+
+    filteredPage = 1;
+    renderFilteredTable();
   });
 
   clearFilterBtn?.addEventListener("click", () => {
     filterSwine.value = "";
     filterStatus.value = "";
+    currentFilteredResults = [];
+    filteredPage = 1;
     if (filteredCard) filteredCard.style.display = "none";
   });
 
-  function renderFilteredTable(reports) {
+  // ---------------- FILTERED TABLE (5 ROWS ONLY) ----------------
+  function renderFilteredTable() {
     if (!filteredBody) return;
+
     filteredBody.innerHTML = "";
-    if (!reports.length) {
+
+    const totalPages = Math.ceil(
+      currentFilteredResults.length / FILTERED_ROWS_PER_PAGE
+    );
+
+    if (!currentFilteredResults.length) {
       filteredBody.innerHTML = `<tr><td colspan="5">No matching reports</td></tr>`;
-      if (filteredCard) filteredCard.style.display = "block";
+      filteredCard.style.display = "block";
       return;
     }
-    reports.forEach(r => {
+
+    const start = (filteredPage - 1) * FILTERED_ROWS_PER_PAGE;
+    const end = start + FILTERED_ROWS_PER_PAGE;
+    const pageItems = currentFilteredResults.slice(start, end);
+
+    pageItems.forEach(r => {
+      const statusLabel = r.status.replace(/_/g, " ");
       const row = document.createElement("tr");
       row.innerHTML = `
         <td>${r.swine_id?.swine_id || "-"}</td>
         <td>${r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "-"}</td>
         <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-        <td>${r.status.replace(/_/g, " ")}</td>
-        <td><button class="btn-view" data-id="${r._id}">View</button></td>
+        <td>
+          <span class="report-status" data-status="${r.status}">
+            ${statusLabel}
+          </span>
+        </td>
+        <td>
+          <button class="btn-view" data-id="${r._id}">View</button>
+        </td>
       `;
       filteredBody.appendChild(row);
     });
-    if (filteredCard) filteredCard.style.display = "block";
+
+    filteredCard.style.display = "block";
+
     filteredBody.querySelectorAll(".btn-view").forEach(btn => {
       btn.addEventListener("click", () => viewReport(btn.dataset.id));
     });
+
+    // ✅ Pagination UI
+    filteredPageIndicator.textContent = `Page ${filteredPage} of ${totalPages}`;
+    filteredPrevBtn.disabled = filteredPage === 1;
+    filteredNextBtn.disabled = filteredPage === totalPages || totalPages === 0;
+
+    document.querySelector(".filtered-pagination").style.display =
+      totalPages > 1 ? "flex" : "none";
   }
+
 
   loadReports();
 });

@@ -41,6 +41,19 @@ html, body{
   align-items: flex-start;
 }
 
+body.modal-open {
+  overflow: hidden !important;
+}
+
+body.modal-open .app-shell {
+  pointer-events: none;
+}
+
+.modal {
+  pointer-events: auto;
+}
+
+
 /* =========== Main content =========== */
 .main-content{
   flex: 1;
@@ -55,12 +68,6 @@ html, body{
   border: 1px solid var(--card-border);
   border-radius: var(--radius);
   box-shadow: none;
-}
-
-.page-title{
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 14px 0;
 }
 
 /* ============================= */
@@ -250,4 +257,14 @@ select.form-select {
   .btn-save {
     width: 100%;
   }
+}
+
+
+/* FIX: Bootstrap modal layering */
+.modal {
+  z-index: 1055 !important;
+}
+
+.modal-backdrop {
+  z-index: 1050 !important;
 }

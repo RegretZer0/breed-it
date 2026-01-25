@@ -31,6 +31,15 @@ html, body{
   color: var(--text-dark);
 }
 
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
 /* =========================
    MODAL BASE
 ========================= */

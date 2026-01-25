@@ -106,50 +106,94 @@
                   <tbody id="filteredTableBody"></tbody>
                 </table>
               </div>
+
+              <!-- ✅ FILTERED PAGINATION -->
+              <div
+                class="filtered-pagination"
+                style="margin-top:12px; display:flex; gap:12px; align-items:center;"
+              >
+                <button id="filteredPrevBtn" class="btn btn-sm" disabled>
+                  Prev
+                </button>
+
+                <span
+                  id="filteredPageIndicator"
+                  style="font-size:13px; font-weight:600;"
+                ></span>
+
+                <button id="filteredNextBtn" class="btn btn-sm" disabled>
+                  Next
+                </button>
+              </div>
             </div>
 
           </div>
         </div>
 
 
+    <!-- REPORTS TABLE CARD -->
+    <div class="card page-card reports-card" style="margin-top: 20px;">
+      <div class="card-body">
 
-        <!-- REPORTS TABLE CARD -->
-        <div class="card page-card reports-card" style="margin-top: 20px;">
-          <div class="card-body">
-
-            <div class="card-header-row">
-              <h5 class="card-title">Heat Reports</h5>
-            </div>
-
-            <div class="table-responsive">
-              <table class="reports-table">
-                <thead>
-                  <tr>
-                    <th>Swine ID</th>
-                    <th>Farmer</th>
-                    <th>Date Reported</th>
-                    <th>Probability</th>
-                    <th>Status</th>
-                    <th>Next Heat</th>
-                    <th>Expected Farrowing</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="reportsTableBody">
-                  <tr>
-                    <td colspan="8">Loading reports...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-          </div>
+        <div class="card-header-row">
+          <h5 class="card-title">Heat Reports</h5>
         </div>
-       
-      </div>
-    </div>
-  </div>
-</main>
+
+        <div class="table-responsive">
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>Swine ID</th>
+                <th>Farmer</th>
+                <th>Date Reported</th>
+                <th>Probability</th>
+                <th>Status</th>
+                <th>Next Heat</th>
+                <th>Expected Farrowing</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody">
+              <tr>
+                <td colspan="8">Loading reports...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+              <!-- 🔽 PAGINATION CONTROLS (STEP 2) -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-3"
+                style="gap: 12px;"
+              >
+                <button
+                  id="prevPageBtn"
+                  class="btn-nav secondary"
+                  type="button"
+                >
+                  ← Prev
+                </button>
+
+                <span
+                  id="pageIndicator"
+                  style="font-weight:600; font-size:14px;"
+                >
+                  Page 1 of 1
+                </span>
+
+                <button
+                  id="nextPageBtn"
+                  class="btn-nav secondary"
+                  type="button"
+                >
+                  Next →
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+    </main>
 
   <!-- REPORT DETAILS MODAL -->
   <div id="reportDetailsModal" class="modal-overlay">
@@ -163,11 +207,21 @@
       <div class="modal-body">
         <!-- DETAILS GRID -->
         <div class="detail-grid">
-          <p id="reportSwine"></p>
-          <p id="reportFarmer"></p>
-          <p id="reportProbability"></p>
-          <p id="reportStatus"></p>
-          <p id="reportSigns" style="grid-column: span 2;"></p>
+          <div class="report-summary">
+            <div class="report-row">
+              <p id="reportSwine"></p>
+              <span id="reportStatus" class="report-status"></span>
+            </div>
+
+            <p id="reportFarmer"></p>
+            <p id="reportProbability"></p>
+
+            <div class="report-signs">
+              <h6>Observed Signs</h6>
+              <div id="reportSigns" class="signs-container"></div>
+            </div>
+          </div>
+
         </div>
 
         <!-- MEDIA GALLERY -->
@@ -263,6 +317,39 @@
             </form>
           </div>
         </div>
+
+        <!-- REJECT REPORT MODAL -->
+        <div id="rejectReasonModal" class="modal">
+          <div class="modal-content" style="max-width: 420px;">
+            <h3>Reject Report</h3>
+
+            <p class="text-muted" style="margin-bottom:10px;">
+              Please provide a reason for rejecting this report.
+            </p>
+
+            <textarea
+              id="rejectReasonInput"
+              rows="4"
+              placeholder="Enter rejection reason..."
+              style="resize:none;"
+            ></textarea>
+
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <button id="confirmRejectBtn" class="btn-nav" style="flex:1; background: var(--stat-red); color:#fff;">
+                Reject Report
+              </button>
+
+              <button
+                type="button"
+                class="btn-nav secondary"
+                style="flex:1;"
+                onclick="document.getElementById('rejectReasonModal').style.display='none'">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
 
 
 <%- include("../../partials/farm-manager/footer") %>

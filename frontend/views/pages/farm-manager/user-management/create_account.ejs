@@ -54,7 +54,14 @@
           <!-- Contact -->
           <div class="field">
             <label>Contact Number</label>
-            <input type="text" id="contact_info" required />
+            <input
+              type="tel"
+              id="contact_info"
+              required
+              pattern="^(09\d{9}|\+639\d{9})$"
+              placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+              title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
+            />
           </div>
 
           <!-- Email -->
@@ -111,12 +118,12 @@
 
           <div class="field tiny farmer-only">
             <label>Pen Count</label>
-            <input type="number" id="num_of_pens" min="0" />
+            <input type="number" id="num_of_pens" min="0" required/>
           </div>
 
           <div class="field tiny farmer-only">
             <label>Pen Capacity</label>
-            <input type="number" id="pen_capacity" min="0" />
+            <input type="number" id="pen_capacity" min="0" required/>
           </div>
 
           <div class="field small farmer-only">

@@ -29,6 +29,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const otherColorInput = document.getElementById("otherColorInput");
   const batchInput = document.getElementById("batch");
 
+
+  // ================= DEFAULT DATE REGISTERED =================
+  const dateTransferInput = document.getElementById("date_transfer");
+
+  if (dateTransferInput) {
+    const today = new Date().toISOString().split("T")[0];
+    dateTransferInput.value = today;
+    dateTransferInput.max = today; // optional: block future dates
+  }
+
+
   // ================= LOCK BREED =================
   const breedInput = document.getElementById("breed");
   breedInput.value = "Native";
@@ -223,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const payload = {
       farmer_id: farmerSelect.value || null,
-      batch: batchInput.value.trim(), 
+      batch: batchInput.value.trim(),
       sex: sexSelect.value,
       age_stage: ageStageSelect.value,
       breed: "Native",
@@ -239,7 +250,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       bodyLength: document.getElementById("bodyLength").value,
       heartGirth: document.getElementById("heartGirth").value,
       teethCount: document.getElementById("teethCount").value,
-      teatCount: document.getElementById("teatCount") ? document.getElementById("teatCount").value : null,
+      teatCount: document.getElementById("teatCount")
+        ? document.getElementById("teatCount").value
+        : null,
       deformities: deformities.length ? deformities : ["None"],
       managerId
     };
@@ -254,21 +267,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const data = await res.json();
-    
-    messageEl.className = data.success ? "text-success fw-bold" : "text-danger fw-bold";
-    messageEl.textContent = data.success
-      ? "✅ Pig registered successfully"
-      : "❌ " + data.message;
 
     if (data.success) {
-        form.reset();
-        if(farmerDropdownBtn) farmerDropdownBtn.textContent = "Search/Select Farmer";
-        breedInput.value = "Native";
-        handleColorChange();
-        toggleTeatField();
-        toggleDeformities();
-        // Delay to ensure DB updates before we calculate the next sequence
-        setTimeout(updateBatchField, 500);
+      const successModalEl = document.getElementById("successSwineModal");
+      const successModal = new bootstrap.Modal(successModalEl);
+      successModal.show();
+
+      form.reset();
+      messageEl.textContent = "";
+
+      if (farmerDropdownBtn)
+        farmerDropdownBtn.textContent = "Search/Select Farmer";
+
+      breedInput.value = "Native";
+      handleColorChange();
+      toggleTeatField();
+      toggleDeformities();
+
+      setTimeout(updateBatchField, 500);
+
+    } else {
+      messageEl.className = "text-danger fw-bold";
+      messageEl.textContent = "❌ " + data.message;
+    }
+  });
+
+  
+  // ================= MODAL CLEANUP (PUT IT HERE) =================
+  document.addEventListener("hidden.bs.modal", event => {
+    if (event.target.classList.contains("modal")) {
+      document.body.classList.remove("modal-open");
+      document.body.style.overflow = "";
+
+      document
+        .querySelectorAll(".modal-backdrop")
+        .forEach(b => b.remove());
     }
   });
 

@@ -57,12 +57,6 @@ html, body{
   box-shadow: none;
 }
 
-.page-title{
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 14px 0;
-}
-
 /* ============================= */
 /* BOAR REGISTRATION CARD */
 /* ============================= */
@@ -140,4 +134,46 @@ input.form-control {
   .btn-clear {
     width: 100%;
   }
+}
+
+.preview-section {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #222;
+}
+
+.preview-row {
+  padding: 6px 0;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.preview-row:last-child {
+  border-bottom: none;
+}
+
+/* ============================= */
+/* BOOTSTRAP MODAL FIX (CRITICAL) */
+/* ============================= */
+
+/* Ensure modal sits above app-shell */
+.modal {
+  position: fixed !important;
+  z-index: 1060 !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure backdrop is clickable but behind modal */
+.modal-backdrop {
+  z-index: 1055 !important;
+}
+
+/* Disable app-shell interaction while modal is open */
+body.modal-open .app-shell {
+  pointer-events: none;
+}
+
+/* Re-enable modal interaction explicitly */
+body.modal-open .modal {
+  pointer-events: auto;
 }

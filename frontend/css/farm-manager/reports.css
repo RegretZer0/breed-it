@@ -515,3 +515,168 @@ body.modal-open {
   border-radius: 6px;
   background: #000;
 }
+
+/* =========================================================
+   REPORT DETAILS – UX ENHANCEMENTS (NON-CONFLICTING)
+========================================================= */
+
+.report-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* STATUS BADGE */
+.report-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Status colors using EXISTING tokens */
+.report-status[data-status="pending"] {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.report-status[data-status="approved"] {
+  background: #d4edda;
+  color: #155724;
+}
+
+.report-status[data-status="under_observation"],
+.report-status[data-status="waiting_heat_check"] {
+  background: #e7f3ff;
+  color: var(--stat-blue);
+}
+
+.report-status[data-status="pregnant"] {
+  background: #fdecea;
+  color: var(--stat-red);
+}
+
+.report-status[data-status="farrowing_ready"] {
+  background: #e8f5e9;
+  color: var(--stat-green);
+}
+
+/* SIGNS */
+.report-signs h6 {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.signs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sign-chip {
+  background: #f4f4f4;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* ============================= */
+/* STATUS CAPSULE (REPORT MODAL) */
+/* ============================= */
+
+.report-status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Status colors */
+.report-status[data-status="open"],
+.report-status[data-status="pending"] {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.report-status[data-status="approved"] {
+  background: #d4edda;
+  color: #155724;
+}
+
+.report-status[data-status="under_observation"],
+.report-status[data-status="waiting_heat_check"] {
+  background: #e7f3ff;
+  color: var(--stat-blue);
+}
+
+.report-status[data-status="pregnant"] {
+  background: #fdecea;
+  color: var(--stat-red);
+}
+
+.report-status[data-status="farrowing_ready"] {
+  background: #e8f5e9;
+  color: var(--stat-green);
+}
+
+/* ============================= */
+/* OBSERVED SIGNS – READABLE */
+/* ============================= */
+
+.signs-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sign-chip {
+  background: #f4f4f4;
+  border: 1px solid #e2e2e2;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.report-status[data-status="lactating"] {
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.report-status[data-status="completed"] {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.report-status[data-status="rejected"] {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.report-status[data-status="ai_confirmed"] {
+  background: #eef2ff;
+  color: #4338ca;
+}

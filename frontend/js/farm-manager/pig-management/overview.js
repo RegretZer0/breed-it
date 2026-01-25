@@ -85,40 +85,138 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ================= FARMERS =================
   async function loadFarmers() {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/farmers/${managerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${BACKEND_URL}/api/auth/farmers/${managerId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       const data = await res.json();
       farmers = data.farmers || [];
+
+      // Render dropdown options
       renderFarmerDropdown(farmers);
 
+      // (Optional legacy select support – safe to keep)
       if (filterFarmer) {
-        filterFarmer.innerHTML = `<option value="">All Farmers / Owners</option>`;
-        farmers.forEach((f) => {
-          filterFarmer.add(new Option(`${f.first_name} ${f.last_name}`, f._id));
+        filterFarmer.innerHTML =
+          `<option value="">All Farmers / Owners</option>`;
+        farmers.forEach(f => {
+          filterFarmer.add(
+            new Option(`${f.first_name} ${f.last_name}`, f._id)
+          );
         });
       }
-    } catch (e) { console.error("Load farmers failed", e); }
+
+    } catch (e) {
+      console.error("Load farmers failed", e);
+    }
   }
 
   function renderFarmerDropdown(list) {
     const wrap = document.getElementById("farmerOptions");
+    const searchInput = document.getElementById("farmerSearch");
+
     if (!wrap) return;
+
     wrap.innerHTML = "";
+
     if (!list.length) {
-      wrap.innerHTML = `<div class="text-muted small">No farmers found</div>`;
+      wrap.innerHTML =
+        `<div class="text-muted small">No farmers found</div>`;
       return;
     }
+
     list.forEach(f => {
       const div = document.createElement("div");
       div.className = "dropdown-item small";
-      div.textContent = `${f.first_name} ${f.last_name}`.trim();
-      div.addEventListener("click", () => {
-        selectedFarmerId = f._id;
-        document.getElementById("farmerDropdownBtn").textContent = `${f.first_name} ${f.last_name}`.trim();
-      });
+      div.textContent =
+        `${f.first_name} ${f.last_name}`.trim();
+
+    div.addEventListener("click", () => {
+      selectedFarmerId = f._id;
+
+      document.getElementById("farmerDropdownBtn").textContent =
+        `${f.first_name} ${f.last_name}`.trim();
+
+      // 🔥 close dropdown
+      bootstrap.Dropdown.getInstance(
+        document.getElementById("farmerDropdownBtn")
+      )?.hide();
+
+      // 🔥 apply filter
+      function renderFarmerDropdown(list) {
+        const wrap = document.getElementById("farmerOptions");
+        const searchInput = document.getElementById("farmerSearch");
+
+        if (!wrap) return;
+        wrap.innerHTML = "";
+
+        if (!list.length) {
+          wrap.innerHTML =
+            `<div class="text-muted small">No farmers found</div>`;
+          return;
+        }
+
+        list.forEach(f => {
+          const div = document.createElement("div");
+          div.className = "dropdown-item small";
+          div.textContent =
+            `${f.first_name} ${f.last_name}`.trim();
+
+          div.addEventListener("click", () => {
+            // ✅ store selection ONLY
+            selectedFarmerId = f._id;
+
+            // ✅ update label
+            document.getElementById("farmerDropdownBtn").textContent =
+              `${f.first_name} ${f.last_name}`.trim();
+
+            // ✅ close dropdown (UX)
+            bootstrap.Dropdown.getInstance(
+              document.getElementById("farmerDropdownBtn")
+            )?.hide();
+
+            // ❌ DO NOT auto-submit
+          });
+
+          wrap.appendChild(div);
+        });
+
+        // Search inside dropdown (unchanged)
+        if (searchInput && !searchInput.dataset.bound) {
+          searchInput.dataset.bound = "true";
+          searchInput.addEventListener("input", () => {
+            const term = searchInput.value.toLowerCase();
+            renderFarmerDropdown(
+              farmers.filter(f =>
+                `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
+              )
+            );
+          });
+        }
+      }
+
+    });
+
       wrap.appendChild(div);
     });
+
+    // ================= SEARCH INSIDE DROPDOWN =================
+    if (searchInput && !searchInput.dataset.bound) {
+      searchInput.dataset.bound = "true"; // prevent duplicate listeners
+
+      searchInput.addEventListener("input", () => {
+        const term = searchInput.value.toLowerCase();
+
+        const filteredFarmers = farmers.filter(f =>
+          `${f.first_name} ${f.last_name}`
+            .toLowerCase()
+            .includes(term)
+        );
+
+        renderFarmerDropdown(filteredFarmers);
+      });
+    }
   }
 
   // ================= MODAL ACTIONS =================
@@ -218,55 +316,123 @@ document.addEventListener("DOMContentLoaded", async () => {
     editModal.show();
   }
 
+  // ===== SWINE TABLE PAGINATION =====
+  let swinePage = 1;
+  const SWINE_ROWS_PER_PAGE = 10;
+
   // ================= TABLE RENDERERS =================
   function renderTable(list) {
     swineTableBody.innerHTML = "";
-    if (!list.length) {
-      swineTableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No swine records found</td></tr>`;
-      return;
-    }
-    list.forEach((sw) => {
-      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim() : "OFFICE / MASTER";
-      const perf = getLatestPerf(sw);
-      
-      const offspringCount = allSwine.filter(child => {
-          const currentId = sw.swine_id.trim().toLowerCase();
-          return (child.dam_id || "").trim().toLowerCase() === currentId || 
-                 (child.sire_id || "").trim().toLowerCase() === currentId;
-      }).length;
 
-      swineTableBody.insertAdjacentHTML("beforeend", `
+    const totalPages = Math.ceil(list.length / SWINE_ROWS_PER_PAGE);
+    if (swinePage > totalPages) swinePage = totalPages || 1;
+
+    const start = (swinePage - 1) * SWINE_ROWS_PER_PAGE;
+    const end = start + SWINE_ROWS_PER_PAGE;
+    const pageItems = list.slice(start, end);
+
+    if (!pageItems.length) {
+      swineTableBody.innerHTML = `
         <tr>
-          <td>
-            <strong>${sw.swine_id}</strong><br>
-            <small>Batch: ${sw.batch || "—"}</small><br>
-            <div class="d-flex gap-1 mt-1">
-              <button class="btn btn-sm btn-outline-primary view-btn" data-id="${sw._id}">View</button>
-              <button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${sw._id}">Edit</button>
-            </div>
+          <td colspan="7" class="text-center text-muted">
+            No swine records found
           </td>
-          <td>${farmerName}</td>
-          <td>Breed: ${sw.breed || "—"}<br>Age: ${formatStageDisplay(sw.age_stage)}</td>
-          <td>Status: ${sw.current_status || "—"}<br>Health: ${sw.health_status || "—"}</td>
-          <td>S: ${sw.sire_id || "N/A"}<br>D: ${sw.dam_id || "N/A"}</td>
-          <td>Piglets: ${offspringCount}</td>
-          <td>Wt: ${perf.weight} kg<br>L: ${perf.length} cm</td>
-        </tr>`);
-    });
+        </tr>`;
+    } else {
+      pageItems.forEach(sw => {
+        const farmerName = sw.farmer_id
+          ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim()
+          : "OFFICE / MASTER";
+
+        const perf = getLatestPerf(sw);
+
+        swineTableBody.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>
+              <strong>${sw.swine_id}</strong><br>
+              <small>Batch: ${sw.batch || "—"}</small><br>
+              <div class="d-flex gap-1 mt-1">
+                <button class="btn btn-sm btn-outline-primary view-btn" data-id="${sw._id}">View</button>
+                <button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${sw._id}">Edit</button>
+              </div>
+            </td>
+            <td>${farmerName}</td>
+            <td>Breed: ${sw.breed || "—"}<br>Age: ${formatStageDisplay(sw.age_stage)}</td>
+            <td>Status: ${sw.current_status || "—"}<br>Health: ${sw.health_status || "—"}</td>
+            <td>S: ${sw.sire_id || "N/A"}<br>D: ${sw.dam_id || "N/A"}</td>
+            <td>${perf.weight} kg</td>
+            <td>${perf.length} cm</td>
+          </tr>
+        `);
+      });
+    }
+
+    // Pagination UI
+    document.getElementById("swinePageIndicator").textContent =
+      `Page ${swinePage} of ${totalPages || 1}`;
+
+    document.getElementById("swinePrevBtn").disabled = swinePage === 1;
+    document.getElementById("swineNextBtn").disabled =
+      swinePage === totalPages || totalPages === 0;
   }
 
-  function renderFilterPreview(list) {
+  document.getElementById("swinePrevBtn")?.addEventListener("click", () => {
+  if (swinePage > 1) {
+    swinePage--;
+    renderTable(allSwine);
+  }
+});
+
+document.getElementById("swineNextBtn")?.addEventListener("click", () => {
+  const totalPages = Math.ceil(allSwine.length / SWINE_ROWS_PER_PAGE);
+  if (swinePage < totalPages) {
+    swinePage++;
+    renderTable(allSwine);
+  }
+});
+
+  // ===== FILTERED PREVIEW PAGINATION =====
+  let filterPreviewPage = 1;
+  const FILTER_PREVIEW_ROWS = 5;
+  let filterPreviewResults = [];
+
+  // ================= FILTER PREVIEW (PAGINATED – PART 2) =================
+  function renderFilterPreview() {
     const wrap = document.getElementById("filterResultWrap");
     const body = document.getElementById("filterResultBody");
+
     if (!wrap || !body) return;
+
     body.innerHTML = "";
-    if (!list.length) {
-      body.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No matching records</td></tr>`;
+
+    const totalPages = Math.ceil(
+      filterPreviewResults.length / FILTER_PREVIEW_ROWS
+    );
+
+    if (!filterPreviewResults.length) {
+      body.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center text-muted">
+            No matching records
+          </td>
+        </tr>`;
       wrap.classList.remove("d-none");
       return;
     }
-    list.slice(0, 5).forEach(sw => {
-      const farmerName = sw.farmer_id ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim() : "OFFICE / MASTER";
+
+    if (filterPreviewPage > totalPages) {
+      filterPreviewPage = totalPages || 1;
+    }
+
+    const start = (filterPreviewPage - 1) * FILTER_PREVIEW_ROWS;
+    const end = start + FILTER_PREVIEW_ROWS;
+    const pageItems = filterPreviewResults.slice(start, end);
+
+    pageItems.forEach(sw => {
+      const farmerName = sw.farmer_id
+        ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim()
+        : "OFFICE / MASTER";
+
       body.insertAdjacentHTML("beforeend", `
         <tr>
           <td>${sw.swine_id}</td>
@@ -274,15 +440,46 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${sw.current_status || sw.status || "—"}</td>
           <td>${sw.batch || "—"}</td>
           <td>
-            <div class="d-flex gap-1 mt-1">
+            <div class="d-flex gap-1">
               <button class="btn btn-sm btn-outline-primary view-btn" data-id="${sw._id}">View</button>
               <button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${sw._id}">Edit</button>
             </div>
           </td>
-        </tr>`);
+        </tr>
+      `);
     });
+
     wrap.classList.remove("d-none");
+
+    // Pagination UI
+    document.getElementById("filterPreviewIndicator").textContent =
+      `Page ${filterPreviewPage} of ${totalPages}`;
+
+    document.getElementById("filterPreviewPrev").disabled =
+      filterPreviewPage === 1;
+
+    document.getElementById("filterPreviewNext").disabled =
+      filterPreviewPage === totalPages;
   }
+
+
+  document.getElementById("filterPreviewPrev")?.addEventListener("click", () => {
+    if (filterPreviewPage > 1) {
+      filterPreviewPage--;
+      renderFilterPreview();
+    }
+  });
+
+  document.getElementById("filterPreviewNext")?.addEventListener("click", () => {
+    const totalPages = Math.ceil(
+      filterPreviewResults.length / FILTER_PREVIEW_ROWS
+    );
+    if (filterPreviewPage < totalPages) {
+      filterPreviewPage++;
+      renderFilterPreview();
+    }
+  });
+
 
   // ================= GLOBAL EVENT LISTENER =================
   document.addEventListener("click", (e) => {
@@ -318,6 +515,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         return false;
+      });
+
+      allSwine.sort((a, b) => {
+        const da = new Date(a.createdAt || a.updatedAt || 0);
+        const db = new Date(b.createdAt || b.updatedAt || 0);
+        return db - da; // newest first
       });
 
       renderTable(allSwine);
@@ -367,10 +570,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (selectedFarmerId) {
       filtered = filtered.filter(sw => {
-        const fid = typeof sw.farmer_id === "object" ? sw.farmer_id._id : sw.farmer_id;
-        return fid === selectedFarmerId;
+        if (!sw.farmer_id) return false;
+
+        const fid = typeof sw.farmer_id === "object"
+          ? sw.farmer_id._id?.toString()
+          : sw.farmer_id.toString();
+
+        return fid === selectedFarmerId.toString();
       });
     }
+
     if (status) filtered = filtered.filter(sw => (sw.current_status || sw.status) === status);
     if (sex) filtered = filtered.filter(sw => sw.sex === sex);
     if (type) {
@@ -384,16 +593,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
     if (tag) filtered = filtered.filter(sw => sw.swine_id?.toLowerCase().includes(tag));
-    renderFilterPreview(filtered);
+    filterPreviewResults = filtered;
+    filterPreviewPage = 1;
+    renderFilterPreview();
+
   });
 
-  document.getElementById("resetFilters").addEventListener("click", () => {
-    selectedFarmerId = null;
-    filtersForm.reset();
-    document.getElementById("farmerDropdownBtn").textContent = "Select Farmer";
-    document.getElementById("filterResultWrap")?.classList.add("d-none");
-    renderTable(allSwine);
-  });
+    document.getElementById("resetFilters").addEventListener("click", () => {
+      selectedFarmerId = null;
+      filterPreviewResults = [];
+      filterPreviewPage = 1;
+
+      filtersForm.reset();
+      document.getElementById("farmerDropdownBtn").textContent = "Select Farmer";
+      document.getElementById("filterResultWrap")?.classList.add("d-none");
+
+      swinePage = 1;
+      renderTable(allSwine);
+    });
 
   // ================= INIT =================
   await loadFarmers();

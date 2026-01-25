@@ -55,3 +55,8 @@
   align-self: center;
 }
 
+.page-title{
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 14px 0;
+}

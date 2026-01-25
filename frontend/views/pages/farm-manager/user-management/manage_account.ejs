@@ -277,20 +277,29 @@
     </div>
 
     <label class="form-label small mt-2">Address</label>
-    <input id="editAddress" class="form-control form-control-sm" />
+    <input id="editAddress" class="form-control form-control-sm" required/>
 
     <label class="form-label small mt-2">Contact Number</label>
-    <input id="editContact" class="form-control form-control-sm" />
+    <input
+      id="editContact"
+      class="form-control form-control-sm"
+      type="tel"
+      required
+      pattern="^(09\d{9}|\+639\d{9})$"
+      placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+      title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
+    />
+
 
     <label class="form-label small mt-2">Account Status</label>
-    <select id="editStatus" class="form-select form-select-sm">
+    <select id="editStatus" class="form-select form-select-sm" required>
       <option value="active">Active</option>
       <option value="inactive">Inactive</option>
     </select>
 
     <div id="farmerOnlyFields" class="mt-2">
       <label class="form-label small">Number of Pens</label>
-      <input id="editPens" type="number" class="form-control form-control-sm mb-2" />
+      <input id="editPens" type="number" class="form-control form-control-sm mb-2" required />
 
       <label class="form-label small">Pen Capacity</label>
       <input id="editCapacity" type="number" class="form-control form-control-sm" />
