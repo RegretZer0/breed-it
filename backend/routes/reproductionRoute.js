@@ -38,9 +38,11 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
             query = { manager_id: new mongoose.Types.ObjectId(targetManagerId) };
         }
 
+        // We populate swine_id (the sow). 
+        // Note: male_swine_id is a String in your schema, so we can't reliably .populate() 
+        // if it's not a valid ObjectId. We will resolve it manually below.
         const records = await AIRecord.find(query)
             .populate("swine_id", "swine_id") 
-            .populate("male_swine_id", "swine_id") 
             .sort({ insemination_date: -1 })
             .lean();
 
@@ -57,11 +59,23 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
                 name = r.farmer_name;
             }
 
+            // --- RESOLVE BOAR TAG ---
+            let displayBoarTag = r.male_swine_id || "N/A";
+            
+            // If the ID looks like a MongoDB ObjectId, try to find the actual Swine tag
+            if (mongoose.Types.ObjectId.isValid(r.male_swine_id)) {
+                const boarSwine = await Swine.findById(r.male_swine_id).select("swine_id").lean();
+                if (boarSwine) {
+                    displayBoarTag = boarSwine.swine_id;
+                }
+            }
+
             return {
                 id: r._id,
                 farmer_name: name,
                 sow_tag: r.swine_id?.swine_id || r.swine_code || "N/A",
-                boar_tag: r.male_swine_id?.swine_id || "N/A",
+                boar_tag: displayBoarTag, // This now returns the human-readable tag
+                male_swine_id: displayBoarTag, // For frontend search compatibility
                 date: r.insemination_date,
                 status: r.status
             };
