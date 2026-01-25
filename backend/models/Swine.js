@@ -26,10 +26,11 @@ const swineSchema = new mongoose.Schema({
   current_status: {
     type: String,
     enum: [
-      "Monitoring (Day 1-30)", "Weaned (Monitoring 3 Months)", "Final Selection", 
+      "Monitoring (Day 1-30)", "Weaning", "3-Month Monitoring", "Final Selection", 
       "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
-      "Active", "Inactive", "Under Monitoring", "Routine Monitoring", "Completed"
+      "Active", "Inactive", "Under Monitoring", "Routine Monitoring", "Completed",
+      "To be Culled/Sold (Deformity)"
     ],
     default: "Monitoring (Day 1-30)" 
   },
@@ -37,15 +38,12 @@ const swineSchema = new mongoose.Schema({
   age_stage: { 
     type: String, 
     enum: [
-      "Monitoring (Day 1-30)", 
-      "Weaned (Monitoring 3 Months)", 
-      "Final Selection", 
       "piglet", 
       "growing", 
       "adult"
     ], 
     required: true, 
-    default: "Monitoring (Day 1-30)" 
+    default: "piglet" 
   },
 
   health_status: {
@@ -106,7 +104,8 @@ const swineSchema = new mongoose.Schema({
         "Registration", 
         "Maintenance Registration", 
         "Monitoring (Day 1-30)", 
-        "Weaned (Monitoring 3 Months)", 
+        "Weaning", 
+        "3-Month Monitoring", 
         "Final Selection", 
         "Market Check", 
         "Routine",
@@ -147,6 +146,31 @@ const swineSchema = new mongoose.Schema({
 
 // ------------------- Logic / Helpers -------------------
 
+// 1. Lifecycle Phase Calculator (New)
+swineSchema.virtual('lifecycle_phase').get(function() {
+  if (this.age_stage !== 'piglet') return null;
+
+  const now = new Date();
+  const regDate = this.date_registered || this.createdAt;
+  const daysDiff = Math.floor((now - regDate) / (1000 * 60 * 60 * 24));
+
+  // Deformity check
+  const latestPerf = this.performance_records?.[this.performance_records.length - 1];
+  const hasDeformity = latestPerf?.deformities?.some(d => d !== "None" && d !== "");
+
+  if (hasDeformity) return { phase: "To be Culled/Sold", daysLeft: 0, status: 'danger' };
+  
+  if (daysDiff <= 30) {
+    return { phase: "Monitoring (Day 1-30)", daysLeft: 30 - daysDiff, status: 'info' };
+  } else if (daysDiff <= 31) {
+    return { phase: "Weaning", daysLeft: 0, status: 'warning' };
+  } else if (daysDiff <= 121) { // 30 days + 3 months (90 days)
+    return { phase: "3-Month Monitoring", daysLeft: 121 - daysDiff, status: 'primary' };
+  } else {
+    return { phase: "Final Selection", daysLeft: 0, status: 'success' };
+  }
+});
+
 // Virtual to find all offspring
 swineSchema.virtual('offspring', {
   ref: 'Swine',
@@ -157,13 +181,10 @@ swineSchema.virtual('offspring', {
 // Virtual for Average Daily Gain (ADG)
 swineSchema.virtual('current_adg').get(function() {
   if (!this.performance_records || this.performance_records.length < 2) return 0;
-  
   const current = this.performance_records[this.performance_records.length - 1];
   const previous = this.performance_records[this.performance_records.length - 2];
-  
   const weightDiff = current.weight - previous.weight;
   const daysDiff = (new Date(current.record_date) - new Date(previous.record_date)) / (1000 * 60 * 60 * 24);
-  
   return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
 });
 
@@ -194,8 +215,6 @@ swineSchema.virtual('selection_suggestion').get(function() {
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
-    
-    // Aligned to 114 days (3 months, 3 weeks, 3 days) - standard gestation
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
       const gestationDays = 114; 
       const farrowDate = new Date(latestCycle.ai_service_date);

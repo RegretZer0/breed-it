@@ -36,11 +36,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   let rawPerformanceData = { morphology: [], deformities: [] };
   let rawSelectionData = [];
   let allSwineData = [];
+  let rawMonitoringData = []; 
 
-  // ================= HELPERS =================
+  // ================= HELPERS (Updated for maximum compatibility) =================
   const isMySwine = (item) => {
-    const ownerId = item.farmer_id?._id || item.farmer_id;
-    return ownerId && user.farmerProfileId && ownerId.toString() === user.farmerProfileId.toString();
+    // Check all possible fields where the farmer ID might hide
+    const ownerId = item.farmer_id?._id || item.farmer_id || item.farmer || item.owner;
+    const loggedInId = user.farmerProfileId || user.id || user._id;
+
+    if (!ownerId || !loggedInId) return false;
+    return ownerId.toString() === loggedInId.toString();
   };
 
   // ================= PIGLET DRILL-DOWN =================
@@ -78,7 +83,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const BASE_URL = "http://localhost:5000"; 
     const isRepro = endpoint.includes("ai-history") || 
                     endpoint.includes("performance-analytics") || 
-                    endpoint.includes("selection-candidates");
+                    endpoint.includes("selection-candidates") ||
+                    endpoint.includes("piglet-monitoring");
     
     const apiPath = isRepro ? `/api/reproduction${endpoint}` : `/api${endpoint}`;
     const fullUrl = `${BASE_URL}${apiPath}`;
@@ -115,21 +121,67 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ================= SEARCH =================
-  const searchInput = document.getElementById("reproductionSearch");
-  searchInput?.addEventListener("input", (e) => {
-    const term = e.target.value.toLowerCase();
-    renderAll(term);
-  });
-
-  function renderAll(term = "") {
-    renderAIRecords(term);
-    renderPerformance(term);
-    renderSelection(term);
-    renderMortality(term);
+  // ================= 1. PIGLET MONITORING =================
+  async function loadPigletMonitoring() {
+    const data = await authFetch("/piglet-monitoring");
+    if (data && data.success) {
+      rawMonitoringData = data.data || [];
+      renderPigletMonitoring();
+    }
+    return data;
   }
 
-  // ================= 1. AI HISTORY (SORTED LATEST FIRST) =================
+  function renderPigletMonitoring(term = "") {
+    const body = document.getElementById("pigletMonitoringBody");
+    if (!body) return;
+
+    const filtered = rawMonitoringData.filter(p => 
+      (p.swine_tag || "").toLowerCase().includes(term) ||
+      (p.current_status || "").toLowerCase().includes(term)
+    );
+
+    body.innerHTML = filtered.length ? filtered.map(p => `
+      <tr>
+        <td><strong>${p.swine_tag}</strong></td>
+        <td><span class="badge bg-${p.status_color || 'secondary'}">${p.current_status}</span></td>
+        <td>${p.days_remaining > 0 ? `<b>${p.days_remaining}</b> days left` : '<span class="text-success">Ready for Action</span>'}</td>
+        <td>${p.latest_weight} kg</td>
+        <td class="text-center">
+          ${p.can_action ? `
+            <div class="btn-group">
+              <button class="btn btn-sm btn-success" onclick="processPigletAction('${p.id}', 'breeding')">Keep</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="processPigletAction('${p.id}', 'sell')">Sell</button>
+            </div>
+          ` : `<small class="text-muted">In Progress</small>`}
+        </td>
+      </tr>
+    `).join("") : `<tr><td colspan="5" class="text-center">No piglets in monitoring.</td></tr>`;
+  }
+
+  window.processPigletAction = async (swineId, action) => {
+    const confirmMsg = action === 'breeding' ? "Promote this piglet to Active Breeder?" : "Mark this piglet for Sale?";
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/reproduction/piglet-action`, {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${getCleanToken()}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ swineId, action })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        loadPigletMonitoring(); 
+      }
+    } catch (err) {
+      console.error("Action Error:", err);
+    }
+  };
+
+  // ================= 2. AI HISTORY (FIXED) =================
   async function loadAIRecords() {
     const data = await authFetch("/ai-history");
     if (data && data.success) {
@@ -156,10 +208,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           <td>${r.boar_tag || "N/A"}</td>
           <td>${r.date ? new Date(r.date).toLocaleDateString() : "N/A"}</td>
         </tr>`).join("")
-      : `<tr><td colspan="3" class="text-center">No AI records found.</td></tr>`;
+      : `<tr><td colspan="3" class="text-center">No AI records found for your swines.</td></tr>`;
   }
 
-  // ================= 2. PERFORMANCE & DEFORMITIES (UPDATED: HEART GIRTH ADDED) =================
+  // ================= 3. PERFORMANCE & DEFORMITIES =================
   async function loadPerformance() {
     const data = await authFetch("/performance-analytics");
     if (data && data.success) {
@@ -182,7 +234,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const selectedDropdownValue = pigletSelect?.value.toLowerCase();
     
     if (!selectedDropdownValue && !term) {
-      if (morphBody) morphBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Please select a piglet from the dropdown to view performance data.</td></tr>`;
+      if (morphBody) morphBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Please select a piglet from the dropdown.</td></tr>`;
       if (deformityList) deformityList.innerHTML = `<div class="text-muted">Select a piglet to check for deformities.</div>`;
       return;
     }
@@ -224,8 +276,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </td>
                 <td>
                   <small><strong>Weight:</strong> ${item.morphology?.weight || 0}kg</small><br>
-                  <small><strong>Heart Girth:</strong> ${item.morphology?.heart_girth || 0}cm</small><br>
-                  <small><strong>Body Length:</strong> ${item.morphology?.body_length || 0}cm</small>
+                  <small><strong>Heart Girth:</strong> ${item.morphology?.heart_girth || 0}cm</small>
                 </td>
                 <td><small><strong>Teeth:</strong> ${item.morphology?.teeth || 0}</small></td>
                 <td>${item.morphology?.date ? new Date(item.morphology.date).toLocaleDateString() : "N/A"}</td>
@@ -240,13 +291,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       deformityList.innerHTML = defs.length ? defs.map(d => `
           <div class="deformity-item" style="padding: 10px; border-left: 4px solid #c62828; background: #fff5f5; margin-bottom: 5px;">
-            <strong>${d.swine_tag}</strong>: ${d.deformity_types} <br>
-            <small class="text-muted">Detected: ${new Date(d.date_detected).toLocaleDateString()}</small>
-          </div>`).join("") : `<div class="text-success">✅ No deformities found for this selection.</div>`;
+            <strong>${d.swine_tag}</strong>: ${d.deformity_types}
+          </div>`).join("") : `<div class="text-success">✅ No deformities found.</div>`;
     }
   }
 
-  // ================= 3. SELECTION CANDIDATES =================
+  // ================= 4. SELECTION CANDIDATES =================
   async function loadSelection() {
     const data = await authFetch("/selection-candidates");
     if (data && data.success) {
@@ -270,7 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         </tr>`).join("") : `<tr><td colspan="4" class="text-center">No selection candidates found.</td></tr>`;
   }
 
-  // ================= 4. MORTALITY ANALYTICS =================
+  // ================= 5. MORTALITY ANALYTICS =================
   async function loadSwine() {
     const data = await authFetch("/swine/all");
     if (data && data.success) {
@@ -286,7 +336,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let adultSows = allSwineData.filter(s => {
       const stage = (s.age_stage || s.current_status || s.current_stage || "").toLowerCase();
-      const isBreeder = ["adult", "pregnant", "lactating", "farrowing", "sow"].some(tag => stage.includes(tag));
+      const isBreeder = ["adult", "pregnant", "lactating", "farrowing", "sow", "piglet"].some(tag => stage.includes(tag));
       return (s.sex || "").toLowerCase() === "female" && isBreeder;
     });
 
@@ -308,12 +358,24 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td class="text-center" style="color: #d32f2f;"><b>${deceasedCount}</b></td>
               <td class="text-center"><b>${mortalityRate}%</b></td>
             </tr>`;
-        }).join("") : `<tr><td colspan="4" class="text-center">No breeder sows found.</td></tr>`;
+        }).join("") : `<tr><td colspan="4" class="text-center">No breeder records found.</td></tr>`;
   }
+
+  // ================= SEARCH =================
+  const searchInput = document.getElementById("reproductionSearch");
+  searchInput?.addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    renderPigletMonitoring(term);
+    renderAIRecords(term);
+    renderPerformance(term);
+    renderSelection(term);
+    renderMortality(term);
+  });
 
   // ================= INIT =================
   try {
     debugLog("INIT", "Starting Load...");
+    await safeLoad(loadPigletMonitoring, "Monitoring", "pigletMonitoringBody");
     await safeLoad(loadAIRecords, "AI History", "aiTableBody");
     await safeLoad(loadPerformance, "Performance", "morphTableBody");
     await safeLoad(loadSelection, "Selection", "selectionTableBody");
