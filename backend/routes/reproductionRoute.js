@@ -20,7 +20,7 @@ const formatName = (userObj) => {
 };
 
 // ---------------------------------------------------------
-// 1. FETCH AI HISTORY
+// 1. FETCH AI HISTORY (FIXED FOR STRING-BASED MALE_SWINE_ID)
 // ---------------------------------------------------------
 router.get("/ai-history", requireSessionAndToken, async (req, res) => {
     try {
@@ -32,15 +32,19 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
             query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
         } else {
             const targetManagerId = (role === "farm_manager" || role === "admin") ? userId : managerId;
-            if (!targetManagerId) {
-                return res.status(400).json({ success: false, message: "Farm context not found" });
-            }
+            if (!targetManagerId) return res.status(400).json({ success: false, message: "Farm context not found" });
             query = { manager_id: new mongoose.Types.ObjectId(targetManagerId) };
         }
 
+<<<<<<< HEAD
         // We populate swine_id (the sow). 
         // Note: male_swine_id is a String in your schema, so we can't reliably .populate() 
         // if it's not a valid ObjectId. We will resolve it manually below.
+=======
+        // Removed .populate("male_swine_id") and .populate("boar_id") because:
+        // 1. male_swine_id is a String in your schema.
+        // 2. boar_id does not exist in your schema.
+>>>>>>> 069d4ef8638955795c9976d8004a5d25eb4b8db7
         const records = await AIRecord.find(query)
             .populate("swine_id", "swine_id") 
             .sort({ insemination_date: -1 })
@@ -49,6 +53,7 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
         const formatted = await Promise.all(records.map(async (r) => {
             let name = "Unknown Farmer";
             let farmerInfo = await Farmer.findById(r.farmer_id).select("first_name last_name");
+            
             if (!farmerInfo) {
                 farmerInfo = await User.findById(r.farmer_id).select("full_name first_name last_name");
             }
@@ -59,6 +64,7 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
                 name = r.farmer_name;
             }
 
+<<<<<<< HEAD
             // --- RESOLVE BOAR TAG ---
             let displayBoarTag = r.male_swine_id || "N/A";
             
@@ -68,14 +74,29 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
                 if (boarSwine) {
                     displayBoarTag = boarSwine.swine_id;
                 }
+=======
+            // --- IMPROVED BOAR TAG RESOLUTION ---
+            // Since male_swine_id is a String, we check if it's an ID or a direct Tag
+            let boarTag = r.male_swine_id || "N/A";
+            
+            // If the male_swine_id looks like a MongoDB ObjectId, try to find the actual tag
+            if (mongoose.Types.ObjectId.isValid(r.male_swine_id)) {
+                const boarSwine = await Swine.findById(r.male_swine_id).select("swine_id");
+                if (boarSwine) boarTag = boarSwine.swine_id;
+>>>>>>> 069d4ef8638955795c9976d8004a5d25eb4b8db7
             }
 
             return {
                 id: r._id,
+                farmer_id: r.farmer_id, // Essential for frontend filter
                 farmer_name: name,
                 sow_tag: r.swine_id?.swine_id || r.swine_code || "N/A",
+<<<<<<< HEAD
                 boar_tag: displayBoarTag, // This now returns the human-readable tag
                 male_swine_id: displayBoarTag, // For frontend search compatibility
+=======
+                boar_tag: boarTag, 
+>>>>>>> 069d4ef8638955795c9976d8004a5d25eb4b8db7
                 date: r.insemination_date,
                 status: r.status
             };
@@ -173,7 +194,73 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. SELECTION PROCESS CANDIDATES
+// 3. PIGLET MONITORING & LIFECYCLE (NEW)
+// ---------------------------------------------------------
+router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
+    try {
+        const { id: userId, role, farmerProfileId } = req.user;
+        let query = { age_stage: "piglet" };
+
+        if (role === "farmer") {
+            query.farmer_id = new mongoose.Types.ObjectId(farmerProfileId);
+        }
+
+        const piglets = await Swine.find(query);
+        
+        const data = piglets.map(p => {
+            const phaseInfo = p.lifecycle_phase; // Uses virtual from Swine.js
+            const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
+            
+            // Check if action can be taken (Final Selection + Weight Range)
+            const canAction = phaseInfo.phase === "Final Selection" && 
+                              latestPerf.weight >= 15 && 
+                              latestPerf.weight <= 25;
+
+            return {
+                id: p._id,
+                swine_tag: p.swine_id,
+                dam_id: p.dam_id || "N/A",
+                current_status: phaseInfo.phase,
+                days_remaining: phaseInfo.daysLeft,
+                status_color: phaseInfo.status,
+                can_action: canAction,
+                latest_weight: latestPerf.weight || 0,
+                deformities: latestPerf.deformities || ["None"]
+            };
+        });
+
+        res.json({ success: true, data });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 4. PIGLET FINAL DECISION (NEW)
+// ---------------------------------------------------------
+router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
+    try {
+        const { swineId, action } = req.body; // action: 'breeding' or 'sell'
+        const swine = await Swine.findById(swineId);
+        
+        if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+
+        if (action === 'breeding') {
+            swine.age_stage = "adult";
+            swine.current_status = "Active Breeder";
+        } else {
+            swine.current_status = "Culled/Sold";
+        }
+
+        await swine.save();
+        res.json({ success: true, message: `Piglet ${swine.swine_id} has been updated.` });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ---------------------------------------------------------
+// 5. SELECTION PROCESS CANDIDATES (OLD LOGIC KEPT)
 // ---------------------------------------------------------
 router.get("/selection-candidates", requireSessionAndToken, async (req, res) => {
     try {
@@ -224,7 +311,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
 });
 
 // ---------------------------------------------------------
-// 4. PROCESS SELECTION
+// 6. PROCESS SELECTION (OLD LOGIC KEPT)
 // ---------------------------------------------------------
 router.put("/process-selection", requireSessionAndToken, async (req, res) => {
     try {
@@ -252,7 +339,7 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 5. FETCH PREGNANT SOWS (READY FOR FARROWING)
+// 7. FETCH PREGNANT SOWS (READY FOR FARROWING)
 // ---------------------------------------------------------
 router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
     try {
@@ -292,7 +379,7 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 6. COMPLETE BREEDING CYCLE (FARROWING)
+// 8. COMPLETE BREEDING CYCLE (FARROWING)
 // ---------------------------------------------------------
 router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
     const { ai_record_id, farrowing_date } = req.body;
@@ -306,7 +393,7 @@ router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
             return res.status(404).json({ success: false, message: "No active record found." });
         }
 
-        aiRecord.status = "Success"; // Mark as success now that piglets are born
+        aiRecord.status = "Success"; 
         aiRecord.farrowing_date = farrowing_date;
         
         await aiRecord.save();

@@ -56,6 +56,7 @@
   border: 1px solid #ccc;
   font-size: 14px;
   outline: none;
+  transition: border-color 0.2s;
 }
 
 .search-input:focus {
@@ -131,6 +132,26 @@ td {
 }
 
 /* =========================
+   MONITORING SPECIFIC (NEW)
+========================= */
+
+.btn-group {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.badge-success { background-color: #2ecc71; color: #fff; }
+.badge-warning { background-color: #f1c40f; color: #333; }
+.badge-info { background-color: #3498db; color: #fff; }
+.badge-secondary { background-color: #95a5a6; color: #fff; }
+
+#pigletMonitoringBody b {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* =========================
    DEFORMITY LIST
 ========================= */
 
@@ -152,21 +173,32 @@ td {
    ACTION BUTTONS
 ========================= */
 
-.action-btn {
+.action-btn, .btn-sm {
   border: none;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
 }
 
-.action-btn:not(.btn-danger) {
+.action-btn:active, .btn-sm:active {
+  transform: scale(0.96);
+}
+
+.btn-success {
   background: #2e7d32;
   color: #fff;
 }
 
-.action-btn.btn-danger {
+.btn-outline-danger {
+  background: transparent;
+  border: 1px solid #d32f2f;
+  color: #d32f2f;
+}
+
+.btn-outline-danger:hover {
   background: #d32f2f;
   color: #fff;
 }
@@ -232,5 +264,9 @@ td {
 
   .search-input {
     padding: 10px 12px;
+  }
+
+  .btn-group {
+    flex-direction: column;
   }
 }

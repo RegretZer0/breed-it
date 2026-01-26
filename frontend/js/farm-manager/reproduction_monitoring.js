@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
      */
     const isOwner = (item) => {
         if (!item) return false;
-        if (user.role.toLowerCase() === "farm-manager") {
+        if (user.role.toLowerCase() === "farm-manager" || user.role.toLowerCase() === "farm_manager") {
             const farmerObj = item.farmer_id;
             if (!farmerObj) return false;
             const managerRef = farmerObj.registered_by || farmerObj.created_by || farmerObj.manager_id;
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ---------------------------------------------------------
-    // 1. AI RECORDS 
+    // 1. AI RECORDS (UPDATED TO REMOVE "READY FOR..." BADGES)
     // ---------------------------------------------------------
     async function loadAIRecords() {
         try {
@@ -198,7 +198,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (err) { 
             console.error("AI Load Error:", err);
-            document.getElementById("aiTableBody").innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading records.</td></tr>';
+            if (document.getElementById("aiTableBody")) {
+                document.getElementById("aiTableBody").innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading records.</td></tr>';
+            }
         }
     }
 
@@ -216,13 +218,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             <tr>
                 <td><strong>${resolveFarmerName(record)}</strong></td>
                 <td><span class="badge-tag">${record.sow_tag}</span></td>
-                <td><span class="badge-tag">${record.boar_tag}</span></td>
+                <td><span class="badge-tag">${record.boar_tag || 'N/A'}</span></td>
                 <td>${new Date(record.date).toLocaleDateString()}</td>
             </tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding: 20px;">No matching records.</td></tr>';
     }
 
     // ---------------------------------------------------------
-    // 2. PERFORMANCE & DEFORMITIES
+    // 2. PERFORMANCE & DEFORMITIES (UPDATED TO REMOVE STATUS MESSAGES)
     // ---------------------------------------------------------
     async function loadPerformanceAnalytics() {
         try {
@@ -272,11 +274,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             morphBody.innerHTML = filteredMorph.length > 0 ? filteredMorph.map(item => {
-                const swineObj = {
-                    swine_id: item.swine_tag, sex: item.swine_sex, current_status: item.morphology.stage, 
-                    performance_records: [{ weight: item.morphology.weight, stage: item.morphology.stage, deformities: [] }]
-                };
-                const suggestion = PerformanceHelper.getSelectionStatus(swineObj, rawPerformanceData.deformities);
+                // Check if this swine has a deformity record
+                const hasDeformity = rawPerformanceData.deformities.some(d => d.swine_tag === item.swine_tag);
+                
+                // Only show a critical alert if there is a real deformity
+                let suggestionLabel = "";
+                if (hasDeformity) {
+                    suggestionLabel = `<br><span style="font-size:0.75rem; padding:2px 4px; border-radius:3px; background:#ffebee; color:#c62828; font-weight:bold;">⚠️ Suggest: Cull/Sell</span>`;
+                }
 
                 return `
                 <tr>
@@ -284,10 +289,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <td><strong>${item.swine_tag}</strong></td>
                     <td style="font-weight:bold; color:${item.swine_sex === 'Female' ? '#d81b60' : '#1976d2'};">${item.swine_sex}</td>
                     <td>
-                        <small>${item.morphology.stage}</small><br>
-                        <span style="font-size:0.75rem; padding:2px 4px; border-radius:3px; background:${suggestion.bg || '#f5f5f5'}; color:${suggestion.color}; font-weight:bold;">
-                            ${suggestion.suggestion}
-                        </span>
+                        <small>${item.morphology.stage}</small>
+                        ${suggestionLabel}
                     </td>
                     <td>
                         <small><strong>Weight:</strong> ${item.morphology.weight}kg</small><br>
