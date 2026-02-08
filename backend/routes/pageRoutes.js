@@ -116,11 +116,11 @@ router.get(
 
 // Reports
 router.get(
-  "/farm-manager/reports",
+  "/farm-manager/heat-reports/index",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/reports", {
+    res.render("pages/farm-manager/heat-reports/index", {
       page_title: "Reports",
       current_section: "reports",
       current_page: "reports",
