@@ -3,144 +3,14 @@
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
 <main class="main-content">
+  <div class="container-fluid">
 
-  <!-- ================= STATS CARD ================= -->
-  <div class="card page-card overview-card">
-    <div class="card-body">
-      <h4 class="page-title">Heat Reports</h4>
+    <%- include("./overview") %>
+    <%- include("./report-table") %>
 
-      <div class="row g-3 stats-grid">
-        <div class="col-md-6 col-lg-3">
-          <div class="stat-card">
-            <div>
-              <div class="stat-label">In-Heat</div>
-              <div class="stat-number" id="countInHeat">0</div>
-            </div>
-            <div class="stat-icon orange">
-              <i class="fa-solid fa-fire"></i>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-          <div class="stat-card">
-            <div>
-              <div class="stat-label">Under Observation</div>
-              <div class="stat-number" id="countAwaitingRecheck">0</div>
-            </div>
-            <div class="stat-icon blue">
-              <i class="fa-solid fa-clock-rotate-left"></i>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-          <div class="stat-card">
-            <div>
-              <div class="stat-label">Pregnant</div>
-              <div class="stat-number" id="countPregnant">0</div>
-            </div>
-            <div class="stat-icon green">
-              <i class="fa-solid fa-piggy-bank"></i>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-          <div class="stat-card">
-            <div>
-              <div class="stat-label">Farrowing Soon</div>
-              <div class="stat-number" id="countFarrowingReady">0</div>
-            </div>
-            <div class="stat-icon red">
-              <i class="fa-solid fa-warehouse"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
-
-  <!-- ================= REPORTS LIST ================= -->
-  <div class="card page-card reports-card mt-3">
-    <div class="card-body">
-      <div class="card-header-row">
-        <h5 class="card-title">Heat Reports</h5>
-      </div>
-
-      <section id="heatReportCards" class="heat-card-grid">
-        <p class="text-muted">Loading reports…</p>
-      </section>
-    </div>
-  </div>
-
 </main>
 
-<!-- ================= DETAILS MODAL ================= -->
-<div id="detailsOverlay" class="report-overlay">
-  <div class="report-modal">
-
-    <div class="panel-header">
-      <h5>Report Details</h5>
-      <button id="closeDetails" class="icon-btn" aria-label="Close">&times;</button>
-    </div>
-
-    <div id="detailsContent" class="panel-body">
-      <!-- Filled dynamically -->
-    </div>
-
-    <div class="panel-footer">
-      <button id="approveBtn" class="btn-success">
-        <i class="fa-solid fa-check"></i> Approve
-      </button>
-
-      <button id="rejectBtn" class="btn-danger">
-        <i class="fa-solid fa-xmark"></i> Reject
-      </button>
-
-      <button id="confirmAIBtn" class="btn-primary" style="display:none;">
-        <i class="fa-solid fa-syringe"></i> Confirm Service
-      </button>
-
-      <button id="confirmPregnancyBtn" class="btn-primary" style="display:none;">
-        <i class="fa-solid fa-person-pregnant"></i> Mark Pregnant
-      </button>
-
-      <button id="followUpBtn" class="btn-warning" style="display:none;">
-        <i class="fa-solid fa-rotate-left"></i> Cycle Failed
-      </button>
-
-      <button id="confirmFarrowingBtn" class="btn-primary" style="display:none;">
-        <i class="fa-solid fa-baby"></i> Record Farrowing
-      </button>
-
-      <button id="closeDetailsBtn" class="btn-secondary">
-        <i class="fa-solid fa-xmark"></i> Close
-      </button>
-    </div>
-
-  </div>
-</div>
-
-<!-- ================= TRACKING MODAL ================= -->
-<div id="progressOverlay" class="report-overlay">
-  <div class="report-modal">
-
-    <div class="panel-header">
-      <h5>Reproductive Cycle Tracking</h5>
-      <button id="closeProgress" class="icon-btn" aria-label="Close">&times;</button>
-    </div>
-
-    <div id="progressTimeline" class="panel-body">
-      <!-- Timeline rendered here -->
-    </div>
-
-  </div>
-</div>
-
-<!-- ================= EVIDENCE LIGHTBOX ================= -->
-<div id="evidenceOverlay" class="evidence-overlay">
-  <img id="evidencePreview" alt="Evidence Preview" />
-</div>
+<%- include("./modals") %>
 
 <%- include("../../../partials/farm-manager/footer") %>

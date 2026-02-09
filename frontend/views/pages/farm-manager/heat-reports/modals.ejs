@@ -1,0 +1,229 @@
+<!-- ================= REPORT DETAILS MODAL ================= -->
+<div id="reportDetailsModal" class="modal-overlay">
+  <div class="modal-panel">
+
+    <div class="modal-header">
+      <h5>Report Details</h5>
+      <button id="closeReportModal" class="modal-close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- BASIC INFO -->
+      <div class="detail-grid">
+        <div class="report-summary">
+          <div class="report-row">
+            <p id="reportSwine"></p>
+            <span id="reportStatus" class="report-status"></span>
+          </div>
+
+          <p id="reportFarmer"></p>
+          <p id="reportProbability"></p>
+
+          <div class="report-signs">
+            <h6>Observed Signs</h6>
+            <div id="reportSigns" class="signs-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIA -->
+      <div class="media-wrapper">
+        <div id="evidenceGallery" class="evidence-gallery"></div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="modal-footer report-actions">
+        <button id="approveBtn" style="display:none;">Approve</button>
+        <button id="rejectBtn" style="display:none;">Reject</button>
+        <button id="confirmAIBtn" style="display:none;">💉 Confirm AI</button>
+        <button id="confirmPregnancyBtn" style="display:none;">🤰 Confirm Pregnancy</button>
+        <button id="followUpBtn" style="display:none;">🔄 Cycle Failed</button>
+        <button id="confirmFarrowingBtn" style="display:none;">🐷 Confirm Farrowing</button>
+
+        <button id="closeReportModalBtn" class="secondary">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= AI CONFIRM MODAL ================= -->
+<div id="aiConfirmModal" class="modal">
+  <div class="modal-content">
+    <h3>💉 Confirm AI Service</h3>
+
+    <label>Select Sire (Boar)</label>
+    <select id="boarSelect"></select>
+
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button id="submitAI" class="btn-nav">Confirm AI</button>
+      <button
+        type="button"
+        class="btn-nav secondary"
+        onclick="document.getElementById('aiConfirmModal').style.display='none'">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FARROWING MODAL ================= -->
+<div id="farrowingModal" class="modal">
+  <div class="modal-content">
+    <h3>🐷 Register Farrowing Results</h3>
+
+    <form id="farrowingForm">
+      <label>Actual Farrowing Date</label>
+      <input type="date" id="farrowingDateInput" required>
+
+      <div class="count-grid">
+        <div>
+          <label>Live</label>
+          <input type="number" id="liveCount" min="0" value="0">
+        </div>
+        <div>
+          <label>Mummy</label>
+          <input type="number" id="mummyCount" min="0" value="0">
+        </div>
+        <div>
+          <label>Stillborn</label>
+          <input type="number" id="stillCount" min="0" value="0">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button type="submit" class="btn-nav">Confirm Farrowing</button>
+        <button
+          type="button"
+          class="btn-nav secondary"
+          onclick="document.getElementById('farrowingModal').style.display='none'">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= REJECT MODAL ================= -->
+<div id="rejectReasonModal" class="modal">
+  <div class="modal-content">
+    <h3>Reject Report</h3>
+
+    <p class="text-muted">
+      Please provide a reason for rejecting this report.
+    </p>
+
+    <textarea
+      id="rejectReasonInput"
+      rows="4"
+      placeholder="Enter rejection reason..."
+      style="resize:none;">
+    </textarea>
+
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <button id="confirmRejectBtn" class="btn-nav">Reject</button>
+      <button
+        type="button"
+        class="btn-nav secondary"
+        onclick="document.getElementById('rejectReasonModal').style.display='none'">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TRACK PROGRESS PANEL ================= -->
+<div id="trackProgressPanel" class="progress-panel">
+
+  <!-- PANEL HEADER -->
+  <div class="progress-panel-header">
+    <h4>Reproductive Cycle Details</h4>
+    <button id="closeProgressPanel" class="panel-close">&times;</button>
+  </div>
+
+  <!-- PANEL BODY -->
+  <div class="progress-panel-body">
+
+    <!-- FARM NAME -->
+    <p class="text-muted" id="progressFarmName">
+      Farm: —
+    </p>
+
+    <!-- ================= SUMMARY CARD ================= -->
+    <div class="cycle-summary-card">
+
+      <!-- SWINE + STATUS -->
+      <div class="cycle-summary-header">
+        <div class="swine-title">
+          <span class="swine-icon">❤</span>
+          <strong id="progressSwineId">
+            PIG-000 — Reproductive Cycle
+          </strong>
+        </div>
+
+        <span id="cycleStatus" class="cycle-status-badge">
+          Active
+        </span>
+      </div>
+
+      <!-- OVERALL PROGRESS -->
+      <div class="overall-progress-block">
+        <div class="progress-label-row">
+          <span>Overall Progress</span>
+          <strong id="overallPercent">0%</strong>
+        </div>
+
+        <div class="progress-bar">
+          <div
+            id="overallProgressFill"
+            class="progress-fill"
+            style="width:0%">
+          </div>
+        </div>
+      </div>
+
+      <!-- CURRENT STAGE -->
+      <div class="current-stage-row">
+        <span class="label">Current:</span>
+        <strong id="currentStage">—</strong>
+        <span class="remaining" id="remainingDays"></span>
+      </div>
+
+    </div>
+    <!-- ================= END SUMMARY ================= -->
+
+
+    <!-- ================= TIMELINE ================= -->
+    <div class="cycle-timeline" id="cycleTimeline">
+
+      <!-- EMPTY STATE (until JS fills it) -->
+      <div class="timeline-empty text-muted">
+        No cycle data available.
+      </div>
+
+      <!--
+        Timeline steps injected by JS like:
+
+        <div class="timeline-step completed">
+          <div class="step-icon">🔥</div>
+          <div class="step-content">
+            <div class="step-header">
+              <strong>Estrus Detection</strong>
+              <span class="step-status completed">Completed</span>
+            </div>
+            <p class="step-desc">Detecting heat signs in sow</p>
+            <div class="step-meta">
+              <span>1 day</span>
+              <span>Nov 13 → Nov 14</span>
+            </div>
+            <em class="step-note">"Clear heat signs observed"</em>
+          </div>
+        </div>
+      -->
+
+    </div>
+    <!-- ================= END TIMELINE ================= -->
+
+  </div>
+</div>
+

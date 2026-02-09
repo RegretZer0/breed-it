@@ -128,6 +128,20 @@ router.get(
   }
 );
 
+// Reports
+// router.get(
+//   "/farm-manager/reports",
+//   requireLogin,
+//   requireFarmManager,
+//   (req, res) => {
+//     res.render("pages/farm-manager/reports", {
+//       page_title: "Reports",
+//       current_section: "reports",
+//       current_page: "reports",
+//     });
+//   }
+// );
+
 /* =========================
    FARM MANAGER – USER MANAGEMENT
 ========================= */

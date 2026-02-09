@@ -1,0 +1,51 @@
+<!-- ================= HEAT REPORTS (CARD VIEW) ================= -->
+<div class="card page-card reports-card" style="margin-top:20px;">
+  <div class="card-body">
+
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="card-title mb-0">Heat Reports</h5>
+    </div>
+
+    <!-- ================= REPORT CARD LIST ================= -->
+    <div
+      id="reportsCardList"
+      class="reports-card-list"
+      aria-live="polite"
+    >
+      <div class="text-muted">Loading reports...</div>
+    </div>
+
+    <!-- ================= PAGINATION ================= -->
+    <div
+      class="d-flex justify-content-between align-items-center mt-4"
+      style="gap:12px;"
+    >
+      <button
+        id="prevPageBtn"
+        class="btn-nav secondary"
+        type="button"
+        aria-label="Previous page"
+      >
+        ← Prev
+      </button>
+
+      <span
+        id="pageIndicator"
+        style="font-weight:600; font-size:14px;"
+      >
+        Page 1 of 1
+      </span>
+
+      <button
+        id="nextPageBtn"
+        class="btn-nav secondary"
+        type="button"
+        aria-label="Next page"
+      >
+        Next →
+      </button>
+    </div>
+
+  </div>
+</div>

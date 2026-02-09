@@ -9,8 +9,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const BACKEND_URL = "http://localhost:5000";
 
   // ---------------- DOM ----------------
-  const tableBody = document.getElementById("reportsTableBody");
-
   const countInHeat = document.getElementById("countInHeat");
   const countAwaitingRecheck = document.getElementById("countAwaitingRecheck");
   const countPregnant = document.getElementById("countPregnant");
@@ -41,8 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const filteredNextBtn = document.getElementById("filteredNextBtn");
   const filteredPageIndicator = document.getElementById("filteredPageIndicator");
 
-
-
   // Farrowing modal
   const farrowingModal = document.getElementById("farrowingModal");
   const farrowingForm = document.getElementById("farrowingForm");
@@ -60,6 +56,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const boarSelect = document.getElementById("boarSelect");
   const submitAIBtn = document.getElementById("submitAI");
 
+  // Track Progress panel (placeholder)
+  const progressPanel = document.getElementById("trackProgressPanel");
+  const closeProgressPanel = document.getElementById("closeProgressPanel");
+
+
   // ---------------- MODAL HELPERS ----------------
   function closeReportDetails() {
     reportDetailsModal.style.display = "none";
@@ -74,7 +75,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     evidenceGallery.innerHTML = "";
   }
 
-  closeReportModal.onclick = closeReportDetails;
+  if (closeReportModal) {
+    closeReportModal.onclick = closeReportDetails;
+  }
+
   if (closeReportModalBtn) closeReportModalBtn.onclick = closeReportDetails;
 
   reportDetailsModal.addEventListener("click", e => {
@@ -130,10 +134,9 @@ let currentReportId = null;
 
       allReports = data.reports || [];
       renderStats(allReports);
-      renderTable(allReports);
+      renderCards(allReports);
     } catch (err) {
       console.error("Reports load error:", err);
-      if (tableBody) tableBody.innerHTML = `<tr><td colspan="8">Failed to load reports</td></tr>`;
     }
   }
 
@@ -157,59 +160,132 @@ let currentReportId = null;
   }
 
   // ---------------- TABLE ----------------
-function renderTable(reports) {
-  if (!tableBody) return;
+  function renderCards(reports) {
+    const cardList = document.getElementById("reportsCardList");
+    if (!cardList) return;
 
-  tableBody.innerHTML = "";
+    cardList.innerHTML = "";
 
-  const totalPages = Math.ceil(reports.length / ROWS_PER_PAGE);
-  if (currentPage > totalPages) currentPage = totalPages || 1;
+    const totalPages = Math.ceil(reports.length / ROWS_PER_PAGE);
+    if (currentPage > totalPages) currentPage = totalPages || 1;
 
-  const start = (currentPage - 1) * ROWS_PER_PAGE;
-  const end = start + ROWS_PER_PAGE;
-  const paginatedReports = reports.slice(start, end);
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    const pageItems = reports.slice(start, start + ROWS_PER_PAGE);
 
-  if (!paginatedReports.length) {
-    tableBody.innerHTML = `<tr><td colspan="8">No reports found</td></tr>`;
-  } else {
-    paginatedReports.forEach(r => {
-      const swineStatus = r.swine_id?.current_status || "Unknown";
-      const statusLabel = (r.status || "pending").replace(/_/g, " ");
+    if (!pageItems.length) {
+      cardList.innerHTML = "<p class='text-muted'>No reports found.</p>";
+      pageIndicator.textContent = `Page 1 of 1`;
+      prevPageBtn.disabled = true;
+      nextPageBtn.disabled = true;
+      return;
+    }
 
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${r.swine_id?.swine_id || "-"}</td>
-        <td>${r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "-"}</td>
-        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-        <td style="font-weight:bold;">${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}</td>
-        <td>
-          <span class="report-status" data-status="${r.status}">
+    pageItems.forEach(r => {
+      const probability = r.heat_probability ?? 0;
+      const status = r.status || "pending";
+      const statusLabel = status.replace(/_/g, " ");
+
+      const card = document.createElement("div");
+      card.className = "report-card";
+
+      card.innerHTML = `
+        <div class="report-card-header">
+          <div>
+            <strong class="swine-id">
+              ${r.swine_id?.swine_id || "-"}
+            </strong>
+            <div class="subtext">
+              ${r.farmer_id
+                ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}`
+                : "Unknown Farmer"}
+            </div>
+            <div class="date">
+              ${new Date(r.createdAt).toLocaleDateString()}
+            </div>
+          </div>
+
+          <span class="status-badge ${status}">
             ${statusLabel}
           </span>
-        </td>
-        <td>${["under_observation", "waiting_heat_check"].includes(r.status) && r.next_heat_check ? `<strong>${getDaysLeft(r.next_heat_check)}</strong>` : "-"}</td>
-        <td>${["pregnant", "farrowing_ready"].includes(r.status) && r.expected_farrowing ? `<strong>${getDaysLeft(r.expected_farrowing)}</strong>` : "-"}</td>
-        <td><button class="btn-view" data-id="${r._id}">View</button></td>
+        </div>
+
+        <div class="probability-block">
+          <div class="label">Probability</div>
+          <div class="progress-row">
+            <div class="progress-bar">
+              <div class="progress-fill" style="width:${probability}%"></div>
+            </div>
+            <strong>${probability}%</strong>
+          </div>
+        </div>
+
+        <div class="indicators">
+          ${
+            Array.isArray(r.signs) && r.signs.length
+              ? r.signs
+                  .map(
+                    s => `<span class="indicator-chip">${s}</span>`
+                  )
+                  .join("")
+              : `<span class="text-muted">No indicators</span>`
+          }
+        </div>
+
+        <div class="report-card-actions">
+          <button
+            class="btn-nav secondary btn-view"
+            data-id="${r._id}">
+            View Details
+          </button>
+
+          <button
+            class="btn-nav btn-track"
+            data-id="${r._id}">
+            Track Progress
+          </button>
+        </div>
       `;
-      tableBody.appendChild(row);
+
+      cardList.appendChild(card);
     });
+
+    function openProgressPanel(reportId) {
+    if (!progressPanel) return;
+
+      // Placeholder only – no logic yet
+      progressPanel.classList.add("open");
+    }
+
+    if (closeProgressPanel) {
+      closeProgressPanel.onclick = () => {
+        progressPanel.classList.remove("open");
+      };
+    }
+
+
+    // Pagination UI
+    pageIndicator.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+
+    // View details binding
+    cardList.querySelectorAll(".btn-view").forEach(btn => {
+      btn.onclick = () => viewReport(btn.dataset.id);
+    });
+
+    // Track progress (placeholder)
+    cardList.querySelectorAll(".btn-track").forEach(btn => {
+      btn.onclick = () => openProgressPanel(btn.dataset.id);
+    });
+
   }
 
-  // Pagination UI
-  pageIndicator.textContent = `Page ${currentPage} of ${totalPages || 1}`;
-  prevPageBtn.disabled = currentPage === 1;
-  nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-
-  document.querySelectorAll(".btn-view").forEach(btn => {
-    btn.addEventListener("click", () => viewReport(btn.dataset.id));
-  });
-}
 
   // ================= MAIN TABLE PAGINATION CONTROLS =================
   prevPageBtn?.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
-      renderTable(allReports);
+      renderCards(allReports);
     }
   });
 
@@ -217,7 +293,7 @@ function renderTable(reports) {
     const totalPages = Math.ceil(allReports.length / ROWS_PER_PAGE);
     if (currentPage < totalPages) {
       currentPage++;
-      renderTable(allReports);
+      renderCards(allReports);
     }
   });
 
@@ -510,7 +586,6 @@ if (farrowingForm) {
     }
   };
 
-
   // ---------------- FILTERING ----------------
   const filterSwine = document.getElementById("filterSwine");
   const filterStatus = document.getElementById("filterStatus");
@@ -518,6 +593,8 @@ if (farrowingForm) {
   const clearFilterBtn = document.getElementById("clearFilter");
   const filteredCard = document.getElementById("filteredResultsCard");
   const filteredBody = document.getElementById("filteredTableBody");
+
+  renderFilteredTable()
 
   applyFilterBtn?.addEventListener("click", () => {
     const swineTerm = filterSwine.value.trim().toLowerCase();

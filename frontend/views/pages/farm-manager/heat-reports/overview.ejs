@@ -1,0 +1,98 @@
+<div class="card page-card overview-card">
+  <div class="card-body">
+
+    <h4 class="page-title">FARMER REPORTS</h4>
+
+    <!-- ================= STATS GRID ================= -->
+    <div class="row g-3 stats-grid">
+      <div class="col-md-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div>
+            <div class="stat-label">In-Heat</div>
+            <div class="stat-number" id="countInHeat">0</div>
+          </div>
+          <div class="stat-icon orange"><i class="fa-solid fa-fire"></i></div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div>
+            <div class="stat-label">Under Observation</div>
+            <div class="stat-number" id="countAwaitingRecheck">0</div>
+          </div>
+          <div class="stat-icon blue"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div>
+            <div class="stat-label">Pregnant</div>
+            <div class="stat-number" id="countPregnant">0</div>
+          </div>
+          <div class="stat-icon green"><i class="fa-solid fa-piggy-bank"></i></div>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div>
+            <div class="stat-label">Farrowing Soon</div>
+            <div class="stat-number" id="countFarrowingReady">0</div>
+          </div>
+          <div class="stat-icon red"><i class="fa-solid fa-warehouse"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <hr style="margin:24px 0;">
+
+    <!-- ================= FILTERS ================= -->
+    <h5 class="card-title">Filter Reports</h5>
+
+    <div class="filter-row">
+      <input type="text" id="filterSwine" placeholder="Swine ID">
+
+      <select id="filterStatus">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="waiting_heat_check">Under Observation</option>
+        <option value="pregnant">Pregnant</option>
+      </select>
+
+      <button id="applyFilter">Apply</button>
+      <button id="clearFilter" class="secondary">Clear</button>
+    </div>
+
+    <!-- ================= FILTERED RESULTS ================= -->
+    <div id="filteredResultsCard" style="display:none; margin-top:24px;">
+      <hr style="margin:24px 0;">
+
+      <h5 class="card-title">Filtered Results</h5>
+
+      <div class="table-responsive">
+        <table class="reports-table">
+          <thead>
+            <tr>
+              <th>Swine ID</th>
+              <th>Farmer</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="filteredTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="filtered-pagination" style="margin-top:12px; display:flex; gap:12px;">
+        <button id="filteredPrevBtn" disabled>Prev</button>
+        <span id="filteredPageIndicator"></span>
+        <button id="filteredNextBtn" disabled>Next</button>
+      </div>
+    </div>
+
+  </div>
+</div>
