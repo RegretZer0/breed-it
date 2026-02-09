@@ -1,0 +1,95 @@
+/* ================= SWINE CARD BASE ================= */
+.swine-card {
+  border-radius: 16px;
+  margin-bottom: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    0 8px 24px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  overflow: hidden; /* clean edges */
+}
+
+/* Hover (desktop only feel) */
+.swine-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.08),
+    0 14px 32px rgba(0, 0, 0, 0.06);
+}
+
+/* ================= CARD BODY ================= */
+.swine-card .card-body {
+  padding: 18px;
+}
+
+/* ================= STATUS BADGE ================= */
+.swine-card .badge {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ================= ACTION BUTTONS ================= */
+.swine-card .btn {
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* Primary action emphasis */
+.swine-card .btn-primary {
+  box-shadow: 0 4px 10px rgba(13, 110, 253, 0.25);
+}
+
+/* Secondary action calmer */
+.swine-card .btn-outline-secondary {
+  background: #f8f9fa;
+}
+
+/* ================= AVATAR ================= */
+.swine-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  background: linear-gradient(135deg, #e6f4ea, #f1fbf4);
+  color: #198754;
+  flex-shrink: 0;
+}
+
+/* ================= SPACING BETWEEN CARDS ================= */
+#swineCardList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* visual rhythm */
+}
+
+/* ================= MOBILE REFINEMENTS ================= */
+@media (max-width: 576px) {
+  .swine-card {
+    margin-bottom: 18px;
+  }
+
+  .swine-card .card-body {
+    padding: 16px;
+  }
+
+  .swine-card .btn {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  /* Make actions feel full-width & tap-friendly */
+  .swine-card .d-flex.gap-2 {
+    flex-direction: column;
+  }
+}
+
+#swineCategoryTabs .nav-link {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+#swineCategoryTabs .nav-link.active {
+  background-color: #198754;
+}

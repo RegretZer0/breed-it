@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ================= DOM =================
-  const swineTableBody = document.getElementById("swineTableBody");
+  const swineCardList = document.getElementById("swineCardList");
   const filterFarmer = document.getElementById("filterFarmer");
   const filtersForm = document.getElementById("filtersForm");
   const filterStatus = document.getElementById("filterStatus");
@@ -321,8 +321,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const SWINE_ROWS_PER_PAGE = 10;
 
   // ================= TABLE RENDERERS =================
-  function renderTable(list) {
-    swineTableBody.innerHTML = "";
+  function renderCards(list) {
+    swineCardList.innerHTML = "";
 
     const totalPages = Math.ceil(list.length / SWINE_ROWS_PER_PAGE);
     if (swinePage > totalPages) swinePage = totalPages || 1;
@@ -332,42 +332,77 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pageItems = list.slice(start, end);
 
     if (!pageItems.length) {
-      swineTableBody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center text-muted">
-            No swine records found
-          </td>
-        </tr>`;
+      swineCardList.innerHTML = `
+        <div class="text-center text-muted py-4">
+          No swine records found
+        </div>`;
     } else {
       pageItems.forEach(sw => {
-        const farmerName = sw.farmer_id
-          ? `${sw.farmer_id.first_name || ""} ${sw.farmer_id.last_name || ""}`.trim()
-          : "OFFICE / MASTER";
-
         const perf = getLatestPerf(sw);
 
-        swineTableBody.insertAdjacentHTML("beforeend", `
-          <tr>
-            <td>
-              <strong>${sw.swine_id}</strong><br>
-              <small>Batch: ${sw.batch || "—"}</small><br>
-              <div class="d-flex gap-1 mt-1">
-                <button class="btn btn-sm btn-outline-primary view-btn" data-id="${sw._id}">View</button>
-                <button class="btn btn-sm btn-outline-secondary edit-btn" data-id="${sw._id}">Edit</button>
+        const ageMonths =
+          sw.age_in_months ||
+          (sw.birth_date
+            ? Math.floor(
+                (Date.now() - new Date(sw.birth_date)) /
+                (1000 * 60 * 60 * 24 * 30)
+              )
+            : "--");
+
+        const sexIcon = sw.sex === "Female" ? "♀" : "♂";
+
+        const statusClass =
+          sw.health_status === "Healthy"
+            ? "bg-success-subtle text-success"
+            : "bg-warning-subtle text-warning";
+
+        swineCardList.insertAdjacentHTML("beforeend", `
+          <div class="swine-card d-flex align-items-center justify-content-between
+                      p-3 border rounded bg-white">
+
+            <!-- LEFT -->
+            <div class="d-flex align-items-center gap-3">
+              <div class="swine-avatar bg-success-subtle rounded-circle
+                          d-flex align-items-center justify-content-center">
+                🐖
               </div>
-            </td>
-            <td>${farmerName}</td>
-            <td>Breed: ${sw.breed || "—"}<br>Age: ${formatStageDisplay(sw.age_stage)}</td>
-            <td>Status: ${sw.current_status || "—"}<br>Health: ${sw.health_status || "—"}</td>
-            <td>S: ${sw.sire_id || "N/A"}<br>D: ${sw.dam_id || "N/A"}</td>
-            <td>${perf.weight} kg</td>
-            <td>${perf.length} cm</td>
-          </tr>
+
+              <div>
+                <div class="fw-semibold">${sw.swine_id}</div>
+                <div class="small text-muted">${sw.breed || "—"}</div>
+
+                <div class="d-flex gap-3 small text-muted mt-1 flex-wrap">
+                  <span>⚖ ${perf.weight} kg</span>
+                  <span>📅 ${ageMonths} mo</span>
+                  <span>${sexIcon} ${sw.sex || "—"}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="text-end d-flex flex-column align-items-end gap-2">
+              <span class="badge ${statusClass}">
+                ${sw.health_status || "—"}
+              </span>
+
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-primary view-btn"
+                  data-id="${sw._id}">
+                  View Details
+                </button>
+                <button class="btn btn-sm btn-outline-secondary edit-btn"
+                  data-id="${sw._id}">
+                  Edit
+                </button>
+              </div>
+            </div>
+
+          </div>
         `);
       });
     }
 
-    // Pagination UI
+    // Pagination UI (UNCHANGED)
     document.getElementById("swinePageIndicator").textContent =
       `Page ${swinePage} of ${totalPages || 1}`;
 
@@ -379,7 +414,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("swinePrevBtn")?.addEventListener("click", () => {
   if (swinePage > 1) {
     swinePage--;
-    renderTable(allSwine);
+    renderCards(allSwine);
   }
 });
 
@@ -387,7 +422,7 @@ document.getElementById("swineNextBtn")?.addEventListener("click", () => {
   const totalPages = Math.ceil(allSwine.length / SWINE_ROWS_PER_PAGE);
   if (swinePage < totalPages) {
     swinePage++;
-    renderTable(allSwine);
+    renderCards(allSwine);
   }
 });
 
@@ -523,7 +558,7 @@ document.getElementById("swineNextBtn")?.addEventListener("click", () => {
         return db - da; // newest first
       });
 
-      renderTable(allSwine);
+      renderCards(allSwine);
     } catch (err) { console.error("Load swine failed", err); }
   }
 
@@ -609,7 +644,7 @@ document.getElementById("swineNextBtn")?.addEventListener("click", () => {
       document.getElementById("filterResultWrap")?.classList.add("d-none");
 
       swinePage = 1;
-      renderTable(allSwine);
+      renderCards(allSwine);
     });
 
   // ================= INIT =================

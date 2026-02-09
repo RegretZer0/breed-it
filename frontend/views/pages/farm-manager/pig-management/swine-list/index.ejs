@@ -1,0 +1,20 @@
+<%- include("../../../../partials/farm-manager/header") %>
+<%- include("../../../../partials/farm-manager/navbar") %>
+<%- include("../../../../partials/farm-manager/sidepanel") %>
+
+<main class="main-content">
+  <div class="container-fluid">
+
+    <%- include("../../../../partials/farm-manager/pigmanagement_panel") %>
+
+    <div class="card page-card mb-3"></div>
+
+    <%- include("./filters") %>
+    <%- include("./table") %>
+    <%- include("./modal") %>
+    <%- include("./edit-modal") %>
+
+  </div>
+</main>
+
+<%- include("../../../../partials/farm-manager/footer") %>

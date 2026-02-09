@@ -1,0 +1,88 @@
+<div class="modal fade" id="swineModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalSwineId">Swine History Card</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div id="reproSummarySection" class="mb-4" style="display:none;">
+          <h6>Lifetime Reproductive Summary</h6>
+          <div class="row text-center border rounded p-3 bg-light mx-0">
+            <div class="col">
+              <label class="small text-muted d-block">Total Cycles</label>
+              <div id="statCycles" class="fw-bold fs-5">0</div>
+            </div>
+            <div class="col">
+              <label class="small text-muted d-block">Total Piglets Born</label>
+              <div id="statTotalBorn" class="fw-bold fs-5">0</div>
+            </div>
+            <div class="col">
+              <label class="small text-muted d-block">Avg. Litter Size</label>
+              <div id="statAvgLitter" class="fw-bold fs-5">0</div>
+            </div>
+            <div class="col">
+              <label class="small text-muted d-block">Total Live</label>
+              <div id="statTotalLive" class="fw-bold fs-5">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="offspringSection" class="mb-4" style="display:none;">
+          <h6>Offspring Inventory (Direct Descendants)</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Tag ID</th>
+                  <th>Sex</th>
+                  <th>Stage</th>
+                  <th>Current Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="offspringListBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <h6>Breeding & Farrowing History</h6>
+        <div class="table-responsive mb-4">
+          <table class="table table-sm table-bordered" id="repoTable">
+            <thead class="table-light">
+              <tr>
+                <th>Cycle</th>
+                <th>Service Date</th>
+                <th>Farrowing Date</th>
+                <th>Total Born</th>
+                <th>Live / Dead</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="reproductiveHistoryBody"></tbody>
+          </table>
+        </div>
+
+        <h6>Growth & Performance Timeline</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered" id="perfTable">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Weight</th>
+                <th>L x G</th>
+                <th>Stage</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody id="performanceTimelineBody"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
