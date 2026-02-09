@@ -132,7 +132,9 @@ let currentReportId = null;
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error("Failed to load reports");
 
-      allReports = data.reports || [];
+      // This is the specific line that prevents rejected reports from displaying
+      allReports = (data.reports || []).filter(r => r.status !== "rejected");
+      
       renderStats(allReports);
       renderCards(allReports);
     } catch (err) {
