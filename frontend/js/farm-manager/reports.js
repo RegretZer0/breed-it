@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const countAwaitingRecheck = document.getElementById("countAwaitingRecheck");
   const countPregnant = document.getElementById("countPregnant");
   const countFarrowingReady = document.getElementById("countFarrowingReady");
+  const countLactating = document.getElementById("countLactating");
 
   const reportDetailsModal = document.getElementById("reportDetailsModal");
   const closeReportModal = document.getElementById("closeReportModal");
@@ -147,6 +148,9 @@ let currentReportId = null;
     if (countInHeat) countInHeat.textContent = reports.filter(r => ["pending", "approved"].includes(r.status)).length;
     if (countAwaitingRecheck) countAwaitingRecheck.textContent = reports.filter(r => ["under_observation", "waiting_heat_check"].includes(r.status)).length;
     if (countPregnant) countPregnant.textContent = reports.filter(r => r.status === "pregnant").length;
+    if (countLactating) {
+    countLactating.textContent = reports.filter(r => r.status === "lactating").length;
+  }
     
     if (countFarrowingReady) {
       countFarrowingReady.textContent = reports.filter(r => {
@@ -251,19 +255,136 @@ let currentReportId = null;
       cardList.appendChild(card);
     });
 
-    function openProgressPanel(reportId) {
+    async function openProgressPanel(reportId) {
     if (!progressPanel) return;
-
-      // Placeholder only – no logic yet
-      progressPanel.classList.add("open");
+    
+    // --- FIX: RE-ATTACH CLOSE LOGIC ---
+    const closeBtn = document.getElementById("closeProgressPanel");
+    if (closeBtn) {
+        closeBtn.onclick = () => progressPanel.classList.remove("open");
     }
 
-    if (closeProgressPanel) {
-      closeProgressPanel.onclick = () => {
-        progressPanel.classList.remove("open");
-      };
-    }
+    progressPanel.classList.add("open");
 
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/detail`, {
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include"
+        });
+        const data = await res.json();
+        if (!data.success) return;
+
+        const r = data.report;
+        
+        // 1. Update Header Info
+        document.getElementById("progressFarmName").textContent = `Farm: ${r.farmer_id?.farm_name || 'N/A'}`;
+        document.getElementById("progressSwineId").textContent = `${r.swine_id?.swine_id || 'Unknown'} — Dynamic Timeline`;
+        
+        const timelineContainer = document.getElementById("cycleTimeline");
+        timelineContainer.innerHTML = ""; 
+
+        // 2. Build Dynamic Event List (Most recent first)
+        const events = [];
+
+        // --- EVENT: LACTATING ---
+        if (r.status === "lactating") {
+            events.push({
+                title: "Lactating",
+                desc: "Sow is currently nursing piglets.",
+                icon: "🍼",
+                date: "Currently Active"
+            });
+        }
+
+        // --- EVENT: FARROWING ---
+        if (["farrowing_ready", "lactating"].includes(r.status)) {
+            events.push({
+                title: "Farrowing Confirmed",
+                desc: "Birth process recorded successfully.",
+                icon: "🐷",
+                date: r.actual_farrowing_date ? new Date(r.actual_farrowing_date).toLocaleDateString() : "Check Records"
+            });
+        }
+
+        // --- EVENT: PREGNANT (115 Days Monitoring) ---
+        if (["pregnant", "farrowing_ready", "lactating"].includes(r.status)) {
+            events.push({
+                title: "Pregnant & Under 115 Days Monitoring",
+                desc: "Pregnancy confirmed. Monitoring gestation period.",
+                icon: "🤰",
+                date: r.expected_farrowing ? `Due: ${new Date(r.expected_farrowing).toLocaleDateString()}` : "Ongoing"
+            });
+        }
+
+        // --- EVENT: UNDER 30 DAYS MONITORING ---
+        if (["under_observation", "pregnant", "farrowing_ready", "lactating"].includes(r.status)) {
+            events.push({
+                title: "Under 30 Days Monitoring",
+                desc: "Monitoring for 'return to heat' signs post-AI.",
+                icon: "👁",
+                date: r.ai_date ? `Started: ${new Date(r.ai_date).toLocaleDateString()}` : "Ongoing"
+            });
+        }
+
+        // --- EVENT: AI CONFIRMED ---
+        if (["ai_confirmed", "under_observation", "pregnant", "farrowing_ready", "lactating"].includes(r.status)) {
+            events.push({
+                title: "Artificial Insemination Performed",
+                desc: "Farm Manager/Encoder confirmed AI procedure.",
+                icon: "💉",
+                date: r.ai_date ? new Date(r.ai_date).toLocaleDateString() : "Date N/A"
+            });
+        }
+
+        // --- EVENT: APPROVED & SCHEDULED ---
+        if (r.status !== "pending" && r.status !== "rejected") {
+            events.push({
+                title: "Sow In Heat & Scheduled for AI",
+                desc: "Report approved by Farm Manager. AI preparation started.",
+                icon: "📅",
+                date: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "Approved"
+            });
+        }
+
+        // --- EVENT: REPORT SUBMITTED ---
+        events.push({
+            title: "Report Submitted",
+            desc: "Farmer submitted the heat detection report.",
+            icon: "📝",
+            date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "Pending"
+        });
+
+        // 3. Render Events
+        events.forEach(event => {
+            const stepDiv = document.createElement("div");
+            stepDiv.className = `timeline-step completed`; 
+            
+            stepDiv.innerHTML = `
+                <div class="step-icon">${event.icon}</div>
+                <div class="step-content">
+                    <div class="step-header">
+                        <strong>${event.title}</strong>
+                        <span class="step-status completed">recorded</span>
+                    </div>
+                    <p class="step-desc">${event.desc}</p>
+                    <div class="step-meta">
+                        <span>${event.date}</span>
+                    </div>
+                </div>
+            `;
+            timelineContainer.appendChild(stepDiv);
+        });
+
+        // 4. Update Current Stage Label
+        const currentStageEl = document.getElementById("currentStage");
+        if (currentStageEl) {
+            currentStageEl.textContent = r.status.replace(/_/g, " ").toUpperCase();
+        }
+
+    } catch (err) {
+        console.error("Error loading dynamic progress:", err);
+    }
+}
 
     // Pagination UI
     pageIndicator.textContent = `Page ${currentPage} of ${totalPages || 1}`;
