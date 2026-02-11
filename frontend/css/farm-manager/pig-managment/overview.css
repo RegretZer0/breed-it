@@ -212,13 +212,392 @@ html, body{
   border-radius: var(--radius);
 }
 
-/* =========================
-   BOOTSTRAP MODAL FIX
-========================= */
-.modal{
+
+/* ===== Growth Timeline ===== */
+
+.growth-month-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s ease;
+}
+
+.growth-month-card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.growth-month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.month-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.weight-range {
+  color: #374151;
+}
+
+.gain-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.gain-positive {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.gain-negative {
+  background: #fdecea;
+  color: #b42318;
+}
+
+/* Toggle button */
+.toggle-growth {
+  font-size: 0.85rem;
+  color: #198754;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.toggle-growth:hover {
+  text-decoration: underline;
+}
+
+/* Details */
+.growth-details {
+  margin-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 10px;
+}
+
+.growth-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.growth-entry:first-child {
+  border-top: none;
+}
+
+.growth-metrics {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.growth-date {
+  font-weight: 500;
+}
+
+.growth-year-header {
+  font-weight: 600;
+  margin: 16px 0 8px;
+  color: #374151;
+}
+
+.growth-month-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.growth-month-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.month-metrics {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.gain-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.gain-positive {
+  background: #e7f6ec;
+  color: #15803d;
+}
+
+.gain-negative {
+  background: #fdecec;
+  color: #b91c1c;
+}
+
+.growth-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.growth-entry:first-child {
+  border-top: none;
+}
+
+.growth-metrics {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+/* ================= GROWTH YEAR FILTER ================= */
+
+#offspringTab .growth-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.growth-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.growth-filter-label i {
+  color: #198754;
+  font-size: 14px;
+}
+
+.growth-year-select {
+  appearance: none;
+  border: 1px solid #ced4da;
+  border-radius: 10px;
+  padding: 6px 36px 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #212529;
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6c757d 50%),
+    linear-gradient(135deg, #6c757d 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 13px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.growth-year-select:hover {
+  border-color: #198754;
+}
+
+.growth-year-select:focus {
+  outline: none;
+  border-color: #198754;
+  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
+}
+
+/* Mobile */
+@media (max-width: 576px) {
+  .growth-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .growth-year-select {
+    width: 100%;
+  }
+}
+
+/* ===== Offspring Cycle Card ===== */
+#offspringTab .offspring-cycle-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.offspring-cycle-header {
+  padding: 12px 16px;
+  border-bottom: 1px dashed #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.offspring-cycle-title {
+  font-weight: 600;
+}
+
+.offspring-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #f1f5f9;
+  align-items: center;
+}
+
+.offspring-row:first-child {
+  border-top: none;
+}
+
+.offspring-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.offspring-value {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .offspring-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ===== Offspring Filter ===== */
+.offspring-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+#offspringCycleFilter {
+  min-width: 180px;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* ===== Offspring Cards ===== */
+#offspringTab .offspring-cycle-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.offspring-card {
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Header */
+.offspring-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.offspring-id {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.offspring-breed {
+  display: block;
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+/* Meta row */
+.offspring-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  font-size: 12px;
+  color: #495057;
+}
+
+.offspring-meta span {
+  display: block;
+  font-size: 11px;
+  color: #adb5bd;
+}
+
+/* Badge */
+.badge-healthy {
+  background: #d1e7dd;
+  color: #0f5132;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.badge-default {
+  background: #e9ecef;
+  color: #495057;
+}
+
+/* Button */
+.offspring-view {
+  align-self: stretch;
+  font-size: 12px;
+  padding: 4px;
+}
+
+/* ================= TAB VISIBILITY GUARANTEE ================= */
+
+/* Hide all profile tabs by default */
+.profile-tab {
+  display: none !important;
+}
+
+/* Only show active tab */
+.profile-tab:not(.d-none) {
+  display: block !important;
+}
+
+.modal {
+  position: fixed !important;
   z-index: 1055 !important;
 }
 
-.modal-backdrop{
+.modal-backdrop {
   z-index: 1050 !important;
 }

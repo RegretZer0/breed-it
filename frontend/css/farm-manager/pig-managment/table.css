@@ -1,0 +1,283 @@
+/* ================= SWINE CARD BASE ================= */
+.swine-card {
+  border-radius: 16px;
+  margin-bottom: 16px;
+  background: #ffffff;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    0 12px 32px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.swine-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.1),
+    0 18px 40px rgba(0, 0, 0, 0.12);
+}
+
+.swine-card .card-body {
+  padding: 18px;
+}
+
+/* ================= STATUS BADGE ================= */
+.swine-card .badge {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ================= DETAIL ROW ================= */
+.swine-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin: 10px 0 14px;
+}
+
+.detail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #495057;
+}
+
+.detail-item i {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  transition: opacity 0.15s ease;
+}
+
+.swine-card:hover .detail-item i {
+  opacity: 0.85;
+}
+
+/* Icon colors */
+.detail-item .fa-venus-mars { color: #d63384; }
+.detail-item .fa-calendar-days { color: #0d6efd; }
+.detail-item .fa-weight-scale { color: #198754; }
+.detail-item .fa-layer-group { color: #fd7e14; }
+
+.detail-item .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #868e96;
+}
+
+.detail-item .value {
+  font-weight: 600;
+  color: #212529;
+}
+
+/* ================= ACTION BUTTONS ================= */
+.btn-xs {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+/* ================= CARD LIST ================= */
+#swineCardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ================= CATEGORY TABS ================= */
+#swineCategoryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#swineCategoryTabs .nav-link {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+#swineCategoryTabs .nav-link.active {
+  background-color: #198754;
+  color: #fff;
+}
+
+/* ================= PROFILE HEADER ================= */
+.pig-profile-header {
+  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.profile-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.profile-main h5 {
+  font-weight: 700;
+}
+
+.profile-main .badge {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Stats grid */
+.profile-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.profile-stats-row .stat {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.profile-stats-row .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6c757d;
+}
+
+.profile-stats-row .value {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ================= PROFILE TABS (CRITICAL FIX) ================= */
+#pigProfileTabs {
+  display: flex !important;          /* 🔥 FIX */
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 6px;
+  margin-top: 12px;
+}
+
+#pigProfileTabs::-webkit-scrollbar {
+  display: none;
+}
+
+#pigProfileTabs .nav-link {
+  border: none;
+  padding: 8px 16px;
+  font-weight: 500;
+  color: #495057;
+  white-space: nowrap;
+  background: transparent;
+}
+
+#pigProfileTabs .nav-link.active {
+  color: #198754;
+  border-bottom: 3px solid #198754;
+  font-weight: 600;
+}
+
+/* ================= PROFILE TAB CONTENT ================= */
+.profile-tab {
+  padding-top: 16px;
+}
+
+.profile-tab > h6 {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.profile-tab .table-responsive {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ================= TABLES ================= */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #495057;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+/* ================= EMPTY STATE ================= */
+.empty-state {
+  text-align: center;
+  color: #6c757d;
+  padding: 24px;
+  font-size: 14px;
+}
+
+/* ================= MOBILE ================= */
+@media (max-width: 576px) {
+  .profile-main {
+    flex-direction: column;
+  }
+
+  .profile-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .modal-dialog {
+    margin: 0;
+  }
+
+  .modal-content {
+    border-radius: 0;
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+  }
+}
+
+/* ================= HARD FIX: MODAL PROFILE TABS ================= */
+#pigProfileTabs {
+  display: flex !important;
+  align-items: center;
+  min-height: 44px;              /* 🔥 PREVENT COLLAPSE */
+  padding: 6px 0;
+  gap: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid #dee2e6;
+}
+
+#pigProfileTabs .nav-item {
+  display: flex;
+}
+
+#pigProfileTabs .nav-link {
+  display: inline-flex;          /* 🔥 IMPORTANT FOR <button> */
+  align-items: center;
+  justify-content: center;
+  height: 36px;                  /* 🔥 PHYSICAL HEIGHT */
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  font-weight: 500;
+  color: #495057;
+  white-space: nowrap;
+}
+
+#pigProfileTabs .nav-link.active {
+  color: #198754;
+  border-bottom: 3px solid #198754;
+  font-weight: 600;
+}

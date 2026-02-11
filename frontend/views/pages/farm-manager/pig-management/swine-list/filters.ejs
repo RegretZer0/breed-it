@@ -1,0 +1,114 @@
+<div class="card page-card mb-4">
+  <div class="card-body">
+    <form id="filtersForm" class="row g-2 align-items-end">
+
+      <div class="col-md-4 position-relative">
+        <label class="form-label small">Farmer</label>
+        <div class="dropdown w-100">
+          <button class="form-select form-select-sm text-start"
+            type="button" id="farmerDropdownBtn"
+            data-bs-toggle="dropdown">
+            Select Farmer
+          </button>
+          <div class="dropdown-menu w-100 p-2"
+            style="max-height:260px;overflow-y:auto;">
+            <input id="farmerSearch"
+              class="form-control form-control-sm mb-2"
+              placeholder="Search farmer...">
+            <div id="farmerOptions">
+              <div class="text-muted small">Loading farmers...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small">Pig Status</label>
+        <select id="filterStatus" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="Healthy">Healthy</option>
+          <option value="Market-Ready">Market-Ready</option>
+          <option value="Pregnant">Pregnant</option>
+          <option value="In-Heat">In-Heat</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small">Sex</label>
+        <select id="filterSex" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small">Type</label>
+        <select id="filterType" class="form-select form-select-sm">
+          <option value="">All</option>
+          <option value="piglet">Piglets</option>
+          <option value="sow">Sows</option>
+          <option value="boar">Boars</option>
+          <option value="master">Master / Maintenance Boars</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small">Tag Number</label>
+        <input id="filterTag"
+          class="form-control form-control-sm"
+          placeholder="Search by tag">
+      </div>
+
+      <div class="col-md-1 d-grid">
+        <button type="submit" class="btn btn-sm btn-success">Search</button>
+      </div>
+
+      <div class="col-md-1 d-grid">
+        <button type="button"
+          id="resetFilters"
+          class="btn btn-sm btn-outline-secondary">
+          Reset
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ================= FILTERED RESULT ================= -->
+<div class="mt-3 d-none" id="filterResultWrap">
+  <h6 class="mb-2 text-muted">Filtered Result</h6>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered mb-0">
+      <thead>
+        <tr>
+          <th>Tag</th>
+          <th>Farmer</th>
+          <th>Status</th>
+          <th>Batch</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="filterResultBody"></tbody>
+    </table>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mt-2"
+    id="filterPreviewPagination">
+
+    <button id="filterPreviewPrev"
+      class="btn btn-sm btn-outline-secondary">
+      Prev
+    </button>
+
+    <span id="filterPreviewIndicator"
+      class="small fw-semibold text-muted"></span>
+
+    <button id="filterPreviewNext"
+      class="btn btn-sm btn-outline-secondary">
+      Next
+    </button>
+  </div>
+</div>

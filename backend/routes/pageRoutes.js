@@ -180,11 +180,11 @@ router.get(
 
 // Pig Management Overview
 router.get(
-  "/farm-manager/pig-management",
+  "/farm-manager/pig-management/swine-list",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/pig-management/overview", {
+    res.render("pages/farm-manager/pig-management/swine-list/index", {
       page_title: "Pig Management Overview",
       current_section: "pig_management",
       current_page: "overview",
