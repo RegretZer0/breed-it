@@ -55,11 +55,11 @@ router.get("/register", (req, res) => {
 
 // Dashboard
 router.get(
-  "/farm-manager/dashboard",
+  "/farm-manager/dashboard/index",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/dashboard", {
+    res.render("pages/farm-manager/dashboard/index", {
       page_title: "Farm Manager Dashboard",
       current_section: "dashboard",
       current_page: "dashboard",
@@ -128,20 +128,6 @@ router.get(
   }
 );
 
-// Reports
-// router.get(
-//   "/farm-manager/reports",
-//   requireLogin,
-//   requireFarmManager,
-//   (req, res) => {
-//     res.render("pages/farm-manager/reports", {
-//       page_title: "Reports",
-//       current_section: "reports",
-//       current_page: "reports",
-//     });
-//   }
-// );
-
 /* =========================
    FARM MANAGER – USER MANAGEMENT
 ========================= */
@@ -174,23 +160,6 @@ router.get(
   }
 );
 
-/* =========================
-   FARM MANAGER – SWINE MANAGEMENT
-========================= */
-
-// Pig Management Overview
-// router.get(
-//   "/farm-manager/pig-management",
-//   requireLogin,
-//   requireFarmManager,
-//   (req, res) => {
-//     res.render("pages/farm-manager/pig-management/overview", {
-//       page_title: "Pig Management Overview",
-//       current_section: "pig_management",
-//       current_page: "overview",
-//     });
-//   }
-// );
 
 // Pig Management Overview
 router.get(
@@ -216,20 +185,6 @@ router.get(
       page_title: "Register Pig",
       current_section: "pig_management",
       current_page: "register_pig",
-    });
-  }
-);
-
-// Master Boar
-router.get(
-  "/farm-manager/pig-management/master-boars",
-  requireLogin,
-  requireFarmManager,
-  (req, res) => {
-    res.render("pages/farm-manager/pig-management/master_boars", {
-      page_title: "Master Boars",
-      current_section: "pig_management",
-      current_page: "master_boars",
     });
   }
 );

@@ -33,16 +33,34 @@
 
       <!-- ACTIONS -->
       <div class="modal-footer report-actions">
-        <button id="approveBtn" style="display:none;">Approve</button>
-        <button id="rejectBtn" style="display:none;">Reject</button>
-        <button id="confirmAIBtn" style="display:none;">💉 Confirm AI</button>
-        <button id="confirmPregnancyBtn" style="display:none;">🤰 Confirm Pregnancy</button>
-        <button id="followUpBtn" style="display:none;">🔄 Cycle Failed</button>
-        <button id="confirmFarrowingBtn" style="display:none;">🐷 Confirm Farrowing</button>
+        <button id="approveBtn" style="display:none;">
+          <i class="bi bi-check-circle"></i> Approve
+        </button>
 
-        <button id="closeReportModalBtn" class="secondary">Close</button>
+        <button id="rejectBtn" style="display:none;">
+          <i class="bi bi-x-circle"></i> Reject
+        </button>
+
+        <button id="confirmAIBtn" style="display:none;">
+          <i class="bi bi-droplet-half"></i> Confirm AI
+        </button>
+
+        <button id="confirmPregnancyBtn" style="display:none;">
+          <i class="bi bi-heart-pulse"></i> Confirm Pregnancy
+        </button>
+
+        <button id="followUpBtn" style="display:none;">
+          <i class="bi bi-arrow-repeat"></i> Cycle Failed
+        </button>
+
+        <button id="confirmFarrowingBtn" style="display:none;">
+          <i class="bi bi-egg-fried"></i> Confirm Farrowing
+        </button>
+
+        <button id="closeReportModalBtn" class="secondary">
+          Close
+        </button>
       </div>
-
     </div>
   </div>
 </div>
@@ -50,13 +68,18 @@
 <!-- ================= AI CONFIRM MODAL ================= -->
 <div id="aiConfirmModal" class="modal">
   <div class="modal-content">
-    <h3>💉 Confirm AI Service</h3>
+    <h3>
+      <i class="bi bi-droplet-half"></i> Confirm AI Service
+    </h3>
 
     <label>Select Sire (Boar)</label>
     <select id="boarSelect"></select>
 
     <div style="display:flex; gap:10px; margin-top:15px;">
-      <button id="submitAI" class="btn-nav">Confirm AI</button>
+      <button id="submitAI" class="btn-nav">
+        <i class="bi bi-check-circle"></i> Confirm AI
+      </button>
+
       <button
         type="button"
         class="btn-nav secondary"
@@ -70,7 +93,9 @@
 <!-- ================= FARROWING MODAL ================= -->
 <div id="farrowingModal" class="modal">
   <div class="modal-content">
-    <h3>🐷 Register Farrowing Results</h3>
+    <h3>
+      <i class="bi bi-egg-fried"></i> Register Farrowing Results
+    </h3>
 
     <form id="farrowingForm">
       <label>Actual Farrowing Date</label>
@@ -92,7 +117,10 @@
       </div>
 
       <div style="display:flex; gap:10px; margin-top:15px;">
-        <button type="submit" class="btn-nav">Confirm Farrowing</button>
+        <button type="submit" class="btn-nav">
+          <i class="bi bi-check-circle"></i> Confirm Farrowing
+        </button>
+
         <button
           type="button"
           class="btn-nav secondary"
@@ -121,7 +149,10 @@
     </textarea>
 
     <div style="display:flex; gap:10px; margin-top:14px;">
-      <button id="confirmRejectBtn" class="btn-nav">Reject</button>
+      <button id="confirmRejectBtn" class="btn-nav">
+        <i class="bi bi-x-circle"></i> Reject
+      </button>
+
       <button
         type="button"
         class="btn-nav secondary"
@@ -135,30 +166,27 @@
 <!-- ================= TRACK PROGRESS PANEL ================= -->
 <div id="trackProgressPanel" class="progress-panel">
 
-  <!-- PANEL HEADER -->
+  <!-- HEADER -->
   <div class="progress-panel-header">
-    <h4>Reproductive Cycle Details</h4>
+    <div>
+      <h4 class="panel-title">Progress Tracking</h4>
+      <p id="progressFarmerName" class="panel-subtitle">
+        Farmer: —
+      </p>
+    </div>
+
     <button id="closeProgressPanel" class="panel-close">&times;</button>
   </div>
 
-  <!-- PANEL BODY -->
+  <!-- BODY -->
   <div class="progress-panel-body">
 
-    <!-- FARM NAME -->
-    <p class="text-muted" id="progressFarmName">
-      Farm: —
-    </p>
-
-    <!-- ================= SUMMARY CARD ================= -->
+    <!-- SUMMARY CARD -->
     <div class="cycle-summary-card">
-
-      <!-- SWINE + STATUS -->
-      <div class="cycle-summary-header">
-        <div class="swine-title">
-          <span class="swine-icon">❤</span>
-          <strong id="progressSwineId">
-            PIG-000 — Reproductive Cycle
-          </strong>
+      <div class="cycle-summary-top">
+        <div class="cycle-swine">
+          <i class="bi bi-heart-fill text-success"></i>
+          <strong id="progressSwineId">—</strong>
         </div>
 
         <span id="cycleStatus" class="cycle-status-badge">
@@ -166,64 +194,26 @@
         </span>
       </div>
 
-      <!-- OVERALL PROGRESS -->
-      <div class="overall-progress-block">
-        <div class="progress-label-row">
-          <span>Overall Progress</span>
-          <strong id="overallPercent">0%</strong>
+      <!-- TIME-BASED INFO -->
+      <div class="cycle-time-info">
+        <div class="time-row">
+          <span class="label">Current Stage</span>
+          <strong id="currentStage">—</strong>
         </div>
 
-        <div class="progress-bar">
-          <div
-            id="overallProgressFill"
-            class="progress-fill"
-            style="width:0%">
-          </div>
+        <div class="time-row highlight">
+          <span class="label">Time Remaining</span>
+          <strong id="remainingDays">—</strong>
         </div>
       </div>
-
-      <!-- CURRENT STAGE -->
-      <div class="current-stage-row">
-        <span class="label">Current:</span>
-        <strong id="currentStage">—</strong>
-        <span class="remaining" id="remainingDays"></span>
-      </div>
-
     </div>
-    <!-- ================= END SUMMARY ================= -->
 
-
-    <!-- ================= TIMELINE ================= -->
+    <!-- TIMELINE -->
     <div class="cycle-timeline" id="cycleTimeline">
-
-      <!-- EMPTY STATE (until JS fills it) -->
       <div class="timeline-empty text-muted">
         No cycle data available.
       </div>
-
-      <!--
-        Timeline steps injected by JS like:
-
-        <div class="timeline-step completed">
-          <div class="step-icon">🔥</div>
-          <div class="step-content">
-            <div class="step-header">
-              <strong>Estrus Detection</strong>
-              <span class="step-status completed">Completed</span>
-            </div>
-            <p class="step-desc">Detecting heat signs in sow</p>
-            <div class="step-meta">
-              <span>1 day</span>
-              <span>Nov 13 → Nov 14</span>
-            </div>
-            <em class="step-note">"Clear heat signs observed"</em>
-          </div>
-        </div>
-      -->
-
     </div>
-    <!-- ================= END TIMELINE ================= -->
 
   </div>
 </div>
-

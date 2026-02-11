@@ -12,7 +12,8 @@
   --stat-orange: #ff9a1f;
   --stat-blue: #1ea7ff;
   --stat-green: #43c572;
-  --stat-red: #f55b66;
+  --stat-red: #cf2631;
+  --stat-pink: #eb79ae;
 
   --gutter: 16px;
   --radius: 10px;
@@ -117,45 +118,7 @@ body {
 .stat-icon.blue   { background: var(--stat-blue); }
 .stat-icon.green  { background: var(--stat-green); }
 .stat-icon.red    { background: var(--stat-red); }
-
-
-/* =========================================================
-   FILTER CONTROLS (GENERIC)
-========================================================= */
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.filter-row input,
-.filter-row select {
-  flex: 1;
-  min-height: 42px;
-  min-width: 200px;
-}
-
-.filter-row button {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  background: #222;
-  color: #fff;
-  min-width: 100px;
-}
-
-.filter-row button.secondary {
-  background: #ddd;
-  color: #333;
-}
-
-@media (max-width: 640px) {
-  .filter-row {
-    flex-direction: column;
-  }
-}
-
+.stat-icon.pink    { background: var(--stat-pink); }
 
 /* =========================================================
    GENERIC MODAL BASE (REUSABLE)

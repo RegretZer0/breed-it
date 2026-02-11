@@ -1,84 +1,48 @@
-/**
- * calendar_module.js
- * Handles FullCalendar initialization for Farm Managers.
- * Features: Auto-refresh, Responsive Views, and Breeding Event Styling.
- */
-
 export function initFarmCalendar(BACKEND_URL, token) {
-  const calendars = [];
   const calendarEl = document.getElementById("calendar");
+  const taskPanel = document.getElementById("taskPanel");
+  const selectedDateLabel = document.getElementById("selectedDateLabel");
+  const addTaskBtn = document.getElementById("addTaskBtn");
 
   if (!calendarEl || !window.FullCalendar) {
     console.warn("Calendar element or FullCalendar not found");
-    return calendars;
+    return null;
   }
 
-  const isMobile = window.innerWidth < 992;
+  const todayStr = new Date().toISOString().split("T")[0];
 
-  /**
-   * Central configuration to ensure both main and modal 
-   * calendars behave the same way.
-   */
-  function calendarConfig(extra = {}) {
-    return {
-      initialView: isMobile ? "listWeek" : "dayGridMonth",
-      height: "auto",
-      expandRows: true,
-      headerToolbar: isMobile
-        ? { left: "prev,next", center: "title", right: "" }
-        : { left: "prev,next today", center: "title", right: "dayGridMonth,listWeek" },
-      events: fetchCalendarEvents,
-      eventDidMount: enhanceEventUI,
-      eventClick: handleEventClick,
-      ...extra
-    };
-  }
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridMonth",
+    height: "auto",
+    expandRows: true,
+    fixedWeekCount: false,
 
-  // =====================
-  // MAIN CALENDAR
-  // =====================
-  const calendar = new FullCalendar.Calendar(calendarEl, calendarConfig());
+    // ✅ LIMIT DISPLAY ONLY (not system data)
+    dayMaxEvents: 2,            // show max 2 in grid
+    moreLinkClick: "day",       // clicking +X goes to day view
+
+    headerToolbar: {
+      left: "prev,next today",
+      center: "title",
+      right: ""
+    },
+
+    events: fetchCalendarEvents,
+    eventContent: renderCustomEvent,
+    eventClick: handleEventClick,
+    dateClick: handleDateClick
+  });
+
   calendar.render();
-  calendars.push(calendar);
 
-  // =====================
-  // MOBILE MODAL CALENDAR
-  // =====================
-  let modalCalendar = null;
-  const modalEl = document.getElementById("calendarModal");
-  const modalBody = document.getElementById("calendarModalBody");
-  const openBtn = document.getElementById("openCalendarModal");
+  // Load today's events initially
+  highlightDate(todayStr);
+  renderEventsForDate(todayStr);
 
-  if (openBtn && modalEl) {
-    openBtn.addEventListener("click", () => {
-      const modal = new bootstrap.Modal(modalEl);
-      modal.show();
+  // ================================
+  // FETCH EVENTS
+  // ================================
 
-      setTimeout(() => {
-        if (!modalCalendar) {
-          modalBody.innerHTML = `<div id="calendarModalInner"></div>`;
-          modalCalendar = new FullCalendar.Calendar(
-            document.getElementById("calendarModalInner"),
-            calendarConfig({ initialView: "dayGridMonth" }) // Always use Grid in modal for better overview
-          );
-          modalCalendar.render();
-          calendars.push(modalCalendar);
-        } else {
-          modalCalendar.updateSize();
-          modalCalendar.refetchEvents(); // Ensure fresh data when modal opens
-        }
-      }, 200);
-    });
-  }
-
-  // =====================
-  // HELPERS
-  // =====================
-
-  /**
-   * Fetches events with Authorization token.
-   * Pulls from the heat report calendar endpoint.
-   */
   async function fetchCalendarEvents(info, success, failure) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/heat/calendar-events`, {
@@ -87,72 +51,142 @@ export function initFarmCalendar(BACKEND_URL, token) {
           "Content-Type": "application/json"
         }
       });
+
       const data = await res.json();
-      if (data.success) {
-        success(data.events);
-      } else {
-        console.error("Backend error:", data.message);
-        failure(data.message);
-      }
+      if (data.success) success(data.events);
+      else failure(data.message);
+
     } catch (err) {
-      console.error("Calendar fetch error:", err);
       failure(err);
     }
   }
 
-  /**
-   * Enhances event appearance based on title.
-   * Adds custom tooltips and visual borders for priority events.
-   */
-  function enhanceEventUI(info) {
-    const title = info.event.title.toLowerCase();
-    let typeLabel = "Scheduled Event";
+  // ================================
+  // CUSTOM EVENT RENDER
+  // ================================
 
-    // Logic to determine tooltips (Matches admin_dashboard.js logic)
-    if (title.includes("ai due")) {
-      typeLabel = "Day 3 Insemination Window";
-    } else if (title.includes("heat re-check")) {
-      typeLabel = "21–23 Day Pregnancy Re-check";
-    } else if (title.includes("farrowing")) {
-      typeLabel = "Expected Farrowing Date";
-    } else if (title.includes("weaning") || title.includes("ready for weaning")) {
-      typeLabel = "30-Day Weaning Threshold";
-    }
+  function renderCustomEvent(arg) {
+    const status = (arg.event.extendedProps.status || "").toLowerCase();
 
-    // Set native tooltip
-    info.el.title = `${info.event.title} (${typeLabel})`;
+    const statusMap = {
+      "in-heat": { color: "#ff9a1f", icon: "bi-fire" },
+      "under observation": { color: "#1ea7ff", icon: "bi-eye" },
+      "pregnant": { color: "#43c572", icon: "bi-heart-fill" },
+      "farrowing": { color: "#cf2631", icon: "bi-exclamation-triangle-fill" },
+      "lactating": { color: "#eb79ae", icon: "bi-droplet-fill" },
+      "completed": { color: "#6c757d", icon: "bi-check-circle-fill" }
+    };
 
-    // Apply background and border colors from backend
-    if (info.event.backgroundColor) {
-      info.el.style.backgroundColor = info.event.backgroundColor;
-      info.el.style.borderColor = info.event.backgroundColor;
-    }
+    const config = statusMap[status] || {
+      color: "#adb5bd",
+      icon: "bi-calendar-event"
+    };
 
-    // Visual indicator for high-priority breeding events
-    if (title.includes("ai") || title.includes("farrowing")) {
-      info.el.style.fontWeight = "bold";
-      info.el.style.borderLeft = "4px solid rgba(0,0,0,0.3)";
-    }
+    return {
+      html: `
+        <div class="fc-custom-event"
+            style="border-left:4px solid ${config.color};
+                    color:${config.color}">
+          <i class="bi ${config.icon}"></i>
+          <span class="fc-event-title">
+            ${arg.event.title}
+          </span>
+        </div>
+      `
+    };
   }
 
-  /**
-   * Handles clicking an event.
-   * Redirects to the heat reports management page with the specific ID.
-   */
-  function handleEventClick(info) {
-  window.location.href = `/farm-manager/reports?reportId=${info.event.id}`;
-}
 
-  // =====================
-  // REAL-TIME UPDATE LOGIC
-  // =====================
-  
-  // Refetch events whenever the user switches back to this tab
-  window.addEventListener('focus', () => {
-    calendars.forEach(c => {
-      if (c) c.refetchEvents();
+
+
+  // ================================
+  // DATE CLICK → PANEL VIEW
+  // ================================
+
+  function handleDateClick(info) {
+    const selectedDate = info.dateStr;
+    highlightDate(selectedDate);
+    renderEventsForDate(selectedDate);
+  }
+
+  function renderEventsForDate(dateStr) {
+    if (!taskPanel) return;
+
+    const events = calendar.getEvents().filter(e =>
+      e.startStr === dateStr
+    );
+
+    selectedDateLabel.textContent = `Events on ${dateStr}`;
+
+    if (!events.length) {
+      taskPanel.innerHTML = `
+        <div class="text-muted small">
+          No breeding events scheduled.
+        </div>
+      `;
+      return;
+    }
+
+    taskPanel.innerHTML = events.map(event => `
+      <div class="task-card mb-3">
+        <div class="fw-semibold">${event.title}</div>
+        <div class="small text-muted mb-2">
+          Status: ${event.extendedProps.status || "N/A"}
+        </div>
+        <button class="btn btn-sm btn-outline-primary"
+          data-report="${event.extendedProps.reportId}">
+          View Report
+        </button>
+      </div>
+    `).join("");
+
+    // Attach report buttons
+    taskPanel.querySelectorAll("[data-report]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const reportId = btn.dataset.report;
+        if (!reportId) return;
+
+        // 🔥 Correct route
+        window.location.href =
+          `/farm-manager/heat-reports/index?reportId=${reportId}`;
+      });
     });
+  }
+
+  // ================================
+  // HIGHLIGHT SELECTED DAY
+  // ================================
+
+  function highlightDate(dateStr) {
+    document.querySelectorAll(".fc-daygrid-day")
+      .forEach(day => day.classList.remove("selected-day"));
+
+    const target = document.querySelector(
+      `.fc-daygrid-day[data-date="${dateStr}"]`
+    );
+
+    if (target) target.classList.add("selected-day");
+  }
+
+  // ================================
+  // EVENT CLICK → REDIRECT
+  // ================================
+
+  function handleEventClick(info) {
+    const reportId = info.event.extendedProps.reportId;
+    if (!reportId) return;
+
+    window.location.href =
+      `/farm-manager/heat-reports/index?reportId=${reportId}`;
+  }
+
+  // ================================
+  // AUTO REFRESH
+  // ================================
+
+  window.addEventListener("focus", () => {
+    calendar.refetchEvents();
   });
 
-  return calendars;
+  return calendar;
 }

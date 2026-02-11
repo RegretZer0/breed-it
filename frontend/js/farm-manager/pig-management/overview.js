@@ -48,11 +48,8 @@
 
     // ================= DOM =================
     const swineCardList = document.getElementById("swineCardList");
-    const filterFarmer = document.getElementById("filterFarmer");
     const filtersForm = document.getElementById("filtersForm");
     const filterStatus = document.getElementById("filterStatus");
-    const filterSex = document.getElementById("filterSex");
-    const filterType = document.getElementById("filterType");
     const filterTag = document.getElementById("filterTag");
     const swineModal = document.getElementById("swineModal");
     const swineModalInstance = new bootstrap.Modal(swineModal, {
@@ -1132,59 +1129,59 @@
           renderGrowth(activeSwineForView);
         }
     });
+
     // ================= FILTERS =================
     filtersForm.addEventListener("submit", (e) => {
       e.preventDefault();
+
       let filtered = [...allSwine];
+
       const status = filterStatus.value;
-      const sex = filterSex.value;
-      const type = filterType.value;
       const tag = filterTag.value.trim().toLowerCase();
 
+      // FARMER FILTER (dropdown-based)
       if (selectedFarmerId) {
         filtered = filtered.filter(sw => {
           if (!sw.farmer_id) return false;
 
-          const fid = typeof sw.farmer_id === "object"
-            ? sw.farmer_id._id?.toString()
-            : sw.farmer_id.toString();
+          const fid =
+            typeof sw.farmer_id === "object"
+              ? sw.farmer_id._id?.toString()
+              : sw.farmer_id.toString();
 
           return fid === selectedFarmerId.toString();
         });
       }
 
-      if (status) filtered = filtered.filter(sw => (sw.current_status || sw.status) === status);
-      if (sex) filtered = filtered.filter(sw => sw.sex === sex);
-      if (type) {
-        filtered = filtered.filter(sw => {
-          const stage = sw.age_stage ? sw.age_stage.toLowerCase() : "";
-          if (type === "piglet") return stage.includes("piglet") || stage.includes("monitoring");
-          if (type === "sow") return sw.sex === "Female" && (stage === "adult" || stage === "final selection");
-          if (type === "boar") return sw.sex === "Male" && stage === "adult" && !sw.is_external_boar;
-          if (type === "master") return sw.is_external_boar === true;
-          return true;
-        });
+      // STATUS FILTER (FIXED FIELD)
+      if (status) {
+        filtered = filtered.filter(
+          sw => sw.health_status === status
+        );
       }
-      if (tag) filtered = filtered.filter(sw => sw.swine_id?.toLowerCase().includes(tag));
-      filterPreviewResults = filtered;
-      filterPreviewPage = 1;
-      renderFilterPreview();
 
+      // TAG FILTER
+      if (tag) {
+        filtered = filtered.filter(
+          sw => sw.swine_id?.toLowerCase().includes(tag)
+        );
+      }
+
+      // RESET pagination + render
+      swinePage = 1;
+      renderCards(filtered);
     });
 
-      document.getElementById("resetFilters").addEventListener("click", () => {
-        selectedFarmerId = null;
-        filterPreviewResults = [];
-        filterPreviewPage = 1;
+    // ================= RESET FILTERS =================
+    document.getElementById("resetFilters").addEventListener("click", () => {
+      selectedFarmerId = null;
 
-        filtersForm.reset();
-        document.getElementById("farmerDropdownBtn").textContent = "Select Farmer";
-        document.getElementById("filterResultWrap")?.classList.add("d-none");
+      filtersForm.reset();
+      document.getElementById("farmerDropdownBtn").textContent = "Farmer";
 
-        swinePage = 1;
-        renderCards(allSwine);
-
-      });
+      swinePage = 1;
+      renderCards(allSwine);
+    });
 
   // ================= TAB SWITCHING (MODAL ONLY) =================
   document

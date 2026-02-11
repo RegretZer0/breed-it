@@ -1,71 +1,56 @@
 <div class="card page-card">
   <div class="card-body">
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5 class="mb-0">Swine Inventory List</h5>
+    <!-- TITLE -->
+    <h5 class="swine-title mb-3">
+      Swine Inventory List
+    </h5>
+
+    <!-- TOOLBAR -->
+    <div class="swine-toolbar mb-3">
+
+      <!-- LEFT: TABS -->
+      <div class="swine-tabs">
+        <ul class="nav nav-pills" id="swineCategoryTabs">
+          <li class="nav-item">
+            <button class="nav-link active" data-type="all">All</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-type="piglet">Piglets</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-type="sow">Sows</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-type="boar">Boars</button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-type="master">Master</button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- RIGHT: FILTERS -->
+      <div class="swine-filters">
+        <%- include("./filters") %>
+      </div>
+
     </div>
 
-    <!-- CATEGORY TABS -->
-    <ul class="nav nav-pills mb-3 gap-2" id="swineCategoryTabs">
-      <li class="nav-item">
-        <button class="nav-link active" data-type="all">All</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" data-type="piglet">Piglets</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" data-type="sow">Sows</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" data-type="boar">Boars</button>
-      </li>
-      <li class="nav-item">
-        <button class="nav-link" data-type="master">Master Boars</button>
-      </li>
-    </ul>
+    <hr class="my-3" />
 
     <!-- CARD LIST -->
     <div id="swineCardList" class="d-flex flex-column">
-
-      <!-- Loading State -->
       <div class="text-center text-muted py-4">
         Loading swine records...
       </div>
-
-      <!--
-        JS WILL RENDER EACH SWINE CARD HERE
-        ------------------------------------------------
-        Card content includes:
-        - Swine ID
-        - Breed
-        - Pig Type (Piglet / Sow / Boar / Master)
-        - Farmer Name
-        - Health Status Badge
-        - Sex, Age, Weight, Stage
-        - View + Edit buttons
-      -->
-
     </div>
 
     <!-- PAGINATION -->
     <div class="d-flex justify-content-between align-items-center mt-4">
-      <button
-        id="swinePrevBtn"
-        class="btn btn-sm btn-outline-secondary">
-        Prev
-      </button>
-
-      <span
-        id="swinePageIndicator"
-        class="small fw-semibold text-muted">
-      </span>
-
-      <button
-        id="swineNextBtn"
-        class="btn btn-sm btn-outline-secondary">
-        Next
-      </button>
+      <button id="swinePrevBtn" class="btn btn-sm btn-outline-secondary">Prev</button>
+      <span id="swinePageIndicator" class="small fw-semibold text-muted"></span>
+      <button id="swineNextBtn" class="btn btn-sm btn-outline-secondary">Next</button>
     </div>
 
   </div>

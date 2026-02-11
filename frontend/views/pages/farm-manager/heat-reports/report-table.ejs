@@ -1,10 +1,15 @@
 <!-- ================= HEAT REPORTS (CARD VIEW) ================= -->
-<div class="card page-card reports-card" style="margin-top:20px;">
+<div class="card page-card reports-card mt-4">
   <div class="card-body">
 
-    <!-- HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="card-title mb-0">Heat Reports</h5>
+    <!-- ================= TITLE ================= -->
+    <h4 class="page-title mb-3">
+      Heat Reports
+    </h4>
+
+    <!-- ================= FILTER TOOLBAR ================= -->
+    <div class="mb-4">
+      <%- include("./filter") %>
     </div>
 
     <!-- ================= REPORT CARD LIST ================= -->
@@ -25,14 +30,14 @@
         id="prevPageBtn"
         class="btn-nav secondary"
         type="button"
-        aria-label="Previous page"
       >
-        ← Prev
+        Prev
       </button>
 
       <span
         id="pageIndicator"
-        style="font-weight:600; font-size:14px;"
+        class="fw-semibold"
+        style="font-size:14px;"
       >
         Page 1 of 1
       </span>
@@ -41,9 +46,8 @@
         id="nextPageBtn"
         class="btn-nav secondary"
         type="button"
-        aria-label="Next page"
       >
-        Next →
+        Next
       </button>
     </div>
 

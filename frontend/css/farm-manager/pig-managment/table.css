@@ -48,14 +48,8 @@
   font-size: 14px;
   width: 16px;
   text-align: center;
-  transition: opacity 0.15s ease;
 }
 
-.swine-card:hover .detail-item i {
-  opacity: 0.85;
-}
-
-/* Icon colors */
 .detail-item .fa-venus-mars { color: #d63384; }
 .detail-item .fa-calendar-days { color: #0d6efd; }
 .detail-item .fa-weight-scale { color: #198754; }
@@ -85,24 +79,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-/* ================= CATEGORY TABS ================= */
-#swineCategoryTabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-#swineCategoryTabs .nav-link {
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 14px;
-}
-
-#swineCategoryTabs .nav-link.active {
-  background-color: #198754;
-  color: #fff;
 }
 
 /* ================= PROFILE HEADER ================= */
@@ -252,7 +228,7 @@
 #pigProfileTabs {
   display: flex !important;
   align-items: center;
-  min-height: 44px;              /* 🔥 PREVENT COLLAPSE */
+  min-height: 44px;        
   padding: 6px 0;
   gap: 8px;
   overflow-x: auto;
@@ -264,10 +240,10 @@
 }
 
 #pigProfileTabs .nav-link {
-  display: inline-flex;          /* 🔥 IMPORTANT FOR <button> */
+  display: inline-flex;       
   align-items: center;
   justify-content: center;
-  height: 36px;                  /* 🔥 PHYSICAL HEIGHT */
+  height: 36px;                
   padding: 0 16px;
   border: none;
   background: transparent;
@@ -280,4 +256,170 @@
   color: #198754;
   border-bottom: 3px solid #198754;
   font-weight: 600;
+}
+
+/* ================= CATEGORY TABS ================= */
+#swineCategoryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#swineCategoryTabs .nav-link {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+#swineCategoryTabs .nav-link.active {
+  background-color: #198754;
+  color: #fff;
+}
+
+/* ================= TITLE ================= */
+.swine-title {
+  font-weight: 700;
+}
+
+/* ================= TOOLBAR ================= */
+.swine-toolbar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 24px;
+}
+
+/* ================= TABS ================= */
+.swine-tabs {
+  flex-shrink: 0;
+}
+
+#swineCategoryTabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+#swineCategoryTabs .nav-link {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#swineCategoryTabs .nav-link.active {
+  background-color: #198754;
+  color: #ffffff;
+}
+
+/* ================= FILTERS ================= */
+.swine-filters {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.swine-filter-form {
+  display: grid;
+  grid-template-columns:
+    140px   /* Farmer */
+    160px   /* Search tag */
+    140px   /* Status */
+    80px    /* Apply */
+    80px;   /* Reset */
+  gap: 8px;
+  align-items: center;
+}
+
+/* Desktop spacing for Apply / Reset */
+.swine-filter-form .btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.swine-filter-form .form-control,
+.swine-filter-form .form-select,
+.swine-filter-form .btn {
+  height: 34px;
+  font-size: 13px;
+}
+
+.swine-filter-form .btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.swine-filter-form .btn-group > .btn {
+  border-radius: 8px !important;
+}
+
+
+/* ================= MOBILE FILTER & TABS (CLEAN) ================= */
+@media (max-width: 768px) {
+
+  /* Toolbar becomes vertical */
+  .swine-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Filters ABOVE tabs */
+  .swine-filters {
+    order: 1;
+    width: 100%;
+  }
+
+  .swine-tabs {
+    order: 2;
+  }
+
+  /* Filter form: vertical stack */
+  .swine-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    padding: 0 12px; /* space from card edges */
+    box-sizing: border-box;
+  }
+
+  /* Dropdown wrapper MUST stretch */
+  .swine-filter-form .dropdown {
+    width: 100%;
+  }
+
+  /* Farmer dropdown button */
+  #farmerDropdownBtn {
+    width: 100%;
+  }
+
+  /* Inputs & selects */
+  .swine-filter-form .form-control,
+  .swine-filter-form .form-select {
+    width: 100%;
+    height: 44px;
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  /* Buttons row */
+  .swine-filter-form .btn-group {
+    display: flex;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .swine-filter-form .btn-group .btn {
+    flex: 1;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  /* Tabs centered and wrapped */
+  #swineCategoryTabs {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+  }
 }

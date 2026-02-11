@@ -8,6 +8,95 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
   const BACKEND_URL = "http://localhost:5000";
 
+  // ------------- FILTER LOGIG -------------
+  let selectedStatus = "";
+
+  document.querySelectorAll(".heat-tab").forEach(tab => {
+    tab.addEventListener("click", function () {
+
+      document.querySelectorAll(".heat-tab")
+        .forEach(t => t.classList.remove("active"));
+
+      this.classList.add("active");
+      selectedStatus = this.dataset.status || "";
+
+      applyFilters();
+    });
+  });
+
+  let selectedFarmerId = null;
+
+  async function loadFarmerForFilter() {
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/auth/farmers/${user.id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const data = await res.json();
+      const list = data.farmers || [];
+
+      const wrap = document.getElementById("farmerOptions");
+      const searchInput = document.getElementById("farmerSearch");
+      const dropdownBtn = document.getElementById("farmerDropdownBtn");
+
+      if (!wrap || !dropdownBtn) return;
+
+      function render(listToRender) {
+        wrap.innerHTML = "";
+
+        if (!listToRender.length) {
+          wrap.innerHTML =
+            `<div class="text-muted small px-2">No farmers found</div>`;
+          return;
+        }
+
+        listToRender.forEach(f => {
+          const div = document.createElement("div");
+          div.className = "dropdown-item small";
+          div.textContent =
+            `${f.first_name} ${f.last_name}`.trim();
+
+          div.addEventListener("click", () => {
+            selectedFarmerId = f._id;
+            dropdownBtn.textContent = div.textContent;
+
+            bootstrap.Dropdown
+              .getInstance(dropdownBtn)
+              ?.hide();
+
+            applyFilters();
+          });
+
+          wrap.appendChild(div);
+        });
+      }
+
+      render(list);
+
+      // Search filter
+      if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = "true";
+        searchInput.addEventListener("input", () => {
+          const term = searchInput.value.toLowerCase();
+          render(
+            list.filter(f =>
+              `${f.first_name} ${f.last_name}`
+                .toLowerCase()
+                .includes(term)
+            )
+          );
+        });
+      }
+
+    } catch (err) {
+      console.error("Load farmers failed", err);
+    }
+  }
+
+  loadFarmerForFilter();
+
+  
   // ---------------- DOM ----------------
   const countInHeat = document.getElementById("countInHeat");
   const countAwaitingRecheck = document.getElementById("countAwaitingRecheck");
@@ -36,9 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const nextPageBtn = document.getElementById("nextPageBtn");
   const pageIndicator = document.getElementById("pageIndicator");
 
-  const filteredPrevBtn = document.getElementById("filteredPrevBtn");
-  const filteredNextBtn = document.getElementById("filteredNextBtn");
-  const filteredPageIndicator = document.getElementById("filteredPageIndicator");
+  const clearFilterBtn = document.getElementById("clearFilter");
 
   // Farrowing modal
   const farrowingModal = document.getElementById("farrowingModal");
@@ -60,6 +147,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Track Progress panel (placeholder)
   const progressPanel = document.getElementById("trackProgressPanel");
   const closeProgressPanel = document.getElementById("closeProgressPanel");
+
+
+  const heatFilterForm = document.getElementById("heatFilterForm");
+
+  heatFilterForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    applyFilters();
+  });
 
 
   // ---------------- MODAL HELPERS ----------------
@@ -86,19 +181,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === reportDetailsModal) closeReportDetails();
   });
 
-let allReports = [];
+  let allReports = [];
+  let filteredReports = [];
+  let currentReportId = null;
+
+
 
 // ===== MAIN TABLE PAGINATION =====
 let currentPage = 1;
 const ROWS_PER_PAGE = 10;
-
-// ===== FILTERED PAGINATION STATE =====
-let filteredPage = 1;
-const FILTERED_ROWS_PER_PAGE = 5;
-let currentFilteredResults = [];
-
-let currentReportId = null;
-
 
   // ---------------- HELPERS ----------------
   function getDaysLeft(targetDate) {
@@ -135,9 +226,12 @@ let currentReportId = null;
 
       // This is the specific line that prevents rejected reports from displaying
       allReports = (data.reports || []).filter(r => r.status !== "rejected");
-      
+
+      filteredReports = [...allReports];
+
       renderStats(allReports);
-      renderCards(allReports);
+      renderCards(filteredReports);
+
     } catch (err) {
       console.error("Reports load error:", err);
     }
@@ -277,8 +371,17 @@ let currentReportId = null;
         const r = data.report;
         
         // 1. Update Header Info
-        document.getElementById("progressFarmName").textContent = `Farm: ${r.farmer_id?.farm_name || 'N/A'}`;
-        document.getElementById("progressSwineId").textContent = `${r.swine_id?.swine_id || 'Unknown'} — Dynamic Timeline`;
+        const farmerEl = document.getElementById("progressFarmerName");
+
+        if (farmerEl) {
+          farmerEl.textContent = `Farmer: ${
+            r.farmer_id
+              ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}`
+              : "N/A"
+          }`;
+        }
+        
+        document.getElementById("progressSwineId").textContent = `${r.swine_id?.swine_id || 'Unknown'}`;
         
         const timelineContainer = document.getElementById("cycleTimeline");
         timelineContainer.innerHTML = ""; 
@@ -291,7 +394,7 @@ let currentReportId = null;
             events.push({
                 title: "Lactating",
                 desc: "Sow is currently nursing piglets.",
-                icon: "🍼",
+                icon: "bi-heart-pulse-fill",
                 date: "Currently Active"
             });
         }
@@ -301,7 +404,7 @@ let currentReportId = null;
             events.push({
                 title: "Farrowing Confirmed",
                 desc: "Birth process recorded successfully.",
-                icon: "🐷",
+                icon: "bi-piggy-bank",
                 date: r.actual_farrowing_date ? new Date(r.actual_farrowing_date).toLocaleDateString() : "Check Records"
             });
         }
@@ -311,7 +414,7 @@ let currentReportId = null;
             events.push({
                 title: "Pregnant & Under 115 Days Monitoring",
                 desc: "Pregnancy confirmed. Monitoring gestation period.",
-                icon: "🤰",
+                icon: "bi-person-hearts",
                 date: r.expected_farrowing ? `Due: ${new Date(r.expected_farrowing).toLocaleDateString()}` : "Ongoing"
             });
         }
@@ -321,7 +424,7 @@ let currentReportId = null;
             events.push({
                 title: "Under 30 Days Monitoring",
                 desc: "Monitoring for 'return to heat' signs post-AI.",
-                icon: "👁",
+                icon: "bi-eye",
                 date: r.ai_date ? `Started: ${new Date(r.ai_date).toLocaleDateString()}` : "Ongoing"
             });
         }
@@ -330,8 +433,8 @@ let currentReportId = null;
         if (["ai_confirmed", "under_observation", "pregnant", "farrowing_ready", "lactating"].includes(r.status)) {
             events.push({
                 title: "Artificial Insemination Performed",
-                desc: "Farm Manager/Encoder confirmed AI procedure.",
-                icon: "💉",
+                desc: "Farm Manager/Encoder confirmed Artificial Isemination procedure.",
+                icon: "bi-droplet-half",
                 date: r.ai_date ? new Date(r.ai_date).toLocaleDateString() : "Date N/A"
             });
         }
@@ -341,7 +444,7 @@ let currentReportId = null;
             events.push({
                 title: "Sow In Heat & Scheduled for AI",
                 desc: "Report approved by Farm Manager. AI preparation started.",
-                icon: "📅",
+                icon: "bi-calendar-check",
                 date: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "Approved"
             });
         }
@@ -350,7 +453,7 @@ let currentReportId = null;
         events.push({
             title: "Report Submitted",
             desc: "Farmer submitted the heat detection report.",
-            icon: "📝",
+            icon: "bi-file-earmark-text",
             date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "Pending"
         });
 
@@ -360,7 +463,7 @@ let currentReportId = null;
             stepDiv.className = `timeline-step completed`; 
             
             stepDiv.innerHTML = `
-                <div class="step-icon">${event.icon}</div>
+                <div class="step-icon"><i class="bi ${event.icon}"></i></div>
                 <div class="step-content">
                     <div class="step-header">
                         <strong>${event.title}</strong>
@@ -381,10 +484,22 @@ let currentReportId = null;
             currentStageEl.textContent = r.status.replace(/_/g, " ").toUpperCase();
         }
 
-    } catch (err) {
-        console.error("Error loading dynamic progress:", err);
+        // ================= TIME-BASED REMAINING =================
+        const remainingEl = document.getElementById("remainingDays");
+
+        if (remainingEl) {
+          if (r.expected_farrowing) {
+            remainingEl.textContent =
+              getDaysLeft(r.expected_farrowing) + " remaining";
+          } else {
+            remainingEl.textContent = "—";
+          }
+        }
+
+        } catch (err) {
+            console.error("Error loading dynamic progress:", err);
+        }
     }
-}
 
     // Pagination UI
     pageIndicator.textContent = `Page ${currentPage} of ${totalPages || 1}`;
@@ -408,17 +523,19 @@ let currentReportId = null;
   prevPageBtn?.addEventListener("click", () => {
     if (currentPage > 1) {
       currentPage--;
-      renderCards(allReports);
+      renderCards(filteredReports);
     }
   });
 
   nextPageBtn?.addEventListener("click", () => {
-    const totalPages = Math.ceil(allReports.length / ROWS_PER_PAGE);
+    const totalPages = Math.ceil(filteredReports.length / ROWS_PER_PAGE);
+
     if (currentPage < totalPages) {
       currentPage++;
-      renderCards(allReports);
+      renderCards(filteredReports);
     }
   });
+
 
 
 // ---------------- VIEW DETAILS ----------------
@@ -429,7 +546,13 @@ async function viewReport(id) {
       credentials: "include"
     });
     const data = await res.json();
-    if (!data.success) throw new Error("Could not load report details");
+
+    console.log("DETAIL RESPONSE:", data);
+    console.log("STATUS CODE:", res.status);
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || "Could not load report details");
+    }
 
     const r = data.report;
     currentReportId = id;
@@ -616,7 +739,7 @@ async function viewReport(id) {
     aiConfirmModal.style.display = "none";
   };
 
-  // ✅ Confirm Reject Action
+  // Confirm Reject Action
     confirmRejectBtn.onclick = () => {
     const reason = rejectReasonInput.value.trim();
 
@@ -636,7 +759,7 @@ async function viewReport(id) {
   };
 
 
-  // ✅ Confirm Pregnancy Action
+  // Confirm Pregnancy Action
   if (confirmPregnancyBtn) {
     confirmPregnancyBtn.onclick = () => {
       if (!confirm("Confirm pregnancy for this sow?")) return;
@@ -647,7 +770,7 @@ async function viewReport(id) {
     };
   }
 
-  // 🔄 FIX 5: Cycle Failed / Return to Heat
+  // Cycle Failed / Return to Heat
   if (followUpBtn) {
     followUpBtn.onclick = () => {
       if (!confirm("Mark cycle as failed and return sow to heat?")) return;
@@ -658,7 +781,7 @@ async function viewReport(id) {
     };
   }
 
-  // ✅ FIX 4: Open Farrowing Modal
+  // Open Farrowing Modal
 if (confirmFarrowingBtn) {
   confirmFarrowingBtn.onclick = () => {
     if (!farrowingModal) return;
@@ -667,135 +790,102 @@ if (confirmFarrowingBtn) {
   };
 }
 
-// ✅ FIX 4: Submit Farrowing Data
+// ================= FARROWING SUBMIT =================
 if (farrowingForm) {
   farrowingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const farrowingDateInput = document.getElementById("farrowingDateInput");
+    const liveInput = document.getElementById("liveCount");
+    const mummyInput = document.getElementById("mummyCount");
+    const stillInput = document.getElementById("stillCount");
+
     const payload = {
-      farrowing_date: document.getElementById("farrowingDateInput").value,
-      total_live: Number(document.getElementById("liveCount").value),
-      mummified: Number(document.getElementById("mummyCount").value),
-      stillborn: Number(document.getElementById("stillCount").value),
+      farrowing_date: farrowingDateInput?.value || null,
+      total_live: Number(liveInput?.value || 0),
+      mummified: Number(mummyInput?.value || 0),
+      stillborn: Number(stillInput?.value || 0),
     };
 
-    action(
+    await action(
       "confirm-farrowing",
       "Farrowing registered! Sow is now Lactating.",
       payload
     );
 
+    if (farrowingModal) farrowingModal.style.display = "none";
+    farrowingForm.reset();
+  });
+}
 
-      farrowingModal.style.display = "none";
-      farrowingForm.reset();
-    });
+
+// ================= CLEAR FILTER =================
+clearFilterBtn?.addEventListener("click", () => {
+
+  const dropdownBtn = document.getElementById("farmerDropdownBtn");
+  if (dropdownBtn) {
+    dropdownBtn.textContent = "Farmer";
   }
 
-    filteredPrevBtn.onclick = () => {
-    if (filteredPage > 1) {
-      filteredPage--;
-      renderFilteredTable();
+  document.getElementById("filterSwine").value = "";
+
+  selectedStatus = "";
+  selectedFarmerId = null;
+
+  // Reset tabs
+  document.querySelectorAll(".heat-tab")
+    .forEach(t => t.classList.remove("active"));
+
+  document.querySelector(".heat-tab")
+    ?.classList.add("active");
+
+  filteredReports = [...allReports];
+  currentPage = 1;
+
+  renderCards(filteredReports);
+});
+
+
+function applyFilters() {
+
+  const swineTerm =
+    document.getElementById("filterSwine")
+      ?.value.trim().toLowerCase() || "";
+
+  filteredReports = allReports.filter(r => {
+
+    // Swine filter
+    const swineMatch =
+      !swineTerm ||
+      (r.swine_id?.swine_id || "")
+        .toLowerCase()
+        .includes(swineTerm);
+
+    // Status filter (tabs)
+    const statusMatch =
+      !selectedStatus ||
+      r.status === selectedStatus;
+
+    // Farmer filter
+    let farmerMatch = true;
+
+    if (selectedFarmerId) {
+      const farmerId =
+        typeof r.farmer_id === "object"
+          ? r.farmer_id._id
+          : r.farmer_id;
+
+      farmerMatch =
+        farmerId &&
+        farmerId.toString() === selectedFarmerId.toString();
     }
-  };
 
-  filteredNextBtn.onclick = () => {
-    const totalPages = Math.ceil(
-      currentFilteredResults.length / FILTERED_ROWS_PER_PAGE
-    );
-
-    if (filteredPage < totalPages) {
-      filteredPage++;
-      renderFilteredTable();
-    }
-  };
-
-  // ---------------- FILTERING ----------------
-  const filterSwine = document.getElementById("filterSwine");
-  const filterStatus = document.getElementById("filterStatus");
-  const applyFilterBtn = document.getElementById("applyFilter");
-  const clearFilterBtn = document.getElementById("clearFilter");
-  const filteredCard = document.getElementById("filteredResultsCard");
-  const filteredBody = document.getElementById("filteredTableBody");
-
-  renderFilteredTable()
-
-  applyFilterBtn?.addEventListener("click", () => {
-    const swineTerm = filterSwine.value.trim().toLowerCase();
-    const statusTerm = filterStatus.value;
-
-    currentFilteredResults = allReports.filter(r => {
-      const swineMatch =
-        !swineTerm ||
-        (r.swine_id?.swine_id || "").toLowerCase().includes(swineTerm);
-      const statusMatch = !statusTerm || r.status === statusTerm;
-      return swineMatch && statusMatch;
-    });
-
-    filteredPage = 1;
-    renderFilteredTable();
+    return swineMatch && statusMatch && farmerMatch;
   });
 
-  clearFilterBtn?.addEventListener("click", () => {
-    filterSwine.value = "";
-    filterStatus.value = "";
-    currentFilteredResults = [];
-    filteredPage = 1;
-    if (filteredCard) filteredCard.style.display = "none";
-  });
-
-  // ---------------- FILTERED TABLE (5 ROWS ONLY) ----------------
-  function renderFilteredTable() {
-    if (!filteredBody) return;
-
-    filteredBody.innerHTML = "";
-
-    const totalPages = Math.ceil(
-      currentFilteredResults.length / FILTERED_ROWS_PER_PAGE
-    );
-
-    if (!currentFilteredResults.length) {
-      filteredBody.innerHTML = `<tr><td colspan="5">No matching reports</td></tr>`;
-      filteredCard.style.display = "block";
-      return;
-    }
-
-    const start = (filteredPage - 1) * FILTERED_ROWS_PER_PAGE;
-    const end = start + FILTERED_ROWS_PER_PAGE;
-    const pageItems = currentFilteredResults.slice(start, end);
-
-    pageItems.forEach(r => {
-      const statusLabel = r.status.replace(/_/g, " ");
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${r.swine_id?.swine_id || "-"}</td>
-        <td>${r.farmer_id ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}` : "-"}</td>
-        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-        <td>
-          <span class="report-status" data-status="${r.status}">
-            ${statusLabel}
-          </span>
-        </td>
-        <td>
-          <button class="btn-view" data-id="${r._id}">View</button>
-        </td>
-      `;
-      filteredBody.appendChild(row);
-    });
-
-    filteredCard.style.display = "block";
-
-    filteredBody.querySelectorAll(".btn-view").forEach(btn => {
-      btn.addEventListener("click", () => viewReport(btn.dataset.id));
-    });
-
-    // ✅ Pagination UI
-    filteredPageIndicator.textContent = `Page ${filteredPage} of ${totalPages}`;
-    filteredPrevBtn.disabled = filteredPage === 1;
-    filteredNextBtn.disabled = filteredPage === totalPages || totalPages === 0;
-
-    document.querySelector(".filtered-pagination").style.display =
-      totalPages > 1 ? "flex" : "none";
-  }
+  currentPage = 1;
+  renderCards(filteredReports);
+}
 
 
   loadReports();

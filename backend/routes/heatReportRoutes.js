@@ -526,46 +526,160 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 });
 
 /* ======================================================
-    CALENDAR EVENTS
+   CALENDAR EVENTS – LIFECYCLE BASED
 ====================================================== */
-router.get("/calendar-events", requireApiLogin, allowRoles("farm_manager", "encoder", "farmer"), async (req, res) => {
+router.get(
+  "/calendar-events",
+  requireApiLogin,
+  allowRoles("farm_manager", "encoder", "farmer"),
+  async (req, res) => {
     try {
-        const user = req.user;
-        let query = { status: { $in: ["approved", "under_observation", "pregnant", "lactating"] } };
+      const user = req.user;
 
-        if (user.role === "farmer") {
-            if (!user.farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
-            query.farmer_id = user.farmerProfileId;
-        } else {
-            query.manager_id = user.role === "farm_manager" ? user.id : user.managerId;
+      let query = {};
+
+      if (user.role === "farmer") {
+        if (!user.farmerProfileId) {
+          return res.status(400).json({
+            success: false,
+            message: "Farmer profile not linked"
+          });
+        }
+        query.farmer_id = user.farmerProfileId;
+      } else {
+        query.manager_id =
+          user.role === "farm_manager" ? user.id : user.managerId;
+      }
+
+      const reports = await HeatReport.find(query)
+        .populate("swine_id", "swine_id")
+        .lean();
+
+      const events = [];
+
+      reports.forEach(r => {
+        const swineCode = r.swine_id?.swine_id || "Unknown";
+
+        // ===============================
+        // Artificial Insemination DUE (After approval)
+        // ===============================
+        if (r.status === "approved" && r.next_heat_check) {
+          events.push({
+            id: `${r._id}-ai-due`,
+            title: `AI Due – ${swineCode}`,
+            start: r.next_heat_check.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "in-heat",
+              type: "ai_due",
+              reportId: r._id
+            }
+          });
         }
 
-        const reports = await HeatReport.find(query).populate("swine_id", "swine_id").lean();
-        const events = [];
+        // ===============================
+        // PREGNANCY CHECK (21 days)
+        // ===============================
+        if (r.status === "under_observation" && r.next_heat_check) {
+          events.push({
+            id: `${r._id}-preg-check`,
+            title: `Pregnancy Check – ${swineCode}`,
+            start: r.next_heat_check.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "under observation",
+              type: "pregnancy_check",
+              reportId: r._id
+            }
+          });
+        }
 
-        reports.forEach(r => {
-            const swineCode = r.swine_id?.swine_id || 'Unknown';
-            if (r.status === "approved" && r.next_heat_check) {
-                events.push({ id: r._id, title: `💉 AI Due: ${swineCode}`, start: r.next_heat_check.toISOString().split("T")[0], backgroundColor: "#3498db", allDay: true });
+        // ===============================
+        // EXPECTED FARROWING
+        // ===============================
+        if (r.status === "pregnant" && r.expected_farrowing) {
+          events.push({
+            id: `${r._id}-expected-farrow`,
+            title: `Expected Farrowing – ${swineCode}`,
+            start: r.expected_farrowing.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "pregnant",
+              type: "expected_farrowing",
+              reportId: r._id
             }
-            if (r.status === "under_observation" && r.next_heat_check) {
-                events.push({ id: r._id, title: `🔍 Heat Re-check: ${swineCode}`, start: r.next_heat_check.toISOString().split("T")[0], backgroundColor: "#f39c12", allDay: true });
+          });
+        }
+
+        // ===============================
+        // ACTUAL FARROWING
+        // ===============================
+        if (r.status === "lactating" && r.actual_farrowing_date) {
+          events.push({
+            id: `${r._id}-actual-farrow`,
+            title: `Farrowed – ${swineCode}`,
+            start: r.actual_farrowing_date.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "farrowing",
+              type: "actual_farrowing",
+              reportId: r._id
             }
-            if (r.status === "pregnant" && r.expected_farrowing) {
-                events.push({ id: r._id, title: `🐷 Farrowing: ${swineCode}`, start: r.expected_farrowing.toISOString().split("T")[0], backgroundColor: "#27ae60", allDay: true });
+          });
+        }
+
+        // ===============================
+        // WEANING DUE (30 days after farrow)
+        // ===============================
+        const farrowDate =
+          r.actual_farrowing_date || r.expected_farrowing;
+
+        if (r.status === "lactating" && farrowDate) {
+          const weaningDate = new Date(farrowDate);
+          weaningDate.setDate(weaningDate.getDate() + 30);
+
+          events.push({
+            id: `${r._id}-weaning`,
+            title: `Weaning Due – ${swineCode}`,
+            start: weaningDate.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "lactating",
+              type: "weaning_due",
+              reportId: r._id
             }
-            const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
-            if (r.status === "lactating" && farrowDate) {
-                const weaningDate = new Date(farrowDate);
-                weaningDate.setDate(weaningDate.getDate() + 30);
-                events.push({ id: r._id, title: `🍼 Weaning Due: ${swineCode}`, start: weaningDate.toISOString().split("T")[0], backgroundColor: "#9b59b6", allDay: true });
+          });
+        }
+
+        // ===============================
+        // WEANING COMPLETED
+        // ===============================
+        if (r.status === "completed" && r.weaning_date) {
+          events.push({
+            id: `${r._id}-weaned`,
+            title: `Weaned – ${swineCode}`,
+            start: r.weaning_date.toISOString().split("T")[0],
+            allDay: true,
+            extendedProps: {
+              status: "completed",
+              type: "weaning_completed",
+              reportId: r._id
             }
-        });
-        res.json({ success: true, events });
+          });
+        }
+      });
+
+      res.json({ success: true, events });
+
     } catch (err) {
-        res.status(500).json({ success: false, message: "Failed to fetch calendar" });
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch calendar"
+      });
     }
-});
+  }
+);
+
 
 /* ======================================================
     REJECT HEAT REPORT

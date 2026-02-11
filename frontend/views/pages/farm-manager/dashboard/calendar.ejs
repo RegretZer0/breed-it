@@ -1,0 +1,56 @@
+<div class="row g-3 g-lg-4 align-items-stretch">
+
+  <!-- ================= CALENDAR ================= -->
+  <div class="col-lg-8">
+
+    <div class="card page-card h-100">
+      <div class="card-body">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h5 class="mb-0">Breeding & Farrowing Schedule</h5>
+            <small class="text-muted">
+              Monitor Artificial Insemination, Heat re-checks, Farrowing, and Weaning events
+            </small>
+          </div>
+        </div>
+
+        <!-- FullCalendar Mount Point -->
+        <div id="calendar"></div>
+
+      </div>
+    </div>
+
+  </div>
+
+<!-- ================= TASK PANEL ================= -->
+<div class="col-lg-4">
+
+  <div class="card page-card h-100">
+    <div class="card-body d-flex flex-column">
+
+      <!-- Task Header -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-0">Tasks</h5>
+          <small class="text-muted">Selected Date</small>
+        </div>
+      </div>
+
+      <!-- Selected Date Label -->
+      <div id="selectedDateLabel" class="mb-2 small text-muted">
+        No date selected
+      </div>
+
+      <!-- Task List Container -->
+      <div id="taskPanel" class="flex-grow-1">
+        <div class="text-muted small">
+          Click a calendar date to view tasks.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -5,13 +5,17 @@
 <main class="main-content">
   <div class="container-fluid">
 
-    <%- include("./overview") %>
+    <!-- ================= STATS CARD ================= -->
+    <div class="card page-card mb-4">
+      <div class="card-body">
+        <%- include("./stats") %>
+      </div>
+    </div>
 
-      <%- include("./report-table") %>
+    <!-- ================= CALENDAR CARD ================= -->
+        <%- include("./calendar") %>
+
   </div>
 </main>
-
-
-<%- include("./modals") %>
 
 <%- include("../../../partials/farm-manager/footer") %>

@@ -1,0 +1,87 @@
+
+    <div class="heat-toolbar d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+    <!-- ================= LEFT: STATUS TABS ================= -->
+    <div class="heat-tabs d-flex align-items-center gap-2 flex-wrap">
+
+        <button class="heat-tab active" data-status="">
+        All
+        </button>
+
+        <button class="heat-tab" data-status="pending">
+        In-Heat
+        </button>
+
+        <button class="heat-tab" data-status="under_observation">
+        Observation
+        </button>
+
+        <button class="heat-tab" data-status="pregnant">
+        Pregnant
+        </button>
+
+        <button class="heat-tab" data-status="lactating">
+        Lactating
+        </button>
+
+    </div>
+
+
+    <!-- ================= RIGHT: FILTERS ================= -->
+    <form id="heatFilterForm"
+            class="d-flex align-items-center gap-2 flex-wrap">
+
+        <!-- Farmer Dropdown -->
+        <div class="dropdown">
+
+        <button
+            class="form-select form-select-sm text-start"
+            type="button"
+            id="farmerDropdownBtn"
+            data-bs-toggle="dropdown">
+            Farmer
+        </button>
+
+        <div class="dropdown-menu p-2"
+            style="max-height:260px;overflow-y:auto;min-width:220px">
+
+            <input
+            id="farmerSearch"
+            class="form-control form-control-sm mb-2"
+            placeholder="Search farmer…">
+
+            <div id="farmerOptions">
+            <div class="text-muted small">
+                Loading farmers…
+            </div>
+            </div>
+
+        </div>
+
+        </div>
+
+        <!-- Tag Search -->
+        <input
+        id="filterSwine"
+        class="form-control form-control-sm"
+        placeholder="Search tag"
+        style="width:160px;">
+
+        <!-- Buttons -->
+        <div class="btn-group">
+
+        <button type="submit" class="btn btn-success btn-sm">
+            Apply
+        </button>
+
+        <button type="button"
+                id="clearFilter"
+                class="btn btn-outline-secondary btn-sm">
+            Reset
+        </button>
+
+        </div>
+
+    </form>
+
+    </div>
