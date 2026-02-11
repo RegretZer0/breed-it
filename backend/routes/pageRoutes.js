@@ -179,6 +179,20 @@ router.get(
 ========================= */
 
 // Pig Management Overview
+// router.get(
+//   "/farm-manager/pig-management",
+//   requireLogin,
+//   requireFarmManager,
+//   (req, res) => {
+//     res.render("pages/farm-manager/pig-management/overview", {
+//       page_title: "Pig Management Overview",
+//       current_section: "pig_management",
+//       current_page: "overview",
+//     });
+//   }
+// );
+
+// Pig Management Overview
 router.get(
   "/farm-manager/pig-management/swine-list",
   requireLogin,

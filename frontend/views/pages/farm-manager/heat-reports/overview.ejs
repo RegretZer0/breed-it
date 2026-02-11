@@ -38,10 +38,22 @@
       <div class="col-md-6 col-lg-3">
         <div class="stat-card d-flex justify-content-between align-items-center">
           <div>
-            <div class="stat-label">Farrowing Soon</div>
+            <div class="stat-label">Farrowing</div>
             <div class="stat-number" id="countFarrowingReady">0</div>
           </div>
           <div class="stat-icon red"><i class="fa-solid fa-warehouse"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 stats-grid">
+      <div class="col-md-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div>
+            <div class="stat-label">Lactating</div>
+            <div class="stat-number" id="countLactating">0</div>
+          </div>
+          <div class="stat-icon pink"><i class="fa-solid fa-baby-carriage"></i></div>
         </div>
       </div>
     </div>
@@ -60,6 +72,7 @@
         <option value="approved">Approved</option>
         <option value="waiting_heat_check">Under Observation</option>
         <option value="pregnant">Pregnant</option>
+        <option value="lactating">Lactating</option>
       </select>
 
       <button id="applyFilter">Apply</button>
