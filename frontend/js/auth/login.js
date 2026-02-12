@@ -47,8 +47,8 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     // ✅ Centralized role → route map (kept)
     const roleRedirectMap = {
       system_admin: "/system-admin/dashboard",
-      farm_manager: "/farm-manager/dashboard",
-      encoder: "/farm-manager/dashboard",
+      farm_manager: "/farm-manager/dashboard/index",
+      encoder: "/farm-manager/dashboard/index",
       farmer: "/farmer/dashboard",
     };
 
