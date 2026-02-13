@@ -795,6 +795,17 @@ if (farrowingForm) {
   farrowingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // 1. SELECT THE SUBMIT BUTTON
+    const submitBtn = farrowingForm.querySelector('button[type="submit"]');
+
+    // 2. GUARD: IF BUTTON IS ALREADY DISABLED, STOP EXECUTION
+    if (submitBtn.disabled) return;
+
+    // 3. DISABLE BUTTON & SHOW LOADING STATE
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
+
     const farrowingDateInput = document.getElementById("farrowingDateInput");
     const liveInput = document.getElementById("liveCount");
     const mortalityinput = document.getElementById("mortalityCount");
@@ -805,14 +816,25 @@ if (farrowingForm) {
       mortality_born: Number(mortalityinput?.value || 0),
     };
 
-    await action(
-      "confirm-farrowing",
-      "Farrowing registered! Sow is now Lactating.",
-      payload
-    );
+    try {
+      // 4. CALL THE ACTION HANDLER
+      await action(
+        "confirm-farrowing",
+        "Farrowing registered! Sow is now Lactating.",
+        payload
+      );
 
-    if (farrowingModal) farrowingModal.style.display = "none";
-    farrowingForm.reset();
+      // SUCCESS: Reset form and close modal
+      if (farrowingModal) farrowingModal.style.display = "none";
+      farrowingForm.reset();
+    } catch (err) {
+      console.error("Farrowing registration failed:", err);
+      alert("Error: " + err.message);
+    } finally {
+      // 5. RE-ENABLE BUTTON (ONLY IF MODAL STAYS OPEN OR ON ERROR)
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
   });
 }
 

@@ -355,9 +355,16 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 });
 
 /* ======================================================
-    UPGRADED CONFIRM FARROWING
+    UPGRADED CONFIRM FARROWING (WITH MULTI-CLICK PROTECTION)
 ====================================================== */
 router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
+    // 1. QUICK GUARD (Outside the transaction for speed)
+    // This stops the multi-click if the status is already updated.
+    const initialCheck = await HeatReport.findById(req.params.id).select("status");
+    if (initialCheck && initialCheck.status === "lactating") {
+        return res.status(400).json({ success: false, message: "Farrowing already registered for this report." });
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
@@ -371,19 +378,19 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         const sow = await Swine.findById(report.swine_id._id);
         const sire_id = aiRecord ? aiRecord.male_swine_id : "Unknown Boar"; 
 
-        // 1. Update Heat Report
+        // 2. Update Heat Report Status IMMEDIATELY
         report.status = "lactating"; 
         report.actual_farrowing_date = farrowDate;
         await report.save({ session });
 
-        // 2. Update AI Record
+        // 3. Update AI Record
         if (aiRecord) {
             aiRecord.status = "Success";
             aiRecord.farrowing_date = farrowDate;
             await aiRecord.save({ session });
         }
 
-        // 3. Update the Sow & Increment Parity
+        // 4. Update the Sow & Increment Parity
         const currentParity = (sow.parity || 0) + 1;
         await Swine.updateOne(
             { _id: sow._id, "breeding_cycles.heat_report_id": report._id },
@@ -403,22 +410,26 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
             { session }
         );
 
-        // 4. GENERATE LIVE PIGLETS
+        // 5. GENERATE LIVE PIGLETS (With Duplicate ID Validation)
         const liveCount = Number(total_live);
+        const pigletsToInsert = [];
+        const generatedIds = []; // Track IDs to check for duplicates
+
         for (let i = 1; i <= liveCount; i++) {
             const pigletId = `PIG-${sow.swine_id}-${farrowDate.getFullYear()}${(farrowDate.getMonth()+1)}${farrowDate.getDate()}-${i}`;
+            generatedIds.push(pigletId);
             
-            const newPiglet = new Swine({
+            pigletsToInsert.push({
                 swine_id: pigletId,
                 registered_by: req.user.id,
                 farmer_id: report.farmer_id._id,
-                manager_id: report.manager_id, // Inherit manager
+                manager_id: report.manager_id,
                 sex: i % 2 === 0 ? "Female" : "Male",
                 breed: sow.breed,
                 birth_date: farrowDate,
                 sire_id: sire_id, 
                 dam_id: sow.swine_id, 
-                birth_cycle_number: currentParity, // Correctly linked to the current parity
+                birth_cycle_number: currentParity,
                 current_status: "Monitoring (Day 1-30)",
                 age_stage: "Monitoring (Day 1-30)",
                 performance_records: [{
@@ -428,9 +439,23 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
                     recorded_by: req.user.id
                 }]
             });
-            await newPiglet.save({ session });
         }
 
+        // --- VALIDATION CHECK: Check if any of these IDs already exist ---
+        const existingSwine = await Swine.find({ 
+            swine_id: { $in: generatedIds } 
+        }).select("swine_id");
+
+        if (existingSwine.length > 0) {
+            const duplicateIds = existingSwine.map(s => s.swine_id);
+            // Option A: Abort if any exist
+            throw new Error(`Duplicate Swine IDs detected: ${duplicateIds.join(", ")}. Farrowing may have already been recorded.`);
+        }
+
+        // Use insertMany to save all piglets in ONE database call
+        if (pigletsToInsert.length > 0) {
+            await Swine.insertMany(pigletsToInsert, { session });
+        }
         await logAction(req.user.id, "CONFIRM_FARROWING", "BREEDING", `Farrowing confirmed for Swine ${sow.swine_id}. ${liveCount} piglets added.`, req);
 
         await notifyBreedingTeam(
@@ -444,7 +469,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         await session.commitTransaction();
         res.json({ success: true, message: `Farrowing confirmed. ${liveCount} piglets registered.` });
     } catch (err) {
-        await session.abortTransaction();
+        if (session.inTransaction()) await session.abortTransaction();
         res.status(500).json({ success: false, message: err.message });
     } finally {
         session.endSession();

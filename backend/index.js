@@ -63,6 +63,37 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* =========================
+    SESSION CONFIG
+========================= */
+app.use(
+  session({
+    name: "breedit.sid",
+    secret: process.env.SESSION_SECRET,
+    resave: true, // Change to true to ensure session is touched on every refresh
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "lax", // Essential for local development sessions
+      secure: false,   // Must be false if you are not using HTTPS/SSL
+    },
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions', // Explicitly name the collection
+      ttl: 24 * 60 * 60,
+    }),
+  })
+);
+
+/* =========================
+    SESSION → EJS USER BINDING
+========================= */
+app.use((req, res, next) => {
+  res.locals.user = req.session?.user || null;
+  next();
+});
+
+/* =========================
     STATIC FILES
 ========================= */
 // Specific asset folders
@@ -93,35 +124,7 @@ mongoose
     process.exit(1);
   });
 
-/* =========================
-    SESSION CONFIG
-========================= */
-app.use(
-  session({
-    name: "breedit.sid",
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // true only in HTTPS
-    },
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      ttl: 24 * 60 * 60,
-    }),
-  })
-);
 
-/* =========================
-    SESSION → EJS USER BINDING
-========================= */
-app.use((req, res, next) => {
-  res.locals.user = req.session?.user || null;
-  next();
-});
 
 /* =========================
     PREVENT CACHE AFTER LOGOUT

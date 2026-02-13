@@ -167,7 +167,7 @@ async function verifyOTPInternal(email, userOtp) {
 }
 
 /* ======================
-    LOGIN
+    LOGIN (FIXED FOR REFRESH BUG)
 ====================== */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -196,7 +196,12 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    req.session.regenerate(async () => {
+    // ✅ SESSION REGENERATE: Prevents Session Fixation
+    req.session.regenerate(async (err) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: "Session regeneration failed" });
+      }
+
       req.session.user = {
         id: user._id.toString(),
         role: role || user.role, 
@@ -207,15 +212,23 @@ router.post("/login", async (req, res) => {
         managerId: user.managerId || null,
       };
 
-      // ✅ Audit Log: Login
-      await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
+      // ✅ FIX: Force the session to save to MongoDB BEFORE responding.
+      // This prevents the refresh bug where the client reloads before the DB write finishes.
+      req.session.save(async (saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ success: false, message: "Session save failed" });
+        }
 
-      res.json({
-        success: true,
-        message: "Login successful",
-        user: req.session.user,
-        role: role || user.role,
-        token: generateToken(user),
+        // ✅ Audit Log: Login
+        await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
+
+        res.json({
+          success: true,
+          message: "Login successful",
+          user: req.session.user,
+          role: role || user.role,
+          token: generateToken(user),
+        });
       });
     });
   } catch (error) {
@@ -338,7 +351,7 @@ router.post("/login", async (req, res) => {
 
 
 /* ======================
-   CHANGE PASSWORD - REQUEST OTP
+    CHANGE PASSWORD - REQUEST OTP
 ====================== */
 router.post(
   "/change-password/request",
@@ -387,7 +400,7 @@ router.post(
 );
 
 /* ======================
-   CHANGE PASSWORD - CONFIRM
+    CHANGE PASSWORD - CONFIRM
 ====================== */
 router.post(
   "/change-password/confirm",
@@ -463,16 +476,17 @@ router.post("/logout", async (req, res) => {
     await logAction(user.id, "LOGOUT", "USER_AUTH", "User logged out", req);
   }
 
-  req.session?.destroy(() => {
-    res.clearCookie("connect.sid");
+  req.session?.destroy((err) => {
+    res.clearCookie("breedit.sid"); // Use your specific cookie name from index.js
     res.json({ success: true, message: "Logged out successfully" });
   });
 });
 
 /* ======================
-    GET CURRENT USER
+    GET CURRENT USER (FIXED FOR REFRESH BUG)
 ====================== */
 router.get("/me", (req, res) => {
+  // Always prioritize the Session for EJS/Web apps
   if (req.session?.user) {
     return res.json({
       success: true,
@@ -493,6 +507,8 @@ router.get("/me", (req, res) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
+    // If we have a valid token but no session (e.g., first hit), 
+    // we could optionally reconstruct the session here.
     res.json({
       success: true,
       source: "jwt",
@@ -518,7 +534,7 @@ router.post("/register", async (req, res) => {
     }
 
     validatePassword(password);
-    verifyOTPInternal(email, otp);
+    await verifyOTPInternal(email, otp);
     await validateEmailLegitimacy(email);
 
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));

@@ -127,7 +127,8 @@ const swineSchema = new mongoose.Schema({
     heart_girth: { type: Number },
     teeth_count: { type: Number },
     leg_conformation: { type: String, default: "Normal" },
-    teat_count: { type: Number }, 
+    teat_count: { type: Number },
+    teat_alignment: { type: String, enum: ['Even', 'Uneven', 'N/A'], default: 'N/A'},
     deformities: { type: [String], default: ["None"] },
     passed_selection: { type: Boolean, default: true },
     recorded_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
