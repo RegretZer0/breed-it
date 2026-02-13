@@ -1,13 +1,45 @@
 <%- include("../../partials/farmer/farmer_nav") %>
 
-<div class="app-root">
-  <main class="calendar-container">
-    <h2 class="page-title">YOUR SCHEDULE</h2>
+<div class="calendar-root container-fluid py-4">
 
-  <div class="calendar-wrapper">
-    <h4 class="calendar-subtitle">Heat checks &amp; farrowing</h4>
-    <div id="calendar"></div>
+  <div class="row g-4">
+
+    <!-- ================= CALENDAR ================= -->
+    <div class="col-lg-8">
+      <div class="calendar-card">
+
+        <div class="calendar-header">
+          <div>
+            <h4>Breeding & Farrowing Schedule</h4>
+            <p>Monitor Artificial Insemination, Heat Re-checks, Farrowing & Weaning</p>
+          </div>
+        </div>
+
+        <div id="calendar"></div>
+
+      </div>
+    </div>
+
+    <!-- ================= TASK PANEL ================= -->
+    <div class="col-lg-4">
+      <div class="task-card-wrapper">
+
+        <div class="task-header">
+          <h4>Tasks</h4>
+          <span id="selectedDateLabel">No date selected</span>
+        </div>
+
+        <div id="taskPanel">
+          <div class="empty-state">
+            Click a calendar date to view tasks.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
+
 </div>
 
 <%- include("../../partials/farmer/farmer_footer") %>

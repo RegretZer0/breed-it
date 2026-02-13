@@ -1,100 +1,114 @@
 <%- include("../../partials/farmer/farmer_nav") %>
-
 <div class="app-root">
   <main class="profile-container">
-    <h2 class="page-title">PROFILE</h2>
 
-    <!-- VIEW PROFILE -->
-    <section id="viewProfile" class="profile-card">
+  <!-- PROFILE HEADER -->
+  <section class="profile-header-card">
+    <div class="profile-avatar" id="avatarPreview">
+      <i class="bi bi-person"></i>
+    </div>
 
-      <div class="profile-avatar" id="avatarPreview">
-        <i class="fa-solid fa-user"></i>
-      </div>
-
-      <!-- FULL NAME -->
-      <h3 id="profileName">Loading...</h3>
+    <div class="profile-header-info">
+      <h2 id="profileName">Loading...</h2>
       <p class="role">Pig Farmer</p>
+    </div>
+  </section>
 
-      <div class="info-row">
-        <span>Farmer ID</span>
-        <strong id="farmer_id">-</strong>
+
+  <!-- VIEW PROFILE CARD -->
+  <section id="viewProfile" class="profile-card modern-card">
+
+    <div class="info-grid">
+      <div class="info-item">
+        <label>Farmer ID</label>
+        <span id="farmer_id">-</span>
       </div>
 
-      <div class="info-row">
-        <span>Email</span>
-        <strong id="email">-</strong>
-      </div>
-      
-      <div class="info-row">
-        <span>Contact Number</span>
-        <strong id="contact_no">-</strong>
+      <div class="info-item">
+        <label>Email</label>
+        <span id="email">-</span>
       </div>
 
-      <div class="info-row">
-        <span>Address</span>
-        <strong id="address">-</strong>
+      <div class="info-item">
+        <label>Contact Number</label>
+        <span id="contact_no">-</span>
       </div>
 
-      <div class="info-row">
-        <span>Number of Pens</span>
-        <strong id="num_of_pens">0</strong>
+      <div class="info-item">
+        <label>Address</label>
+        <span id="address">-</span>
       </div>
 
-      <div class="info-row">
-        <span>Pen Capacity</span>
-        <strong id="pen_capacity">0</strong>
+      <div class="info-item">
+        <label>Number of Pens</label>
+        <span id="num_of_pens">0</span>
       </div>
 
-      <p id="profileMessage" class="small text-danger mt-2"></p>
-
-      <button class="edit-btn" id="editProfileBtn">
-        <i class="fa-solid fa-pen"></i> EDIT PROFILE
-      </button>
-    </section>
-
-    <!-- EDIT PROFILE (UI only) -->
-    <section id="editProfile" class="profile-card hidden">
-      <h4>Edit Profile</h4>
-
-      <label>Name</label>
-      <input type="text" id="editName" disabled />
-
-      <label>Email</label>
-      <input type="email" id="editEmail" disabled/>
-
-      <label>Contact Number</label>
-      <input
-        type="tel"
-        id="editContact_no"
-        required
-        pattern="^(09\d{9}|\+639\d{9})$"
-        placeholder="09XXXXXXXXX or +639XXXXXXXXX"
-        title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
-      />
-
-      <label>Address</label>
-      <input type="text" id="editAddress" required />
-
-      <label>Number of Pens</label>
-      <input type="number" id="editNumPens" min="0" required/>
-
-      <label>Pen Capacity</label>
-      <input type="number" id="editPenCapacity" min="0" required/>
-
-      <hr class="profile-divider">
-
-      <h5 class="mt-2">Change Password</h5>
-
-      <button type="button" class="edit-btn" id="openChangePassword">
-        Change Password
-      </button>
-
-
-      <div class="actions">
-        <button class="cancel-btn" id="cancelEdit">CANCEL</button>
-        <button class="save-btn">SAVE</button>
+      <div class="info-item">
+        <label>Pen Capacity</label>
+        <span id="pen_capacity">0</span>
       </div>
-    </section>
+    </div>
+
+    <button class="primary-btn edit-profile-btn" id="editProfileBtn">
+      <i class="bi bi-pencil"></i>
+      Edit Profile
+    </button>
+
+
+  </section>
+
+
+  <!-- EDIT PROFILE -->
+  <section id="editProfile" class="profile-card modern-card hidden">
+
+    <h3 class="section-title">Edit Profile</h3>
+
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="editName" disabled />
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="editEmail" disabled />
+      </div>
+
+      <div class="form-group">
+        <label>Contact Number</label>
+        <input type="tel" id="editContact_no" required />
+      </div>
+
+      <div class="form-group">
+        <label>Address</label>
+        <input type="text" id="editAddress" required />
+      </div>
+
+      <div class="form-group">
+        <label>Number of Pens</label>
+        <input type="number" id="editNumPens" min="0" required />
+      </div>
+
+      <div class="form-group">
+        <label>Pen Capacity</label>
+        <input type="number" id="editPenCapacity" min="0" required />
+      </div>
+
+    </div>
+
+    <button class="secondary-btn mt-3" id="openChangePassword">
+      Change Password
+    </button>
+
+    <div class="actions modern-actions">
+      <button class="cancel-btn" id="cancelEdit">Cancel</button>
+      <button class="primary-btn save-btn">Save</button>
+    </div>
+
+  </section>
+
   </main>
 </div>
 
@@ -118,6 +132,39 @@
     </div>
   </div>
 </div>
+
+  <!-- SUCCESS MODAL -->
+  <div id="successModal" class="success-overlay hidden">
+    <div class="success-modal">
+      <div class="success-icon">
+        <i class="bi bi-check-lg"></i>
+      </div>
+
+      <h3>Profile Updated</h3>
+      <p>Your profile changes have been saved successfully.</p>
+
+      <button id="closeSuccessModal" class="primary-btn w-100">
+        Continue
+      </button>
+    </div>
+</div>
+
+<!-- FAILED MODAL -->
+<div id="errorModal" class="error-overlay hidden">
+  <div class="error-modal">
+    <div class="error-icon">
+      <i class="bi bi-x-lg"></i>
+    </div>
+
+    <h3>Update Failed</h3>
+    <p>Something went wrong while saving your profile.</p>
+
+    <button id="closeErrorModal" class="error-btn w-100">
+      Try Again
+    </button>
+  </div>
+</div>
+
 
 <div id="changePasswordModal" class="modal hidden">
   <div class="modal-content change-password-modal">
@@ -168,5 +215,6 @@
     </div>
 
   </form>
+
 
 <%- include("../../partials/farmer/farmer_footer") %>

@@ -36,90 +36,92 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       RENDER RECENT (LIMIT 8)
   ========================= */
   function renderRecent() {
-    recentList.innerHTML = "";
-    const recent = allNotifications.slice(0, 8);
+  recentList.innerHTML = "";
+  const recent = allNotifications.slice(0, 8);
 
-    // Update Badge Visibility (Show if any notification is unread)
-    const hasUnread = allNotifications.some(n => !n.is_read);
-    if (notifBadge) {
-      notifBadge.style.display = hasUnread ? "block" : "none";
-    }
-
-    if (!recent.length) {
-      recentList.innerHTML =
-        `<li class="list-group-item text-muted text-center">No notifications</li>`;
-      return;
-    }
-
-    recent.forEach(n => {
-      const li = document.createElement("li");
-      // Add 'bg-light' or a custom class if the notification is unread
-      li.className = `list-group-item ${!n.is_read ? "fw-bold border-start border-primary border-4" : ""}`;
-      li.style.cursor = "pointer";
-
-      li.innerHTML = `
-        <div class="d-flex justify-content-between align-items-start">
-          <div>
-            <strong>${n.title}</strong>
-            <div class="small text-dark">${n.message}</div>
-            <div class="text-muted small mt-1">
-              ${new Date(n.created_at).toLocaleString()}
-            </div>
-          </div>
-          ${!n.is_read ? '<span class="badge rounded-pill bg-primary" style="font-size: 0.6rem;">NEW</span>' : ''}
-        </div>
-      `;
-
-      li.onclick = () => markAsRead(n._id);
-      recentList.appendChild(li);
-    });
+  const hasUnread = allNotifications.some(n => !n.is_read);
+  if (notifBadge) {
+    notifBadge.style.display = hasUnread ? "block" : "none";
   }
+
+  if (!recent.length) {
+    recentList.innerHTML =
+      `<div class="notification-item">
+         <div class="notification-message text-muted">
+           No notifications yet
+         </div>
+       </div>`;
+    return;
+  }
+
+  recent.forEach(n => {
+
+    const div = document.createElement("div");
+    div.className = `notification-item ${!n.is_read ? "unread" : ""}`;
+
+    div.innerHTML = `
+      <div class="notification-title">${n.title}</div>
+      <div class="notification-message">${n.message}</div>
+      <div class="notification-time">
+        ${new Date(n.created_at).toLocaleString()}
+      </div>
+    `;
+
+    div.onclick = () => markAsRead(n._id);
+
+    recentList.appendChild(div);
+  });
+}
+
 
   /* =========================
       HISTORY (Modal View)
   ========================= */
-  function renderHistory() {
+    function renderHistory() {
+
     let list = [...allNotifications];
-
-    if (typeFilter?.value) {
-      list = list.filter(n => n.type === typeFilter.value);
-    }
-
-    if (timeFilter?.value) {
-      const ranges = {
-        "24h": 86400000,
-        "7d": 604800000,
-        "30d": 2592000000
-      };
-      const cutoff = Date.now() - ranges[timeFilter.value];
-      list = list.filter(n => new Date(n.created_at).getTime() >= cutoff);
-    }
 
     historyList.innerHTML = "";
 
     if (!list.length) {
       historyList.innerHTML =
-        `<li class="list-group-item text-muted text-center">No notifications found in this range</li>`;
+        `<div class="notification-item">
+          <div class="notification-message text-muted">
+            No notifications found
+          </div>
+        </div>`;
       return;
     }
 
     list.forEach(n => {
-      const li = document.createElement("li");
-      li.className = `list-group-item ${!n.is_read ? "border-start border-primary border-3" : ""}`;
-      
-      li.innerHTML = `
-        <div class="d-flex justify-content-between">
+
+      const div = document.createElement("div");
+
+      div.className = `notification-item history ${!n.is_read ? "unread" : ""}`;
+
+      const typeClass = n.type?.toLowerCase() || "info";
+
+      div.innerHTML = `
+        <div class="notification-header">
           <strong>${n.title}</strong>
-          <small class="text-muted">${n.type.toUpperCase()}</small>
+          <span class="notification-type ${typeClass}">
+            ${n.type || "INFO"}
+          </span>
         </div>
-        <div class="my-1">${n.message}</div>
-        <div class="text-muted small">
+
+        <div class="notification-message">
+          ${n.message}
+        </div>
+
+        <div class="notification-time">
           ${new Date(n.created_at).toLocaleString()}
         </div>
       `;
-      historyList.appendChild(li);
+
+      historyList.appendChild(div);
     });
   }
+
 
   /* =========================
       MARK READ

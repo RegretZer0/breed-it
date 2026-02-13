@@ -268,46 +268,32 @@ if (changeAvatarBtn && avatarInput) {
     localStorage.setItem("lang", lang);
   }
 
-  /* =========================
-     SETTINGS (THEME + LANGUAGE)
+ /* =========================
+   SETTINGS (LANGUAGE ONLY)
   ========================= */
-  const themeToggle = document.getElementById("themeToggle");
-  const themeLabel = document.getElementById("themeLabel");
+
   const languageSelect = document.getElementById("languageSelect");
   const saveSettings = document.getElementById("saveSettings");
   const resetSettings = document.getElementById("resetSettings");
 
-  function applyTheme(theme) {
-    document.body.classList.toggle("dark", theme === "dark");
-    themeToggle.checked = theme === "dark";
-    themeLabel.textContent = theme === "dark" ? "Dark" : "Light";
-    localStorage.setItem("theme", theme);
-  }
-
   function loadSettings() {
-    const theme = localStorage.getItem("theme") || "light";
     const lang = localStorage.getItem("lang") || "en";
-    applyTheme(theme);
     applyLanguage(lang);
-    languageSelect.value = lang;
+    if (languageSelect) languageSelect.value = lang;
   }
 
   saveSettings?.addEventListener("click", () => {
-    applyTheme(themeToggle.checked ? "dark" : "light");
-    applyLanguage(languageSelect.value);
+    if (languageSelect) {
+      applyLanguage(languageSelect.value);
+    }
     alert("Settings saved");
   });
 
   resetSettings?.addEventListener("click", () => {
-    localStorage.clear();
-    applyTheme("light");
+    localStorage.removeItem("lang");
     applyLanguage("en");
-    languageSelect.value = "en";
+    if (languageSelect) languageSelect.value = "en";
     alert("Settings reset");
-  });
-
-  themeToggle?.addEventListener("change", () => {
-    themeLabel.textContent = themeToggle.checked ? "Dark" : "Light";
   });
 
   loadSettings();

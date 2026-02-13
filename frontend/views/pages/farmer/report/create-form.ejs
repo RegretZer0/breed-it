@@ -1,0 +1,106 @@
+<form id="heatReportForm" class="form-card">
+
+  <!-- ================= GENERAL ================= -->
+  <div class="form-section">
+    <h4>General Information</h4>
+
+    <label for="swineSelect">Select Pig</label>
+    <select id="swineSelect" required>
+      <option value="">Loading your swine...</option>
+    </select>
+  </div>
+
+
+  <!-- ================= HEAT SIGNS ================= -->
+  <div class="form-section">
+    <h4>Observed Heat Signs</h4>
+
+    <div class="heat-chips">
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Reddened Vulva">
+        <span>Reddened Vulva</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Swollen Vulva">
+        <span>Swollen Vulva</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Mucous Discharge">
+        <span>Mucous Discharge</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Seeking the Boar">
+        <span>Seeking the Boar</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Perked/Twitching Ears">
+        <span>Perked / Twitching Ears</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Standing Reflex">
+        <span>Standing Reflex</span>
+      </label>
+
+      <label class="chip">
+        <input type="checkbox" name="signs" value="Back Pressure Test">
+        <span>Back Pressure Test</span>
+      </label>
+
+    </div>
+
+    <small class="hint-text">Select all that apply</small>
+  </div>
+
+
+  <!-- ================= UPLOAD EVIDENCE ================= -->
+  <div class="form-section">
+    <h4>Upload Evidence</h4>
+
+    <div class="upload-box">
+
+      <input
+        type="file"
+        id="evidence"
+        name="evidence"
+        accept="image/*,video/*"
+        multiple
+        required
+        hidden
+      />
+
+      <button type="button" class="upload-btn" id="uploadBtn">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+
+      <span id="fileCountBadge" class="file-counter-badge"></span>
+
+      <div id="mediaPreview"></div>
+
+      <small class="hint-text">
+        Upload clear photos or videos (maximum 5 files)
+      </small>
+
+    </div>
+  </div>
+
+
+  <!-- ================= ACTIONS ================= -->
+  <div class="form-actions">
+    <button type="button" class="cancel-btn" id="cancelCreate">
+      CANCEL
+    </button>
+
+    <button type="submit" class="btn-submit send-btn">
+      SEND REPORT
+    </button>
+  </div>
+
+  <p id="reportMessage"></p>
+
+</form>

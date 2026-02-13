@@ -101,7 +101,14 @@ router.put("/profile", requireApiLogin, async (req, res) => {
       userObjectId = new mongoose.Types.ObjectId(user.id);
     }
 
-    const { name, email, contact_no, address } = req.body;
+    const {
+      name,
+      email,
+      contact_no,
+      address,
+      num_of_pens,
+      pen_capacity,
+    } = req.body;
 
     const update = {};
 
@@ -110,11 +117,18 @@ router.put("/profile", requireApiLogin, async (req, res) => {
       update.first_name = parts.shift();
       update.last_name = parts.join(" ");
     }
+
     if (email) update.email = email;
     if (contact_no) update.contact_no = contact_no;
     if (address) update.address = address;
 
-    const updatedFarmer = await Farmer.findOneAndUpdate(
+    if (typeof num_of_pens !== "undefined")
+      update.num_of_pens = Number(num_of_pens);
+
+    if (typeof pen_capacity !== "undefined")
+      update.pen_capacity = Number(pen_capacity);
+
+    const updatedFarmerDoc = await Farmer.findOneAndUpdate(
       {
         $or: [
           userObjectId ? { user_id: userObjectId } : null,
@@ -122,35 +136,37 @@ router.put("/profile", requireApiLogin, async (req, res) => {
         ].filter(Boolean),
       },
       { $set: update },
-      { new: true }
-    ).lean();
+      { new: true, runValidators: true }
+    ).select("-password");
 
-    if (!updatedFarmer) {
+    if (!updatedFarmerDoc) {
       return res.status(404).json({
         success: false,
         message: "Farmer profile not found",
       });
     }
 
-    // ✅ Audit Log: Update Profile
-    // We use user.id (the ID from session/token) to ensure it appears in their audit history
-    await logAction(
-      user.id, 
-      "UPDATE_USER", 
-      "USER_AUTH", 
-      `Farmer updated their profile details (Email: ${updatedFarmer.email})`, 
-      req
-    );
+    const updatedFarmer = updatedFarmerDoc.toObject();
 
     updatedFarmer.name =
       `${updatedFarmer.first_name || ""} ${updatedFarmer.last_name || ""}`.trim();
 
+    await logAction(
+      user.id,
+      "UPDATE_USER",
+      "USER_AUTH",
+      `Farmer updated profile`,
+      req
+    );
+
     res.json({ success: true, farmer: updatedFarmer });
+
   } catch (err) {
     console.error("Update farmer profile error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
+
 
 /* ======================================================
     GET ALL PIGS UNDER A SPECIFIC FARMER (Manager/Encoder)

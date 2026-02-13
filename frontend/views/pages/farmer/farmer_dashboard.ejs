@@ -1,10 +1,9 @@
 <%- include("../../partials/farmer/farmer_nav") %>
 
 <div class="app-root">
-<!-- MAIN CONTENT -->
 <main class="dashboard-container">
 
-  <!-- GREETING (MOVED HERE) -->
+  <!-- GREETING -->
   <div class="dashboard-greeting">
     <h2>Hello, <%= user?.first_name || "Farmer" %></h2>
     <p id="phDateTime">Loading date and time...</p>
@@ -15,58 +14,58 @@
   <div class="dashboard-grid">
 
     <!-- MY PIGS -->
-    <a href="/farmer/mypigs" class="dashboard-card">
-      <div class="icon-circle green">
-        <i class="fa-solid fa-piggy-bank"></i>
+    <a href="/farmer/my-pigs/" class="dashboard-card">
+      <div class="icon-circle">
+        <i class="bi bi-piggy-bank"></i>
       </div>
       <span data-i18n="my_pigs">MY PIGS</span>
     </a>
 
     <!-- REPORT -->
-    <a href="/farmer/report" class="dashboard-card">
-      <div class="icon-circle blue">
-        <i class="fa-solid fa-file-pen"></i>
+    <a href="/farmer/report/" class="dashboard-card">
+      <div class="icon-circle">
+        <i class="bi bi-file-earmark-text"></i>
       </div>
       <span data-i18n="report">REPORT</span>
     </a>
 
     <!-- YOUR SCHEDULE -->
     <a href="/farmer/calendar" class="dashboard-card">
-      <div class="icon-circle teal">
-        <i class="fa-solid fa-calendar-check"></i>
+      <div class="icon-circle">
+        <i class="bi bi-calendar-check"></i>
       </div>
       <span class="card-title">YOUR SCHEDULE</span>
       <small class="card-subtitle">Heat checks &amp; farrowing</small>
     </a>
 
-    <!-- REPRODUCTION & GROWTH -->
+    <!-- REPRODUCTION MONITORING -->
     <a href="/farmer/reproduction" class="dashboard-card">
-      <div class="icon-circle red">
-        <i class="fa-solid fa-chart-line"></i>
+      <div class="icon-circle">
+        <i class="bi bi-graph-up-arrow"></i>
       </div>
       <span class="card-title">REPRODUCTION MONITORING</span>
     </a>
 
     <!-- BREEDING ANALYTICS -->
     <a href="/farmer/breeding-analytics" class="dashboard-card">
-      <div class="icon-circle yellow">
-        <i class="fa-solid fa-dna"></i>
+      <div class="icon-circle">
+        <i class="bi bi-activity"></i>
       </div>
       <span class="card-title">BREEDING ANALYTICS</span>
     </a>
 
     <!-- PROFILE -->
     <a href="/farmer/profile" class="dashboard-card">
-      <div class="icon-circle orange">
-        <i class="fa-solid fa-user"></i>
+      <div class="icon-circle">
+        <i class="bi bi-person"></i>
       </div>
       <span data-i18n="profile">PROFILE</span>
     </a>
 
     <!-- HELP -->
     <a href="/farmer/help" class="dashboard-card">
-      <div class="icon-circle purple">
-        <i class="fa-solid fa-question"></i>
+      <div class="icon-circle">
+        <i class="bi bi-question-circle"></i>
       </div>
       <span data-i18n="help">HELP</span>
     </a>
@@ -75,4 +74,5 @@
 
 </main>
 </div>
+
 <%- include("../../partials/farmer/farmer_footer") %>

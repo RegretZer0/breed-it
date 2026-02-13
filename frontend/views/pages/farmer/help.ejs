@@ -1,23 +1,50 @@
 <%- include("../../partials/farmer/farmer_nav") %>
+
 <div class="app-root">
- <!-- CONTENT -->
   <main class="help-container">
-    <h2 class="page-title">HELP</h2>
 
-    <div class="help-card">
-      <span>VIDEO TUTORIALS</span>
-      <i class="fa-solid fa-chevron-right"></i>
-    </div>
+    <!-- HEADER SECTION -->
+    <section class="help-hero">
+      <h2>Need Help?</h2>
+      <p>Find guides, answers and support quickly.</p>
+    </section>
 
-    <div class="help-card">
-      <span>FREQUENT ASKED QUESTIONS</span>
-      <i class="fa-solid fa-chevron-right"></i>
-    </div>
+    <!-- HELP OPTIONS -->
+    <section class="help-options">
 
-    <div class="help-card">
-      <span>SUPPORT</span>
-      <i class="fa-solid fa-chevron-right"></i>
-    </div>
+      <div class="help-card">
+        <div class="card-left">
+          <div class="card-icon">
+            <i class="fa-solid fa-video"></i>
+          </div>
+          <span>Video Tutorials</span>
+        </div>
+        <i class="fa-solid fa-chevron-right arrow"></i>
+      </div>
+
+      <div class="help-card">
+        <div class="card-left">
+          <div class="card-icon">
+            <i class="fa-solid fa-circle-question"></i>
+          </div>
+          <span>Frequently Asked Questions</span>
+        </div>
+        <i class="fa-solid fa-chevron-right arrow"></i>
+      </div>
+
+      <div class="help-card">
+        <div class="card-left">
+          <div class="card-icon">
+            <i class="fa-solid fa-headset"></i>
+          </div>
+          <span>Support</span>
+        </div>
+        <i class="fa-solid fa-chevron-right arrow"></i>
+      </div>
+
+    </section>
+
   </main>
 </div>
+
 <%- include("../../partials/farmer/farmer_footer") %>

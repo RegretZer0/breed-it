@@ -1,131 +1,378 @@
+/* =========================================
+   GLOBAL NAVBAR OFFSET FIX
+========================================= */
 
-/* =========================
-   VISIBILITY HELPERS
-========================= */
-.hidden {
-  display: none;
+/* This ensures content NEVER hides under fixed nav */
+body {
+  padding-top: 90px; /* adjust to your exact navbar height */
 }
 
-
-/* =========================
-   PAGE CONTAINER
-========================= */
-.calendar-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: auto;
+/* Remove any conflicting margins */
+.calendar-root {
+  background: #f3f6f5;
+  min-height: calc(100vh - 90px);
+  padding: 30px 20px 40px 20px;
 }
 
-/* =========================
-   TITLES
-========================= */
-.page-title {
-  text-align: center;
-  margin: 28px 0 8px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+/* =========================================
+   ROW SPACING FIX
+========================================= */
+
+.calendar-root .row {
+  margin-top: 0 !important;
 }
 
-.calendar-subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 16px;
-}
+/* =========================================
+   MAIN CARDS
+========================================= */
 
-/* =========================
-   CALENDAR WRAPPER
-========================= */
-.calendar-wrapper {
+.calendar-card,
+.task-card-wrapper {
   background: #ffffff;
-  border-radius: 14px;
-  padding: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.05);
+  height: 100%;
+  transition: 0.3s ease;
 }
 
-/* =========================
-   FULLCALENDAR BASE
-========================= */
-#calendar {
-  font-size: 12px; /* Mobile-first */
+/* =========================================
+   HEADER (GREEN GRADIENT)
+========================================= */
+
+.calendar-header {
+  background: linear-gradient(135deg, #1fbf8f, #16a085);
+  padding: 22px 24px;
+  border-radius: 18px;
+  color: white;
+  margin-bottom: 24px;
 }
 
-/* Reduce header clutter on small screens */
+.calendar-header h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.calendar-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.task-header h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.task-header span {
+  font-size: 13px;
+  color: #8a8a8a;
+}
+
+/* =========================================
+   FULLCALENDAR MODERN LOOK
+========================================= */
+
+/* Remove grid borders */
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border: none !important;
+}
+
+/* Day cells */
+.fc-daygrid-day-frame {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 8px;
+  border: 1px solid #eef2f1;
+  transition: 0.25s ease;
+}
+
+.fc-daygrid-day-frame:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+/* Selected + Today */
+.fc-day-today .fc-daygrid-day-frame,
+.selected-day .fc-daygrid-day-frame {
+  border: 2px solid #1fbf8f;
+}
+
+/* Toolbar */
 .fc .fc-toolbar {
-  flex-wrap: wrap;
-  gap: 6px;
+  margin-bottom: 20px;
 }
 
 .fc .fc-toolbar-title {
-  font-size: 1rem;
-  font-weight: 700;
-  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
 }
 
-/* Buttons */
 .fc .fc-button {
+  background: #f3f6f5;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+.fc .fc-button-primary.fc-button-active {
+  background: #1fbf8f;
+  color: white;
+}
+
+/* Event badge */
+.fc-custom-event {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(31, 191, 143, 0.08);
 }
 
-/* Day numbers */
+/* =========================================
+   WEEKDAY HEADER THEME COLOR
+========================================= */
+
+.fc .fc-col-header-cell-cushion {
+  color: #16a085 !important;   /* Theme green */
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.fc .fc-col-header-cell {
+  background: transparent;
+}
+
+/* =========================================
+   DAY NUMBER THEME COLOR FIX
+========================================= */
+
 .fc .fc-daygrid-day-number {
-  font-size: 11px;
+  color: #1fbf8f !important;   /* Theme green */
+  font-weight: 600;
+  text-decoration: none;
 }
 
-/* Event pills */
-.fc-event {
-  font-size: 11px;
-  padding: 2px 4px;
-  border-radius: 6px;
+.fc .fc-daygrid-day-number:hover {
+  color: #16a085 !important;
 }
 
-/* Prevent text overflow */
-.fc-event-title {
+/* =========================================
+   FIX EVENT OVERFLOW
+========================================= */
+
+/* Prevent event from overflowing day cell */
+.fc-daygrid-event {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+/* Clean event badge */
+.fc-custom-event {
+  width: 100%;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(31, 191, 143, 0.12);
+}
+
+/* Prevent icon pushing layout */
+.fc-custom-event i {
+  flex-shrink: 0;
+}
+
+/* Make title truncate properly */
+.fc-custom-event span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* =========================
-   TABLET VIEW
-========================= */
-@media (min-width: 600px) {
-  #calendar {
-    font-size: 13px;
+/* =========================================
+   TOOLBAR BUTTON IMPROVEMENT
+========================================= */
+
+.fc .fc-button {
+  background: #ffffff;
+  border: 1px solid #dfe7e5;
+  border-radius: 10px;
+  font-size: 13px;
+  padding: 6px 12px;
+  color: #2c3e50;
+  font-weight: 500;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+  transition: 0.2s ease;
+}
+
+/* Hover */
+.fc .fc-button:hover {
+  background: #1fbf8f;
+  color: #ffffff;
+  border-color: #1fbf8f;
+}
+
+/* Active */
+.fc .fc-button-primary.fc-button-active {
+  background: #16a085;
+  color: white;
+  border-color: #1fbf8f;
+}
+
+/* Disabled arrows */
+.fc .fc-button:disabled {
+  opacity: 0.4;
+}
+
+/* =========================================
+   TASK PANEL
+========================================= */
+
+#taskPanel {
+  margin-top: 20px;
+  overflow-y: auto;
+  max-height: 60vh;
+  padding-right: 6px;
+}
+
+#taskPanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+#taskPanel::-webkit-scrollbar-thumb {
+  background: #dcdcdc;
+  border-radius: 10px;
+}
+
+.empty-state {
+  font-size: 13px;
+  color: #9a9a9a;
+}
+
+/* Task Card */
+.task-card {
+  background: #f9fbfa;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+  transition: 0.25s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-3px);
+}
+
+.task-card .btn-success {
+  background: linear-gradient(135deg, #1fbf8f, #16a085);
+  border: none;
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 6px 14px;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 992px) {
+
+  body {
+    padding-top: 80px; /* slightly smaller navbar on mobile */
   }
 
-  .fc .fc-toolbar-title {
-    font-size: 1.2rem;
+  .calendar-card,
+  .task-card-wrapper {
+    padding: 20px;
   }
 
-  .fc .fc-button {
-    font-size: 13px;
-    padding: 6px 10px;
-  }
-
-  .fc-event {
-    font-size: 12px;
+  .calendar-header {
+    padding: 18px;
   }
 }
 
-/* =========================
-   DESKTOP VIEW
-========================= */
-@media (min-width: 992px) {
-  .calendar-wrapper {
-    padding: 16px;
+/* =========================================
+   MOBILE FIX (Clean & Compact)
+========================================= */
+
+@media (max-width: 576px) {
+
+  body {
+    padding-top: 80px;
   }
 
-  #calendar {
-    font-size: 14px;
+  .calendar-root {
+    padding: 20px 12px 30px 12px;
+  }
+
+  .calendar-card,
+  .task-card-wrapper {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .calendar-header {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .calendar-header h4 {
+    font-size: 15px;
+  }
+
+  .calendar-header p {
+    font-size: 12px;
+  }
+
+  /* Toolbar Wrap Better */
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .fc .fc-toolbar-title {
-    font-size: 1.4rem;
+    font-size: 14px;
+    text-align: center;
+    width: 100%;
   }
 
-  .fc-event {
+  .fc .fc-button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /* Calendar Day Cells */
+  .fc .fc-daygrid-day-frame {
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .fc .fc-daygrid-day-number {
     font-size: 13px;
+  }
+
+  /* Prevent event overflow */
+  .fc-daygrid-event {
+    font-size: 10px;
+  }
+
+  /* Task panel */
+  #taskPanel {
+    max-height: 45vh;
+  }
+
+  .task-card {
+    padding: 14px;
+    border-radius: 14px;
   }
 }

@@ -186,56 +186,69 @@ document.addEventListener("DOMContentLoaded", async () => {
         const swineDisplay = r.swine_id?.swine_id || "Unknown";
         pigSet.add(swineDisplay);
 
-        const rawStatus = (r.status || "pending").toLowerCase().trim().replace(/\s+/g, "_");
-        const displayStatus = (r.status || "pending").replace(/_/g, " ");
-        const isRejected = rawStatus === "rejected";
-        const isProcessed = rawStatus !== "pending" && !isRejected;
-        
-        const heatCheckDate = r.next_heat_check ? new Date(r.next_heat_check) : null;
-        const farrowingDate = r.expected_farrowing ? new Date(r.expected_farrowing) : null;
-        const actualFarrowDate = r.actual_farrowing_date ? new Date(r.actual_farrowing_date) : farrowingDate;
-        
-        if (heatCheckDate) heatCheckDate.setHours(0,0,0,0);
-        const isReadyForPregnancy = rawStatus === "under_observation" && heatCheckDate && now.getTime() >= heatCheckDate.getTime();
+        const rawStatus = (r.status || "pending")
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, "_");
 
-        // WEANING LOGIC: Ready if status is lactating and 30 days passed since farrowing
-        const isLactating = rawStatus === "lactating";
-        let isReadyToWean = false;
-        if (isLactating && actualFarrowDate) {
-            const weanThreshold = new Date(actualFarrowDate);
-            weanThreshold.setDate(weanThreshold.getDate() + 30);
-            isReadyToWean = now.getTime() >= weanThreshold.getTime();
-        }
+        const displayStatus = (r.status || "pending").replace(/_/g, " ");
+
+        const heatCheckDate = r.next_heat_check
+          ? new Date(r.next_heat_check)
+          : null;
+
+        const farrowingDate = r.expected_farrowing
+          ? new Date(r.expected_farrowing)
+          : null;
 
         return `
-          <tr data-status="${rawStatus}" data-swine="${swineDisplay}" data-date="${r.createdAt.split('T')[0]}">
-            <td>${swineDisplay}</td>
-            <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-            <td>
-              <div style="text-transform: capitalize; font-weight: bold; color: ${isRejected ? "#e74c3c" : isProcessed ? "#27ae60" : "#2c3e50"};">
+          <div class="report-item"
+              data-status="${rawStatus}"
+              data-swine="${swineDisplay}"
+              data-date="${r.createdAt.split("T")[0]}">
+
+            <div class="report-header">
+              <div>
+                <div class="report-id">${swineDisplay}</div>
+                <div class="report-date">
+                  ${new Date(r.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+
+              <div class="report-status-pill ${rawStatus}">
                 ${displayStatus === "approved" ? "AI Scheduled" : displayStatus}
               </div>
-              <button class="btn-view-evidence" onclick="viewEvidence('${r._id}')" style="margin-top:5px; padding:2px 8px; font-size:0.7em; cursor:pointer;">View Evidence</button>
-              ${isProcessed ? `<div style="margin-top:4px;font-size:0.75em;color:#27ae60;opacity:0.8;">Update: ${new Date(r.updatedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</div>` : ""}
-              ${isRejected && r.rejection_message ? `<div class="rejection-note" style="margin-top:8px;padding:8px;background:#fff5f5;border:1px solid #feb2b2;border-radius:4px;font-size:0.8em;color:#c53030;"><strong>Reason:</strong><br>"${r.rejection_message}"</div>` : ""}
-            </td>
-            <td>
-              ${heatCheckDate ? `<b>${rawStatus === "approved" ? "AI Date" : "Check Date"}:</b> ${heatCheckDate.toLocaleDateString()} <br><span class="next-heat" data-date="${r.next_heat_check}" style="font-size: 0.85em; color: #3498db;">-</span>` : "-"}
-            </td>
-            <td>
-              ${farrowingDate ? `<b>Target:</b> ${farrowingDate.toLocaleDateString()} <br><span class="farrowing" data-date="${r.expected_farrowing}" style="font-size: 0.85em; color: #27ae60; font-weight:bold;">-</span>` : "-"}
-            </td>
-            <td>
-              ${["waiting_heat_check", "under_observation", "approved", "lactating"].includes(rawStatus) ? `
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  ${rawStatus !== "approved" && !isLactating ? `<button class="btn-followup" onclick="submitFollowUp('${r._id}','${swineDisplay}')">Back in Heat</button>` : ""}
-                  ${rawStatus === "under_observation" ? `<button class="btn-pregnant" ${!isReadyForPregnancy ? "disabled" : ""} onclick="confirmPregnancy('${r._id}','${swineDisplay}')">Confirm Pregnant</button>` : ""}
-                  ${isLactating ? `<button class="btn-wean" ${!isReadyToWean ? "disabled" : ""} onclick="confirmWeaning('${r._id}','${swineDisplay}')" style="background-color:#9b59b6; color:white; border:none; padding:5px; border-radius:4px; cursor:${isReadyToWean ? 'pointer' : 'not-allowed'}; opacity:${isReadyToWean ? '1' : '0.6'};">Confirm Weaning</button>` : ""}
-                  ${rawStatus === "approved" ? `<span style="font-size:0.8em;color:#3498db;">Waiting for Admin</span>` : ""}
-                </div>` : isRejected ? `<span style="color:#e74c3c;font-weight:bold;">Report Denied</span>` : `<span style="color:#888;">No Action Needed</span>`}
-            </td>
-          </tr>`;
+            </div>
+
+            <div class="report-meta">
+
+              <div>
+                <label>Next Heat</label>
+                <span class="next-heat" data-date="${r.next_heat_check || ""}">
+                  ${heatCheckDate ? heatCheckDate.toLocaleDateString() : "-"}
+                </span>
+              </div>
+
+              <div>
+                <label>Expected Farrowing</label>
+                <span class="farrowing" data-date="${r.expected_farrowing || ""}">
+                  ${farrowingDate ? farrowingDate.toLocaleDateString() : "-"}
+                </span>
+              </div>
+
+            </div>
+
+            <div class="report-actions">
+              <button class="btn-view-evidence"
+                      onclick="viewEvidence('${r._id}')">
+                View Evidence
+              </button>
+            </div>
+
+          </div>
+        `;
       }).join("");
+
 
       const currentVal = pigFilter.value;
       pigFilter.innerHTML = '<option value="">All pigs</option>' + [...pigSet].sort().map(p => `<option value="${p}">${p}</option>`).join("");
@@ -262,13 +275,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       }).join('');
 
       const modal = document.createElement('div');
-      modal.style = "position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:20px;";
+      modal.className = "evidence-overlay";
       modal.innerHTML = `
-        <div style="background:white; padding:20px; border-radius:12px; max-width:90%; max-height:90%; overflow-y:auto; position:relative;">
-          <button style="position:absolute; top:10px; right:10px; border:none; background:none; font-size:24px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">×</button>
+        <div class="evidence-modal">
+          <button class="evidence-close" onclick="this.closest('.evidence-overlay').remove()">×</button>
           <h3>Evidence for ${report.swine_id?.swine_id || "Swine"}</h3>
-          <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">${evidenceHtml}</div>
-          <p style="margin-top:15px;"><strong>Signs:</strong> ${report.signs.join(', ')}</p>
+
+          <div class="evidence-gallery">
+            ${evidenceHtml}
+          </div>
+
+          <div class="evidence-signs">
+            <strong>Observed Signs:</strong><br>
+            ${report.signs.join(', ')}
+          </div>
         </div>
       `;
       document.body.appendChild(modal);
@@ -378,8 +398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const data = await res.json();
       if (res.ok) {
-        reportMessage.style.color = "green";
-        reportMessage.textContent = "Heat report submitted!";
+          reportMessage.textContent = "Heat report submitted!";
         await sendAdminNotification("New Heat Report", `Farmer ${user.first_name} submitted a new report for ${swineSelect.value}.`, "info");
         reportForm.reset();
         selectedFiles = [];
@@ -399,15 +418,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------- FILTER LOGIC ----------------
   searchBtn?.addEventListener("click", () => {
     const s = statusFilter.value, d = dateFilter.value, p = pigFilter.value;
-    reportsTableBody.querySelectorAll("tr").forEach(row => {
-      const match = (!s || row.dataset.status === s) && (!d || row.dataset.date === d) && (!p || row.dataset.swine === p);
+    reportsTableBody.querySelectorAll(".report-item").forEach(card => {
+      const match = (!s || card.dataset.status === s) && (!d || row.dataset.date === d) && (!p || row.dataset.swine === p);
       row.style.display = match ? "" : "none";
     });
   });
 
   clearFilterBtn?.addEventListener("click", () => {
     [statusFilter, dateFilter, pigFilter].forEach(f => f.value = "");
-    reportsTableBody.querySelectorAll("tr").forEach(row => row.style.display = "");
+    reportsTableBody.querySelectorAll(".report-item").forEach(row => row.style.display = "");
   });
 
   document.getElementById("logoutBtn")?.addEventListener("click", () => {

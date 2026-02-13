@@ -1,0 +1,36 @@
+<div id="editPigModal" class="modal hidden">
+  <div class="modal-content">
+
+    <span id="closeEditModal" class="modal-close">&times;</span>
+
+    <h3>Edit Pig</h3>
+
+    <form id="editPigForm">
+
+      <input type="hidden" id="editPigId" />
+
+      <label>Health</label>
+      <select id="editHealth">
+        <option value="Healthy">Healthy</option>
+        <option value="Sick">Sick</option>
+        <option value="Injured">Injured</option>
+      </select>
+
+      <label>Status</label>
+      <select id="editStatus">
+        <option value="Open">Open</option>
+        <option value="Monitoring">Monitoring</option>
+        <option value="Under Observation">Under Observation</option>
+      </select>
+
+      <label>Notes</label>
+      <textarea id="editNotes"></textarea>
+
+      <button type="submit" class="primary-btn">
+        Save Changes
+      </button>
+
+    </form>
+
+  </div>
+</div>

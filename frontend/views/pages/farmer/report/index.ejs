@@ -1,0 +1,59 @@
+<%- include("../../../partials/farmer/farmer_nav") %>
+
+<div class="app-root">
+  <main class="report-container">
+    <h2 class="page-title">REPORT</h2>
+
+    <!-- TABS -->
+    <div class="report-tabs">
+      <button class="tab active" id="logsTab">LOGS</button>
+      <button class="tab outline" id="createTab">CREATE REPORT</button>
+    </div>
+
+    <!-- ================= LOGS ================= -->
+    <section id="logsSection">
+
+      <!-- HERO HEADER -->
+      <div class="report-hero">
+        <div>
+          <h2>Heat Monitoring</h2>
+          <p>Track breeding cycle and pregnancy progress</p>
+        </div>
+      </div>
+
+      <%- include("./filter") %>
+
+      <!-- REPORT CARDS -->
+      <div id="reportsTableBody" class="reports-list">
+        <div class="empty-state">
+          Checking for active reports...
+        </div>
+      </div>
+
+    </section>
+
+
+
+    <!-- ================= CREATE REPORT ================= -->
+    <section id="createSection" class="hidden">
+
+      <div class="create-hero">
+        <h3>Create Heat Report</h3>
+        <p>Submit signs of heat and evidence for review</p>
+      </div>
+
+      <%- include("./create-form") %>
+
+    </section>
+
+
+  </main>
+</div>
+
+<!-- ================= MODALS ================= -->
+<%- include("./modal") %>
+<%- include("./edit-modal") %>
+
+<%- include("../../../partials/farmer/farmer_footer") %>
+
+<script type="module" src="/js/reports/index.js"></script>

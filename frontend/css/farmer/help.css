@@ -1,44 +1,104 @@
 /* =========================
+   ROOT APP BACKGROUND
+========================= */
+.app-root {
+  min-height: 100vh;
+  background: #f3f6f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================
    HELP CONTAINER
 ========================= */
 .help-container {
   padding: 24px;
-  padding-top: 80px; 
-  max-width: 1200px;
+  padding-top: 90px;
+  max-width: 1100px;
   margin: auto;
-  flex: 1;
   width: 100%;
 }
 
 /* =========================
-   PAGE TITLE
+   HERO SECTION (GREEN HEADER)
 ========================= */
-.page-title {
-  text-align: center;
-  margin: 32px 0 24px;
-  font-weight: 800;
+.help-hero {
+  background: linear-gradient(135deg, #1fbf8f, #16a085);
+  color: white;
+  padding: 40px 28px;
+  border-radius: 24px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
+  margin-bottom: 40px;
+}
+
+.help-hero h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.help-hero p {
+  margin-top: 8px;
+  opacity: 0.9;
+  font-size: 14px;
 }
 
 /* =========================
-   HELP CARDS
+   HELP OPTIONS WRAPPER
+========================= */
+.help-options {
+  display: flex;
+  flex-direction: column;
+  gap: 28px; /* more space between cards */
+  margin-top: 10px;
+}
+
+/* =========================
+   HELP CARDS (SOFT FLOATING)
 ========================= */
 .help-card {
-  border: 1.5px solid #bdbdbd;
-  border-radius: 14px;
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  background: white;
+  border-radius: 22px;
+  padding: 24px 26px; /* more internal breathing room */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  width: 100%;
+}
+
+/* Hover effect */
+.help-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* LEFT SIDE */
+.card-left {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  gap: 16px;
+  font-weight: 600;
+  color: #333;
 }
 
-.help-card:hover {
-  background: #f8f8f8;
+/* ICON STYLE */
+.card-icon {
+  background: rgba(31, 191, 143, 0.1);
+  color: #1fbf8f;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
 }
 
-.help-card i {
-  font-size: 18px;
+/* RIGHT ARROW */
+.arrow {
+  color: #bdbdbd;
+  font-size: 16px;
 }

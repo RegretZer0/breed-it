@@ -1,0 +1,79 @@
+<%- include("../../../partials/farmer/farmer_nav") %>
+    <div class="pigs-container">
+
+  <!-- SUMMARY CARD -->
+  <div class="summary-card">
+    <div class="summary-left">
+      <h2><i class="bi bi-piggy-bank"></i> My Pigs</h2>
+      <p>Manage your livestock efficiently</p>
+    </div>
+
+    <div class="summary-stats">
+      <div>
+        <span id="totalCount">0</span>
+        <small>Total</small>
+      </div>
+
+      <div class="healthy">
+        <span id="healthyCount">0</span>
+        <small>Healthy</small>
+      </div>
+
+      <div class="sick">
+        <span id="sickCount">0</span>
+        <small>Sick</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER CARD -->
+  <div class="filter-card">
+
+    <!-- KEEP ORIGINAL ID -->
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input 
+        type="text" 
+        id="searchInput"
+        placeholder="Search by Tag ID..."
+      />
+    </div>
+
+    <!-- KEEP ORIGINAL CLASS + data-type -->
+    <div class="type-tabs">
+      <button class="tab-btn active" data-type="all">All</button>
+      <button class="tab-btn" data-type="piglet">Piglets</button>
+      <button class="tab-btn" data-type="sow">Sows</button>
+      <button class="tab-btn" data-type="boar">Boars</button>
+    </div>
+
+  </div>
+
+  <!-- KEEP ORIGINAL ID -->
+  <p id="loadingMessage" class="loading-message hidden">
+    Loading your pigs...
+  </p>
+
+  <!-- KEEP ORIGINAL ID -->
+  <div id="pigList" class="pig-list"></div>
+
+  <!-- KEEP ORIGINAL IDs -->
+  <div class="pagination">
+    <button id="prevPage">
+      <i class="bi bi-chevron-left"></i>
+    </button>
+
+    <span id="pageInfo">Page 1 of 1</span>
+
+    <button id="nextPage">
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+
+    </div>
+
+
+<!-- MODAL -->
+<%- include("./modal") %>
+
+<%- include("../../../partials/farmer/farmer_footer") %>

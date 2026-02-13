@@ -3,20 +3,160 @@ import { authGuard } from "/js/authGuard.js";
 document.addEventListener("DOMContentLoaded", async () => {
   const BACKEND_URL = "http://localhost:5000";
 
-  // 🔐 Authenticate user as 'farmer'
   const user = await authGuard("farmer");
   if (!user) return;
 
   const token = localStorage.getItem("token");
 
   const calendarEl = document.getElementById("calendar");
-  if (!calendarEl) return;
+  const taskPanel = document.getElementById("taskPanel");
+  const selectedDateLabel = document.getElementById("selectedDateLabel");
 
+  if (!calendarEl || !window.FullCalendar) {
+    console.warn("Calendar element or FullCalendar not found");
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // ================================
+  // FETCH EVENTS
+  // ================================
+  async function fetchCalendarEvents(info, success, failure) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat/calendar-events`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await res.json();
+      if (data.success) success(data.events);
+      else failure(data.message);
+
+    } catch (err) {
+      console.error(err);
+      failure(err);
+    }
+  }
+
+  // ================================
+  // EVENT STYLE (Manager Design)
+  // ================================
+  function renderCustomEvent(arg) {
+    const status = (arg.event.extendedProps.status || "").toLowerCase();
+
+    const statusMap = {
+      "in-heat": { color: "#ff9a1f", icon: "bi-fire" },
+      "under observation": { color: "#1ea7ff", icon: "bi-eye" },
+      "pregnant": { color: "#43c572", icon: "bi-heart-fill" },
+      "farrowing": { color: "#cf2631", icon: "bi-exclamation-triangle-fill" },
+      "lactating": { color: "#eb79ae", icon: "bi-droplet-fill" },
+      "completed": { color: "#6c757d", icon: "bi-check-circle-fill" }
+    };
+
+    const config = statusMap[status] || {
+      color: "#adb5bd",
+      icon: "bi-calendar-event"
+    };
+
+    return {
+      html: `
+        <div class="fc-custom-event"
+             style="border-left:4px solid ${config.color};
+                    color:${config.color};
+                    padding-left:4px;">
+          <i class="bi ${config.icon}"></i>
+          <span>${arg.event.title}</span>
+        </div>
+      `
+    };
+  }
+
+  // ================================
+  // EVENT CLICK → FARMER ACTION
+  // ================================
+  function handleEventClick(info) {
+    const swineId = info.event.extendedProps.swineId;
+
+    window.location.href = swineId
+      ? `/farmer/report?swineId=${swineId}`
+      : `/farmer/report`;
+  }
+
+  // ================================
+  // DATE CLICK
+  // ================================
+  function handleDateClick(info) {
+    highlightDate(info.dateStr);
+    renderEventsForDate(info.dateStr);
+  }
+
+  function renderEventsForDate(dateStr) {
+    if (!taskPanel) return;
+
+    const events = calendar.getEvents().filter(e =>
+      e.startStr === dateStr
+    );
+
+    if (selectedDateLabel) {
+      selectedDateLabel.textContent = `Events on ${dateStr}`;
+    }
+
+    if (!events.length) {
+      taskPanel.innerHTML = `
+        <div class="text-muted small">
+          No scheduled activities.
+        </div>
+      `;
+      return;
+    }
+
+    taskPanel.innerHTML = events.map(event => `
+      <div class="task-card mb-3">
+        <div class="fw-semibold">${event.title}</div>
+        <div class="small text-muted mb-2">
+          Status: ${event.extendedProps.status || "N/A"}
+        </div>
+        <button class="btn btn-sm btn-success"
+                data-swine="${event.extendedProps.swineId || ""}">
+          Take Action
+        </button>
+      </div>
+    `).join("");
+
+    taskPanel.querySelectorAll("[data-swine]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const swineId = btn.dataset.swine;
+        window.location.href = swineId
+          ? `/farmer/report?swineId=${swineId}`
+          : `/farmer/report`;
+      });
+    });
+  }
+
+  function highlightDate(dateStr) {
+    document.querySelectorAll(".fc-daygrid-day")
+      .forEach(day => day.classList.remove("selected-day"));
+
+    const target = document.querySelector(
+      `.fc-daygrid-day[data-date="${dateStr}"]`
+    );
+
+    if (target) target.classList.add("selected-day");
+  }
+
+  // ================================
+  // CREATE CALENDAR
+  // ================================
   const calendar = new FullCalendar.Calendar(calendarEl, {
-    // Responsive view: List on mobile, Grid on desktop
-    initialView: window.innerWidth < 600 ? "listWeek" : "dayGridMonth",
+    initialView: "dayGridMonth",
     height: "auto",
     expandRows: true,
+    fixedWeekCount: false,
+    dayMaxEvents: 2,
+    moreLinkClick: "day",
 
     headerToolbar: {
       left: "prev,next today",
@@ -24,96 +164,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       right: "dayGridMonth,listWeek"
     },
 
-    // =====================
-    // DATA FETCHING
-    // =====================
-    events: async (info, successCallback, failureCallback) => {
-      try {
-        // We fetch events - the backend will automatically filter by the logged-in user's profile
-        const response = await fetch(`${BACKEND_URL}/api/heat/calendar-events`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          successCallback(data.events);
-        } else {
-          console.error("Backend error:", data.message);
-          failureCallback(data.message);
-        }
-      } catch (err) {
-        console.error("Calendar fetch error:", err);
-        failureCallback(err);
-      }
-    },
-
-    // =====================
-    // EVENT STYLING & UI
-    // =====================
-    eventDidMount: (info) => {
-      const title = info.event.title.toLowerCase();
-      let label = "Event";
-
-      // Enhanced tooltips for Farmer clarity
-      if (title.includes("ai due")) {
-        label = "Insemination Day (Prepare for AI)";
-      } else if (title.includes("heat re-check")) {
-        label = "Critical: Check for Heat Signs (21-23 Days)";
-      } else if (title.includes("farrowing")) {
-        label = "Expected Farrowing (Prepare Nesting)";
-      } else if (title.includes("weaning") || title.includes("ready for weaning")) {
-        label = "Ready for New Heat Report / Weaning";
-      }
-
-      // Native tooltip content
-      info.el.title = `${info.event.title} - ${label}`;
-
-      // Apply dynamic colors from backend (HeatReportRoutes.js)
-      if (info.event.backgroundColor) {
-        info.el.style.backgroundColor = info.event.backgroundColor;
-        info.el.style.borderColor = info.event.backgroundColor;
-      }
-
-      // Visual priority for high-importance tasks
-      if (title.includes("ai") || title.includes("farrowing")) {
-        info.el.style.fontWeight = "bold";
-        info.el.style.borderLeft = "4px solid rgba(0,0,0,0.3)";
-      }
-    },
-
-    // =====================
-    // NAVIGATION
-    // =====================
-    eventClick: (info) => {
-      // Extract Swine ID from title (e.g., "AI Due: A-0001")
-      const parts = info.event.title.split(":");
-      const swineId = parts.length > 1 ? parts[1].trim().split(" ")[0] : null;
-
-      // Redirect farmer to the reporting page to act on the event
-      window.location.href = swineId
-        ? `/farmer/report?swineId=${swineId}`
-        : `/farmer/report`;
-    }
+    events: fetchCalendarEvents,
+    eventContent: renderCustomEvent,
+    eventClick: handleEventClick,
+    dateClick: handleDateClick
   });
 
   calendar.render();
 
-  // =====================
-  // REAL-TIME UPDATES
-  // =====================
-  // Automatically refresh when the farmer switches back to this tab
+  highlightDate(todayStr);
+  renderEventsForDate(todayStr);
+
   window.addEventListener("focus", () => {
-    if (calendar) calendar.refetchEvents();
-  });
-  
-  // Handle window resizing
-  window.addEventListener("resize", () => {
-    const newView = window.innerWidth < 600 ? "listWeek" : "dayGridMonth";
-    if (calendar.view.type !== newView) {
-      calendar.changeView(newView);
-    }
+    calendar.refetchEvents();
   });
 });

@@ -120,31 +120,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     function renderRanking(data) {
-        if (!rankingTable) return;
-        if (data.length === 0) {
-            rankingTable.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px;">No adult swine records available for analysis.</td></tr>`;
+        const container = document.getElementById("rankingCards");
+        if (!container) return;
+
+        if (!data.length) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    No adult swine records available for analysis.
+                </div>`;
             return;
         }
 
-        rankingTable.innerHTML = data.map((sw, index) => {
-            let color = sw.qualityScore > 75 ? "#28a745" : (sw.qualityScore > 40 ? "#ffc107" : "#dc3545");
+        container.innerHTML = data.map((sw, index) => {
+
+            let scoreColor =
+                sw.qualityScore > 75 ? "#1fbf8f" :
+                sw.qualityScore > 40 ? "#f39c12" :
+                "#e74c3c";
+
             const sexClass = sw.sex === "Female" ? "badge-female" : "badge-male";
 
             return `
-            <tr>
-                <td><strong>#${index + 1}</strong></td>
-                <td>${sw.swine_id}</td>
-                <td><span class="badge ${sexClass}">${sw.sex}</span></td>
-                <td>${sw.breed}</td>
-                <td>
-                    <div class="score-bar" style="background:#eee; height:10px; border-radius:5px; width:100px; overflow:hidden;">
-                        <div class="score-fill" style="width:${sw.qualityScore}%; background:${color}; height:100%;"></div>
+            <div class="ranking-card">
+
+                <div class="ranking-top">
+                    <div class="rank-badge">#${index + 1}</div>
+                    <div>
+                        <div class="swine-id">${sw.swine_id}</div>
+                        <div class="swine-breed">${sw.breed}</div>
                     </div>
-                    <small>${sw.qualityScore}% Quality Index</small>
-                </td>
-            </tr>`;
+                    <span class="sex-badge ${sexClass}">
+                        ${sw.sex}
+                    </span>
+                </div>
+
+                <div class="quality-section">
+                    <div class="quality-label">
+                        Quality Index
+                        <strong>${sw.qualityScore}%</strong>
+                    </div>
+
+                    <div class="quality-bar">
+                        <div class="quality-fill"
+                            style="width:${sw.qualityScore}%;
+                                    background:${scoreColor};">
+                        </div>
+                    </div>
+                </div>
+
+            </div>`;
         }).join('');
     }
+
 
     function populateDropdowns(data) {
         if (!femaleSelect || !maleSelect) return;

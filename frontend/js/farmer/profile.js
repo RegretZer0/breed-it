@@ -100,7 +100,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =======================
      SAVE → PREVIEW MODAL
   ======================= */
-  saveBtn.addEventListener("click", () => {
+  saveBtn.addEventListener("click", (e) => {
+  e.preventDefault();
     previewName.textContent = editName.value;
     previewEmail.textContent = editEmail.value;
     previewContact.textContent = editContact.value;
@@ -115,7 +116,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     previewModal.classList.add("hidden");
   });
 
-  previewConfirm?.addEventListener("click", async () => {
+  previewConfirm?.addEventListener("click", async (e) => {
+  e.preventDefault();
     try {
       const payload = {
         name: editName.value,
@@ -154,15 +156,30 @@ document.addEventListener("DOMContentLoaded", async () => {
       editSection.classList.add("hidden");
       viewSection.classList.remove("hidden");
 
-      alert("✅ Profile changes have been saved.");
+      document.getElementById("successModal").classList.remove("hidden");
 
     } catch (err) {
       console.error("❌ Save failed:", err);
-      alert("❌ Failed to save profile. Please try again.");
+      document.getElementById("errorModal")
+        .classList.remove("hidden");
     }
+  });
+
+  // SUCCESS MODAL CLOSE
+  document.getElementById("closeSuccessModal")
+    ?.addEventListener("click", () => {
+      document.getElementById("successModal")
+        .classList.add("hidden");
   });
 });
 
+
+  // CLOSE ERROR MODAL
+  document.getElementById("closeErrorModal")
+    ?.addEventListener("click", () => {
+      document.getElementById("errorModal")
+        .classList.add("hidden");
+  });
 
 /* =======================
    CHANGE PASSWORD (MODAL TOGGLE)

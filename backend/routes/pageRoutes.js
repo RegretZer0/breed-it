@@ -277,11 +277,11 @@ router.get(
 // My Pigs
 // ==========================
 router.get(
-  "/farmer/mypigs",
+  "/farmer/my-pigs/",
   requireLogin,
   requireFarmer,
   (req, res) => {
-    res.render("pages/farmer/mypigs", {
+    res.render("pages/farmer/my-pigs/index", {
       page_title: "MyPigs",
       current_section: "pigs",
       current_page: "mypigs",
@@ -309,11 +309,11 @@ router.get(
 // Farmer Reports
 // ==========================
 router.get(
-  "/farmer/report",
+  "/farmer/report/",
   requireLogin,
   requireFarmer,
   (req, res) => {
-    res.render("pages/farmer/report", {
+    res.render("pages/farmer/report/index", {
       page_title: "Report",
       current_section: "report",
       current_page: "report",

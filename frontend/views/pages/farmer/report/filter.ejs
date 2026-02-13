@@ -1,0 +1,58 @@
+<!-- ================= FILTERS ================= -->
+<div class="filters">
+  <div class="filter">
+    <label>Status</label>
+    <select id="statusFilter">
+      <option value="">All</option>
+      <option value="pending">Pending</option>
+      <option value="accepted">Accepted</option>
+      <option value="waiting_heat_check">Waiting Heat Check</option>
+      <option value="pregnant">Pregnant</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+
+  <div class="filter">
+    <label>Date</label>
+    <input type="date" id="dateFilter" />
+  </div>
+
+  <div class="filter">
+    <label>Pig Tag</label>
+    <select id="pigFilter">
+      <option value="">All pigs</option>
+    </select>
+  </div>
+
+  <button class="search-btn" id="searchBtn">
+    <i class="fa-solid fa-magnifying-glass"></i> SEARCH
+  </button>
+
+  <button class="search-btn outline" id="clearFilterBtn">
+    CLEAR
+  </button>
+</div>
+
+<!-- ================= STATS ================= -->
+<div class="stats-container">
+  <div class="stat-card">
+    <div>
+      <h4>Open Sows</h4>
+      <span id="countOpen">0</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div>
+      <h4>Pregnant</h4>
+      <span id="countPregnant">0</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div>
+      <h4>Farrowing Soon</h4>
+      <span id="countFarrowing">0</span>
+    </div>
+  </div>
+</div>
