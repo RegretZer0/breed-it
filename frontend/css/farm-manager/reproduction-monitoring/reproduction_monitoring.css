@@ -1,0 +1,384 @@
+/* =========== Root tokens =========== */
+:root{
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --panel-border: #ededed;
+
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
+
+  --accent-blue: #0d6efd;
+  --accent-teal: #0aa2c0;
+  --accent-gray: #6c757d;
+  --danger: #f55b66;
+
+  --gutter: 18px;
+  --radius: 10px;
+}
+
+/* =========== Global reset =========== */
+*, *::before, *::after{
+  box-sizing: border-box;
+}
+
+body{
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+/* =========== Shell layout =========== */
+.app-shell{
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
+}
+
+/* =========================
+   MODAL BASE
+========================= */
+.modal-content{
+  border-radius: var(--radius);
+}
+
+.modal-header{
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.modal-title{
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.modal-body{
+  padding: 20px 24px 26px;
+}
+
+/* =====================================================
+   REPRODUCTION MONITORING – LAYOUT BASE
+===================================================== */
+
+.repro-wrapper {
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 16px;
+}
+
+/* =====================================================
+   FARMER DIRECTORY CARD
+===================================================== */
+
+.farmer-card-modern {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.08);
+  transition: 0.2s ease;
+}
+
+.farmer-card-modern:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.08),
+    0 20px 45px rgba(0, 0, 0, 0.12);
+}
+
+.farmer-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.farmer-card-left {
+  display: flex;
+  gap: 16px;
+}
+
+.farmer-card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e9ecef;
+}
+
+.farmer-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.farmer-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.farmer-meta {
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.farmer-status {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.status-active {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.status-inactive {
+  background: #f1f3f5;
+  color: #6c757d;
+}
+
+.farmer-card-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* =====================================================
+   FILTER TOOLBAR – FORCE SINGLE ROW
+===================================================== */
+
+.farmer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Keep everything on ONE LINE */
+.farmer-filter-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;     /* 🔥 Prevent wrapping */
+}
+
+/* Control widths manually */
+.farmer-filter-form .location-select {
+  width: 160px;
+}
+
+.farmer-filter-form .status-select {
+  width: 140px;
+}
+
+.farmer-filter-form .search-input {
+  width: 260px;
+}
+
+.farmer-filter-form .btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* Uniform height */
+.farmer-filter-form .form-control,
+.farmer-filter-form .form-select,
+.farmer-filter-form .btn {
+  height: 36px;
+  font-size: 13px;
+}
+
+/* =====================================================
+   MODAL – PROFILE HEADER
+===================================================== */
+
+.farmer-profile-header {
+  background: linear-gradient(180deg, #f8f9fa, #ffffff);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.profile-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.profile-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e9ecef;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-info h5 {
+  margin: 0;
+  font-weight: 600;
+}
+
+
+.profile-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.profile-hero-left {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.profile-status-badge {
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.profile-stats-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile-stat-card {
+  flex: 1;
+  min-width: 150px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+}
+
+.stat-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #198754;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* =====================================================
+   LINKED PIG LIST
+===================================================== */
+
+#linkedPigList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#linkedPigList .linked-pig-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: 0.15s ease;
+}
+
+#linkedPigList .linked-pig-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.pig-name {
+  font-weight: 600;
+}
+
+.pig-meta {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* =====================================================
+   EMPTY STATE
+===================================================== */
+
+.empty-state {
+  text-align: center;
+  color: #6c757d;
+  padding: 24px;
+  font-size: 14px;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .farmer-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .farmer-filter-form .form-control,
+  .farmer-filter-form .form-select,
+  .farmer-filter-form .btn {
+    width: 100%;
+    height: 44px;
+  }
+
+}
+.modal {
+  z-index: 1055;
+}
+
+.modal-backdrop {
+  z-index: 1050;
+}
+
+/* ================= GLOBAL LOADER ================= */
+
+.global-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.global-loader .loader-content {
+  text-align: center;
+}
+
+.global-loader .loader-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+}

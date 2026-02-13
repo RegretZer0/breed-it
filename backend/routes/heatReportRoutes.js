@@ -361,7 +361,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const { total_live, mummified, stillborn, farrowing_date } = req.body;
+        const { total_live, mortality, farrowing_date } = req.body;
         const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
         
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
@@ -393,9 +393,8 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
                     "breeding_cycles.$.farrowed": true,
                     "breeding_cycles.$.actual_farrowing_date": farrowDate,
                     "breeding_cycles.$.farrowing_results": {
-                        total_piglets: Number(total_live) + Number(stillborn) + Number(mummified),
+                        total_piglets: Number(total_live) + Number(mortality),
                         live_piglets: Number(total_live),
-                        mortality_count: Number(stillborn) + Number(mummified)
                     },
                     current_status: "Lactating" 
                 },

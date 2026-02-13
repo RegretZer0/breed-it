@@ -1,0 +1,39 @@
+<div class="card page-card">
+  <div class="card-body">
+
+    <!-- TITLE -->
+    <h5 class="mb-3">
+      Farmer Directory
+    </h5>
+
+    <!-- TOOLBAR -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+      <!-- LEFT (Empty now - tabs removed) -->
+      <div></div>
+
+      <!-- RIGHT: FILTERS -->
+      <div>
+        <%- include("./filters") %>
+      </div>
+
+    </div>
+
+    <hr class="my-3" />
+
+    <!-- CARD LIST -->
+    <div id="farmerCardList" class="d-flex flex-column">
+      <div class="text-center text-muted py-4">
+        Loading farmer records...
+      </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <button id="farmerPrevBtn" class="btn btn-sm btn-outline-secondary">Prev</button>
+      <span id="farmerPageIndicator" class="small fw-semibold text-muted"></span>
+      <button id="farmerNextBtn" class="btn btn-sm btn-outline-secondary">Next</button>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,51 @@
+<div class="modal fade" id="editPerformanceModal" tabindex="-1">
+  <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Swine Performance</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editPerformanceForm">
+          <input type="hidden" id="editSwineId">
+
+          <div class="mb-3">
+            <label class="form-label">Weight (kg)</label>
+            <input type="number" step="0.1"
+              class="form-control"
+              id="editWeight" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Body Length (cm)</label>
+            <input type="number" step="0.1"
+              class="form-control"
+              id="editBodyLength" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Heart Girth (cm)</label>
+            <input type="number" step="0.1"
+              class="form-control"
+              id="editHeartGirth" required>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary"
+          data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <button class="btn btn-primary"
+          id="savePerformanceBtn">
+          Save Changes
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>

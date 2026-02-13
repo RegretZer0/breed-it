@@ -1,6 +1,25 @@
-  import { authGuard } from "/js/authGuard.js";
+import { authGuard } from "/js/authGuard.js";
 
   document.addEventListener("DOMContentLoaded", async () => {
+
+    // ===== LOADER SETUP =====
+    function showGlobalLoader(text = "Loading...") {
+      const loader = document.getElementById("globalLoader");
+      if (!loader) return;
+
+      const textEl = loader.querySelector(".loader-text");
+      if (textEl) textEl.textContent = text;
+
+      loader.classList.remove("d-none");
+    }
+
+    function hideGlobalLoader() {
+      const loader = document.getElementById("globalLoader");
+      if (!loader) return;
+
+      loader.classList.add("d-none");
+    }
+
     // ================= AUTH =================
     const user = await authGuard(["farm_manager", "encoder"]);
     if (!user) return;
@@ -62,6 +81,7 @@
       if (activeSwineForView) {
         renderGrowth(activeSwineForView);
       }
+      hideGlobalLoader();   
     });
 
     const editModalEl = document.getElementById("editPerformanceModal");
@@ -505,26 +525,22 @@
         // Render dropdown options
         renderFarmerDropdown(farmers);
 
-        // (Optional legacy select support – safe to keep)
-        if (filterFarmer) {
-          filterFarmer.innerHTML =
-            `<option value="">All Farmers / Owners</option>`;
-          farmers.forEach(f => {
-            filterFarmer.add(
-              new Option(`${f.first_name} ${f.last_name}`, f._id)
-            );
-          });
-        }
-
       } catch (e) {
         console.error("Load farmers failed", e);
       }
     }
 
       // ================= MODAL ACTIONS =================
-      function handleView(mongoId) {
+      async function handleView(mongoId) {
+
+        // Force browser to render loader first
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         const sw = allSwine.find(s => s._id === mongoId);
-        if (!sw) return;
+        if (!sw) {
+          hideGlobalLoader();
+          return;
+        }
 
         activeSwineForView = sw;
 
@@ -950,9 +966,13 @@
     if (viewBtn) {
       e.preventDefault();
       e.stopPropagation();
+
+      showGlobalLoader("Opening pig profile...");
       handleView(viewBtn.dataset.id);
+
       return;
     }
+
 
     if (editBtn) {
       e.preventDefault();
@@ -1225,4 +1245,20 @@
     // ================= INIT =================
     await loadFarmers();
     await loadSwine();
-  });
+
+    const autoOpenId = localStorage.getItem("openPigId");
+
+    if (autoOpenId) {
+
+      showGlobalLoader("Opening pig profile...");
+
+      // Data is already loaded above
+      handleView(autoOpenId);
+
+      localStorage.removeItem("openPigId");
+
+      // Hide AFTER modal animation finishes
+      setTimeout(() => {
+      }, 1000);
+    }
+ });

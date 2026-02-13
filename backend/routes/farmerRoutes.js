@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Farmer = require("../models/UserFarmer");
+const Swine = require("../models/Swine");
 const logAction = require("../middleware/logger"); // ✅ Added Logger utility
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
@@ -150,5 +151,45 @@ router.put("/profile", requireApiLogin, async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
+/* ======================================================
+    GET ALL PIGS UNDER A SPECIFIC FARMER (Manager/Encoder)
+====================================================== */
+router.get(
+  "/:id/pigs",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const farmerId = req.params.id;
+
+      if (!mongoose.Types.ObjectId.isValid(farmerId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid farmer ID",
+        });
+      }
+
+      const pigs = await Swine.find({
+        farmer_id: farmerId
+      })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      res.json({
+        success: true,
+        pigs
+      });
+
+    } catch (err) {
+      console.error("Fetch farmer pigs error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Server error while fetching pigs"
+      });
+    }
+  }
+);
+
 
 module.exports = router;

@@ -1,0 +1,68 @@
+<div class="heat-toolbar d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+  <form id="filtersForm"
+        class="farmer-filter-form d-flex align-items-center gap-2 flex-wrap">
+
+    <!-- Farmer Dropdown (using original location IDs) -->
+    <div class="dropdown location-select">
+
+      <button
+        class="form-select form-select-sm text-start"
+        type="button"
+        id="locationDropdownBtn"
+        data-bs-toggle="dropdown">
+        Farmer
+      </button>
+
+      <div class="dropdown-menu p-2"
+           style="max-height:260px;overflow-y:auto;min-width:220px">
+
+        <input
+          id="locationSearch"
+          class="form-control form-control-sm mb-2"
+          placeholder="Search farmer…">
+
+        <div id="locationOptions">
+          <div class="text-muted small">
+            Loading farmers…
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Location Search (using original farmer ID) -->
+    <input
+      id="searchFarmer"
+      class="form-control form-control-sm search-input"
+      placeholder="Search location…"
+      style="width:180px;">
+
+    <!-- Status -->
+    <select id="filterStatus"
+            class="form-select form-select-sm status-select"
+            style="width:140px;">
+      <option value="">Status</option>
+      <option value="Active">Active</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+
+    <!-- Buttons -->
+    <div class="btn-group">
+
+      <button type="submit"
+              class="btn btn-success btn-sm">
+        Apply
+      </button>
+
+      <button type="button"
+              id="resetFilters"
+              class="btn btn-outline-secondary btn-sm">
+        Reset
+      </button>
+
+    </div>
+
+  </form>
+
+</div>

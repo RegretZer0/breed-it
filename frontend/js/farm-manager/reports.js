@@ -797,14 +797,12 @@ if (farrowingForm) {
 
     const farrowingDateInput = document.getElementById("farrowingDateInput");
     const liveInput = document.getElementById("liveCount");
-    const mummyInput = document.getElementById("mummyCount");
-    const stillInput = document.getElementById("stillCount");
+    const mortalityinput = document.getElementById("mortalityCount");
 
     const payload = {
       farrowing_date: farrowingDateInput?.value || null,
       total_live: Number(liveInput?.value || 0),
-      mummified: Number(mummyInput?.value || 0),
-      stillborn: Number(stillInput?.value || 0),
+      mortality_born: Number(mortalityinput?.value || 0),
     };
 
     await action(

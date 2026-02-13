@@ -11,12 +11,13 @@ const {
 const requireSystemAdmin = require("../middleware/requireSystemAdmin.page");
 
 
+/* ======================================================
+   AUTHENTICATION / PUBLIC PAGES
+====================================================== */
 
-/* =========================
-   AUTH / PUBLIC PAGES
-========================= */
-
+// ==========================
 // Landing Page
+// ==========================
 router.get("/", (req, res) => {
   res.render("pages/auth/landing_page", {
     page_title: "Landing Page",
@@ -24,7 +25,9 @@ router.get("/", (req, res) => {
   });
 });
 
+// ==========================
 // Login
+// ==========================
 router.get("/login", (req, res) => {
   res.render("pages/auth/login", {
     page_title: "Login",
@@ -32,7 +35,9 @@ router.get("/login", (req, res) => {
   });
 });
 
+// ==========================
 // Forgot Password
+// ==========================
 router.get("/forgot_password", (req, res) => {
   res.render("pages/auth/forgot_password", {
     page_title: "Forgot Password",
@@ -40,7 +45,9 @@ router.get("/forgot_password", (req, res) => {
   });
 });
 
+// ==========================
 // Register
+// ==========================
 router.get("/register", (req, res) => {
   res.render("pages/auth/register", {
     page_title: "Register",
@@ -49,11 +56,13 @@ router.get("/register", (req, res) => {
 });
 
 
-/* =========================
+/* ======================================================
    FARM MANAGER PAGES
-========================= */
+====================================================== */
 
+// ==========================
 // Dashboard
+// ==========================
 router.get(
   "/farm-manager/dashboard/index",
   requireLogin,
@@ -68,13 +77,15 @@ router.get(
   }
 );
 
+// ==========================
 // Reproduction Monitoring
+// ==========================
 router.get(
-  "/farm-manager/reproduction-monitoring",
+  "/farm-manager/reproduction-monitoring/index",
   requireLogin,
   requireFarmManager,
   (req, res) => {
-    res.render("pages/farm-manager/reproduction_monitoring", {
+    res.render("pages/farm-manager/reproduction-monitoring/index", {
       page_title: "Reproduction Monitoring",
       current_section: "reproduction_monitoring",
       current_page: "reproduction_monitoring",
@@ -82,11 +93,13 @@ router.get(
   }
 );
 
-/* =========================
+/* ======================================================
    FARM MANAGER – BREED QUALITY ANALYTICS
-========================= */
+====================================================== */
 
-// Breed Quality Analysis
+// ==========================
+// Swine Analysis
+// ==========================
 router.get(
   "/farm-manager/breed-quality-analytics/swine-analysis",
   requireLogin,
@@ -100,7 +113,9 @@ router.get(
   }
 );
 
-// Heat & Breeding Analytics
+// ==========================
+// Heat & Breeding Analytics (HBE)
+// ==========================
 router.get(
   "/farm-manager/breed-quality-analytics/HBE-analysis",
   requireLogin,
@@ -114,7 +129,9 @@ router.get(
   }
 );
 
+// ==========================
 // Reports
+// ==========================
 router.get(
   "/farm-manager/heat-reports/index",
   requireLogin,
@@ -128,11 +145,13 @@ router.get(
   }
 );
 
-/* =========================
+/* ======================================================
    FARM MANAGER – USER MANAGEMENT
-========================= */
+====================================================== */
 
+// ==========================
 // Create Account
+// ==========================
 router.get(
   "/farm-manager/user-management/create",
   requireLogin,
@@ -146,7 +165,9 @@ router.get(
   }
 );
 
+// ==========================
 // Manage Account
+// ==========================
 router.get(
   "/farm-manager/user-management/manage",
   requireLogin,
@@ -160,8 +181,13 @@ router.get(
   }
 );
 
+/* ======================================================
+   FARM MANAGER – PIG MANAGEMENT
+====================================================== */
 
+// ==========================
 // Pig Management Overview
+// ==========================
 router.get(
   "/farm-manager/pig-management/swine-list",
   requireLogin,
@@ -175,7 +201,27 @@ router.get(
   }
 );
 
+// ==========================
+// View Single Pig Profile
+// ==========================
+router.get(
+  "/farm-manager/pig-management/swine/:id",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/pig-management/swine-profile/index", {
+      page_title: "Swine Profile",
+      current_section: "pig_management",
+      current_page: "swine_profile",
+      swineId: req.params.id
+    });
+  }
+);
+
+
+// ==========================
 // Register Pig
+// ==========================
 router.get(
   "/farm-manager/pig-management/register",
   requireLogin,
@@ -189,7 +235,9 @@ router.get(
   }
 );
 
+// ==========================
 // Register Boar
+// ==========================
 router.get(
   "/farm-manager/pig-management/register-boar",
   requireLogin,
@@ -204,11 +252,13 @@ router.get(
 );
 
 
-/* =========================
+/* ======================================================
    FARMER PAGES
-========================= */
+====================================================== */
 
+// ==========================
 // Farmer Dashboard
+// ==========================
 router.get(
   "/farmer/dashboard",
   requireLogin,
@@ -223,7 +273,9 @@ router.get(
   }
 );
 
+// ==========================
 // My Pigs
+// ==========================
 router.get(
   "/farmer/mypigs",
   requireLogin,
@@ -237,7 +289,9 @@ router.get(
   }
 );
 
+// ==========================
 // Farmer Profile
+// ==========================
 router.get(
   "/farmer/profile",
   requireLogin,
@@ -251,7 +305,9 @@ router.get(
   }
 );
 
+// ==========================
 // Farmer Reports
+// ==========================
 router.get(
   "/farmer/report",
   requireLogin,
@@ -265,7 +321,9 @@ router.get(
   }
 );
 
+// ==========================
 // Farmer Schedule
+// ==========================
 router.get(
   "/farmer/calendar",
   requireLogin,
@@ -275,12 +333,14 @@ router.get(
       page_title: "Your Schedule",
       current_section: "calendar",
       current_page: "calendar",
-      user: req.user 
+      user: req.user,
     });
   }
 );
 
+// ==========================
 // Farmer Reproduction & Growth
+// ==========================
 router.get(
   "/farmer/reproduction",
   requireLogin,
@@ -294,7 +354,9 @@ router.get(
   }
 );
 
+// ==========================
 // Farmer Breeding Analytics
+// ==========================
 router.get(
   "/farmer/breeding-analytics",
   requireLogin,
@@ -308,7 +370,9 @@ router.get(
   }
 );
 
+// ==========================
 // Farmer Help
+// ==========================
 router.get(
   "/farmer/help",
   requireLogin,
@@ -322,12 +386,13 @@ router.get(
   }
 );
 
-
-
-/* =========================
+/* ======================================================
    SYSTEM ADMIN PAGES
-========================= */
+====================================================== */
 
+// ==========================
+// System Admin Dashboard
+// ==========================
 router.get(
   "/system-admin/dashboard",
   requireLogin,
@@ -341,8 +406,5 @@ router.get(
     });
   }
 );
-
-
-
 
 module.exports = router;

@@ -1,0 +1,25 @@
+<%- include("../../../partials/farm-manager/header") %>
+<%- include("../../../partials/farm-manager/navbar") %>
+<%- include("../../../partials/farm-manager/sidepanel") %>
+
+<main class="main-content">
+  <div class="container-fluid">
+
+
+    <%- include("./table") %>
+    <%- include("./modal") %>
+    <%- include("./edit-modal") %>
+
+  </div>
+</main>
+
+
+<!-- Global Loading Overlay -->
+<div id="globalLoader" class="global-loader d-none">
+  <div class="loader-content">
+    <div class="spinner-border text-success" role="status"></div>
+    <div class="loader-text mt-3">Opening pig profile...</div>
+  </div>
+</div>
+
+<%- include("../../../partials/farm-manager/footer") %>

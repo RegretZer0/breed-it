@@ -1,0 +1,214 @@
+<div class="modal fade" id="farmerModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content profile-modal">
+
+      <!-- HEADER -->
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-semibold">Farmer Profile</h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- BODY -->
+      <div class="modal-body pt-3">
+
+        <!-- ================= PROFILE HERO ================= -->
+        <div class="profile-hero mb-4">
+
+          <div class="profile-hero-top">
+
+            <!-- LEFT SIDE -->
+            <div class="profile-hero-left">
+
+              <div class="profile-avatar-lg">
+                <img id="profileAvatar"
+                     src="../../../../images/default-avatar.png"
+                     alt="Profile">
+              </div>
+
+              <div>
+                <h4 id="profileFarmerName" class="mb-1">—</h4>
+                <div class="text-muted small"
+                     id="profileFarmerContact">—</div>
+              </div>
+
+            </div>
+
+            <!-- STATUS (TOP RIGHT) -->
+            <div>
+              <span id="profileFarmerStatus"
+                    class="badge profile-status-badge">
+                —
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ================= SUMMARY CARDS ================= -->
+        <div class="profile-stats-row mb-4">
+
+          <div class="profile-stat-card">
+            <div class="stat-number" id="profileFarmerId">—</div>
+            <div class="stat-label">Farmer ID</div>
+          </div>
+
+          <div class="profile-stat-card">
+            <div class="stat-number" id="profilePenCount">—</div>
+            <div class="stat-label">Pen Count</div>
+          </div>
+
+          <div class="profile-stat-card">
+            <div class="stat-number" id="profilePenCapacity">—</div>
+            <div class="stat-label">Pen Capacity</div>
+          </div>
+
+        </div>
+
+        <!-- ================= TABS ================= -->
+        <ul class="nav nav-pills profile-tabs mb-3"
+            id="farmerProfileTabs">
+
+          <li class="nav-item">
+            <button class="nav-link active"
+                    data-target="farmerOverviewTab"
+                    type="button">
+              Overview
+            </button>
+          </li>
+
+          <li class="nav-item">
+            <button class="nav-link"
+                    data-target="farmerPigsTab"
+                    type="button">
+              Pigs
+            </button>
+          </li>
+
+        </ul>
+
+        <!-- ================= OVERVIEW TAB ================= -->
+        <div id="farmerOverviewTab" class="farmer-tab">
+
+          <div class="row g-4">
+
+            <!-- Farmer Info -->
+            <div class="col-md-6">
+              <div class="profile-card">
+                <h6 class="profile-card-title">Farmer Information</h6>
+
+                <div class="profile-row">
+                  <span>Farmer ID</span>
+                  <span id="profileFarmerIdOverview">—</span>
+                </div>
+
+                <div class="profile-row">
+                  <span>Pen Count</span>
+                  <span id="profilePenCountOverview">—</span>
+                </div>
+
+                <div class="profile-row">
+                  <span>Pen Capacity</span>
+                  <span id="profilePenCapacityOverview">—</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="col-md-6">
+              <div class="profile-card">
+                <h6 class="profile-card-title">Contact Details</h6>
+
+                <div class="profile-row">
+                  <span>Phone</span>
+                  <span id="profilePhone">—</span>
+                </div>
+
+                <div class="profile-row">
+                  <span>Email</span>
+                  <span id="profileEmail">—</span>
+                </div>
+
+                <div class="profile-row">
+                  <span>Address</span>
+                  <span id="profileAddress">—</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ================= PIGS TAB ================= -->
+        <div id="farmerPigsTab"
+             class="farmer-tab d-none">
+
+          <!-- CATEGORY FILTER -->
+          <ul class="nav nav-pills mb-3"
+              id="farmerPigCategoryTabs">
+            <li class="nav-item">
+              <button class="nav-link active"
+                      data-type="all">All</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link"
+                      data-type="piglet">Piglets</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link"
+                      data-type="sow">Sows</button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link"
+                      data-type="boar">Boars</button>
+            </li>
+          </ul>
+
+          <!-- FILTER BAR -->
+          <form id="farmerPigFilters"
+                class="d-flex gap-2 mb-3">
+
+            <input type="text"
+                   id="pigSearchTag"
+                   class="form-control form-control-sm"
+                   placeholder="Search tag">
+
+            <select id="pigStatusFilter"
+                    class="form-select form-select-sm">
+              <option value="">Status</option>
+              <option value="Healthy">Healthy</option>
+              <option value="Sick">Sick</option>
+              <option value="Deceased">Deceased</option>
+            </select>
+
+            <button class="btn btn-success btn-sm"
+                    type="submit">
+              Apply
+            </button>
+
+            <button class="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    id="resetPigFilters">
+              Reset
+            </button>
+          </form>
+
+          <!-- LIST -->
+          <div id="linkedPigList"
+               class="d-flex flex-column gap-3">
+
+            <div class="text-muted text-center py-3">
+              Select a farmer to view pigs
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
