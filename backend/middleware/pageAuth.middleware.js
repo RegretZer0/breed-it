@@ -1,14 +1,16 @@
 const Farmer = require("../models/UserFarmer");
 const jwt = require("jsonwebtoken");
 
-
 // ======================================================
 // Require login for EJS pages
 // ======================================================
 function requireLogin(req, res, next) {
+  // Check session specifically
   if (!req.session || !req.session.user) {
     return res.redirect("/login");
   }
+  // Sync session user to req.user so other features can use it
+  req.user = req.session.user;
   next();
 }
 
@@ -16,9 +18,10 @@ function requireLogin(req, res, next) {
 // Require Farm Manager role - added encoder as allowed role
 // ======================================================
 function requireFarmManager(req, res, next) {
+  const user = req.session?.user || req.user;
   if (
-    !req.session?.user ||
-    !["farm_manager", "encoder"].includes(req.session.user.role)
+    !user ||
+    !["farm_manager", "encoder"].includes(user.role)
   ) {
     return res.status(403).render("pages/auth/unauthorized", {
       page_title: "Unauthorized",
@@ -31,14 +34,14 @@ function requireFarmManager(req, res, next) {
 // Require Farmer role
 // ======================================================
 function requireFarmer(req, res, next) {
-  if (!req.session?.user || req.session.user.role !== "farmer") {
+  const user = req.session?.user || req.user;
+  if (!user || user.role !== "farmer") {
     return res.status(403).render("pages/auth/unauthorized", {
       page_title: "Unauthorized",
     });
   }
   next();
 }
-
 
 function requireApiFarmer(req, res, next) {
   if (!req.user || req.user.role !== "farmer") {
@@ -52,20 +55,20 @@ function requireApiFarmer(req, res, next) {
 
 // ======================================================
 // Require login for API routes (JSON)
-// FIXED: supports id, _id, and email
+// FIXED: added session persistence re-binding for rapid refresh
 // ======================================================
 async function requireApiLogin(req, res, next) {
   try {
     let sessionUser = req.session?.user || null;
 
-    // ✅ Allow JWT authentication
+    // 1. If no session, check for JWT (for Mobile/Postman)
     if (!sessionUser) {
       const authHeader = req.headers.authorization;
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.split(" ")[1];
         try {
           const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            sessionUser = decoded.user || decoded;
+          sessionUser = decoded.user || decoded;
         } catch (err) {
           return res.status(401).json({
             success: false,
@@ -75,6 +78,7 @@ async function requireApiLogin(req, res, next) {
       }
     }
 
+    // 2. Double-Check Security
     if (!sessionUser) {
       return res.status(401).json({
         success: false,
@@ -82,11 +86,12 @@ async function requireApiLogin(req, res, next) {
       });
     }
 
-    // Normalize user identity
+    // 3. Normalize user identity (Handle different ID field names)
     const userId = sessionUser.id || sessionUser._id || null;
-    let farmerProfileId = null;
+    let farmerProfileId = sessionUser.farmerProfileId || null;
 
-    if (sessionUser.role === "farmer") {
+    // 4. Farmer Profile Logic (Cached to prevent DB spam on refresh)
+    if (sessionUser.role === "farmer" && !farmerProfileId) {
       const farmer = await Farmer.findOne({
         $or: [
           userId ? { user_id: userId } : null,
@@ -100,11 +105,11 @@ async function requireApiLogin(req, res, next) {
           message: "Farmer profile not linked",
         });
       }
-
       farmerProfileId = farmer._id.toString();
     }
 
-    // 🔑 Unified user object
+    // 5. 🔑 Re-bind Unified User Object
+    // This ensures that even if you refresh, req.user is always populated
     req.user = {
       id: userId,
       role: sessionUser.role,
@@ -112,6 +117,11 @@ async function requireApiLogin(req, res, next) {
       farmerProfileId,
       managerId: sessionUser.managerId || null,
     };
+
+    // 6. Optional: Sync back to session to prevent repeated DB lookups on next F5
+    if (req.session) {
+        req.session.user = { ...sessionUser, farmerProfileId: req.user.farmerProfileId };
+    }
 
     next();
   } catch (err) {
@@ -124,7 +134,8 @@ async function requireApiLogin(req, res, next) {
 }
 
 function requireFarmManagerOnly(req, res, next) {
-  if (!req.session?.user || req.session.user.role !== "farm_manager") {
+  const user = req.session?.user || req.user;
+  if (!user || user.role !== "farm_manager") {
     return res.status(403).render("pages/auth/unauthorized", {
       page_title: "Unauthorized",
     });
@@ -132,12 +143,11 @@ function requireFarmManagerOnly(req, res, next) {
   next();
 }
 
-
 module.exports = {
   requireLogin,
   requireApiLogin,
   requireFarmManager,
   requireFarmManagerOnly,
   requireFarmer,
-  requireApiFarmer, // 👈 ADD
+  requireApiFarmer,
 };

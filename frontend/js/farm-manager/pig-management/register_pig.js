@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sexSelect = document.getElementById("sex");
   const ageStageSelect = document.getElementById("ageStage");
   const teatGroup = document.getElementById("teatCountGroup");
+  const teatAlignmentGroup = document.getElementById("teatAlignmentGroup");
+  const teatAlignmentSelect = document.getElementById("teatAlignment");
 
   const damSelect = document.getElementById("dam_id");
   const sireSelect = document.getElementById("sire_id");
@@ -59,14 +61,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ================= UI TOGGLES =================
   function toggleTeatField() {
-    if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
-      teatGroup.classList.remove("d-none");
-    } else {
-      teatGroup.classList.add("d-none");
-      const teatInput = document.getElementById("teatCount");
-      if (teatInput) teatInput.value = "";
-    }
+  if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
+    teatGroup.classList.remove("d-none");
+    teatAlignmentGroup.classList.remove("d-none"); // Show alignment
+  } else {
+    teatGroup.classList.add("d-none");
+    teatAlignmentGroup.classList.add("d-none"); // Hide alignment
+    
+    const teatInput = document.getElementById("teatCount");
+    if (teatInput) teatInput.value = "";
+    if (teatAlignmentSelect) teatAlignmentSelect.value = "Even"; // Reset to default
   }
+}
 
   function toggleDeformities() {
     deformityChecklist.style.display =
@@ -253,6 +259,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       teatCount: document.getElementById("teatCount")
         ? document.getElementById("teatCount").value
         : null,
+      teat_alignment: document.getElementById("teatAlignment") // Add this
+        ? document.getElementById("teatAlignment").value 
+        : "N/A",
       deformities: deformities.length ? deformities : ["None"],
       managerId
     };
@@ -278,6 +287,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (farmerDropdownBtn)
         farmerDropdownBtn.textContent = "Search/Select Farmer";
+      if (teatAlignmentSelect) 
+        teatAlignmentSelect.value = "Even";
 
       breedInput.value = "Native";
       handleColorChange();

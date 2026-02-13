@@ -64,7 +64,7 @@ router.get("/register", (req, res) => {
 // Dashboard
 // ==========================
 router.get(
-  "/farm-manager/dashboard/index",
+  "/farm-manager/dashboard/",
   requireLogin,
   requireFarmManager,
   (req, res) => {
