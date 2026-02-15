@@ -649,7 +649,7 @@ import { authGuard } from "/js/authGuard.js";
     `;
 
     // default → latest cycle
-    activeOffspringCycle = cycles[0] || "all";
+    activeOffspringCycle = "all";
     cycleSelect.value = activeOffspringCycle;
     
     renderOffspring();
@@ -1150,6 +1150,14 @@ import { authGuard } from "/js/authGuard.js";
         }
     });
 
+    /* ================= OFFSPRING CYCLE FILTER ================= */
+    document.getElementById("offspringCycleFilter")
+      ?.addEventListener("change", (e) => {
+        activeOffspringCycle = e.target.value;
+        renderOffspring();
+    });
+
+
     // ================= FILTERS =================
     filtersForm.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -1234,11 +1242,6 @@ import { authGuard } from "/js/authGuard.js";
         if (target === "offspringTab") {
           renderOffspring();
         }
-
-        // Optional but correct
-        if (target === "performanceTab" && activeSwineForView) {
-          renderGrowth(activeSwineForView);
-        }
       });
     });
 
@@ -1247,18 +1250,47 @@ import { authGuard } from "/js/authGuard.js";
     await loadSwine();
 
     const autoOpenId = localStorage.getItem("openPigId");
+    const autoOpenTab = localStorage.getItem("openPigTab");
 
     if (autoOpenId) {
 
       showGlobalLoader("Opening pig profile...");
 
-      // Data is already loaded above
       handleView(autoOpenId);
 
-      localStorage.removeItem("openPigId");
-
-      // Hide AFTER modal animation finishes
+      // Wait a bit for modal to fully render
       setTimeout(() => {
-      }, 1000);
+
+        if (autoOpenTab) {
+
+          // Activate the requested tab
+          document
+            .querySelectorAll("#pigProfileTabs .nav-link")
+            .forEach(b => b.classList.remove("active"));
+
+          document
+            .querySelectorAll(".profile-tab")
+            .forEach(tab => tab.classList.add("d-none"));
+
+          const tabBtn = document.querySelector(
+            `#pigProfileTabs .nav-link[data-target="${autoOpenTab}"]`
+          );
+
+          tabBtn?.classList.add("active");
+
+          document.getElementById(autoOpenTab)
+            ?.classList.remove("d-none");
+
+          // If performance tab → render growth
+          if (autoOpenTab === "performanceTab" && activeSwineForView) {
+            renderGrowth(activeSwineForView);
+          }
+        }
+
+        localStorage.removeItem("openPigId");
+        localStorage.removeItem("openPigTab");
+
+      }, 500);
     }
+
  });

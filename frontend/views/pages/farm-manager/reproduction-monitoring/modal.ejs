@@ -23,7 +23,7 @@
 
               <div class="profile-avatar-lg">
                 <img id="profileAvatar"
-                     src="../../../../images/default-avatar.png"
+                     src="/images/default-avatar.png"
                      alt="Profile">
               </div>
 
@@ -86,6 +86,14 @@
               Pigs
             </button>
           </li>
+
+          <li class="nav-item">
+            <button class="nav-link"
+                    data-target="breedingPerformanceTab">
+              Breeding Performance
+            </button>
+          </li>
+
 
         </ul>
 
@@ -168,33 +176,35 @@
           </ul>
 
           <!-- FILTER BAR -->
-          <form id="farmerPigFilters"
-                class="d-flex gap-2 mb-3">
+          <div id="pigFilterSection">
+            <form id="farmerPigFilters"
+                  class="d-flex gap-2 mb-3">
 
-            <input type="text"
-                   id="pigSearchTag"
-                   class="form-control form-control-sm"
-                   placeholder="Search tag">
+              <input type="text"
+                    id="pigSearchTag"
+                    class="form-control form-control-sm"
+                    placeholder="Search tag">
 
-            <select id="pigStatusFilter"
-                    class="form-select form-select-sm">
-              <option value="">Status</option>
-              <option value="Healthy">Healthy</option>
-              <option value="Sick">Sick</option>
-              <option value="Deceased">Deceased</option>
-            </select>
+              <select id="pigStatusFilter"
+                      class="form-select form-select-sm">
+                <option value="">Status</option>
+                <option value="Healthy">Healthy</option>
+                <option value="Sick">Sick</option>
+                <option value="Deceased">Deceased</option>
+              </select>
 
-            <button class="btn btn-success btn-sm"
-                    type="submit">
-              Apply
-            </button>
+              <button class="btn btn-success btn-sm"
+                      type="submit">
+                Apply
+              </button>
 
-            <button class="btn btn-outline-secondary btn-sm"
-                    type="button"
-                    id="resetPigFilters">
-              Reset
-            </button>
-          </form>
+              <button class="btn btn-outline-secondary btn-sm"
+                      type="button"
+                      id="resetPigFilters">
+                Reset
+              </button>
+            </form>
+          </div>
 
           <!-- LIST -->
           <div id="linkedPigList"
@@ -205,7 +215,104 @@
             </div>
 
           </div>
+  
+          <!-- ================= PIG ANALYSIS PANEL ================= -->
+          <div id="pigAnalysisPanel" class="d-none">
 
+            <button class="btn btn-sm btn-outline-secondary mb-3 d-inline-flex align-items-center gap-2"
+              id="backToPigList">
+              <i class="bi bi-arrow-left"></i>
+              <span>Back to Pig List</span>
+            </button>
+
+            <div class="profile-hero mb-3">
+              <h5 id="analysisPigTitle">Pig Analysis</h5>
+              <div class="text-muted small" id="analysisPigMeta">—</div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-pills mb-3"
+                id="pigAnalysisTabs">
+              <li class="nav-item">
+                <button class="nav-link active"
+                        data-target="pigProfileTab">
+                  Profile
+                </button>
+              </li>
+
+              <li class="nav-item">
+                <button class="nav-link"
+                        data-target="pigBreedingTab">
+                  Artificial Insemination Record
+                </button>
+              </li>
+
+              <li class="nav-item">
+                <button class="nav-link"
+                        data-target="pigPerformanceTab">
+                  Piglets Growth Records
+                </button>
+              </li>
+
+              <li class="nav-item">
+                <button class="nav-link"
+                        data-target="pigHealthTab">
+                  Health & Defects
+                </button>
+              </li>
+
+              <li class="nav-item">
+                <button class="nav-link"
+                        data-target="pigSelectionTab">
+                  Selection Status
+                </button>
+              </li>
+            </ul>
+
+            <!-- TAB CONTENTS -->
+            <div id="pigProfileTab" class="pig-analysis-tab"></div>
+            <div id="pigBreedingTab" class="pig-analysis-tab d-none"></div>
+            <div id="pigPerformanceTab" class="pig-analysis-tab d-none"></div>
+            <div id="pigHealthTab" class="pig-analysis-tab d-none"></div>
+            <div id="pigSelectionTab" class="pig-analysis-tab d-none"></div>
+
+          </div>
+        </div>
+
+          <!-- ================= BREEDING PERFORMANCE TAB ================= -->
+          <div id="breedingPerformanceTab"
+              class="farmer-tab d-none">
+
+            <!-- KPI SECTION -->
+            <div id="breedingKpiSection"
+                class="row g-3 mb-4">
+            </div>
+
+            <!-- SOW LIST -->
+            <div id="breedingSowList"
+                class="d-flex flex-column gap-3">
+            </div>
+
+            <!-- CYCLE PANEL -->
+            <div id="breedingCyclePanel"
+                class="mt-4 d-none">
+
+              <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body">
+                  <h6 class="mb-3">Mortality Rate per Cycle</h6>
+                  <canvas id="breedingMortalityChart"
+                          height="100">
+                  </canvas>
+                </div>
+              </div>
+
+              <div id="breedingCycleCards"
+                  class="d-flex flex-column gap-3">
+              </div>
+
+            </div>
+
+          </div>
         </div>
 
       </div>

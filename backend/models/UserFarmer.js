@@ -12,16 +12,25 @@ const farmerSchema = new mongoose.Schema(
     num_of_pens: { type: Number, default: 0 },
     pen_capacity: { type: Number, default: 0 },
 
-    role: { type: String, default: "farmer", immutable: true },
-
-    // Optional future link to users
-    user_id: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User", 
-      required: false 
+    // ✅ ADD THESE TWO FIELDS
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active"
     },
 
-    // Farm manager who owns this farmer
+    profile_picture: {
+      type: String,
+      default: "/images/default-avatar.png"
+    },
+
+    role: { type: String, default: "farmer", immutable: true },
+
+    user_id: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "User"
+    },
+
     managerId: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User", 
@@ -30,5 +39,6 @@ const farmerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 module.exports = mongoose.model("Farmer", farmerSchema);
