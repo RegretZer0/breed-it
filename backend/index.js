@@ -151,6 +151,7 @@ app.use("/api/heat", require("./routes/heatReportRoutes"));
 app.use("/api/swine-records", require("./routes/swinePerformanceRoutes"));
 app.use("/api/breeding", require("./routes/breedingRoutes"));
 app.use("/api/farmer", require("./routes/farmerRoutes"));
+app.use("/api/farmer", require("./routes/farmerProfileRoutes"));
 app.use("/api/admin", adminRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reproduction", reproductionRoute);

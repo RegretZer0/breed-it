@@ -1,15 +1,20 @@
-<div id="pigModal" class="modal hidden">
-  <div class="modal-content">
+<div id="pigModal" class="modal">
+  <div class="modal-panel">
 
-    <span id="closeModal" class="modal-close">&times;</span>
+    <!-- HEADER -->
+    <div class="modal-header">
+      <div>
+        <h3 id="modalPigTitle">Pig Details</h3>
+        <small class="modal-subtitle">Livestock Information</small>
+      </div>
 
-    <div id="modalBody"></div>
-
-    <div class="modal-actions">
-      <button id="editPigBtn" class="primary-btn">
-        Edit
+      <button id="closeModal" class="modal-close-btn">
+        <i class="bi bi-x-lg"></i>
       </button>
     </div>
+
+    <!-- BODY -->
+    <div id="modalBody" class="modal-body"></div>
 
   </div>
 </div>

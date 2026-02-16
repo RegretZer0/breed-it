@@ -1,4 +1,4 @@
-console.log("✅ farmer_profile.js loaded");
+console.log(" farmer_profile.js loaded");
 
 document.addEventListener("DOMContentLoaded", async () => {
   /* =======================
@@ -14,7 +14,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   const farmerIdEl = document.getElementById("farmer_id");
   const numPensEl = document.getElementById("num_of_pens");
   const penCapacityEl = document.getElementById("pen_capacity");
-  const messageEl = document.getElementById("profileMessage");
+
+  /* =======================
+    AVATAR ELEMENTS
+  ======================= */
+  const avatarImg = document.getElementById("profileAvatarImg");
+  const editAvatarImg = document.getElementById("editAvatarImg");
+  const avatarInput = document.getElementById("avatarInput");
+  const changeAvatarBtn = document.getElementById("changeAvatarBtn");
+
+  /* =======================
+   CHANGE PASSWORD (MODAL TOGGLE)
+  ======================= */
+  const openChangeBtn = document.getElementById("openChangePassword");
+  const closeChangeBtn = document.getElementById("closeChangePassword");
+  const changeModal = document.getElementById("changePasswordModal");
+
+  if (openChangeBtn && changeModal) {
+    openChangeBtn.addEventListener("click", () => {
+      changeModal.classList.remove("hidden");
+    });
+
+    closeChangeBtn?.addEventListener("click", () => {
+      changeModal.classList.add("hidden");
+    });
+  }
+
+  /* =======================
+   AVATAR PREVIEW
+  ======================= */
+  if (avatarInput) {
+    avatarInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (editAvatarImg) {
+          editAvatarImg.src = reader.result;
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   /* =======================
      EDIT MODE ELEMENTS
@@ -63,7 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     farmerData = data.farmer;
 
-    nameEl.textContent = farmerData.name || "-";
+    nameEl.textContent = `${farmerData.first_name} ${farmerData.last_name}` || "-";
     emailEl.textContent = farmerData.email || "-";
     contactEl.textContent = farmerData.contact_no || "-";
     addressEl.textContent = farmerData.address || "-";
@@ -71,22 +113,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     numPensEl.textContent = farmerData.num_of_pens ?? "0";
     penCapacityEl.textContent = farmerData.pen_capacity ?? "0";
 
-  } catch (err) {
-    console.error(err);
-    messageEl.textContent = "Failed to load profile.";
-    return;
+    // Load profile picture
+    if (avatarImg) {
+      avatarImg.src = farmerData.profile_picture || "/images/default-avatar.png";
+    }
+
+    if (editAvatarImg) {
+      editAvatarImg.src = farmerData.profile_picture || "/images/default-avatar.png";
+    }
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load profile.");
+      return;
+    }
+
+  /* =======================
+   AVATAR UPLOAD TOGGLE
+  ======================= */
+  if (changeAvatarBtn && avatarInput) {
+    changeAvatarBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      if (!avatarInput.dataset.opening) {
+        avatarInput.dataset.opening = "true";
+        avatarInput.click();
+
+        setTimeout(() => {
+          avatarInput.dataset.opening = "";
+        }, 500);
+      }
+    });
   }
 
   /* =======================
      EDIT MODE
   ======================= */
   editBtn.addEventListener("click", () => {
-    editName.value = farmerData.name || "";
+    // editName.value = farmerData.name || "";
     editEmail.value = farmerData.email || "";
     editContact.value = farmerData.contact_no || "";
     editAddress.value = farmerData.address || "";
     editNumPens.value = farmerData.num_of_pens ?? 0;
     editPenCapacity.value = farmerData.pen_capacity ?? 0;
+    editName.value = `${farmerData.first_name} ${farmerData.last_name}` || "";
+
 
     viewSection.classList.add("hidden");
     editSection.classList.remove("hidden");
@@ -101,7 +173,18 @@ document.addEventListener("DOMContentLoaded", async () => {
      SAVE → PREVIEW MODAL
   ======================= */
   saveBtn.addEventListener("click", (e) => {
-  e.preventDefault();
+    e.preventDefault();
+
+    if (!editContact.value || !editAddress.value) {
+      alert("Please complete required fields.");
+      return;
+    }
+
+    if (editNumPens.value < 0 || editPenCapacity.value < 0) {
+      alert("Values cannot be negative.");
+      return;
+    }
+
     previewName.textContent = editName.value;
     previewEmail.textContent = editEmail.value;
     previewContact.textContent = editContact.value;
@@ -112,27 +195,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     previewModal.classList.remove("hidden");
   });
 
+
   previewCancel?.addEventListener("click", () => {
     previewModal.classList.add("hidden");
   });
 
+  
   previewConfirm?.addEventListener("click", async (e) => {
   e.preventDefault();
     try {
-      const payload = {
-        name: editName.value,
-        email: editEmail.value,
-        contact_no: editContact.value,
-        address: editAddress.value,
-        num_of_pens: Number(editNumPens.value),
-        pen_capacity: Number(editPenCapacity.value),
-      };
+      const formData = new FormData();
+      formData.append("contact_no", editContact.value);
+      formData.append("address", editAddress.value);
+      formData.append("num_of_pens", editNumPens.value);
+      formData.append("pen_capacity", editPenCapacity.value);
+
+      if (avatarInput && avatarInput.files[0]) {
+        formData.append("profile_picture", avatarInput.files[0]);
+      }
 
       const res = await fetch("/api/farmer/profile", {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       const data = await res.json();
@@ -142,7 +227,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const farmer = data.farmer;
 
-      nameEl.textContent = farmer.name;
+      nameEl.textContent = `${farmer.first_name} ${farmer.last_name}`;
       emailEl.textContent = farmer.email;
       contactEl.textContent = farmer.contact_no;
       addressEl.textContent = farmer.address;
@@ -171,8 +256,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("successModal")
         .classList.add("hidden");
   });
-});
-
 
   // CLOSE ERROR MODAL
   document.getElementById("closeErrorModal")
@@ -180,24 +263,4 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("errorModal")
         .classList.add("hidden");
   });
-
-/* =======================
-   CHANGE PASSWORD (MODAL TOGGLE)
-======================= */
-document.addEventListener("DOMContentLoaded", () => {
-  const openChangeBtn = document.getElementById("openChangePassword");
-  const closeChangeBtn = document.getElementById("closeChangePassword");
-  const changeModal = document.getElementById("changePasswordModal");
-
-  if (!openChangeBtn || !changeModal) return;
-
-  openChangeBtn.addEventListener("click", () => {
-    changeModal.classList.remove("hidden");
-  });
-
-  closeChangeBtn?.addEventListener("click", () => {
-    changeModal.classList.add("hidden");
-  });
 });
-
-

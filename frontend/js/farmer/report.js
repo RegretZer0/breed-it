@@ -15,11 +15,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   const reportsTableBody = document.getElementById("reportsTableBody");
   const submitBtn = reportForm?.querySelector(".btn-submit");
 
+  /* ---------------- FILTER ELEMENT REFERENCES ----------------*/
   const statusFilter = document.getElementById("statusFilter");
-  const dateFilter = document.getElementById("dateFilter");
-  const pigFilter = document.getElementById("pigFilter");
   const searchBtn = document.getElementById("searchBtn");
   const clearFilterBtn = document.getElementById("clearFilterBtn");
+
+  const tagSearchInput = document.getElementById("tagSearchInput");
+  const dateFromFilter = document.getElementById("dateFromFilter");
+  const dateToFilter = document.getElementById("dateToFilter");
+
+  const statusTabs = document.querySelectorAll(".status-tab");
 
   let selectedFiles = [];
 
@@ -173,18 +178,39 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res) return;
       const data = await res.json();
 
+      /* ---------------- STATUS TAB FILTER ----------------*/
+      statusTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+          statusTabs.forEach(t => t.classList.remove("active"));
+          tab.classList.add("active");
+
+          const selectedStatus = tab.dataset.status;
+
+          document.querySelectorAll(".report-item").forEach(card => {
+            if (!selectedStatus || card.dataset.status === selectedStatus) {
+              card.style.display = "";
+            } else {
+              card.style.display = "none";
+            }
+          });
+        });
+      });
+
+      /* ---------------- EMPTY STATE RENDER ----------------*/
       if (!data.success || !data.reports?.length) {
-        reportsTableBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No reports found</td></tr>";
+        reportsTableBody.innerHTML = `
+          <div class="empty-state">
+            No reports found
+          </div>
+        `;
         return;
       }
 
       const now = new Date();
       now.setHours(0,0,0,0);
-      const pigSet = new Set();
 
       reportsTableBody.innerHTML = data.reports.map(r => {
         const swineDisplay = r.swine_id?.swine_id || "Unknown";
-        pigSet.add(swineDisplay);
 
         const rawStatus = (r.status || "pending")
           .toLowerCase()
@@ -207,52 +233,60 @@ document.addEventListener("DOMContentLoaded", async () => {
               data-swine="${swineDisplay}"
               data-date="${r.createdAt.split("T")[0]}">
 
-            <div class="report-header">
-              <div>
-                <div class="report-id">${swineDisplay}</div>
-                <div class="report-date">
-                  ${new Date(r.createdAt).toLocaleDateString()}
+            <div class="report-card">
+
+              <!-- TOP RIGHT STATUS -->
+              <div class="report-status-pill ${rawStatus}">
+                ${displayStatus}
+              </div>
+
+              <div class="report-main">
+
+                <!-- PROFILE SLOT -->
+                <div class="report-avatar">
+                  <div class="avatar-placeholder">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                  </div>
+                </div>
+
+                <!-- MAIN INFO -->
+                <div class="report-info">
+                  <div class="report-header-line">
+                    <h3>${swineDisplay}</h3>
+                    <span class="report-date">
+                      ${new Date(r.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div class="report-sub-info">
+                    <span class="dynamic-status">
+                      ${displayStatus}
+                    </span>
+                    <span class="days-remaining">
+                      ${formatCountdown(r.next_heat_check || r.expected_farrowing)}
+                    </span>
+                  </div>
+
+                  <!-- ACTIONS -->
+                  <div class="report-actions">
+                    <button class="btn-view-evidence"
+                            onclick="viewEvidence('${r._id}')">
+                      View Detail
+                    </button>
+
+                    <button class="btn-track-progress"
+                            onclick="submitFollowUp('${r._id}', '${swineDisplay}')">
+                      Track Progress
+                    </button>
+                  </div>
+
                 </div>
               </div>
-
-              <div class="report-status-pill ${rawStatus}">
-                ${displayStatus === "approved" ? "AI Scheduled" : displayStatus}
-              </div>
             </div>
-
-            <div class="report-meta">
-
-              <div>
-                <label>Next Heat</label>
-                <span class="next-heat" data-date="${r.next_heat_check || ""}">
-                  ${heatCheckDate ? heatCheckDate.toLocaleDateString() : "-"}
-                </span>
-              </div>
-
-              <div>
-                <label>Expected Farrowing</label>
-                <span class="farrowing" data-date="${r.expected_farrowing || ""}">
-                  ${farrowingDate ? farrowingDate.toLocaleDateString() : "-"}
-                </span>
-              </div>
-
-            </div>
-
-            <div class="report-actions">
-              <button class="btn-view-evidence"
-                      onclick="viewEvidence('${r._id}')">
-                View Evidence
-              </button>
-            </div>
-
           </div>
         `;
+
       }).join("");
-
-
-      const currentVal = pigFilter.value;
-      pigFilter.innerHTML = '<option value="">All pigs</option>' + [...pigSet].sort().map(p => `<option value="${p}">${p}</option>`).join("");
-      pigFilter.value = currentVal;
 
       updateCountdowns();
     } catch (err) { console.error("Load Reports Error:", err); }
@@ -415,18 +449,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // ---------------- FILTER LOGIC ----------------
-  searchBtn?.addEventListener("click", () => {
-    const s = statusFilter.value, d = dateFilter.value, p = pigFilter.value;
-    reportsTableBody.querySelectorAll(".report-item").forEach(card => {
-      const match = (!s || card.dataset.status === s) && (!d || row.dataset.date === d) && (!p || row.dataset.swine === p);
-      row.style.display = match ? "" : "none";
-    });
-  });
+  /* ---------------- ADVANCED FILTER APPLY ----------------
+   Purpose: Apply combined filters (status dropdown, tag search, date range)
+*/
+searchBtn?.addEventListener("click", () => {
 
+  const statusVal = statusFilter.value;
+  const tagVal = tagSearchInput.value.trim().toLowerCase();
+  const fromDate = dateFromFilter.value;
+  const toDate = dateToFilter.value;
+
+  reportsTableBody.querySelectorAll(".report-item").forEach(card => {
+
+    const cardStatus = card.dataset.status;
+    const cardDate = card.dataset.date;
+    const cardSwine = card.dataset.swine.toLowerCase();
+
+    const matchStatus = !statusVal || cardStatus === statusVal;
+    const matchTag = !tagVal || cardSwine.includes(tagVal);
+    const matchFrom = !fromDate || cardDate >= fromDate;
+    const matchTo = !toDate || cardDate <= toDate;
+
+    const shouldShow = matchStatus && matchTag && matchFrom && matchTo;
+
+    card.style.display = shouldShow ? "" : "none";
+  });
+});
+
+
+  /* -------------- FILTER RESET ----------------*/
   clearFilterBtn?.addEventListener("click", () => {
-    [statusFilter, dateFilter, pigFilter].forEach(f => f.value = "");
-    reportsTableBody.querySelectorAll(".report-item").forEach(row => row.style.display = "");
+
+    tagSearchInput.value = "";
+    dateFromFilter.value = "";
+    dateToFilter.value = "";
+    statusFilter.value = "";
+
+    reportsTableBody.querySelectorAll(".report-item").forEach(card => {
+      card.style.display = "";
+    });
+
+    statusTabs.forEach(t => t.classList.remove("active"));
+    if (statusTabs.length > 0) statusTabs[0].classList.add("active");
   });
 
   document.getElementById("logoutBtn")?.addEventListener("click", () => {

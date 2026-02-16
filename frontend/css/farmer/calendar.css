@@ -130,7 +130,7 @@ body {
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 600;
-  background: rgba(31, 191, 143, 0.08);
+  background: rgba(20, 205, 60, 0.08);
 }
 
 /* =========================================
@@ -162,7 +162,7 @@ body {
 }
 
 /* =========================================
-   FIX EVENT OVERFLOW
+   EVENT OVERFLOW
 ========================================= */
 
 /* Prevent event from overflowing day cell */
@@ -170,6 +170,8 @@ body {
   width: 100% !important;
   max-width: 100% !important;
   overflow: hidden;
+  background: transparent;
+  border: none;
 }
 
 /* Clean event badge */
@@ -185,7 +187,7 @@ body {
   padding: 3px 6px;
   font-size: 10px;
   font-weight: 600;
-  background: rgba(31, 191, 143, 0.12);
+  background: rgb(241, 240, 240);
 }
 
 /* Prevent icon pushing layout */

@@ -12,7 +12,7 @@ const farmerSchema = new mongoose.Schema(
     num_of_pens: { type: Number, default: 0 },
     pen_capacity: { type: Number, default: 0 },
 
-    // ✅ ADD THESE TWO FIELDS
+    //  ADD THESE TWO FIELDS
     status: {
       type: String,
       enum: ["Active", "Inactive"],

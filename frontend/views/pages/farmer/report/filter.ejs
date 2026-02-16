@@ -1,38 +1,3 @@
-<!-- ================= FILTERS ================= -->
-<div class="filters">
-  <div class="filter">
-    <label>Status</label>
-    <select id="statusFilter">
-      <option value="">All</option>
-      <option value="pending">Pending</option>
-      <option value="accepted">Accepted</option>
-      <option value="waiting_heat_check">Waiting Heat Check</option>
-      <option value="pregnant">Pregnant</option>
-      <option value="rejected">Rejected</option>
-    </select>
-  </div>
-
-  <div class="filter">
-    <label>Date</label>
-    <input type="date" id="dateFilter" />
-  </div>
-
-  <div class="filter">
-    <label>Pig Tag</label>
-    <select id="pigFilter">
-      <option value="">All pigs</option>
-    </select>
-  </div>
-
-  <button class="search-btn" id="searchBtn">
-    <i class="fa-solid fa-magnifying-glass"></i> SEARCH
-  </button>
-
-  <button class="search-btn outline" id="clearFilterBtn">
-    CLEAR
-  </button>
-</div>
-
 <!-- ================= STATS ================= -->
 <div class="stats-container">
   <div class="stat-card">
@@ -55,4 +20,53 @@
       <span id="countFarrowing">0</span>
     </div>
   </div>
+</div>
+
+
+<!-- ================= STATUS TABS ================= -->
+<div class="status-tabs">
+  <button class="status-tab active" data-status="">All</button>
+  <button class="status-tab" data-status="pending">Pending</button>
+  <button class="status-tab" data-status="approved">Approved</button>
+  <button class="status-tab" data-status="rejected">Rejected</button>
+  <button class="status-tab" data-status="pregnant">Pregnant</button>
+  <button class="status-tab" data-status="waiting_heat_check">Ongoing</button>
+</div>
+
+
+<!-- ================= ADVANCED FILTER ================= -->
+<div class="filters">
+
+  <div class="filter">
+    <label>Search Tag / Pig ID</label>
+    <input type="text" id="tagSearchInput" placeholder="Enter Pig ID..." />
+  </div>
+
+  <div class="filter">
+    <label>From Date</label>
+    <input type="date" id="dateFromFilter" />
+  </div>
+
+  <div class="filter">
+    <label>To Date</label>
+    <input type="date" id="dateToFilter" />
+  </div>
+
+  <div class="filter">
+    <label>Status</label>
+    <select id="statusFilter">
+      <option value="">All</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="waiting_heat_check">Ongoing</option>
+      <option value="pregnant">Pregnant</option>
+      <option value="rejected">Rejected</option>
+    </select>
+  </div>
+
+  <div class="filter-actions">
+    <button class="search-btn" id="searchBtn">APPLY</button>
+    <button class="search-btn outline" id="clearFilterBtn">RESET</button>
+  </div>
+
 </div>

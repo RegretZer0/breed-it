@@ -1,34 +1,51 @@
-<div id="editPigModal" class="modal hidden">
-  <div class="modal-content">
+<div id="editPigModal" class="modal">
+  <div class="modal-panel">
 
-    <span id="closeEditModal" class="modal-close">&times;</span>
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button type="button" id="backToOverviewEdit" class="modal-close-btn">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <h3>Update Pig Information</h3>
+      </div>
 
-    <h3>Edit Pig</h3>
+      <button id="closeEditModal" class="modal-close-btn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
 
-    <form id="editPigForm">
+    <form id="editPigForm" class="modal-body">
 
       <input type="hidden" id="editPigId" />
 
-      <label>Health</label>
-      <select id="editHealth">
-        <option value="Healthy">Healthy</option>
-        <option value="Sick">Sick</option>
-        <option value="Injured">Injured</option>
-      </select>
+      <div class="form-group">
+        <label>Health Condition</label>
+        <select id="editHealth">
+          <option value="Healthy">Healthy</option>
+          <option value="Sick">Sick</option>
+          <option value="Injured">Injured</option>
+        </select>
+      </div>
 
-      <label>Status</label>
-      <select id="editStatus">
-        <option value="Open">Open</option>
-        <option value="Monitoring">Monitoring</option>
-        <option value="Under Observation">Under Observation</option>
-      </select>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="editStatus">
+          <option value="Open">Open</option>
+          <option value="Monitoring">Monitoring</option>
+          <option value="Under Observation">Under Observation</option>
+        </select>
+      </div>
 
-      <label>Notes</label>
-      <textarea id="editNotes"></textarea>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="editNotes" rows="4"></textarea>
+      </div>
 
-      <button type="submit" class="primary-btn">
-        Save Changes
-      </button>
+      <div class="modal-footer">
+        <button type="submit" class="primary-btn full-width">
+          Save Changes
+        </button>
+      </div>
 
     </form>
 

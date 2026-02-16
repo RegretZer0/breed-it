@@ -207,24 +207,6 @@ if (editBtn && cancelEdit) {
     viewProfile.classList.remove("hidden");
   });
 }
-
-/* PROFILE IMAGE UPLOAD */
-const avatarInput = document.getElementById("avatarInput");
-const changeAvatarBtn = document.getElementById("changeAvatarBtn");
-const avatarEditPreview = document.getElementById("avatarEditPreview");
-
-if (changeAvatarBtn && avatarInput) {
-  changeAvatarBtn.addEventListener("click", () => avatarInput.click());
-
-  avatarInput.addEventListener("change", () => {
-    const file = avatarInput.files[0];
-    if (!file) return;
-
-    const url = URL.createObjectURL(file);
-    avatarEditPreview.innerHTML = `<img src="${url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-  });
-}
-
   
   /* =========================
      TRANSLATIONS

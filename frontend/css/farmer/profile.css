@@ -46,6 +46,13 @@ body {
   font-size: 40px;
 }
 
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
 .profile-header-info h2 {
   margin: 0;
   font-weight: 600;
@@ -266,6 +273,18 @@ body {
   font-size: 32px;
   overflow: hidden;
 }
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-avatar, .avatar-preview {
+  overflow: hidden;
+}
+
 
 /* Change avatar button */
 .avatar-upload button {
