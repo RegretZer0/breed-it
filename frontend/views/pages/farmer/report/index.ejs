@@ -2,58 +2,52 @@
 
 <div class="app-root">
   <main class="report-container">
-    <h2 class="page-title">REPORT</h2>
 
-    <!-- TABS -->
+    <!-- ================= MODULE: PAGE HEADER (TITLE CARD) ================= -->
+    <header class="title-card" id="moduleTitleCard">
+      <h2 class="title-main" id="moduleTitleMain">REPORT - HEAT MONITORING</h2>
+      <p class="title-sub" id="moduleTitleSub">Track breeding cycle & pregnancy progress</p>
+    </header>
+
+    <!-- ================= MODULE: TABS ================= -->
     <div class="report-tabs">
       <button class="tab active" id="logsTab">LOGS</button>
       <button class="tab outline" id="createTab">CREATE REPORT</button>
     </div>
 
-    <!-- ================= LOGS ================= -->
+    <!-- ================= MODULE: LOGS SECTION ================= -->
     <section id="logsSection">
 
-      <!-- HERO HEADER -->
-      <div class="report-hero">
-        <div>
-          <h2>Heat Monitoring</h2>
-          <p>Track breeding cycle and pregnancy progress</p>
-        </div>
+      <!-- MODULE: LOGS FILTERS -->
+      <div class="logs-controls">
+        <%- include("./filter") %>
       </div>
 
-      <%- include("./filter") %>
-
-      <!-- REPORT CARDS -->
-      <div id="reportsTableBody" class="reports-list">
+      <!-- MODULE: LOGS REPORT LIST -->
+      <div id="reportsTableBody" class="reports-list reports-card-list">
         <div class="empty-state">
           Checking for active reports...
         </div>
       </div>
 
+      <!-- MODULE: PAGINATION -->
+      <div id="reportsPagination" class="reports-pagination"></div>
+
     </section>
 
-
-
-    <!-- ================= CREATE REPORT ================= -->
+    <!-- ================= MODULE: CREATE SECTION ================= -->
     <section id="createSection" class="hidden">
 
-      <div class="create-hero">
-        <h3>Create Heat Report</h3>
-        <p>Submit signs of heat and evidence for review</p>
-      </div>
-
+      <!-- MODULE: CREATE FORM -->
       <%- include("./create-form") %>
 
     </section>
 
-
   </main>
 </div>
 
-<!-- ================= MODALS ================= -->
+<!-- ================= MODULE: MODALS ================= -->
 <%- include("./modal") %>
 <%- include("./edit-modal") %>
 
 <%- include("../../../partials/farmer/farmer_footer") %>
-
-<script type="module" src="/js/reports/index.js"></script>

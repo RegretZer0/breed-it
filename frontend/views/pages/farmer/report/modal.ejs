@@ -1,9 +1,77 @@
-<div id="reportModal" class="modal hidden">
-  <div class="modal-content">
-    <span class="close-modal">&times;</span>
-    <h3>Report Details</h3>
+<div id="reportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+  <div class="modal-content report-details-modal">
+    <button type="button" class="close-modal btn-icon" aria-label="Close">
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <h3 id="reportModalTitle" class="modal-title">Report Details</h3>
+
     <div id="modalBody">
       <p>Loading...</p>
     </div>
+  </div>
+</div>
+
+<!-- TRACK PROGRESS MODAL -->
+<div id="trackModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="trackTitle">
+  <div class="modal-content track-modal">
+
+    <button type="button" class="close-modal btn-icon" aria-label="Close" id="trackCloseBtn">
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="track-head">
+      <div>
+        <h3 id="trackTitle" class="modal-title">Progress Tracking</h3>
+        <div class="track-sub" id="trackFarmerLine">Farmer: —</div>
+      </div>
+    </div>
+
+    <!-- Pig summary card -->
+    <div class="track-pig-card">
+      <div class="track-pig-top">
+        <div class="track-pig-id">
+          <i class="bi bi-heart-fill"></i>
+          <span id="trackSwineId">—</span>
+        </div>
+
+        <span class="track-state-pill" id="trackStatePill">Active</span>
+      </div>
+
+      <div class="track-pig-grid">
+        <div class="track-pig-kv">
+          <div class="kv-label">Current Stage</div>
+          <div class="kv-value" id="trackCurrentStage">—</div>
+        </div>
+
+        <div class="track-pig-kv right">
+          <div class="kv-label">Time Remaining</div>
+          <div class="kv-value warn" id="trackTimeRemaining">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="track-timeline" id="trackBody">
+      <div class="empty-state">Loading progress...</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- EVIDENCE LIGHTBOX -->
+<div class="evidence-lightbox" id="evidenceLightbox" aria-hidden="true">
+  <div class="lb-card" role="dialog" aria-modal="true">
+    <div class="lb-head">
+      <div class="lb-title">
+        <i class="bi bi-aspect-ratio"></i>
+        Evidence Preview
+      </div>
+      <button class="lb-close" type="button" id="evidenceLightboxClose" aria-label="Close preview">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="lb-body" id="evidenceLightboxBody"></div>
   </div>
 </div>

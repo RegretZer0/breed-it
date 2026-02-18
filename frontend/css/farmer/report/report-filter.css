@@ -1,0 +1,227 @@
+/* =========================================================
+   FILTER BAR
+========================================================= */
+
+.filter-bar-card{
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(17,24,39,0.06);
+  border-radius: 26px;
+  padding: 14px 16px;
+  box-shadow:
+    0 18px 44px rgba(0,0,0,0.06),
+    0 1px 0 rgba(255,255,255,0.70) inset;
+  backdrop-filter: blur(10px);
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------- LEFT: STATUS TABS ---------- */
+.filter-bar-card .status-tabs{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.status-tab{
+  border: 1px solid rgba(31,167,116,0.28);
+  background: rgba(255,255,255,0.92);
+  color: #1FA774;
+
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+
+.status-tab:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(17,24,39,0.06);
+}
+
+.status-tab.active{
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1FA774, #38C98E);
+  box-shadow: 0 14px 28px rgba(31,167,116,0.20);
+}
+
+/* ---------- RIGHT: FILTER CONTROLS ---------- */
+.filter-bar-card .filter-controls{
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  gap: 8px;
+
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.filter{
+  min-width: 0;
+}
+
+.filter label{
+  display: none; /* desktop: clean */
+}
+
+.filter input,
+.filter select{
+  height: 38px;
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(17,24,39,0.10);
+  background: rgba(246, 251, 248, 0.92);
+
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+
+  box-sizing: border-box;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.filter input::placeholder{
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.filter input:focus,
+.filter select:focus{
+  outline: none;
+  border-color: rgba(31,167,116,0.55);
+  box-shadow: 0 0 0 4px rgba(31,167,116,0.14);
+  background: #ffffff;
+}
+
+/* dropdown caret */
+.filter select{
+  appearance: none;
+  padding-right: 42px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #1FA774 50%),
+    linear-gradient(135deg, #1FA774 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px),
+    calc(100% - 44px) 50%;
+  background-size: 6px 6px, 6px 6px, 1px 20px;
+  background-repeat: no-repeat;
+}
+
+/* widths (desktop) */
+.filter.filter-search{ width: 220px; }
+.filter.filter-status{ width: 220px; }
+
+/* ---------- BUTTONS (same size) ---------- */
+.search-btn{
+  height: 38px;
+  min-width: 112px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  box-sizing: border-box;
+}
+
+.search-btn.btn-apply{
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1FA774, #38C98E);
+  box-shadow: 0 14px 26px rgba(31,167,116,0.18);
+}
+
+.search-btn.btn-reset{
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(31,167,116,0.30);
+  color: #1FA774;
+  box-shadow: 0 10px 22px rgba(17,24,39,0.04);
+}
+
+.search-btn:hover{ transform: translateY(-1px); }
+.search-btn.btn-apply:hover{ box-shadow: 0 18px 32px rgba(31,167,116,0.22); }
+.search-btn.btn-reset:hover{ box-shadow: 0 14px 26px rgba(17,24,39,0.06); }
+
+.search-btn:active{
+  transform: translateY(0px);
+  opacity: 0.95;
+}
+
+/* =========================================================
+   MOBILE
+   - Controls (search/status/apply/reset) on TOP
+   - Tabs (All/Pending/...) below
+========================================================= */
+@media (max-width: 768px){
+  .filter-bar-card{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  /* put controls first */
+  .filter-bar-card .filter-controls{
+    order: 1;
+    margin-left: 0;
+
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+  }
+
+  /* search + status full width */
+  .filter-bar-card .filter-controls > .filter{
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* buttons side-by-side */
+  .search-btn{
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* tabs go under */
+  .filter-bar-card .status-tabs{
+    order: 2;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .status-tab{
+    padding: 8px 12px;
+    font-size: 12.5px;
+  }
+
+  .filter label{
+    display: block;
+    font-size: 12px;
+    font-weight: 900;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+
+  .filter.filter-search,
+  .filter.filter-status{
+    width: 100%;
+  }
+}

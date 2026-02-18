@@ -1,6 +1,10 @@
 <!-- ================= STATS ================= -->
 <div class="stats-container">
+
   <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-piggy-bank"></i>
+    </div>
     <div>
       <h4>Open Sows</h4>
       <span id="countOpen">0</span>
@@ -8,6 +12,29 @@
   </div>
 
   <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-heart-pulse"></i>
+    </div>
+    <div>
+      <h4>In-Heat</h4>
+      <span id="countInHeat">0</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-search"></i>
+    </div>
+    <div>
+      <h4>Under Observation</h4>
+      <span id="countObservation">0</span>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-clipboard2-pulse"></i>
+    </div>
     <div>
       <h4>Pregnant</h4>
       <span id="countPregnant">0</span>
@@ -15,58 +42,59 @@
   </div>
 
   <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-calendar-heart"></i>
+    </div>
     <div>
-      <h4>Farrowing Soon</h4>
+      <h4>Farrowing</h4>
       <span id="countFarrowing">0</span>
     </div>
   </div>
+
+  <div class="stat-card">
+    <div class="stat-icon">
+      <i class="bi bi-egg-fried"></i>
+    </div>
+    <div>
+      <h4>Lactating</h4>
+      <span id="countLactating">0</span>
+    </div>
+  </div>
+
 </div>
 
+<!-- ================= STATUS + FILTER (ONE BAR) ================= -->
+<div class="filter-bar-card">
 
-<!-- ================= STATUS TABS ================= -->
-<div class="status-tabs">
-  <button class="status-tab active" data-status="">All</button>
-  <button class="status-tab" data-status="pending">Pending</button>
-  <button class="status-tab" data-status="approved">Approved</button>
-  <button class="status-tab" data-status="rejected">Rejected</button>
-  <button class="status-tab" data-status="pregnant">Pregnant</button>
-  <button class="status-tab" data-status="waiting_heat_check">Ongoing</button>
-</div>
-
-
-<!-- ================= ADVANCED FILTER ================= -->
-<div class="filters">
-
-  <div class="filter">
-    <label>Search Tag / Pig ID</label>
-    <input type="text" id="tagSearchInput" placeholder="Enter Pig ID..." />
+  <!-- LEFT: Status Tabs -->
+  <div class="status-tabs">
+    <button class="status-tab active" data-status="">All</button>
+    <button class="status-tab" data-status="pending">Pending</button>
+    <button class="status-tab" data-status="approved">Approved</button>
+    <button class="status-tab" data-status="rejected">Rejected</button>
+    <button class="status-tab" data-status="ongoing">Ongoing</button>
   </div>
 
-  <div class="filter">
-    <label>From Date</label>
-    <input type="date" id="dateFromFilter" />
-  </div>
+  <!-- RIGHT: Filter Controls -->
+  <div class="filter-controls">
+    <div class="filter filter-search">
+      <label>Search by Tag</label>
+      <input type="text" id="tagSearchInput" placeholder="Search tag..." />
+    </div>
 
-  <div class="filter">
-    <label>To Date</label>
-    <input type="date" id="dateToFilter" />
-  </div>
+    <div class="filter filter-status">
+      <label>Status</label>
+      <select id="statusFilter">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="ongoing">Ongoing</option>
+      </select>
+    </div>
 
-  <div class="filter">
-    <label>Status</label>
-    <select id="statusFilter">
-      <option value="">All</option>
-      <option value="pending">Pending</option>
-      <option value="approved">Approved</option>
-      <option value="waiting_heat_check">Ongoing</option>
-      <option value="pregnant">Pregnant</option>
-      <option value="rejected">Rejected</option>
-    </select>
-  </div>
-
-  <div class="filter-actions">
-    <button class="search-btn" id="searchBtn">APPLY</button>
-    <button class="search-btn outline" id="clearFilterBtn">RESET</button>
+    <button class="search-btn btn-apply" id="searchBtn" type="button">Apply</button>
+    <button class="search-btn btn-reset" id="clearFilterBtn" type="button">Reset</button>
   </div>
 
 </div>
