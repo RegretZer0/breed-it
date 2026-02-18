@@ -10,17 +10,17 @@ const Notification = require("../models/Notifications");
  * 3. pregnant -> farrowing (on day 114/115)
  * 4. farrowing -> lactating (2 days after farrowing)
  * 5. lactating -> open (30 days after farrowing)
+ * 6. NEW: Auto-Cull (7 days post-weaning without heat report)
  */
 const initHeatCron = () => {
   // Run every hour to ensure timely status changes and notifications
   cron.schedule("0 * * * *", async () => {
-    console.log("Checking for Swine status transitions and AI reminders...");
+    console.log("Checking for Swine status transitions, AI reminders, and productivity windows...");
 
     try {
       const now = new Date();
 
       // --- PART 1: AI REMINDERS ---
-      // Send a reminder to the farmer if the scheduled AI (next_heat_check) is tomorrow
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStr = tomorrow.toISOString().split('T')[0];
@@ -97,11 +97,10 @@ const initHeatCron = () => {
         else if (diffDays >= 30) {
             newSwineStatus = "Open";
             
-            // Mark the breeding cycle report as completed
             if (report.status !== "completed") {
                 report.status = "completed";
                 await report.save();
-                shouldNotifyWeaning = true; // Trigger notification only once when transitioning
+                shouldNotifyWeaning = true; 
             }
         }
 
@@ -112,7 +111,6 @@ const initHeatCron = () => {
                 await swine.save();
                 console.log(`Swine ${swine.swine_id} transitioned to ${newSwineStatus}`);
 
-                // Send notification when moving to Open (Weaning)
                 if (shouldNotifyWeaning && report.farmer_id?.user_id) {
                     await Notification.create({
                         user_id: report.farmer_id.user_id,
@@ -123,6 +121,49 @@ const initHeatCron = () => {
                 }
             }
         }
+      }
+
+      // --- PART 4: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const openSows = await Swine.find({ current_status: "Open" });
+
+      for (const sow of openSows) {
+          // Find the weaning date from the latest breeding cycle
+          const lastCycle = sow.breeding_cycles && sow.breeding_cycles.length > 0 
+              ? sow.breeding_cycles[sow.breeding_cycles.length - 1] 
+              : null;
+
+          if (lastCycle && lastCycle.weaning_date) {
+              const weaningDate = new Date(lastCycle.weaning_date);
+
+              if (weaningDate < sevenDaysAgo) {
+                  // Check if a heat report was created AFTER the weaning date
+                  const recentReport = await HeatReport.findOne({
+                      swine_id: sow._id,
+                      createdAt: { $gt: lastCycle.weaning_date }
+                  });
+
+                  // If no heat report found, the sow failed to return to heat within 7 days
+                  if (!recentReport) {
+                      sow.current_status = "Culled/Sold";
+                      await sow.save();
+
+                      console.log(`Swine ${sow.swine_id} auto-culled due to 7-day unproductive window.`);
+
+                      // Notify the manager/farmer
+                      if (sow.manager_id) {
+                          await Notification.create({
+                              user_id: sow.manager_id,
+                              title: "Productivity Cull",
+                              message: `Swine ${sow.swine_id} has been automatically culled. It failed to show heat signs within 7 days post-weaning.`,
+                              type: "danger"
+                          });
+                      }
+                  }
+              }
+          }
       }
 
     } catch (err) {

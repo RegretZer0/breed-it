@@ -54,7 +54,13 @@ const swineSchema = new mongoose.Schema({
 
   // ------------------- Lineage -------------------
   sire_id: { type: String }, 
-  dam_id: { type: String },  
+  dam_id: { type: String },
+
+  // --- Main Schema ---
+  first_success_basis: {
+    signs: [String],
+    established_date: { type: Date }
+  },
 
   // ------------------- Reproductive Cycles (For Females) -------------------
   breeding_cycles: [{
@@ -65,6 +71,7 @@ const swineSchema = new mongoose.Schema({
     estrus_date: { type: Date },           
     ai_service_date: { type: Date },       
     
+    observed_signs: [String],
     pregnancy_check_date: { type: Date }, 
     is_pregnant: { type: Boolean, default: false },
     farrowed: { type: Boolean, default: false }, 
@@ -179,6 +186,12 @@ swineSchema.virtual('offspring', {
   foreignField: 'dam_id'
 });
 
+swineSchema.virtual('heat_sign_basis').get(function() {
+  return this.first_success_basis?.signs?.length > 0 
+    ? this.first_success_basis.signs 
+    : ["No successful cycle recorded yet"];
+});
+
 // Virtual for Average Daily Gain (ADG)
 swineSchema.virtual('current_adg').get(function() {
   if (!this.performance_records || this.performance_records.length < 2) return 0;
@@ -216,11 +229,26 @@ swineSchema.virtual('selection_suggestion').get(function() {
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
+    
+    // Gestation Calculation
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
       const gestationDays = 114; 
       const farrowDate = new Date(latestCycle.ai_service_date);
       farrowDate.setDate(farrowDate.getDate() + gestationDays);
       latestCycle.expected_farrowing_date = farrowDate;
+    }
+
+    // Logic for First Successful Pregnancy Basis
+    // Only sets if first_success_basis.signs is empty
+    if (
+      latestCycle.is_pregnant && 
+      (!this.first_success_basis || !this.first_success_basis.signs || this.first_success_basis.signs.length === 0) &&
+      latestCycle.observed_signs?.length > 0
+    ) {
+      this.first_success_basis = {
+        signs: latestCycle.observed_signs,
+        established_date: new Date()
+      };
     }
   }
   next();
