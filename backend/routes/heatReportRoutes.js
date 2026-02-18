@@ -38,24 +38,44 @@ const upload = multer({
 /**
  * UPDATED: logic to cap score at 100
  */
-const calculateProbability = (signs) => {
+const calculateProbability = (signs, swine) => {
+    // 1. Check if the swine has an established "First Success Basis"
+    const hasBasis = swine.first_success_basis && 
+                     swine.first_success_basis.signs && 
+                     swine.first_success_basis.signs.length > 0;
+
+    if (hasBasis) {
+        const basisSigns = swine.first_success_basis.signs;
+        
+        // Check if current signs are EXACTLY the same as the successful ones
+        const isIdentical = signs.length === basisSigns.length && 
+                            signs.every(s => basisSigns.includes(s));
+
+        if (isIdentical) {
+            return 100; // Same signs = 100% Probability
+        }
+    }
+
+    // 2. Default weighted calculation if no basis exists or signs don't match exactly
     const weights = {
-        "Reddened Vulva": 10,
-        "Swollen Vulva": 60,
-        "Mucous Discharge": 15,
-        "Seeking the Boar": 20,
-        "Perked/Twitching Ears": 40,
+        "Reddened Vulva": 20,
+        "Swollen Vulva": 10,
+        "Mucous Discharge": 5,
+        "Tail raising": 2,
+        "Perked/Twitching Ears": 5,
         "Standing Reflex": 50,
-        "Back Pressure Test": 30
+        "Restlessness or noticeable behavioral change": 2,
+        "Increased vocalization": 2,
+        "Decreased appetite": 2,
+        "Increased alertness or irritability": 2
     };
+
     let score = 0;
     const parsedSigns = Array.isArray(signs) ? signs : [];
-    
     parsedSigns.forEach(sign => {
         if (weights[sign]) score += weights[sign];
     });
 
-    // Ensures it never exceeds 100
     return score > 100 ? 100 : score;
 };
 
@@ -90,7 +110,7 @@ const notifyBreedingTeam = async (managerId, farmerUserId, title, message, type 
 };
 
 /* ======================================================
-    ADD NEW HEAT REPORT
+    ADD NEW HEAT REPORT (With Culling Logic)
 ====================================================== */
 router.post(
     "/add",
@@ -109,7 +129,6 @@ router.post(
             let farmer = await Farmer.findOne({
                 $or: [{ _id: req.user.farmerProfileId }, { user_id: req.user.id }]
             });
-
             if (!farmer) return res.status(404).json({ success: false, message: "Farmer profile not found" });
 
             const swine = await Swine.findOne({ swine_id: swineId });
@@ -117,6 +136,31 @@ router.post(
 
             const evidenceData = files.map(file => `/uploads/${file.filename}`);
             const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
+
+            // --- NEW LOGIC: CULLING CHECK ---
+            const hasBasis = swine.first_success_basis && 
+                             swine.first_success_basis.signs && 
+                             swine.first_success_basis.signs.length > 0;
+
+            if (hasBasis) {
+                const basisSigns = swine.first_success_basis.signs;
+                const isIdentical = parsedSigns.length === basisSigns.length && 
+                                    parsedSigns.every(s => basisSigns.includes(s));
+
+                if (!isIdentical) {
+                    // Update Swine status to Culled/Sold because signs changed
+                    swine.current_status = "Culled/Sold";
+                    await swine.save();
+
+                    await logAction(req.user.id, "AUTO_CULL", "BREEDING", `Swine ${swineId} auto-culled due to irregular heat signs.`, req);
+                    
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: `Report rejected: Swine ${swineId} has been marked as Culled/Sold because current heat signs do not match its successful history.` 
+                    });
+                }
+            }
+            // ---------------------------------
 
             const newReport = new HeatReport({
                 swine_id: swine._id,
@@ -126,7 +170,7 @@ router.post(
                 standing_reflex: parsedSigns.includes("Standing Reflex"),
                 back_pressure_test: parsedSigns.includes("Back Pressure Test"),
                 evidence_url: evidenceData,
-                heat_probability: calculateProbability(parsedSigns),
+                heat_probability: calculateProbability(parsedSigns, swine), // Pass swine here
                 status: "pending"
             });
 
@@ -186,7 +230,7 @@ router.get("/farmer", requireApiLogin, allowRoles("farmer", "farm_manager", "enc
 });
 
 /* ======================================================
-    APPROVE HEAT REPORT
+    APPROVE HEAT REPORT (Updated with First Success Logic)
 ====================================================== */
 router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
     try {
@@ -206,6 +250,12 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
         const swine = await Swine.findById(report.swine_id);
         const nextCycleNumber = (swine.breeding_cycles?.length || 0) + 1;
 
+        // Logic to check if current signs match the established "First Success Basis"
+        const hasBasis = swine.first_success_basis && swine.first_success_basis.signs.length > 0;
+        const matchesBasis = hasBasis 
+            ? report.signs.every(sign => swine.first_success_basis.signs.includes(sign))
+            : false;
+
         await Swine.findByIdAndUpdate(report.swine_id, { 
             current_status: "In-Heat",
             $push: {
@@ -213,6 +263,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
                     cycle_number: nextCycleNumber,
                     heat_report_id: report._id,
                     estrus_date: report.approved_at,
+                    observed_signs: report.signs, // <--- SAVES CURRENT SIGNS TO CYCLE
                     is_pregnant: false
                 }
             }
@@ -220,15 +271,20 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
 
         await logAction(req.user.id, "APPROVE_HEAT_REPORT", "BREEDING", `Approved heat for Swine ${swine.swine_id}.`, req);
 
+        // Enhanced notification message
+        let matchNote = hasBasis 
+            ? (matchesBasis ? " (Matches First Success Profile)" : " (Varies from First Success Profile)") 
+            : "";
+
         await notifyBreedingTeam(
             req.user.id, 
             report.farmer_id.user_id, 
             "Heat Approved", 
-            `Swine ${swine.swine_id} is approved for AI on ${scheduledInsemination.toLocaleDateString()}.`,
+            `Swine ${swine.swine_id} is approved for AI on ${scheduledInsemination.toLocaleDateString()}.${matchNote}`,
             "success"
         );
         
-        res.json({ success: true, message: "Report approved." });
+        res.json({ success: true, message: "Report approved and cycle signs recorded." });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -477,7 +533,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 });
 
 /* ======================================================
-    CONFIRM WEANING
+    CONFIRM WEANING (Updated with Weaning Window)
 ====================================================== */
 router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
     try {
@@ -486,28 +542,43 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
         if (report.status !== "lactating") return res.status(400).json({ success: false, message: "Only lactating sows can be weaned." });
 
         const now = new Date();
+        
+        // 1. Update Heat Report status
         report.status = "completed"; 
         report.weaning_date = now;
         await report.save();
 
+        // 2. Update the AI Record to Completed
         await AIRecord.findOneAndUpdate({ heat_report_id: report._id }, { status: "Completed" });
 
+        // 3. Update Swine: set weaning_date in the cycle and set status to Open
+        // This weaning_date is what your cron job will use for the 7-day cull timer
         await Swine.updateOne(
             { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
-            { $set: { "breeding_cycles.$.weaning_date": now, current_status: "Open" } }
+            { 
+                $set: { 
+                    "breeding_cycles.$.weaning_date": now, 
+                    current_status: "Open" 
+                } 
+            }
         );
 
+        // 4. Log the action
         await logAction(req.user.id, "CONFIRM_WEANING", "BREEDING", `Weaning confirmed for Swine ${report.swine_id.swine_id}.`, req);
 
+        // 5. Notify the breeding team
         await notifyBreedingTeam(
             report.manager_id, 
             report.farmer_id.user_id, 
             "Sow Weaned", 
-            `Swine ${report.swine_id.swine_id} has been weaned and is now Open.`,
+            `Swine ${report.swine_id.swine_id} has been weaned. 7-day window to return to heat has started.`,
             "info"
         );
 
-        res.json({ success: true, message: "Weaning confirmed. Swine is now Open." });
+        res.json({ 
+            success: true, 
+            message: "Weaning confirmed. Swine is now Open. Note: Sow must return to heat within 7 days to avoid automatic culling." 
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -550,7 +621,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 });
 
 /* ======================================================
-   CALENDAR EVENTS – LIFECYCLE BASED
+    CALENDAR EVENTS – LIFECYCLE & HEAT WINDOWS
 ====================================================== */
 router.get(
   "/calendar-events",
@@ -559,7 +630,6 @@ router.get(
   async (req, res) => {
     try {
       const user = req.user;
-
       let query = {};
 
       if (user.role === "farmer") {
@@ -571,22 +641,28 @@ router.get(
         }
         query.farmer_id = user.farmerProfileId;
       } else {
-        query.manager_id =
-          user.role === "farm_manager" ? user.id : user.managerId;
+        query.manager_id = user.role === "farm_manager" ? user.id : user.managerId;
       }
 
+      // 1. Fetch Heat Reports (Existing Features)
       const reports = await HeatReport.find(query)
         .populate("swine_id", "swine_id")
         .lean();
 
+      // 2. Fetch "Open" Swine (New Feature: 7-day Heat Window tracking)
+      const openSwine = await Swine.find({ 
+        ...query, 
+        current_status: "Open",
+        sex: "Female" 
+      }).lean();
+
       const events = [];
 
+      // --- PROCESS HEAT REPORTS (Your Original Features) ---
       reports.forEach(r => {
         const swineCode = r.swine_id?.swine_id || "Unknown";
 
-        // ===============================
-        // Artificial Insemination DUE (After approval)
-        // ===============================
+        // Artificial Insemination DUE
         if (r.status === "approved" && r.next_heat_check) {
           events.push({
             id: `${r._id}-ai-due`,
@@ -601,9 +677,7 @@ router.get(
           });
         }
 
-        // ===============================
-        // PREGNANCY CHECK (21 days)
-        // ===============================
+        // PREGNANCY CHECK
         if (r.status === "under_observation" && r.next_heat_check) {
           events.push({
             id: `${r._id}-preg-check`,
@@ -618,9 +692,7 @@ router.get(
           });
         }
 
-        // ===============================
         // EXPECTED FARROWING
-        // ===============================
         if (r.status === "pregnant" && r.expected_farrowing) {
           events.push({
             id: `${r._id}-expected-farrow`,
@@ -635,9 +707,7 @@ router.get(
           });
         }
 
-        // ===============================
         // ACTUAL FARROWING
-        // ===============================
         if (r.status === "lactating" && r.actual_farrowing_date) {
           events.push({
             id: `${r._id}-actual-farrow`,
@@ -652,16 +722,11 @@ router.get(
           });
         }
 
-        // ===============================
-        // WEANING DUE (30 days after farrow)
-        // ===============================
-        const farrowDate =
-          r.actual_farrowing_date || r.expected_farrowing;
-
+        // WEANING DUE
+        const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
         if (r.status === "lactating" && farrowDate) {
           const weaningDate = new Date(farrowDate);
           weaningDate.setDate(weaningDate.getDate() + 30);
-
           events.push({
             id: `${r._id}-weaning`,
             title: `Weaning Due – ${swineCode}`,
@@ -675,9 +740,7 @@ router.get(
           });
         }
 
-        // ===============================
         // WEANING COMPLETED
-        // ===============================
         if (r.status === "completed" && r.weaning_date) {
           events.push({
             id: `${r._id}-weaned`,
@@ -693,6 +756,49 @@ router.get(
         }
       });
 
+      // --- PROCESS OPEN SWINE (Heat Window & Culling Deadline) ---
+      openSwine.forEach(s => {
+        // Look for the most recent weaning date in the breeding cycles
+        const lastCycle = s.breeding_cycles && s.breeding_cycles.length > 0 
+          ? s.breeding_cycles[s.breeding_cycles.length - 1] 
+          : null;
+
+        if (lastCycle && lastCycle.weaning_date) {
+          const startWindow = new Date(lastCycle.weaning_date);
+          const cullDeadline = new Date(lastCycle.weaning_date);
+          cullDeadline.setDate(cullDeadline.getDate() + 7);
+
+          // Visual Window for Heat Detection
+          events.push({
+            id: `${s._id}-heat-detect-window`,
+            title: `Heat Detection Window – ${s.swine_id}`,
+            start: startWindow.toISOString().split("T")[0],
+            end: cullDeadline.toISOString().split("T")[0], // Range highlight
+            display: 'background', // Highlights the background of these days
+            color: '#fff3cd', // Light yellow warning color
+            extendedProps: {
+              type: "heat_window_range",
+              swineId: s._id
+            }
+          });
+
+          // Specific Deadline Marker
+          events.push({
+            id: `${s._id}-cull-warning`,
+            title: `CRITICAL: Heat Report Due – ${s.swine_id}`,
+            start: cullDeadline.toISOString().split("T")[0],
+            allDay: true,
+            backgroundColor: '#dc3545', // Danger Red
+            borderColor: '#bd2130',
+            extendedProps: {
+              type: "cull_deadline",
+              swineId: s._id,
+              status: "Open"
+            }
+          });
+        }
+      });
+
       res.json({ success: true, events });
 
     } catch (err) {
@@ -703,7 +809,6 @@ router.get(
     }
   }
 );
-
 
 /* ======================================================
     REJECT HEAT REPORT
