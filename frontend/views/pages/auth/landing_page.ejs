@@ -1,26 +1,51 @@
 <%- include("../../partials/landing_header.ejs") %>
 
-<main class="hero">
-  <div class="container-lg h-100">
-    <div class="row align-items-center h-100 gx-5">
+<main class="lp-hero" id="hero">
+  <div class="container-lg">
+    <div class="row align-items-center gy-4">
 
-      <div class="col-lg-6 col-md-7 hero-left">
-        <h1 class="hero-title">BREED-IT</h1>
-        <p class="hero-sub">Breeding and Production Information System</p>
+      <!-- LEFT: Text -->
+      <div class="col-lg-6 lp-left">
+        <div class="lp-kicker">BREED-IT</div>
 
-        <div class="mt-4 d-flex gap-3">
-          <a href="/login" class="btn btn-outline-success btn-lg pill-btn">
-            GET STARTED
+        <h1 class="lp-title">
+          Breeding & Production
+          <span class="lp-title-accent">Information System</span>
+        </h1>
+
+        <p class="lp-sub">
+          Enhance native pig breed quality with a simple, centralized system for
+          breeding records, production tracking, and performance monitoring.
+        </p>
+
+        <div class="lp-cta">
+          <a href="/login" class="lp-btn lp-btn-outline" data-route="/login">
+            Get Started
           </a>
-          <a href="#" class="btn btn-success btn-lg pill-btn filled">
-            LEARN MORE
+          <a href="/about" class="lp-btn lp-btn-solid" data-route="/about">
+            Learn More
           </a>
+        </div>
+
+        <div class="lp-meta">
+          Built for farm managers, encoders, and researchers — optimized for MVP workflows.
         </div>
       </div>
 
-      <div class="col-lg-6 col-md-5 d-none d-md-flex justify-content-end hero-right">
-        <div class="hero-image-wrap">
-          <img src="/images/tree.png" alt="Illustration" class="hero-image" />
+      <!-- RIGHT: Illustration -->
+      <div class="col-lg-6 lp-right">
+        <div class="lp-illus-wrap">
+          <div class="lp-blob lp-blob-a"></div>
+          <div class="lp-blob lp-blob-b"></div>
+
+          <div class="lp-illus-card" aria-hidden="true">
+            <div class="lp-illus-topbar"></div>
+            <img
+              src="/images/tree.png"
+              alt="Breed-it illustration"
+              class="lp-illus-img"
+            />
+          </div>
         </div>
       </div>
 
@@ -28,11 +53,166 @@
   </div>
 </main>
 
-<div class="d-block d-md-none small-hero-image container">
-  <img src="/images/tree.png" alt="Illustration small" class="img-fluid" />
-</div>
+<!-- =========================
+     SECTION 2: APP / INSTALL (ALT: PHONE LEFT)
+========================= -->
+<section class="lp-app" id="download">
+  <div class="container-lg">
+    <div class="row align-items-center gy-4">
+
+      <!-- LEFT: Phone mockup -->
+      <div class="col-lg-6 lp-app-right">
+        <div class="lp-phone-wrap">
+          <div class="lp-blob lp-blob-c"></div>
+          <div class="lp-blob lp-blob-d"></div>
+
+          <div class="lp-phone" aria-hidden="true">
+            <div class="lp-phone-notch"></div>
+
+            <div class="lp-phone-screen">
+              <img
+                id="lpPhoneSlide"
+                src="/images/system-mobile-1.png"
+                data-slides="/images/system-mobile-1.png,/images/system-mobile-2.png,/images/system-mobile-3.png"
+                alt="Breed-it mobile preview slideshow"
+                class="lp-phone-img lp-slide-img"
+              />
+            </div>
+
+            <div class="lp-phone-bottom">
+              <div class="lp-mini-badge">
+                <span class="lp-dot"></span>
+                Mobile Preview
+              </div>
+
+              <button class="lp-mini-install" type="button" id="installBtnMini">
+                Install
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT: Text -->
+      <div class="col-lg-6 lp-app-left">
+        <div class="lp-kicker">MOBILE EXPERIENCE</div>
+
+        <h2 class="lp-section-title">
+          Use BREED-IT on the go with a
+          <span class="lp-title-accent">mobile-friendly view</span>
+        </h2>
+
+        <p class="lp-section-sub">
+          Quickly access records, view swine profiles, and update essential data
+          right from your phone—perfect for farm-side monitoring.
+        </p>
+
+        <div class="lp-cta">
+          <a href="#" class="lp-btn lp-btn-solid" id="installBtn">
+            Install App
+          </a>
+          <a href="/features" class="lp-btn lp-btn-outline" data-route="/features">
+            View Features
+          </a>
+        </div>
+
+        <div class="lp-meta">
+          Tip: Works best when added to your home screen (PWA-ready).
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =========================
+     SECTION 3: CORE MODULES
+========================= -->
+<section class="lp-modules" id="modules">
+  <div class="container-lg">
+
+    <div class="text-center mb-5">
+      <div class="lp-kicker">SYSTEM MODULES</div>
+      <h2 class="lp-section-title">
+        Everything you need for
+        <span class="lp-title-accent">native pig management</span>
+      </h2>
+      <p class="lp-section-sub mx-auto">
+        BREED-IT centralizes breeding, health, growth, and performance data
+        into one streamlined platform.
+      </p>
+    </div>
+
+    <div class="row g-4">
+
+      <% const modules = [
+        { title: "Profile Management", desc: "Complete swine profile tracking with structured records." },
+        { title: "Artificial Insemination", desc: "Track heat cycles, AI schedules, and breeding logs." },
+        { title: "Breeding Performance", desc: "Monitor pregnancy outcomes and reproductive metrics." },
+        { title: "Piglets Growth Records", desc: "Record weights and evaluate development progress." },
+        { title: "Health & Defects", desc: "Track health issues and genetic defect observations." },
+        { title: "Selection Status", desc: "Identify high-performing native breeds for improvement." }
+      ]; %>
+
+      <% modules.forEach(module => { %>
+        <div class="col-md-6 col-lg-4">
+          <div class="lp-module-card">
+            <h5><%= module.title %></h5>
+            <p><%= module.desc %></p>
+          </div>
+        </div>
+      <% }) %>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- =========================
+     FOOTER
+========================= -->
+<footer class="lp-footer" id="footer">
+  <div class="container-lg">
+
+    <div class="row gy-4">
+
+      <div class="col-lg-4">
+        <div class="lp-footer-brand">BREED-IT</div>
+        <p class="lp-footer-text">
+          A Breeding and Production Information System
+          designed to enhance native pig breed quality.
+        </p>
+      </div>
+
+      <div class="col-lg-4">
+        <h6 class="lp-footer-title">Quick Links</h6>
+        <ul class="lp-footer-links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="/login">Login</a></li>
+        </ul>
+      </div>
+
+      <div class="col-lg-4">
+        <h6 class="lp-footer-title">System Info</h6>
+        <p class="lp-footer-text">
+          Developed for structured swine breeding data management.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="lp-footer-bottom">
+      © <%= new Date().getFullYear() %> BREED-IT. All rights reserved.
+    </div>
+
+  </div>
+</footer>
+
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/landing_page.js"></script>
 </body>
 </html>
+``

@@ -1,5 +1,6 @@
 <%
   const title = page_title || "BreedIT";
+  const isLanding = (title === "Landing Page");
 %>
 
 <!doctype html>
@@ -14,33 +15,40 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <% if (title === "Landing Page") { %>
+  <% if (isLanding) { %>
     <link rel="stylesheet" href="/css/landing_page.css">
-
   <% } else if (title === "Login") { %>
     <link rel="stylesheet" href="/css/login.css">
-
   <% } else if (title === "Forgot Password") { %>
     <link rel="stylesheet" href="/css/forgot_password.css">
-
   <% } else if (title === "Register") { %>
     <link rel="stylesheet" href="/css/register.css">
-
   <% } else { %>
     <link rel="stylesheet" href="/css/style.css">
-    
   <% } %>
 </head>
 <body>
 
-<header class="top-bar">
-  <div class="container-lg d-flex align-items-center py-3">
-    
-    <a href="/" class="d-flex align-items-center text-decoration-none">
-      <img src="/images/logo.png" alt="Breed-it logo" class="brand-logo me-3" />
-      <div class="brand-text">BREED-IT</div>
+<header class="lp-topbar">
+  <div class="container-lg lp-topbar-inner">
+
+    <a href="/" class="lp-brand">
+      <img src="/images/logo.png" alt="Breed-it logo" class="lp-brand-logo" />
+      <div class="lp-brand-text">BREED-IT</div>
     </a>
 
-    <div class="ms-auto"></div>
+    <% if (isLanding) { %>
+    <div class="lp-topbar-right">
+      <nav class="lp-nav" aria-label="Primary">
+        <a href="#hero" class="lp-nav-link">Home</a>
+        <a href="#mobile" class="lp-nav-link">Mobile</a>
+        <a href="#modules" class="lp-nav-link">Modules</a>
+        <a href="#footer" class="lp-nav-link">Contact</a>
+      </nav>
+
+      <a href="/login" class="lp-nav-cta">Login</a>
+    </div>
+  <% } %>
+
   </div>
 </header>

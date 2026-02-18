@@ -1,101 +1,139 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-/* =====================
-   Variables
-===================== */
+/* =========================
+   THEME TOKENS (same as login/landing)
+========================= */
 :root{
-  --dark-gray: #2e2e2e;
-  --muted: #8a8a8a;
-  --divider: #dcdcdc;
+  --primary: #1FA774;
+  --primary-light: #38C98E;
 
-  --card-border: rgba(0,0,0,0.08);
-  --link-blue: #1560ff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #eef2f7;
+  --divider: #e5e7eb;
+
   --bg: #ffffff;
-  --brand-green: #2fb23f;
+  --radius: 18px;
+  --pill: 999px;
+
+  --shadow-sm: 0 10px 28px rgba(17,24,39,0.08);
 }
 
-/* =====================
-   Base
-===================== */
+/* =========================
+   BASE
+========================= */
 html, body {
   height: 100%;
   margin: 0;
   font-family: 'Roboto', system-ui, -apple-system, "Segoe UI",
                "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
-  color: var(--dark-gray);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
 
-/* =====================
-   Top bar
-===================== */
-.top-bar{
-  border-bottom: 1px solid #f2f2f2;
-  background: var(--bg);
-  height: 64px;
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  gap: 12px;
+a { text-decoration: none; }
+
+/* =========================
+   FIX NAVBAR (landing_header uses lp-topbar)
+========================= */
+.lp-topbar{
+  height: 68px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
-.brand-logo{
-  width: 44px;
-  height: 44px;
+.lp-topbar-inner{
+  height: 68px;
+  display:flex;
+  align-items:center;
+  gap: 16px;
+}
+
+.lp-brand{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  color: var(--text);
+}
+
+.lp-brand-logo{
+  width: 42px;
+  height: 42px;
   object-fit: contain;
 }
 
-.brand-text{
-  font-weight: 700;
-  font-size: 22px;
-  color: var(--dark-gray);
+.lp-brand-text{
+  font-weight: 900;
+  font-size: 20px;
   letter-spacing: 0.6px;
-  margin: 0;
 }
 
-/* =====================
-   Signup viewport
-===================== */
+/* =========================
+   VIEWPORT
+========================= */
 .signup-viewport{
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - 68px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px 0;
-  background: var(--bg);
+  padding: 28px 0;
 }
 
-/* =====================
-   Signup card
-===================== */
+.signup-viewport .row{
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  justify-content: center;
+}
+
+.signup-viewport .col-xl-4,
+.signup-viewport .col-lg-5,
+.signup-viewport .col-md-6,
+.signup-viewport .col-sm-8{
+  display: flex;
+  justify-content: center;
+}
+
 .signup-card{
   width: 100%;
-  max-width: 420px;
-  padding: 32px;
-  background: #fff;
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
+  max-width: 460px;
 }
 
-/* =====================
-   Title
-===================== */
+/* =========================
+   CARD
+========================= */
+.signup-card{
+  width: 100%;
+  max-width: 460px;
+  padding: 36px 30px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
 .signup-title{
-  font-weight: 700;
+  font-weight: 900;
   font-size: 26px;
-  color: var(--dark-gray);
+  color: var(--text);
   margin-bottom: 12px;
   text-align: center;
 }
 
-/* =====================
-   Form labels & inputs
-===================== */
+/* =========================
+   FORM LABELS & INPUTS
+========================= */
 .form-label{
   font-size: 12px;
   color: var(--muted);
@@ -104,67 +142,81 @@ html, body {
 
 .form-control{
   width: 100%;
-  height: 40px;
-  padding: 8px 10px;
+  height: 42px;
+  padding: 8px 12px;
   font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #e1e1e1;
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
   box-shadow: none;
 }
 
 .form-control:focus{
-  border-color: #cfcfcf;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(31,167,116,0.15);
   outline: none;
-  box-shadow: none;
 }
 
-/* =====================
-   Password input
-===================== */
+/* Password toggle */
 .input-group .toggle-pass{
-  background: transparent;
+  background: #fff;
   border-left: 1px solid #e6e6e6;
   color: var(--muted);
-  padding: 6px 10px;
-  border-radius: 0 6px 6px 0;
-  cursor: pointer;
+  border-radius: 0 10px 10px 0;
 }
 
-.input-group .toggle-pass:focus{
-  box-shadow: none;
+.input-group .toggle-pass:hover{
+  background: rgba(31,167,116,0.06);
+  color: var(--text);
 }
 
-/* Hide browser default password reveal icon (Edge / Chromium) */
+/* Hide browser default password reveal icon */
 input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear {
   display: none;
 }
 
-
-/* =====================
-   Signup button
-===================== */
-.signup-btn{
-  width: 100%;
-  background: transparent;
-  color: #222;
-  border: 1px solid #cfcfcf;
-  border-radius: 6px;
-  padding: 10px 14px;
+/* =========================
+   OTP BUTTON
+========================= */
+#sendOtpBtn{
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
   font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
+  font-size: 13px;
 }
 
-.signup-btn.primary{
-  background: var(--brand-green);
-  border-color: var(--brand-green);
+#sendOtpBtn:hover{
+  background: rgba(31,167,116,0.08);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* =========================
+   SIGNUP BUTTON (THEME)
+========================= */
+.signup-btn{
+  height: 46px;
+  border-radius: var(--pill);
+  font-weight: 800;
+  font-size: 14px;
+
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: #fff;
+  border: none;
+
+  box-shadow: 0 14px 28px rgba(31,167,116,0.18);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.signup-btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 18px 38px rgba(31,167,116,0.22);
   color: #fff;
 }
 
-/* =====================
-   Divider
-===================== */
+/* =========================
+   DIVIDER
+========================= */
 .muted-divider{
   display: flex;
   align-items: center;
@@ -181,53 +233,42 @@ input[type="password"]::-ms-clear {
 
 .muted-divider .divider-text{
   font-size: 12px;
-  color: #9a9a9a;
+  color: #9ca3af;
 }
 
-/* =====================
-   Login link
-===================== */
+/* =========================
+   LOGIN LINK
+========================= */
 .create-link{
-  color: var(--link-blue);
-  font-weight: 700;
-  font-size: 13px;
-  text-decoration: none;
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 14px;
 }
 
 .create-link:hover{
   text-decoration: underline;
 }
 
-/* =====================
-   Responsive
-===================== */
+/* =========================
+   RESPONSIVE
+========================= */
 @media (max-width: 767px){
   .signup-card{
-    padding: 24px 18px;
-    margin: 0 14px;
+    padding: 26px 18px;
+    margin: 0 16px;
   }
 
   .signup-viewport{
-    padding: 20px 0;
-    min-height: calc(100vh - 64px);
-  }
-
-  .brand-text{
-    font-size: 18px;
+    padding: 28px 0;
+    min-height: calc(100vh - 68px);
   }
 
   .signup-title{
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .form-control{
-    height: 38px;
-    font-size: 14px;
-  }
-
-  .signup-btn{
-    font-size: 13px;
-    padding: 8px 12px;
+    height: 40px;
   }
 
   .muted-divider .divider-line{
@@ -235,41 +276,22 @@ input[type="password"]::-ms-clear {
   }
 }
 
-/* =====================
-   Mobile layout fixes
-===================== */
-
-/* Stack first & last name on small screens */
-@media (max-width: 575px) {
-  .signup-card .row.gx-2 > .col {
-    flex: 0 0 100%;
-    max-width: 100%;
-  }
-
-  .signup-card .row.gx-2 > .col:not(:last-child) {
-    margin-bottom: 12px;
-  }
+/* ===== TOPBAR RIGHT WRAP ===== */
+.lp-topbar-right{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* Ensure clean mobile spacing */
-@media (max-width: 480px) {
-  .signup-card {
-    padding: 20px 16px;
-  }
+/* Mobile: keep brand left, CTA right, hide nav links */
+@media (max-width: 991px){
+  .lp-nav{ display: none; }
+  .lp-topbar-right{ margin-left: auto; }
+}
 
-  .signup-title {
-    font-size: 22px;
-  }
-
-  .form-control {
-    height: 38px;
-  }
-
-  .signup-btn {
-    padding: 8px 12px;
-  }
-
-  .muted-divider .divider-line {
-    width: 25%;
-  }
+/* Extra safety on very small screens */
+@media (max-width: 420px){
+  .lp-brand-text{ font-size: 18px; }
+  .lp-nav-cta{ height: 38px; padding: 0 14px; }
 }
