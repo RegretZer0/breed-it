@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     managerId = role === "farm_manager" ? user.id : user.managerId;
   } catch (err) {
     console.error("Manager resolution failed", err);
+    hideGlobalLoader();
     return;
   }
 
@@ -138,40 +139,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderFarmerCards() {
     if (!farmerCardList) return;
 
-    // Always fall back to allFarmers if filtered is empty
-    const list = filteredFarmers && filteredFarmers.length
-        ? filteredFarmers
-        : allFarmers;
+    const list = filteredFarmers && filteredFarmers.length ? filteredFarmers : allFarmers;
 
-    const totalPages = Math.max(
-        1,
-        Math.ceil(list.length / FARMER_ROWS_PER_PAGE)
-    );
-
+    const totalPages = Math.max(1, Math.ceil(list.length / FARMER_ROWS_PER_PAGE));
     if (farmerPage > totalPages) farmerPage = totalPages;
 
     const start = (farmerPage - 1) * FARMER_ROWS_PER_PAGE;
     const pageItems = list.slice(start, start + FARMER_ROWS_PER_PAGE);
 
     if (!pageItems.length) {
-        farmerCardList.innerHTML = `
+      farmerCardList.innerHTML = `
         <div class="text-center text-muted py-4">
-            No farmer records found
+          No farmer records found
         </div>`;
-        updatePagination(totalPages);
-        return;
+      updatePagination(totalPages);
+      return;
     }
 
     let html = "";
 
     pageItems.forEach(f => {
-
       const fullName = `${f.first_name || ""} ${f.last_name || ""}`.trim();
       const status = f.status || "Active";
       const isActive = status === "Active";
 
       html += `
-        <div class="farmer-card-modern">
+        <div class="farmer-card-modern" data-farmer-card="${f._id}">
           <div class="farmer-card-top">
 
             <div class="farmer-card-left">
@@ -179,13 +172,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <img src="${f.profile_picture || '/images/default-avatar.png'}" alt="Avatar">
               </div>
 
-              <div>
-                <div class="farmer-name">
-                  ${fullName}
-                </div>
+              <div class="farmer-card-info">
+                <div class="farmer-name">${fullName}</div>
 
                 <div class="farmer-meta">
-                  Farmer ID: ${f.farmer_id || f._id}
+                  <span class="me-2">Farmer ID:</span>
+                  <span class="fw-semibold">${f.farmer_id || f._id}</span>
                 </div>
 
                 <div class="farmer-meta">
@@ -193,26 +185,34 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
 
                 <div class="farmer-meta">
-                  Pens: ${f.num_of_pens ?? 0} |
-                  Capacity: ${f.pen_capacity ?? 0}
+                  Pens: ${f.num_of_pens ?? 0} | Capacity: ${f.pen_capacity ?? 0}
                 </div>
               </div>
             </div>
 
-            <div>
-              <span class="farmer-status ${
-                isActive ? "status-active" : "status-inactive"
-              }">
+            <div class="text-end">
+              <span class="farmer-status ${isActive ? "status-active" : "status-inactive"}">
                 ${status}
               </span>
             </div>
+          </div>
 
+          <!-- Reproduction Snapshot (hydrated later) -->
+          <div class="farmer-repro-snapshot mt-3" id="repro-${f._id}">
+            <div class="repro-grid">
+              ${renderReproMetricSkeleton("bi-gender-female", "Active Sows")}
+              ${renderReproMetricSkeleton("bi-patch-check", "Pregnant")}
+              ${renderReproMetricSkeleton("bi-hourglass-split", "Observation")}
+              ${renderReproMetricSkeleton("bi-collection", "Total Born")}
+              ${renderReproMetricSkeleton("bi-activity", "Mortality")}
+            </div>
+            <div class="small text-muted mt-2" id="reproHint-${f._id}">
+              Loading reproduction summary…
+            </div>
           </div>
 
           <div class="farmer-card-bottom">
-            <button
-              class="btn btn-outline-primary btn-sm view-farmer-btn"
-              data-id="${f._id}">
+            <button class="btn btn-outline-primary btn-sm view-farmer-btn" data-id="${f._id}">
               View Profile
             </button>
           </div>
@@ -222,7 +222,161 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     farmerCardList.innerHTML = html;
     updatePagination(totalPages);
- }
+    hydrateFarmerReproSummaries(pageItems);
+  }
+
+  /* skeleton card for metrics */
+  function renderReproMetricSkeleton(icon, label) {
+    return `
+      <div class="repro-metric">
+        <div class="repro-icon"><i class="bi ${icon}"></i></div>
+        <div class="repro-text">
+          <div class="repro-value">—</div>
+          <div class="repro-label">${label}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ================= HYDRATE REPRO SUMMARIES (VISIBLE CARDS ONLY) ================= */
+  async function hydrateFarmerReproSummaries(farmersOnPage) {
+    try {
+      // fetch pigs per farmer (only for visible page)
+      const jobs = farmersOnPage.map(async (f) => {
+        const summary = await getFarmerReproSummary(f._id);
+        applyFarmerReproSummaryToCard(f._id, summary);
+      });
+
+      await Promise.all(jobs);
+    } catch (err) {
+      console.error("hydrateFarmerReproSummaries failed:", err);
+    }
+  }
+
+  /* ================= GET SUMMARY USING EXISTING ENDPOINTS ================= */
+  async function getFarmerReproSummary(farmerId) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Failed to load farmer pigs");
+
+      const data = await res.json();
+      const pigs = data.pigs || [];
+
+      // Identify adult sows
+      const sows = pigs.filter(p =>
+        (p.sex || "").toLowerCase() === "female" &&
+        (p.age_stage || "").toLowerCase().includes("adult")
+      );
+
+      const sowTags = sows.map(s => (s.swine_id || "").toString().trim()).filter(Boolean);
+
+      // Cycle states based on your cycle model
+      let pregnantCount = 0;
+      let observationCount = 0;
+
+      sows.forEach(sow => {
+        const cycles = sow.breeding_cycles || [];
+        cycles.forEach(c => {
+          // Pregnant if flagged and not farrowed
+          if (c?.is_pregnant && !c?.farrowed) pregnantCount++;
+
+          // Under observation if AI date exists but not yet pregnant/farrowed
+          if (c?.ai_service_date && !c?.is_pregnant && !c?.farrowed) observationCount++;
+        });
+      });
+
+      // Born/Dead from allSwineData (you already have it)
+      let totalBorn = 0;
+      let totalDead = 0;
+
+      if (Array.isArray(allSwineData) && allSwineData.length && sowTags.length) {
+        const piglets = allSwineData.filter(p => sowTags.includes((p.dam_id || "").toString().trim()));
+        totalBorn = piglets.length;
+        totalDead = piglets.filter(p => (p.health_status || "") !== "Healthy").length;
+      }
+
+      const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
+
+      // Simple attention logic (tweak as you like)
+      const needsAttention =
+        observationCount > 0 ||
+        (Number(mortalityPct) >= 10); // example threshold
+
+      return {
+        activeSows: sows.length,
+        pregnant: pregnantCount,
+        observation: observationCount,
+        totalBorn,
+        totalDead,
+        mortalityPct,
+        needsAttention
+      };
+    } catch (err) {
+      console.error("getFarmerReproSummary error:", err);
+      return {
+        activeSows: 0,
+        pregnant: 0,
+        observation: 0,
+        totalBorn: 0,
+        totalDead: 0,
+        mortalityPct: "0.0",
+        needsAttention: false,
+        error: true
+      };
+    }
+  }
+
+  /* ================= APPLY SUMMARY TO DOM ================= */
+  function applyFarmerReproSummaryToCard(farmerId, s) {
+    const wrap = document.getElementById(`repro-${farmerId}`);
+    const attn = document.getElementById(`attn-${farmerId}`);
+    const hint = document.getElementById(`reproHint-${farmerId}`);
+
+    if (!wrap) return;
+
+    // Update attention pill
+    if (attn) {
+      if (s?.error) {
+        attn.textContent = "Repro stats unavailable";
+        attn.className = "badge rounded-pill bg-secondary-subtle text-secondary farmer-attn-pill";
+      } else if (s.needsAttention) {
+        attn.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Needs attention`;
+        attn.className = "badge rounded-pill bg-warning-subtle text-warning farmer-attn-pill";
+      } else {
+        attn.classList.add("d-none"); // hide pill completely
+      }
+    }
+
+    // Replace snapshot grid with real values
+    wrap.querySelector(".repro-grid").innerHTML = `
+      ${renderReproMetric("bi-gender-female", s.activeSows, "Active Sows")}
+      ${renderReproMetric("bi-patch-check", s.pregnant, "Pregnant")}
+      ${renderReproMetric("bi-hourglass-split", s.observation, "Observation")}
+      ${renderReproMetric("bi-collection", s.totalBorn, "Total Born")}
+      ${renderReproMetric("bi-activity", `${s.mortalityPct}%`, "Mortality")}
+    `;
+
+    if (hint) {
+      hint.textContent = s?.error
+        ? "Open profile to view detailed breeding performance."
+        : "Snapshot shows sow status and overall litter outcomes.";
+    }
+  }
+
+  function renderReproMetric(icon, value, label) {
+    return `
+      <div class="repro-metric">
+        <div class="repro-icon"><i class="bi ${icon}"></i></div>
+        <div class="repro-text">
+          <div class="repro-value">${value ?? "—"}</div>
+          <div class="repro-label">${label}</div>
+        </div>
+      </div>
+    `;
+  }
 
 
   /* ================= PAGINATION ================= */
@@ -269,6 +423,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     const farmer = allFarmers.find(f => f._id === id);
     if (!farmer) return;
 
+    // show loader (uses your existing globalLoader)
+    showGlobalLoader("Opening farmer profile...");
+
+    // set avatar correctly + fallback
+    setImage("profileAvatar", farmer.profile_picture);
+
     // Full Name
     const fullName = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
     setText("profileFarmerName", fullName);
@@ -296,11 +456,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Status Badge
     const badge = document.getElementById("profileFarmerStatus");
     if (badge) {
-
       const isActive = farmer.status === "Active";
-
       badge.textContent = farmer.status || "Inactive";
-
       badge.className =
         `badge rounded-pill px-3 py-1 ${
           isActive
@@ -309,13 +466,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         }`;
     }
 
+    // reset modal tabs to Overview (prevents “stuck” tab state)
+    document.querySelectorAll("#farmerProfileTabs .nav-link")
+      .forEach(b => b.classList.remove("active"));
+
+    document.querySelector('#farmerProfileTabs .nav-link[data-target="farmerOverviewTab"]')
+      ?.classList.add("active");
+
+    document.querySelectorAll(".farmer-tab")
+      .forEach(tab => tab.classList.add("d-none"));
+
+    document.getElementById("farmerOverviewTab")
+      ?.classList.remove("d-none");
+
+    // ensure pigs panel is in list mode (not analysis)
+    document.getElementById("pigAnalysisPanel")?.classList.add("d-none");
+    document.getElementById("linkedPigList")?.classList.remove("d-none");
+    document.getElementById("farmerPigCategoryTabs")?.classList.remove("hidden-section");
+    document.getElementById("pigFilterSection")?.classList.remove("hidden-section");
+    document.getElementById("farmerProfileTabs")?.classList.remove("hidden-section");
+
     // Show modal
     if (farmerModal) farmerModal.show();
 
-    // Load pigs
-    loadLinkedPigs(id);
+    // Load pigs and hide loader after
+    await loadLinkedPigs(id);
+    hideGlobalLoader();
   }
-
 
   /* ================= LOAD RESEARCH DATA ================= */
   async function loadResearchData() {
@@ -360,63 +537,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ================= LOAD LINKED PIGS ================= */
   async function loadLinkedPigs(farmerId) {
     // Reset analysis view when switching farmer
-    document.getElementById("pigAnalysisPanel")
-      ?.classList.add("d-none");
-
-    document.getElementById("linkedPigList")
-      ?.classList.remove("d-none");
-
-    document.getElementById("farmerPigCategoryTabs")
-      ?.classList.remove("hidden-section");
-
-    document.getElementById("pigFilterSection")
-      ?.classList.remove("hidden-section");
-
-    document.getElementById("farmerProfileTabs")
-      ?.classList.remove("hidden-section");
+    document.getElementById("pigAnalysisPanel")?.classList.add("d-none");
+    document.getElementById("linkedPigList")?.classList.remove("d-none");
+    document.getElementById("farmerPigCategoryTabs")?.classList.remove("hidden-section");
+    document.getElementById("pigFilterSection")?.classList.remove("hidden-section");
+    document.getElementById("farmerProfileTabs")?.classList.remove("hidden-section");
 
     pigPage = 1;
+    litterPage = 1;
+    aiPage = 1;
     filteredPigList = [];
 
     const wrap = document.getElementById("linkedPigList");
     if (!wrap) return;
 
-    wrap.innerHTML = `
-      <div class="text-muted text-center py-3">
-        Loading pigs...
-      </div>`;
+    wrap.innerHTML = `<div class="text-muted text-center py-3">Loading pigs...</div>`;
 
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/farmer/${farmerId}/pigs`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Make sure allSwineData exists for born/dead stats
+      if (!Array.isArray(allSwineData) || allSwineData.length === 0) {
+        await loadResearchData();
+      }
+
+      const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       if (!res.ok) throw new Error("Failed request");
 
       const data = await res.json();
       currentFarmerPigs = data.pigs || [];
 
+      // Snapshot cards
+      updateReproSnapshotStats();
+
       if (!currentFarmerPigs.length) {
-        wrap.innerHTML = `
-          <div class="text-muted text-center py-3">
-            No pigs registered under this farmer.
-          </div>`;
+        wrap.innerHTML = `<div class="text-muted text-center py-3">No pigs registered under this farmer.</div>`;
         setText("profileTotalPigs", 0);
         return;
       }
 
-      renderFarmerPigs(currentFarmerPigs);
       setText("profileTotalPigs", currentFarmerPigs.length);
-
+      renderFarmerPigs(); // ✅ no params
     } catch (err) {
       console.error("Load pigs error:", err);
-      wrap.innerHTML = `
-        <div class="text-danger text-center py-3">
-          Failed to load pigs
-        </div>`;
+      wrap.innerHTML = `<div class="text-danger text-center py-3">Failed to load pigs</div>`;
     }
   }
+
 
   /* ================= RENDER FAMER PIG LIST ================= */
     function renderFarmerPigs() {
@@ -2134,6 +2302,118 @@ document.addEventListener("click", (e) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value || "—";
   }
+
+  function updateReproSnapshotStats() {
+    const pigs = Array.isArray(currentFarmerPigs) ? currentFarmerPigs : [];
+    const swineAll = Array.isArray(allSwineData) ? allSwineData : [];
+
+    const totalPigs = pigs.length;
+
+    const adultSows = pigs.filter(p => {
+      const sex = (p.sex || "").toLowerCase();
+      const stage = (p.age_stage || "").toLowerCase();
+      return sex === "female" && stage.includes("adult");
+    });
+
+    const adultBoars = pigs.filter(p => {
+      const sex = (p.sex || "").toLowerCase();
+      const stage = (p.age_stage || "").toLowerCase();
+      return sex === "male" && stage.includes("adult");
+    });
+
+    const pigletsUnderFarmer = pigs.filter(p => {
+      const stage = (p.age_stage || "").toLowerCase();
+      return stage.includes("piglet");
+    });
+
+    // cycle-based stats
+    let pregnantSows = 0;
+    let observationSows = 0;
+    let activeCycles = 0;
+
+    adultSows.forEach(sow => {
+      const cycles = Array.isArray(sow.breeding_cycles) ? sow.breeding_cycles : [];
+
+      // "active cycle" = not farrowed yet
+      activeCycles += cycles.filter(c => c && c.farrowed !== true).length;
+
+      cycles.forEach(c => {
+        if (!c) return;
+        if (c.is_pregnant && !c.farrowed) pregnantSows++;
+        if (c.ai_service_date && !c.is_pregnant && !c.farrowed) observationSows++;
+      });
+    });
+
+    // born/dead piglets across ALL swine collection (uses dam_id matching sow swine_id)
+    const sowTags = adultSows
+      .map(s => (s.swine_id || "").toString().trim())
+      .filter(Boolean);
+
+    const bornPiglets = sowTags.length
+      ? swineAll.filter(x => sowTags.includes((x.dam_id || "").toString().trim()))
+      : [];
+
+    const totalBorn = bornPiglets.length;
+    const totalDead = bornPiglets.filter(x => (x.health_status || "") !== "Healthy").length;
+
+    const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
+
+    // update DOM (make sure these IDs exist in your modal HTML)
+    setText("statTotalPigs", totalPigs);
+    setText("statPiglets", pigletsUnderFarmer.length);
+    setText("statAdultSows", adultSows.length);
+    setText("statAdultBoars", adultBoars.length);
+
+    setText("statPregnant", pregnantSows);
+    setText("statObservation", observationSows);
+    setText("statActiveCycles", activeCycles);
+
+    setText("statTotalBorn", totalBorn);
+    setText("statMortality", `${mortalityPct}%`);
+  }
+
+
+  /* ================= IMAGE HELPERS ================= */
+  function resolveImageUrl(path) {
+    if (!path) return "/images/default-avatar.png";
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    if (path.startsWith("/")) return path;
+
+    // If your backend stores images in a different folder, change this path:
+    return `/uploads/profiles/${path}`;
+  }
+
+  function setImage(id, src) {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const finalSrc = resolveImageUrl(src);
+
+    // cache-bust for overwritten images
+    const cacheBust = finalSrc.includes("?") ? "&" : "?";
+    el.src = `${finalSrc}${cacheBust}v=${Date.now()}`;
+
+    el.onerror = () => {
+      el.onerror = null;
+      el.src = "/images/default-avatar.png";
+    };
+  }
+
+  /* ================= GLOBAL LOADER ================= */
+  function showGlobalLoader(text = "Opening farmer profile...") {
+    const loader = document.getElementById("globalLoader");
+    if (!loader) return;
+
+    const label = loader.querySelector(".loader-text");
+    if (label) label.textContent = text;
+
+    loader.classList.remove("d-none");
+  }
+
+  function hideGlobalLoader() {
+    document.getElementById("globalLoader")?.classList.add("d-none");
+  }
+
 
   /* ================= INIT ================= */
     await Promise.all([

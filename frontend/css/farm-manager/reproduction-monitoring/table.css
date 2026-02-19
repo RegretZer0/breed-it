@@ -405,33 +405,101 @@
 
 /* ================= STATS ================= */
 
-.profile-stats-row {
-  display: flex;
-  gap: 16px;
-  margin-top: 20px;
-  flex-wrap: wrap;
+.profile-stats-row,
+.profile-stat-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+
+  /* mobile default: 2 columns */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.profile-stat-card {
-  flex: 1;
-  min-width: 140px;
+/* card itself */
+.profile-stats-row .profile-stat-card,
+.profile-stat-grid .profile-stat-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 18px;
+  padding: 16px 14px;
   text-align: center;
   box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  min-height: 86px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+
+  /* IMPORTANT: prevent full-width stacking due to flex/row utilities */
+  width: auto !important;
+  max-width: none !important;
 }
 
-.stat-number {
+/* typography */
+.profile-stats-row .profile-stat-card .stat-number,
+.profile-stat-grid .profile-stat-card .stat-number {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   color: #198754;
+  line-height: 1.1;
 }
 
-.stat-label {
+.profile-stats-row .profile-stat-card .stat-label,
+.profile-stat-grid .profile-stat-card .stat-label {
   font-size: 12px;
   color: #6c757d;
 }
+
+/* icons */
+.profile-stats-row .profile-stat-card i,
+.profile-stat-grid .profile-stat-card i {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-right: 6px;
+}
+
+/* very small phones: 1 column */
+@media (max-width: 380px) {
+  .profile-stats-row,
+  .profile-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* tablet: 3 columns */
+@media (min-width: 576px) {
+  .profile-stats-row,
+  .profile-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* desktop: ONE ROW */
+@media (min-width: 992px) {
+  .profile-stats-row,
+  .profile-stat-grid {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(170px, 1fr);
+    grid-template-columns: none;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .profile-stats-row::-webkit-scrollbar,
+  .profile-stat-grid::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .profile-stats-row::-webkit-scrollbar-thumb,
+  .profile-stat-grid::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 999px;
+  }
+}
+
 
 /* ================= TABS ================= */
 
@@ -549,4 +617,366 @@
 
 .profile-row:last-child {
   border-bottom: none;
+}
+
+/* =========================================================
+   PAGE CARD SPACING
+========================================================= */
+.page-card {
+  border-radius: 18px;
+  border: 1px solid #eee;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.page-card .card-body {
+  padding: 20px;
+}
+
+#farmerCardList {
+  gap: 14px;
+}
+
+/* =========================================================
+   TOOLBAR / FILTER LAYOUT
+========================================================= */
+.heat-toolbar {
+  width: 100%;
+}
+
+.farmer-filter-form {
+  width: 100%;
+  gap: 10px;
+}
+
+.location-select .dropdown-menu {
+  border-radius: 14px;
+  border: 1px solid #eee;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+/* Desktop */
+@media (min-width: 992px) {
+  .farmer-filter-form {
+    flex-wrap: nowrap;
+  }
+
+  .farmer-filter-form .search-input {
+    width: 260px !important;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .farmer-filter-form {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .farmer-filter-form .location-select,
+  .farmer-filter-form .status-select,
+  .farmer-filter-form .search-input,
+  .farmer-filter-form .btn-group {
+    width: 100% !important;
+  }
+
+  .farmer-filter-form .btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .farmer-filter-form .btn {
+    height: 44px;
+    border-radius: 12px;
+  }
+}
+
+/* =========================================================
+   FARMER CARD: MOBILE STACK + BETTER BUTTONS
+========================================================= */
+.farmer-card-modern {
+  border: 1px solid #f0f0f0;
+  padding: 18px;
+}
+
+.farmer-card-top {
+  gap: 14px;
+}
+
+.farmer-card-left {
+  gap: 14px;
+  align-items: center;
+}
+
+.farmer-card-avatar {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+}
+
+.farmer-card-bottom {
+  margin-top: 14px;
+}
+
+.view-farmer-btn {
+  border-radius: 12px;
+  padding: 8px 14px;
+}
+
+@media (max-width: 576px) {
+  .farmer-card-modern {
+    padding: 16px;
+  }
+
+  .farmer-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .farmer-card-bottom {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .view-farmer-btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   MODAL TABS: SCROLLABLE ON MOBILE
+========================================================= */
+.profile-tabs,
+#pigAnalysisTabs,
+#farmerPigCategoryTabs {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  padding-bottom: 6px;
+}
+
+.profile-tabs::-webkit-scrollbar,
+#pigAnalysisTabs::-webkit-scrollbar,
+#farmerPigCategoryTabs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.profile-tabs::-webkit-scrollbar-thumb,
+#pigAnalysisTabs::-webkit-scrollbar-thumb,
+#farmerPigCategoryTabs::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.15);
+  border-radius: 999px;
+}
+
+@media (max-width: 576px) {
+  .modal-body {
+    padding: 16px !important;
+  }
+}
+
+/* =========================================================
+   LINKED PIG LIST: BETTER TOUCH TARGETS
+========================================================= */
+#linkedPigList .linked-pig-item {
+  padding: 14px 14px;
+  gap: 12px;
+}
+
+#linkedPigList .linked-pig-item .btn {
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+@media (max-width: 420px) {
+  #linkedPigList .linked-pig-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #linkedPigList .linked-pig-item > div:last-child {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #linkedPigList .linked-pig-item .btn {
+    flex: 1;
+  }
+}
+
+
+/* =========================================================
+   FARMER PROFILE MODAL SPACING + RESPONSIVE GRID
+   (put this at the very bottom to override conflicts)
+========================================================= */
+
+/* Modal body breathing room */
+#farmerModal .modal-body {
+  padding: 22px !important;
+}
+
+/* Header spacing */
+.profile-header-modern {
+  padding: 22px !important;
+  margin-bottom: 16px;
+}
+
+.profile-header-row {
+  gap: 16px;
+}
+
+/* Name/number spacing */
+.profile-details h4 {
+  margin-bottom: 4px;
+}
+
+#profileFarmerContact {
+  margin-top: 2px;
+}
+
+/* ================= SUMMARY CARDS GRID ================= */
+/* IMPORTANT: your HTML uses .profile-stat-grid (not .profile-stats-row) */
+.profile-stat-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+  margin-bottom: 14px;
+
+  /* default (mobile-friendly) */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-stat-grid .profile-stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  min-height: 86px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.profile-stat-grid .stat-number {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #198754;
+}
+
+.profile-stat-grid .stat-label {
+  font-size: 12px;
+  color: #6c757d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.2;
+}
+
+.profile-stat-grid .stat-label i {
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+/* ================= TABS SPACING ================= */
+#farmerProfileTabs {
+  margin-top: 10px;
+  margin-bottom: 14px;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+#farmerProfileTabs .nav-link {
+  padding: 10px 16px;
+}
+
+/* Content spacing inside each tab */
+.farmer-tab {
+  padding-top: 14px;
+}
+
+/* Farmer Information card spacing */
+.farmer-tab .card {
+  margin-top: 10px;
+}
+
+/* ================= MOBILE TUNING ================= */
+@media (max-width: 576px) {
+
+  /* tighter but still clean */
+  #farmerModal .modal-body {
+    padding: 16px !important;
+  }
+
+  .profile-header-modern {
+    padding: 18px !important;
+    margin-bottom: 14px;
+  }
+
+  .profile-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .profile-avatar-lg {
+    width: 78px;
+    height: 78px;
+  }
+
+  /* summary cards: 2 columns, better spacing */
+  .profile-stat-grid {
+    gap: 12px;
+    margin-top: 14px;
+    margin-bottom: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-stat-grid .profile-stat-card {
+    padding: 14px 12px;
+    min-height: 84px;
+  }
+
+  /* tabs become easier to tap */
+  #farmerProfileTabs .nav-link {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .farmer-tab {
+    padding-top: 12px;
+  }
+}
+
+/* ================= TABLET (3 columns looks great) ================= */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .profile-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+/* ================= DESKTOP (one row) ================= */
+@media (min-width: 992px) {
+
+  /* header spacing */
+  .profile-header-modern {
+    padding: 24px !important;
+    margin-bottom: 18px;
+  }
+
+  /* 6 cards in one row */
+  .profile-stat-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+    margin-bottom: 16px;
+  }
+
+  .profile-stat-grid .profile-stat-card {
+    min-height: 92px;
+  }
 }
