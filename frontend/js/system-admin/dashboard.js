@@ -7,31 +7,43 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("searchUser").addEventListener("input", filterUsers);
 });
 
-// SYSTEM OVERVIEW
+/**
+ * HELPER: Consistently extract a display name from user objects
+ */
+function getDisplayName(user) {
+  if (!user) return "-";
+  if (user.fullName) return user.fullName;
+  if (user.first_name || user.last_name) {
+    return `${user.first_name || ""} ${user.last_name || ""}`.trim();
+  }
+  return user.name || "-";
+}
+
+// SYSTEM & INFRASTRUCTURE OVERVIEW
 function loadAdminStats() {
   fetch("http://localhost:5000/api/admin/stats", { credentials: "include" })
-    .then(res => res.text())
-    .then(text => {
-      try {
-        const data = JSON.parse(text);
-        if (!data.success) {
-          alert("Access denied.");
-          window.location.href = "login.html";
-          return;
-        }
-
-        const stats = data.stats || {};
-        document.getElementById("farmManagers").textContent = stats.farmManagers ?? 0;
-        document.getElementById("farmers").textContent = stats.farmers ?? 0;
-        document.getElementById("swine").textContent = stats.swine ?? 0;
-        document.getElementById("heatReports").textContent = stats.heatReports ?? 0;
-        document.getElementById("breeding").textContent = stats.breedingRecords ?? 0;
-
-      } catch (err) {
-        console.error("Stats response not JSON:", text);
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        alert("Access denied.");
+        window.location.href = "login.html";
+        return;
       }
+
+      const stats = data.stats || {};
+      
+      // Update Server Health Cards
+      const statusEl = document.getElementById("serverStatus");
+      statusEl.textContent = stats.serverStatus ?? "--";
+      statusEl.className = stats.serverStatus === "Stable" ? "status-stable" : "status-strained";
+
+      document.getElementById("cpuLoad").textContent = stats.cpuLoad ? `${stats.cpuLoad} avg` : "--";
+      document.getElementById("memoryUsage").textContent = stats.memoryUsage ?? "--";
+      document.getElementById("totalUsers").textContent = stats.totalUsers ?? 0;
+      document.getElementById("concurrentUsers").textContent = stats.concurrentUsers ?? 0;
+
     })
-    .catch(err => console.error(err));
+    .catch(err => console.error("Stats Error:", err));
 }
 
 // LOGOUT
@@ -64,7 +76,7 @@ function renderUsersTable(users) {
   users.forEach(user => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${user.name || "-"}</td>
+      <td>${getDisplayName(user)}</td>
       <td>${user.email}</td>
       <td>
         <select class="roleSelect" data-id="${user._id}">
@@ -119,36 +131,33 @@ function filterUsers(e) {
   const q = e.target.value.toLowerCase();
   renderUsersTable(
     allUsers.filter(u =>
-      (u.fullName || u.name || "").toLowerCase().includes(q) ||
+      getDisplayName(u).toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q)
     )
   );
 }
 
-// DATA OVERSIGHT
-
+// INFRASTRUCTURE OVERSIGHT
 function loadDataOversight() {
   fetch("http://localhost:5000/api/admin/data", { credentials: "include" })
-    .then(res => res.text())
-    .then(text => {
-      try {
-        const parsed = JSON.parse(text);
-        const data = parsed.data || parsed;
+    .then(res => res.json())
+    .then(parsed => {
+      const data = parsed.data || parsed;
 
-        renderFarmManagersTable(data.farmManagers);
-        renderFarmersTable(data.farmers);
-        renderSwineTable(data.swine);
-        renderHeatReportsTable(data.heatReports);
-        renderBreedingTable(data.breedingRecords);
-
-      } catch (err) {
-        console.error("Data oversight response not JSON:", text);
+      // Render the new Infrastructure Metrics
+      if (data.systemInfo) {
+        document.getElementById("osPlatform").textContent = data.systemInfo.platform;
+        document.getElementById("systemUptime").textContent = data.systemInfo.uptime;
+        document.getElementById("cpuModel").textContent = data.systemInfo.cpuModel;
+        document.getElementById("totalMemory").textContent = data.systemInfo.totalMemory;
       }
+
+      renderFarmManagersTable(data.farmManagers);
+      renderFarmersTable(data.farmers);
     })
-    .catch(err => console.error(err));
+    .catch(err => console.error("Data oversight Error:", err));
 }
 
-/* -------- Render Tables Individually -------- */
 function renderFarmManagersTable(rows = []) {
   const tbody = document.querySelector("#farmManagersTable tbody");
   if (!tbody) return;
@@ -158,7 +167,7 @@ function renderFarmManagersTable(rows = []) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${fm._id}</td>
-      <td>${fm.fullName || "-"}</td>
+      <td>${getDisplayName(fm)}</td>
       <td>${fm.email || "-"}</td>
       <td>${fm.status || "-"}</td>
     `;
@@ -172,77 +181,16 @@ function renderFarmersTable(rows = []) {
   tbody.innerHTML = "";
 
   rows.forEach(f => {
-    const registeredBy = f.registered_by?.fullName || "-";
+    const registeredBy = getDisplayName(f.managerId);
+    
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${f.farmer_id || "-"}</td>
-      <td>${f.name || "-"}</td>
+      <td>${getDisplayName(f)}</td>
       <td>${f.email || "-"}</td>
       <td>${f.contact_no || "-"}</td>
       <td>${f.num_of_pens ?? 0}</td>
-      <td>${f.pen_capacity ?? 0}</td>
       <td>${registeredBy}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderSwineTable(rows = []) {
-  const tbody = document.querySelector("#swineTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(s => {
-    const age = s.birth_date ? Math.floor((new Date() - new Date(s.birth_date)) / (1000*60*60*24)) + " days" : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${s.swine_id || "-"}</td>
-      <td>${s.color || "-"}</td>
-      <td>${s.breed || "-"}</td>
-      <td>${age}</td>
-      <td>${s.batch || "-"}</td>
-      <td>${s.status || "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderHeatReportsTable(rows = []) {
-  const tbody = document.querySelector("#heatReportsTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(hr => {
-    const date = hr.date_reported ? new Date(hr.date_reported).toLocaleDateString() : "-";
-    const signs = Array.isArray(hr.signs) ? hr.signs.join(", ") : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${hr._id}</td>
-      <td>${hr.swine_id || "-"}</td>
-      <td>${date}</td>
-      <td>${signs}</td>
-      <td>${hr.heat_probability ?? "-"}</td>
-      <td>${hr.status || "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderBreedingTable(rows = []) {
-  const tbody = document.querySelector("#breedingRecordsTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(b => {
-    const date = b.recordDate ? new Date(b.recordDate).toLocaleDateString() : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${b.reproductionId || "-"}</td>
-      <td>${b.swine_id || "-"}</td>
-      <td>${date}</td>
-      <td>${b.parentType || "-"}</td>
-      <td>${b.noOfPiglets ?? "-"}</td>
-      <td>${b.admin_notes || "-"}</td>
     `;
     tbody.appendChild(tr);
   });

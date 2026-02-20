@@ -91,6 +91,11 @@
       font-weight: bold;
     }
 
+    /* Status styling for Server Health */
+    .status-stable { color: #10b981; }
+    .status-strained { color: #f59e0b; }
+    .status-danger { color: #ef4444; }
+
     input[type="text"] {
       padding: 8px 12px;
       width: 300px;
@@ -121,6 +126,16 @@
       color: white;
     }
 
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
     footer {
       margin-top: 30px;
       text-align: center;
@@ -140,41 +155,39 @@
 <div class="container">
 
   <nav>
-    <a href="#">📊 Dashboard</a>
+    <a href="#">📊 System Health</a>
     <a href="#user-control">👤 User Control</a>
-    <a href="#data-oversight">📁 Data Oversight</a>
+    <a href="#infrastructure">📁 Infrastructure</a>
   </nav>
 
   <main>
 
-    <!-- SYSTEM OVERVIEW -->
-    <h2>System Overview</h2>
+    <h2>System Performance</h2>
     <div class="cards">
       <div class="card">
-        <h2>Farm Managers</h2>
-        <p id="farmManagers">--</p>
+        <h2>Server Status</h2>
+        <p id="serverStatus">--</p>
       </div>
       <div class="card">
-        <h2>Farmers</h2>
-        <p id="farmers">--</p>
+        <h2>CPU Load</h2>
+        <p id="cpuLoad">--</p>
       </div>
       <div class="card">
-        <h2>Total Swine</h2>
-        <p id="swine">--</p>
+        <h2>Memory Usage</h2>
+        <p id="memoryUsage">--</p>
       </div>
       <div class="card">
-        <h2>Heat Reports</h2>
-        <p id="heatReports">--</p>
+        <h2>Total Users</h2>
+        <p id="totalUsers">--</p>
       </div>
       <div class="card">
-        <h2>Breeding Records</h2>
-        <p id="breeding">--</p>
+        <h2>Active Sessions</h2>
+        <p id="concurrentUsers">--</p>
       </div>
     </div>
 
-    <!-- USER & ACCESS CONTROL -->
     <section id="user-control">
-      <h2>All Users</h2>
+      <h2>User Access Management</h2>
       <input type="text" id="searchUser" placeholder="Search by name or email..." />
       <table id="usersTable">
         <thead>
@@ -190,12 +203,22 @@
       </table>
     </section>
 
-    <!-- DATA OVERSIGHT -->
-    <section id="data-oversight">
-      <h2>Data Oversight</h2>
+    <section id="infrastructure">
+      <h2>Infrastructure Details</h2>
 
-      <!-- FARM MANAGERS -->
-      <h3>Farm Managers</h3>
+      <div class="info-grid" id="systemInfoBox">
+        <div>
+          <p><strong>OS Platform:</strong> <span id="osPlatform">--</span></p>
+          <p><strong>System Uptime:</strong> <span id="systemUptime">--</span></p>
+        </div>
+        <div>
+          <p><strong>CPU Model:</strong> <span id="cpuModel">--</span></p>
+          <p><strong>Total Memory:</strong> <span id="totalMemory">--</span></p>
+        </div>
+      </div>
+
+      <br>
+      <h3>Farm Managers Oversight</h3>
       <table id="farmManagersTable">
         <thead>
           <tr>
@@ -208,8 +231,7 @@
         <tbody></tbody>
       </table>
 
-      <!-- FARMERS -->
-      <h3>Farmers</h3>
+      <h3>Farmers Oversight</h3>
       <table id="farmersTable">
         <thead>
           <tr>
@@ -218,56 +240,7 @@
             <th>Email</th>
             <th>Contact</th>
             <th>Pens</th>
-            <th>Capacity</th>
             <th>Registered By</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <!-- SWINE -->
-      <h3>Swine</h3>
-      <table id="swineTable">
-        <thead>
-          <tr>
-            <th>Swine ID</th>
-            <th>Color</th>
-            <th>Breed</th>
-            <th>Age</th>
-            <th>Batch</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <!-- HEAT REPORTS -->
-      <h3>Heat Reports</h3>
-      <table id="heatReportsTable">
-        <thead>
-          <tr>
-            <th>Report ID</th>
-            <th>Swine ID</th>
-            <th>Date</th>
-            <th>Signs</th>
-            <th>Probability</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <!-- BREEDING RECORDS -->
-      <h3>Breeding Records</h3>
-      <table id="breedingRecordsTable">
-        <thead>
-          <tr>
-            <th>Record ID</th>
-            <th>Swine ID</th>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Piglets</th>
-            <th>Notes</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -276,7 +249,7 @@
     </section>
 
     <footer>
-      © 2026 BreedIT System | System Administrator
+      © 2026 BreedIT System | Infrastructure & Security Monitoring
     </footer>
 
   </main>
