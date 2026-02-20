@@ -28,6 +28,7 @@ const heatReportSchema = new mongoose.Schema(
     },
 
     // ---------------- HEAT DETAILS ----------------
+    // UPDATED: Added new behavioral signs to the enum to match calculation logic
     signs: [
       {
         type: String,
@@ -36,9 +37,14 @@ const heatReportSchema = new mongoose.Schema(
           "Swollen Vulva",
           "Mucous Discharge",
           "Seeking the Boar",
+          "Tail raising",
           "Perked/Twitching Ears",
           "Standing Reflex",
-          "Back Pressure Test"
+          "Back Pressure Test",
+          "Restlessness or noticeable behavioral change",
+          "Increased vocalization",
+          "Decreased appetite",
+          "Increased alertness or irritability"
         ],
         required: true
       }

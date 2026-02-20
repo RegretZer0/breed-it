@@ -122,22 +122,42 @@ router.post(
             const { swineId, signs } = req.body;
             const files = req.files;
 
+            // 1. Initial Validation
             if (!swineId || !signs || !files || files.length === 0) {
-                return res.status(400).json({ success: false, message: "Swine ID, signs, and evidence are required" });
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Swine ID, signs, and evidence are required" 
+                });
             }
 
+            // 2. Safe JSON Parsing for Signs
+            let parsedSigns;
+            try {
+                parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
+            } catch (e) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Invalid format for signs. Expected an array." 
+                });
+            }
+
+            // 3. Find Farmer Profile
             let farmer = await Farmer.findOne({
                 $or: [{ _id: req.user.farmerProfileId }, { user_id: req.user.id }]
             });
-            if (!farmer) return res.status(404).json({ success: false, message: "Farmer profile not found" });
+            if (!farmer) {
+                return res.status(404).json({ success: false, message: "Farmer profile not found" });
+            }
 
+            // 4. Find Swine
             const swine = await Swine.findOne({ swine_id: swineId });
-            if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
+            if (!swine) {
+                return res.status(404).json({ success: false, message: "Swine not found" });
+            }
 
             const evidenceData = files.map(file => `/uploads/${file.filename}`);
-            const parsedSigns = Array.isArray(signs) ? signs : JSON.parse(signs);
 
-            // --- NEW LOGIC: CULLING CHECK ---
+            // 5. --- CULLING CHECK (Your Feature) ---
             const hasBasis = swine.first_success_basis && 
                              swine.first_success_basis.signs && 
                              swine.first_success_basis.signs.length > 0;
@@ -160,8 +180,8 @@ router.post(
                     });
                 }
             }
-            // ---------------------------------
 
+            // 6. Create the Heat Report
             const newReport = new HeatReport({
                 swine_id: swine._id,
                 farmer_id: farmer._id,
@@ -170,11 +190,13 @@ router.post(
                 standing_reflex: parsedSigns.includes("Standing Reflex"),
                 back_pressure_test: parsedSigns.includes("Back Pressure Test"),
                 evidence_url: evidenceData,
-                heat_probability: calculateProbability(parsedSigns, swine), // Pass swine here
+                heat_probability: calculateProbability(parsedSigns, swine),
                 status: "pending"
             });
 
             await newReport.save();
+
+            // 7. Logging & Notifications
             await logAction(req.user.id, "ADD_HEAT_REPORT", "BREEDING", `Farmer ${farmer.first_name} submitted a heat report for Swine ${swineId}.`, req);
 
             await notifyBreedingTeam(
@@ -185,7 +207,9 @@ router.post(
             );
 
             res.status(201).json({ success: true, report: newReport });
+
         } catch (err) {
+            console.error("Error in /api/heat/add:", err);
             res.status(500).json({ success: false, message: err.message });
         }
     }

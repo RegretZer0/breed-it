@@ -11,6 +11,44 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 console.log("Notification Model Status: Loaded");
 
 /*======================================================
+    NEW: NOTIFY ADMINS (Matches report.api.js call)
+====================================================== */
+router.post(
+  "/admin",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      const { title, message, type } = req.body;
+
+      // Find all system admins
+      const admins = await UserModel.find({ role: "system_admin" });
+
+      if (!admins || admins.length === 0) {
+        return res.status(200).json({ success: true, message: "No admins to notify" });
+      }
+
+      // Create a notification for every admin found
+      const notificationPromises = admins.map(admin => {
+        return Notification.create({
+          user_id: admin._id,
+          title: title || "Admin Alert",
+          message: message || "A new event requires attention",
+          type: type || "info",
+          is_global: false
+        });
+      });
+
+      await Promise.all(notificationPromises);
+
+      res.status(201).json({ success: true, message: "Admins notified successfully" });
+    } catch (err) {
+      console.error("Admin notification error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+/*======================================================
     AUTO NOTIFY FARM MANAGER & ENCODERS
 ====================================================== */
 router.post(
@@ -187,7 +225,6 @@ router.get("/global", async (req, res) => {
   try {
     const alerts = await Notification.find({
       is_global: true,
-      // We show alerts that haven't ended yet
       $or: [
         { ends_at: { $gt: new Date() } },
         { ends_at: null }

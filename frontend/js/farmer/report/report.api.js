@@ -71,16 +71,35 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
 
   async function submitHeatReport({ swineId, farmerId, signs, files, remarks }) {
     const formData = new FormData();
+
+    // 1. Match backend route expectation for 'swineId'
     formData.append("swineId", swineId);
-    formData.append("farmerId", farmerId);
-    formData.append("signs", JSON.stringify(signs));
+    
+    // Included farmerId in case your backend logic needs it for specific overrides,
+    // though the route primarily uses the logged-in session.
+    if (farmerId) formData.append("farmerId", farmerId);
+
+    // 2. Ensure signs is stringified JSON for Multer parsing
+    const signsArray = Array.isArray(signs) ? signs : [];
+    formData.append("signs", JSON.stringify(signsArray));
+
+    // 3. Optional remarks
     if (remarks && String(remarks).trim() !== "") {
         formData.append("remarks", String(remarks).trim());
     }
-    (files || []).forEach(f => formData.append("evidence", f));
 
-    return fetchWithAuth(`${BACKEND_URL}/api/heat/add`, { method: "POST", body: formData });
+    // 4. Match backend field name 'evidence'
+    if (files && files.length > 0) {
+        files.forEach(f => formData.append("evidence", f));
     }
+
+    // Note: Do not manually set headers to 'multipart/form-data' here. 
+    // fetch + FormData handles boundaries automatically.
+    return fetchWithAuth(`${BACKEND_URL}/api/heat/add`, {
+      method: "POST",
+      body: formData
+    });
+  }
 
   return {
     fetchWithAuth,
