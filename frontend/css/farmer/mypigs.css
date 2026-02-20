@@ -680,3 +680,433 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* =========================================================
+   OFFSPRING TAB UI
+   Append this block at the end of your CSS file
+========================================================= */
+
+/* Offspring section spacing */
+.offspring-section{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header */
+.offspring-top{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.offspring-title{
+  margin: 0;
+  font-weight: 800;
+}
+
+.offspring-sub{
+  color: #7a8a87;
+  margin-top: 4px;
+}
+
+/* Stats grid */
+.offspring-stats{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 0;
+}
+
+.o-stat{
+  background: #f7faf9;
+  border-radius: 18px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid rgba(31,167,116,0.10);
+}
+
+.o-stat small{
+  display: block;
+  font-size: 11px;
+  color: #7a8a87;
+  margin-bottom: 6px;
+}
+
+.o-stat strong{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.o-stat.live strong{ color: #16a34a; }
+.o-stat.dead strong{ color: #dc2626; }
+
+/* Offspring chart sizing */
+.offspring-chart-card{
+  height: 260px;
+}
+
+/* =========================================================
+   OFFSPRING FILTER CARD
+========================================================= */
+.offspring-filter-card{
+  background: linear-gradient(180deg, #ffffff, #fbfdfc);
+  border-radius: 22px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.04);
+
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.offspring-filter-left{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #2b3a36;
+}
+
+.filter-label i{
+  color: #1FA774;
+}
+
+/* Designed select control */
+.select-box{
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  background: #f7faf9;
+  border: 1px solid rgba(31,167,116,0.14);
+  border-radius: 18px;
+
+  padding: 0 12px;
+  height: 48px;
+  gap: 10px;
+
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.select-box i{
+  color: #1FA774;
+  font-size: 16px;
+}
+
+.select-box select{
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  border: none;
+  outline: none;
+  background: transparent;
+
+  width: 100%;
+  height: 100%;
+
+  font-size: 14px;
+  font-weight: 800;
+  color: #2b3a36;
+
+  padding-right: 28px; /* space for arrow */
+  cursor: pointer;
+}
+
+.select-box::after{
+  content: "";
+  position: absolute;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(43,58,54,0.55);
+  border-bottom: 2px solid rgba(43,58,54,0.55);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.select-box:focus-within{
+  background: #ffffff;
+  border-color: rgba(31,167,116,0.45);
+  box-shadow: 0 0 0 4px rgba(31,167,116,0.12);
+}
+
+/* Latest button polish */
+.latest-btn{
+  height: 48px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.latest-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(31,167,116,0.12);
+  background: #e4f3ed;
+}
+
+/* =========================================================
+   CYCLE CARD AREA
+========================================================= */
+.cycle-cards-area{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Isolated cycle card */
+.modern-cycle-card{
+  padding: 18px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modern-cycle-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.08);
+}
+
+.cycle-card-top{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cycle-card-top strong{
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.cycle-card-top small{
+  display: block;
+  color: #7a8a87;
+  margin-top: 6px;
+}
+
+/* badges */
+.cycle-badges{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.mini-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 800;
+  background: #f2f5f4;
+  color: #2b3a36;
+}
+
+.mini-badge.total{
+  background: rgba(31,167,116,0.10);
+  color: #137a56;
+}
+
+.mini-badge.live{
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.mini-badge.dead{
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.cycle-card-bottom{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+}
+
+.cycle-mini small{
+  color: #7a8a87;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.mono{
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Hint card */
+.offspring-hint{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #f7faf9;
+  border: 1px solid rgba(31,167,116,0.10);
+  color: #4b5b58;
+  font-size: 13px;
+}
+
+/* =========================================================
+   CYCLE DETAILS VIEW
+========================================================= */
+.cycle-details-view{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Back button (reuses your existing .back-btn style if present) */
+.cycle-details-view .back-btn{
+  align-self: flex-start;
+}
+
+/* Header row */
+.cycle-details-head{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.cycle-details-title{
+  margin: 0;
+  font-weight: 900;
+}
+
+.cycle-details-sub{
+  color: #7a8a87;
+}
+
+/* Live rate pill */
+.cycle-details-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(31,167,116,0.10);
+  color: #137a56;
+  font-weight: 900;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.details-mini-stats{
+  margin: 0;
+}
+
+/* Parents */
+.parents-card{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: #f7faf9;
+  border: 1px solid rgba(31,167,116,0.10);
+  border-radius: 20px;
+  padding: 14px;
+}
+
+.parent-item small{
+  display: block;
+  color: #7a8a87;
+  margin-bottom: 6px;
+}
+
+/* Piglets list */
+.piglets-card{
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.piglets-title{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.piglets-title small{
+  color: #7a8a87;
+}
+
+.piglet-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 6px;
+  border-bottom: 1px solid #eef3f2;
+}
+
+.piglet-row:last-child{
+  border-bottom: none;
+}
+
+.piglet-left{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.piglet-id{
+  font-weight: 800;
+}
+
+.piglet-badge{
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.piglet-badge.alive{
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.piglet-badge.dead{
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.piglet-badge.neutral{
+  background: #f2f5f4;
+  color: #64748b;
+}
+
+/* =========================================================
+   RESPONSIVE (OFFSPRING)
+========================================================= */
+@media (max-width: 768px){
+  .offspring-stats{ grid-template-columns: 1fr 1fr; }
+  .offspring-filter-card{ grid-template-columns: 1fr; }
+  .latest-btn{ width: 100%; }
+  .offspring-chart-card{ height: 210px; }
+  .cycle-card-bottom{ grid-template-columns: 1fr; }
+  .parents-card{ grid-template-columns: 1fr; }
+  .cycle-details-head{ flex-direction: column; align-items: flex-start; }
+}
