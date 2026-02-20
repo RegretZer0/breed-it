@@ -51,10 +51,17 @@ async function requireSessionAndToken(req, res, next) {
       userId = req.session.user.id;
     }
 
-    // 4) LOAD FULL USER FROM DATABASE
-    // We check both User and Farmer collections to find the base account
-    let user = await User.findById(userId).lean();
+    // 4) LOAD FULL USER FROM DATABASE & UPDATE LAST ACTIVE
+    // Removed .lean() so we can use .save() or update fields easily
+    let user = await User.findById(userId);
     
+    // UPDATED: Heartbeat Logic
+    // If user exists, update their lastActive timestamp for the Admin Dashboard
+    if (user) {
+      user.lastActive = new Date();
+      await user.save();
+    }
+
     // Fallback: Check if the ID provided is actually a Farmer ID directly
     if (!user) {
         const directFarmer = await Farmer.findById(userId).lean();
@@ -67,6 +74,11 @@ async function requireSessionAndToken(req, res, next) {
                 last_name: directFarmer.last_name,
                 managerId: directFarmer.registered_by
             };
+            
+            // Optional: If they are a direct farmer, update their base User account heartbeat too
+            if (directFarmer.user_id) {
+              await User.findByIdAndUpdate(directFarmer.user_id, { lastActive: new Date() });
+            }
         }
     }
 

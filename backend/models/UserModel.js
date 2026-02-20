@@ -22,12 +22,32 @@ const userSchema = new mongoose.Schema({
     ref: "User",
     default: null
   },
+  
+  // ⚡ Indexed for faster session counting in the Admin Dashboard
+  lastActive: { 
+    type: Date, 
+    default: Date.now,
+    index: true 
+  },
 
   status: {
     type: String,
     enum: ["active", "disabled"],
     default: "active"
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  // These options allow virtual fields like 'fullName' to be sent to the frontend
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+/**
+ * VIRTUAL: fullName
+ * This allows dashboard.js to use user.fullName without storing extra data in MongoDB.
+ */
+userSchema.virtual('fullName').get(function() {
+  return `${this.first_name} ${this.last_name}`;
+});
 
 module.exports = mongoose.model("User", userSchema);

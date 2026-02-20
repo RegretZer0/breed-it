@@ -1,37 +1,134 @@
 document.addEventListener("DOMContentLoaded", () => {
-  loadAdminStats();
+  // Initial Load
+  refreshDashboard();
   loadUsers();
-  loadDataOversight();
+
+  // Feature: Auto-refresh system metrics every 3 seconds
+  const autoRefreshInterval = setInterval(refreshDashboard, 3000);
 
   document.getElementById("logoutBtn").addEventListener("click", logout);
   document.getElementById("searchUser").addEventListener("input", filterUsers);
+  
+  // Maintenance Broadcast Listener
+  const sendMaintBtn = document.getElementById("sendMaintBtn");
+  if (sendMaintBtn) {
+    sendMaintBtn.addEventListener("click", broadcastMaintenance);
+  }
+
+  // Optional: Listener for a manual refresh button
+  const manualBtn = document.getElementById("manualRefreshBtn");
+  if (manualBtn) {
+    manualBtn.addEventListener("click", refreshDashboard);
+  }
 });
 
-// SYSTEM OVERVIEW
-function loadAdminStats() {
-  fetch("http://localhost:5000/api/admin/stats", { credentials: "include" })
-    .then(res => res.text())
-    .then(text => {
-      try {
-        const data = JSON.parse(text);
-        if (!data.success) {
-          alert("Access denied.");
-          window.location.href = "login.html";
-          return;
-        }
+/**
+ * Combined function to update all dynamic system metrics
+ */
+function refreshDashboard() {
+  loadAdminStats();
+  loadDataOversight();
+}
 
-        const stats = data.stats || {};
-        document.getElementById("farmManagers").textContent = stats.farmManagers ?? 0;
-        document.getElementById("farmers").textContent = stats.farmers ?? 0;
-        document.getElementById("swine").textContent = stats.swine ?? 0;
-        document.getElementById("heatReports").textContent = stats.heatReports ?? 0;
-        document.getElementById("breeding").textContent = stats.breedingRecords ?? 0;
+/**
+ * HELPER: Consistently extract a display name from user objects
+ */
+function getDisplayName(user) {
+  if (!user) return "-";
+  if (user.fullName) return user.fullName;
+  if (user.first_name || user.last_name) {
+    return `${user.first_name || ""} ${user.last_name || ""}`.trim();
+  }
+  return user.name || "-";
+}
 
-      } catch (err) {
-        console.error("Stats response not JSON:", text);
+// FIXED: BROADCAST MAINTENANCE WITH SCHEDULED START & END
+function broadcastMaintenance() {
+  const title = document.getElementById("maintTitle").value.trim();
+  const message = document.getElementById("maintMessage").value.trim();
+  const scheduled_for = document.getElementById("maintStart").value; // Matches new EJS ID
+  const ends_at = document.getElementById("maintEnd").value;        // Matches new EJS ID
+  const btn = document.getElementById("sendMaintBtn");
+
+  if (!title || !message || !scheduled_for || !ends_at) {
+    alert("Please fill in all fields: Title, Start Time, End Time, and Message.");
+    return;
+  }
+
+  // Visual feedback
+  btn.disabled = true;
+  btn.textContent = "Broadcasting...";
+
+  // Payload matches the updated Mongoose Schema and Routes
+  const payload = {
+    title,
+    message,
+    scheduled_for,
+    ends_at,
+    type: "maintenance"
+  };
+
+  fetch("http://localhost:5000/api/notifications/broadcast-maintenance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert("Maintenance notification successfully broadcasted to all users.");
+        // Clear form
+        document.getElementById("maintTitle").value = "";
+        document.getElementById("maintMessage").value = "";
+        document.getElementById("maintStart").value = "";
+        document.getElementById("maintEnd").value = "";
+      } else {
+        alert("Broadcast failed: " + (data.message || "Unknown error"));
       }
     })
-    .catch(err => console.error(err));
+    .catch(err => {
+      console.error("Maintenance Error:", err);
+      alert("Error connecting to notification service.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "🚀 Broadcast to All Users";
+    });
+}
+
+// SYSTEM & INFRASTRUCTURE OVERVIEW
+function loadAdminStats() {
+  fetch("http://localhost:5000/api/admin/stats", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      const stats = data.stats || {};
+      
+      const statusEl = document.getElementById("serverStatus");
+      if (statusEl) {
+        statusEl.textContent = stats.serverStatus ?? "--";
+        statusEl.className = stats.serverStatus === "Stable" ? "status-stable" : "status-strained";
+      }
+
+      const cpuEl = document.getElementById("cpuLoad");
+      if (cpuEl) cpuEl.textContent = stats.cpuLoad ? `${stats.cpuLoad} avg` : "--";
+
+      const memEl = document.getElementById("memoryUsage");
+      if (memEl) memEl.textContent = stats.memoryUsage ?? "--";
+
+      const totalUsersEl = document.getElementById("totalUsers");
+      if (totalUsersEl) totalUsersEl.textContent = stats.totalUsers ?? 0;
+
+      const concurrentEl = document.getElementById("concurrentUsers");
+      if (concurrentEl) concurrentEl.textContent = stats.concurrentUsers ?? 0;
+
+    })
+    .catch(err => console.error("Stats Error:", err));
 }
 
 // LOGOUT
@@ -64,7 +161,7 @@ function renderUsersTable(users) {
   users.forEach(user => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${user.name || "-"}</td>
+      <td>${getDisplayName(user)}</td>
       <td>${user.email}</td>
       <td>
         <select class="roleSelect" data-id="${user._id}">
@@ -119,36 +216,44 @@ function filterUsers(e) {
   const q = e.target.value.toLowerCase();
   renderUsersTable(
     allUsers.filter(u =>
-      (u.fullName || u.name || "").toLowerCase().includes(q) ||
+      getDisplayName(u).toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q)
     )
   );
 }
 
-// DATA OVERSIGHT
-
+// INFRASTRUCTURE OVERSIGHT
 function loadDataOversight() {
   fetch("http://localhost:5000/api/admin/data", { credentials: "include" })
-    .then(res => res.text())
-    .then(text => {
-      try {
-        const parsed = JSON.parse(text);
-        const data = parsed.data || parsed;
+    .then(res => res.json())
+    .then(parsed => {
+      const data = parsed.data || parsed;
 
+      if (data.systemInfo) {
+        const platformEl = document.getElementById("osPlatform");
+        const uptimeEl = document.getElementById("systemUptime");
+        const cpuModelEl = document.getElementById("cpuModel");
+        const memTotalEl = document.getElementById("totalMemory");
+
+        if (platformEl) platformEl.textContent = data.systemInfo.platform;
+        if (uptimeEl) uptimeEl.textContent = data.systemInfo.uptime;
+        if (cpuModelEl) cpuModelEl.textContent = data.systemInfo.cpuModel;
+        if (memTotalEl) memTotalEl.textContent = data.systemInfo.totalMemory;
+      }
+
+      const fmTbody = document.querySelector("#farmManagersTable tbody");
+      if (fmTbody && fmTbody.children.length === 0) {
         renderFarmManagersTable(data.farmManagers);
+      }
+      
+      const fTbody = document.querySelector("#farmersTable tbody");
+      if (fTbody && fTbody.children.length === 0) {
         renderFarmersTable(data.farmers);
-        renderSwineTable(data.swine);
-        renderHeatReportsTable(data.heatReports);
-        renderBreedingTable(data.breedingRecords);
-
-      } catch (err) {
-        console.error("Data oversight response not JSON:", text);
       }
     })
-    .catch(err => console.error(err));
+    .catch(err => console.error("Data oversight Error:", err));
 }
 
-/* -------- Render Tables Individually -------- */
 function renderFarmManagersTable(rows = []) {
   const tbody = document.querySelector("#farmManagersTable tbody");
   if (!tbody) return;
@@ -158,7 +263,7 @@ function renderFarmManagersTable(rows = []) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${fm._id}</td>
-      <td>${fm.fullName || "-"}</td>
+      <td>${getDisplayName(fm)}</td>
       <td>${fm.email || "-"}</td>
       <td>${fm.status || "-"}</td>
     `;
@@ -172,77 +277,16 @@ function renderFarmersTable(rows = []) {
   tbody.innerHTML = "";
 
   rows.forEach(f => {
-    const registeredBy = f.registered_by?.fullName || "-";
+    const registeredBy = getDisplayName(f.managerId);
+    
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${f.farmer_id || "-"}</td>
-      <td>${f.name || "-"}</td>
+      <td>${getDisplayName(f)}</td>
       <td>${f.email || "-"}</td>
       <td>${f.contact_no || "-"}</td>
       <td>${f.num_of_pens ?? 0}</td>
-      <td>${f.pen_capacity ?? 0}</td>
       <td>${registeredBy}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderSwineTable(rows = []) {
-  const tbody = document.querySelector("#swineTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(s => {
-    const age = s.birth_date ? Math.floor((new Date() - new Date(s.birth_date)) / (1000*60*60*24)) + " days" : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${s.swine_id || "-"}</td>
-      <td>${s.color || "-"}</td>
-      <td>${s.breed || "-"}</td>
-      <td>${age}</td>
-      <td>${s.batch || "-"}</td>
-      <td>${s.status || "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderHeatReportsTable(rows = []) {
-  const tbody = document.querySelector("#heatReportsTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(hr => {
-    const date = hr.date_reported ? new Date(hr.date_reported).toLocaleDateString() : "-";
-    const signs = Array.isArray(hr.signs) ? hr.signs.join(", ") : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${hr._id}</td>
-      <td>${hr.swine_id || "-"}</td>
-      <td>${date}</td>
-      <td>${signs}</td>
-      <td>${hr.heat_probability ?? "-"}</td>
-      <td>${hr.status || "-"}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function renderBreedingTable(rows = []) {
-  const tbody = document.querySelector("#breedingRecordsTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-
-  rows.forEach(b => {
-    const date = b.recordDate ? new Date(b.recordDate).toLocaleDateString() : "-";
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${b.reproductionId || "-"}</td>
-      <td>${b.swine_id || "-"}</td>
-      <td>${date}</td>
-      <td>${b.parentType || "-"}</td>
-      <td>${b.noOfPiglets ?? "-"}</td>
-      <td>${b.admin_notes || "-"}</td>
     `;
     tbody.appendChild(tr);
   });
