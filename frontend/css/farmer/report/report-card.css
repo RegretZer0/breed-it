@@ -1,7 +1,8 @@
 /* =========================================================
    REPORT LIST + CARDS (Clean horizontal structure like screenshot)
 ========================================================= */
-.report-card-list{
+.report-card-list,
+.reports-card-list{
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -809,4 +810,385 @@
 
 @media (max-width: 576px){
   .track-modal{ width: min(520px, calc(100vw - 18px)); }
+}
+
+/* =========================================================
+   PIG PICKER (Create Report) - Overlay Panel
+========================================================= */
+
+/* If you already have .hidden, keep it. This is just a safe fallback. */
+.hidden { display: none !important; }
+
+/* Overlay */
+.pig-picker-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55); /* dark overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+/* Modal card */
+.pig-picker-card {
+  width: min(980px, 100%);
+  max-height: min(82vh, 760px);
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.18),
+    0 30px 80px rgba(0,0,0,0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.pig-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.picker-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.picker-title i {
+  font-size: 18px;
+}
+
+.picker-close {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.picker-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+}
+
+/* Controls */
+.pig-picker-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 14px 16px 10px;
+}
+
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+}
+
+.picker-search i {
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.picker-search input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-weight: 600;
+  color: #0f172a;
+  background: transparent;
+}
+
+/* List container */
+.pig-picker-list {
+  padding: 12px 16px 16px;
+  overflow: auto;
+  flex: 1;
+}
+
+/* Empty state inside picker */
+.pig-picker-list .empty-state {
+  border: 1px dashed rgba(15, 23, 42, 0.18);
+  border-radius: 16px;
+  padding: 16px;
+  color: rgba(15, 23, 42, 0.70);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+/* =========================================================
+   Sow Cards inside Picker
+========================================================= */
+
+.pig-card {
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: 18px;
+  background: #fff;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.pig-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.10);
+  border-color: rgba(15, 23, 42, 0.16);
+}
+
+.pig-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(15, 23, 42, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pig-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pig-avatar .avatar-fallback {
+  font-size: 26px;
+  color: rgba(15, 23, 42, 0.50);
+}
+
+/* Card main text */
+.pig-info h5 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.pig-info .pig-sub {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* little info chips */
+.pig-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  background: rgba(15, 23, 42, 0.02);
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.82);
+}
+
+.pig-chip i {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+/* Action */
+.pig-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+/* =========================================================
+   Selected Pig (shown in form after picking)
+========================================================= */
+
+.selected-pig-wrap {
+  margin-top: 10px;
+}
+
+.selected-pig-card {
+  border: 2px solid rgba(16, 185, 129, 0.35); /* soft green outline */
+  border-radius: 18px;
+  background: rgba(16, 185, 129, 0.06);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 72px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.selected-pig-card .selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+/* =========================================================
+   Picker Pagination
+========================================================= */
+
+.picker-pagination {
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.picker-page-info {
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.82);
+}
+
+/* Reuse your .page-btn if you already have; fallback below */
+.picker-pagination .page-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.picker-pagination .page-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.10);
+}
+
+.picker-pagination .page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* =========================================================
+   Remarks textarea styling
+========================================================= */
+
+#remarks {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  outline: none;
+  resize: vertical;
+  min-height: 92px;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fff;
+}
+
+#remarks:focus {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+/* =========================================================
+   Buttons (safe fallback styles)
+   - If you already have .btn-soft / .btn-primary, yours will win.
+========================================================= */
+
+.btn-soft {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.03);
+  color: #0f172a;
+  font-weight: 900;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.btn-soft:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.10);
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.btn-primary {
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(34, 197, 94, 0.95));
+  color: #fff;
+  font-weight: 900;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.14);
+}
+
+/* =========================================================
+   Responsive tweaks
+========================================================= */
+
+@media (max-width: 640px) {
+  .pig-picker-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .pig-card,
+  .selected-pig-card {
+    grid-template-columns: 64px 1fr;
+    grid-template-areas:
+      "avatar info"
+      "actions actions";
+    align-items: start;
+  }
+
+  .pig-avatar { width: 64px; height: 64px; border-radius: 14px; }
+
+  .pig-actions {
+    grid-area: actions;
+    flex-direction: row;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .pig-info h5 {
+    font-size: 15px;
+  }
 }

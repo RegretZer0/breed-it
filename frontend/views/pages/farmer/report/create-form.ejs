@@ -1,13 +1,38 @@
-<form id="heatReportForm" class="form-card">
+<form id="heatReportForm" class="form-card" novalidate>
 
   <!-- ================= GENERAL ================= -->
   <div class="form-section">
     <h4>General Information</h4>
 
-    <label for="swineSelect">Select Pig</label>
-    <select id="swineSelect" required>
+    <!-- KEEP THIS for compatibility (older code expects #swineSelect) -->
+    <select id="swineSelect" disabled hidden>
       <option value="">Loading your swine...</option>
     </select>
+
+    <!-- IMPORTANT: This is what the JS actually uses -->
+    <input type="hidden" id="selectedSwineId" />
+
+    <!-- Picker trigger (shown when no pig selected) -->
+    <div id="pickPigTriggerWrap">
+      <label class="mb-2 d-block">Select Pig</label>
+
+      <button type="button" class="btn-soft" id="openPigPickerBtn">
+        <i class="bi bi-search"></i>
+        Select a Pig
+      </button>
+
+      <small class="hint-text d-block mt-2">
+        Only sows with <b>Open</b> status are selectable.
+      </small>
+    </div>
+
+    <!-- Selected pig card (shown after selecting) -->
+    <div id="selectedPigWrap" class="selected-pig-wrap hidden">
+      <label class="mb-2 d-block">Selected Pig</label>
+
+      <!-- JS injects the selected card here -->
+      <div id="selectedPigCard"></div>
+    </div>
   </div>
 
 
@@ -32,8 +57,9 @@
         <span>Mucous Discharge</span>
       </label>
 
+      <!-- MATCH BACKEND KEY -->
       <label class="chip">
-        <input type="checkbox" name="signs" value="Restlessness">
+        <input type="checkbox" name="signs" value="Restlessness or noticeable behavioral change">
         <span>Restlessness</span>
       </label>
 
@@ -52,11 +78,13 @@
         <span>Tail raising</span>
       </label>
 
+      <!-- MATCH BACKEND KEY (lowercase v) -->
       <label class="chip">
         <input type="checkbox" name="signs" value="Increased vocalization">
         <span>Increased Vocalization</span>
       </label>
 
+      <!-- MATCH BACKEND KEY (lowercase a) -->
       <label class="chip">
         <input type="checkbox" name="signs" value="Decreased appetite">
         <span>Decreased Appetite</span>
@@ -73,19 +101,39 @@
   </div>
 
 
+  <!-- ================= REMARKS ================= -->
+  <div class="form-section">
+    <h4>Remarks</h4>
+
+    <label for="remarks">Optional Notes</label>
+    <textarea
+      id="remarks"
+      name="remarks"
+      rows="3"
+      placeholder="Add additional observations (optional)"
+    ></textarea>
+
+    <small class="hint-text">
+      This will be included when the report is submitted.
+    </small>
+  </div>
+
+
   <!-- ================= UPLOAD EVIDENCE ================= -->
   <div class="form-section">
     <h4>Upload Evidence</h4>
 
     <div class="upload-box">
 
+      <!-- IMPORTANT FIX:
+           remove "required" because the input is hidden (browser can't focus it when invalid).
+           validate in JS instead (you already require files in backend). -->
       <input
         type="file"
         id="evidence"
         name="evidence"
         accept="image/*,video/*"
         multiple
-        required
         hidden
       />
 
@@ -119,3 +167,56 @@
   <p id="reportMessage"></p>
 
 </form>
+
+
+<!-- =====================================================
+     PIG PICKER PANEL (Overlay / Modal-like)
+===================================================== -->
+<div id="pigPickerPanel" class="pig-picker-panel hidden" aria-hidden="true">
+
+  <div class="pig-picker-card" role="dialog" aria-modal="true" aria-label="Select a Pig">
+
+    <!-- Header -->
+    <div class="pig-picker-header">
+      <div class="picker-title">
+        <i class="bi bi-list-check"></i>
+        <span>Select an Open Sow</span>
+      </div>
+
+      <button type="button" class="picker-close" id="closePigPickerBtn" aria-label="Close picker">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Search row -->
+    <div class="pig-picker-controls">
+      <div class="picker-search">
+        <i class="bi bi-tag"></i>
+        <input
+          type="text"
+          id="pigPickerSearchInput"
+          placeholder="Search by ID / breed / tag..."
+          autocomplete="off"
+        />
+      </div>
+
+      <button type="button" class="btn-soft" id="pigPickerSearchBtn">
+        <i class="bi bi-search"></i>
+        Search
+      </button>
+    </div>
+
+    <small class="hint-text" style="margin-top:8px;">
+      Showing sows in <b>Open</b> status only. Page size: 5.
+    </small>
+
+    <!-- List -->
+    <div id="pigPickerList" class="pig-picker-list" aria-live="polite">
+      <div class="empty-state">Loading available sows...</div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pigPickerPagination" class="picker-pagination"></div>
+
+  </div>
+</div>
