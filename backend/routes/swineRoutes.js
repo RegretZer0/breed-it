@@ -748,4 +748,29 @@ router.get("/farmer", requireApiLogin, allowRoles("farmer"), async (req, res) =>
     } catch (e) { res.status(500).json({ success: false, message: "Server error" }); }
 });
 
+
+/* ======================================================
+    GET SWINE BY MONGO ID (READ ONLY)
+====================================================== */
+router.get(
+  "/by-mongo-id/:id",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder", "farmer"),
+  async (req, res) => {
+    try {
+      const swine = await Swine.findById(req.params.id)
+        .select("swine_id sex age_stage breed")
+        .lean();
+
+      if (!swine) {
+        return res.status(404).json({ success: false, message: "Swine not found" });
+      }
+
+      res.json({ success: true, swine });
+    } catch (e) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  }
+);
+
 module.exports = router;

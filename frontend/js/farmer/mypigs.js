@@ -34,6 +34,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     currentSwineData.filter(p => p.health_status === "Sick").length;
 }
 
+
+  /* =========================
+    FATHER ID RESOLVER (ObjectId -> swine_id)
+  ========================= */
+  const swineIdCache = new Map();
+
+  function looksLikeObjectId(v) {
+    return typeof v === "string" && /^[a-f0-9]{24}$/i.test(v.trim());
+  }
+
+  async function resolveSwineId(idOrCode) {
+    const raw = (idOrCode || "").toString().trim();
+    if (!raw) return "—";
+
+    // If already a swine_id like "CE0B-BOAR-0001", just return it
+    if (!looksLikeObjectId(raw)) return raw;
+
+    // Cached?
+    if (swineIdCache.has(raw)) return swineIdCache.get(raw) || raw;
+
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/swine/by-mongo-id/${raw}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include"
+      });
+      const data = await res.json();
+
+      const swineId = data?.swine?.swine_id || raw;
+      swineIdCache.set(raw, swineId);
+      return swineId;
+    } catch (err) {
+      console.error("resolveSwineId failed:", err);
+      swineIdCache.set(raw, raw);
+      return raw;
+    }
+  }
+
   /* =========================
      MODAL CONTROLS
   ========================= */
@@ -230,6 +267,7 @@ function isDeadStatus(s) {
           // parent info (support multiple field names)
           mother_id: pig.swine_id,
           father_id:
+            c.cycle_sire_id ||            
             c.boar_id ||
             c.sire_id ||
             c.male_swine_id ||
@@ -321,7 +359,7 @@ function isDeadStatus(s) {
 
     const father = cycle.father_id || "—";
     const mother = cycle.mother_id || motherPig?.swine_id || "—";
-    const piglets = extractCyclePiglets(c);
+    const piglets = extractCyclePiglets(cycle?.raw || cycle);
     const pigletsTotal = piglets.length;
 
     const pigletListHtml = piglets.length
@@ -371,7 +409,7 @@ function isDeadStatus(s) {
           </div>
           <div class="parent-item">
             <small>Father</small>
-            <div class="mono">${father}</div>
+            <div class="mono" id="fatherDetailsLabel2">Loading...</div>
           </div>
         </div>
 
@@ -416,6 +454,21 @@ function isDeadStatus(s) {
 
       cycleCardsArea.innerHTML = renderCycleDetailsView(pig, cycle);
 
+      // Resolve father swine_id in details view
+      const fatherEl = document.getElementById("fatherDetailsLabel");
+      if (fatherEl) {
+        resolveSwineId(cycle.father_id).then(v => {
+          fatherEl.textContent = v || "—";
+        });
+      }
+
+      // Resolve father swine_id in parents card too
+      const fatherEl2 = document.getElementById("fatherDetailsLabel2");
+      if (fatherEl2) {
+        resolveSwineId(cycle.father_id).then(v => {
+          fatherEl2.textContent = v || "—";
+        });
+}
       const backBtn = document.getElementById("backToOffspringBtn");
       backBtn?.addEventListener("click", () => {
         // go back to the card view without rebuilding the whole tab
@@ -465,11 +518,19 @@ function isDeadStatus(s) {
             </div>
             <div class="cycle-mini">
               <small>Father</small>
-              <div class="mono">${selected.father_id || "—"}</div>
+              <div class="mono" id="fatherCycleLabel">Loading...</div>
             </div>
           </div>
         </div>
       `;
+
+      // Resolve father swine_id (handles ObjectId)
+      const fatherEl = document.getElementById("fatherCycleLabel");
+      if (fatherEl) {
+        resolveSwineId(selected.father_id).then(v => {
+          fatherEl.textContent = v || "—";
+        });
+}
 
       const clickable = document.getElementById("cycleCardClickable");
       const openDetails = () => showCycleDetails(selected);
@@ -794,9 +855,18 @@ function isDeadStatus(s) {
         <div class="summary-card-light">
           <h4>Monthly Growth Summary</h4>
 
-          <div class="year-filter">
-            <i class="bi bi-calendar3"></i>
-            <select id="yearFilter"></select>
+          <div class="growth-filter-card">
+            <div class="growth-filter-left">
+              <div class="growth-filter-label">
+                <i class="bi bi-calendar3"></i>
+                <span>Select Year</span>
+              </div>
+
+              <div class="growth-select-box">
+                <select id="yearFilter"></select>
+                <i class="bi bi-chevron-down select-arrow"></i>
+              </div>
+            </div>
           </div>
 
           <div id="monthlySummary"></div>
@@ -1085,24 +1155,26 @@ function isDeadStatus(s) {
         </div>
 
         <!-- CYCLE FILTER -->
-        <div class="offspring-filter-card">
-          <div class="offspring-filter-left">
-            <div class="filter-label">
-              <i class="bi bi-funnel"></i>
-              <span>Select Cycle</span>
-            </div>
+        <div class="cycle-filter-card">
+          <div class="cycle-filter-label">
+            <i class="bi bi-funnel"></i>
+            <span>Select Cycle</span>
+          </div>
 
-            <div class="select-box cycle-select">
+          <div class="cycle-filter-row">
+            <div class="cycle-select-box">
               <i class="bi bi-repeat"></i>
               <select id="cycleSelect">
                 ${cycleOptions}
               </select>
+              <i class="bi bi-chevron-down cycle-select-arrow"></i>
             </div>
-          </div>
 
-          <button class="secondary-btn latest-btn" id="jumpLatestCycleBtn" type="button">
-            <i class="bi bi-arrow-clockwise"></i> Latest
-          </button>
+            <button class="cycle-latest-btn" id="jumpLatestCycleBtn" type="button">
+              <i class="bi bi-arrow-clockwise"></i>
+              <span>Latest</span>
+            </button>
+          </div>
         </div>
 
         <!-- CYCLE CARD AREA -->
@@ -1122,7 +1194,7 @@ function isDeadStatus(s) {
      RENDER CYCLE DETAILS
   ========================= */
   function renderCycleDetailsView(pig, cycle) {
-    const father = cycle.father_id || "—";
+    const fatherRaw = cycle.father_id || "—";
     const mother = cycle.mother_id || pig?.swine_id || "—";
     const piglets = getDisplayPiglets(cycle);
 
@@ -1185,10 +1257,6 @@ function isDeadStatus(s) {
             <small>Dead</small>
             <strong>${cycle.dead}</strong>
           </div>
-          <div class="o-stat">
-            <small>Father</small>
-            <strong class="mono">${father}</strong>
-          </div>
         </div>
 
         <div class="parents-card">
@@ -1198,7 +1266,7 @@ function isDeadStatus(s) {
           </div>
           <div class="parent-item">
             <small>Father</small>
-            <div class="mono">${father}</div>
+            <div class="mono" id="fatherDetailsLabel2">Loading...</div>
           </div>
         </div>
 

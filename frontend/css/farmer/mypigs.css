@@ -579,11 +579,68 @@ body {
 
 
 /* YEAR FILTER */
-.year-filter {
+/* =========================
+   GROWTH YEAR FILTER DESIGN
+========================= */
+
+.growth-filter-card {
+  background: #ffffff;
+  padding: 16px 20px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+.growth-filter-left {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.growth-filter-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
+  font-weight: 600;
+  color: #1FA774;
+  font-size: 14px;
+}
+
+.growth-select-box {
+  position: relative;
+  min-width: 140px;
+}
+
+.growth-select-box select {
+  appearance: none;
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border-radius: 16px;
+  border: 1px solid #dce7e2;
+  background: #f7faf9;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.growth-select-box select:focus {
+  outline: none;
+  border-color: #1FA774;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(31,167,116,0.1);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  pointer-events: none;
+  color: #1FA774;
 }
 
 .month-card {
@@ -1109,4 +1166,121 @@ body {
   .cycle-card-bottom{ grid-template-columns: 1fr; }
   .parents-card{ grid-template-columns: 1fr; }
   .cycle-details-head{ flex-direction: column; align-items: flex-start; }
+}
+
+/* =========================
+   OFFSPRING: CYCLE FILTER FIX
+========================= */
+
+.cycle-filter-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  margin: 18px 0;
+}
+
+.cycle-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: #1FA774;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.cycle-filter-row {
+  display: flex;
+  align-items: stretch; /* makes button + select same height */
+  gap: 12px;
+}
+
+/* SELECT BOX */
+.cycle-select-box {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  background: #f7faf9;
+  border: 1px solid #dce7e2;
+  border-radius: 18px;
+  padding: 0 14px;
+  min-height: 48px; /* key for alignment */
+}
+
+.cycle-select-box > i.bi-repeat {
+  color: #1FA774;
+  font-size: 16px;
+  flex: 0 0 auto;
+}
+
+.cycle-select-box select {
+  appearance: none;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  width: 100%;
+  height: 48px;            /* match container height */
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding-right: 36px;     /* space for arrow */
+}
+
+.cycle-select-box select:focus {
+  outline: none;
+}
+
+.cycle-select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #6b7d77;
+  font-size: 14px;
+}
+
+/* LATEST BUTTON */
+.cycle-latest-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 48px;       /* match select height */
+  padding: 0 16px;
+  border-radius: 18px;
+
+  border: 1px solid rgba(31,167,116,0.22);
+  background: rgba(31,167,116,0.10);
+  color: #1FA774;
+
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s ease;
+}
+
+.cycle-latest-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(31,167,116,0.14);
+}
+
+.cycle-latest-btn i {
+  font-size: 16px;
+}
+
+/* MOBILE: stack nicely */
+@media (max-width: 520px) {
+  .cycle-filter-row {
+    flex-direction: column;
+  }
+  .cycle-latest-btn {
+    width: 100%;
+  }
 }
