@@ -7,26 +7,25 @@ const UserModel = require("../models/UserModel"); // Managers & encoders
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
-console.log("Notification typeof:", typeof Notification);
-console.log("Notification keys:", Object.keys(Notification || {}));
-
+// Debugging logs
+console.log("Notification Model Status: Loaded");
 
 /*======================================================
-   AUTO NOTIFY FARM MANAGER & ENCODERS
+    AUTO NOTIFY FARM MANAGER & ENCODERS
 ====================================================== */
 router.post(
   "/",
   requireSessionAndToken,
-  allowRoles("farm_manager", "encoder", "admin"),
+  allowRoles("farm_manager", "encoder", "system_admin"),
   async (req, res) => {
     try {
-      const { user_id, title, message, type, expires_at } = req.body;
+      const { user_id, title, message, type, scheduled_for, ends_at } = req.body;
 
       if (!user_id || !title || !message) {
         return res.status(400).json({ success: false, message: "Missing fields" });
       }
 
-      // 🔐 ENCODER RESTRICTION (INSERT HERE)
+      // 🔐 ENCODER RESTRICTION
       if (req.user.role === "encoder" && user_id !== req.user.id) {
         return res.status(403).json({
           success: false,
@@ -38,8 +37,9 @@ router.post(
         user_id,
         title,
         message,
-        type,
-        expires_at
+        type: type || "info",
+        scheduled_for,
+        ends_at
       });
 
       res.status(201).json({ success: true, notification });
@@ -51,21 +51,17 @@ router.post(
 );
 
 /* ======================================================
-   GET USER NOTIFICATIONS (supports multiple IDs)
-   Example: /user/123,456
+    GET USER NOTIFICATIONS (supports multiple IDs)
 ====================================================== */
 router.get(
   "/user/:userIds",
   requireSessionAndToken,
-  allowRoles("farmer", "farm_manager", "encoder", "admin"),
+  allowRoles("farmer", "farm_manager", "encoder", "system_admin"),
   async (req, res) => {
     try {
       const { userIds } = req.params;
       if (!userIds) {
-        return res.status(400).json({
-          success: false,
-          message: "No user IDs provided"
-        });
+        return res.status(400).json({ success: false, message: "No user IDs provided" });
       }
 
       const idsArray = userIds
@@ -75,10 +71,7 @@ router.get(
         .map(id => new mongoose.Types.ObjectId(id));
 
       if (idsArray.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "No valid user IDs provided"
-        });
+        return res.status(400).json({ success: false, message: "No valid user IDs provided" });
       }
 
       let notifications = await Notification.find({
@@ -87,7 +80,6 @@ router.get(
         .sort({ created_at: -1 })
         .lean();
 
-      // ✅ FIX: Proper ObjectId → string comparison
       const userIdStrs = idsArray.map(id => id.toString());
 
       notifications = notifications.map(n => ({
@@ -98,33 +90,26 @@ router.get(
       }));
 
       res.json({ success: true, notifications });
-
     } catch (err) {
       console.error("Fetch notifications error:", err);
-      res.status(500).json({
-        success: false,
-        message: "Server error"
-      });
+      res.status(500).json({ success: false, message: "Server error" });
     }
   }
 );
 
-
-
 /* ======================================================
-   MARK NOTIFICATION AS READ
+    MARK NOTIFICATION AS READ
 ====================================================== */
 router.post(
   "/:id/read",
   requireSessionAndToken,
-  allowRoles("farmer", "farm_manager", "encoder", "admin"),
+  allowRoles("farmer", "farm_manager", "encoder", "system_admin"),
   async (req, res) => {
     try {
-      const userId = req.user.id; // ID of logged-in user
+      const userId = req.user.id;
       const notification = await Notification.findById(req.params.id);
       if (!notification) return res.status(404).json({ success: false, message: "Notification not found" });
 
-      // Add userId to read_by array if not already present
       if (!notification.read_by.includes(userId)) {
         notification.read_by.push(userId);
         await notification.save();
@@ -139,12 +124,12 @@ router.post(
 );
 
 /* ======================================================
-   DELETE NOTIFICATION
+    DELETE NOTIFICATION
 ====================================================== */
 router.delete(
   "/:id",
   requireSessionAndToken,
-  allowRoles("farm_manager", "encoder", "farmer", "admin"),
+  allowRoles("farm_manager", "encoder", "farmer", "system_admin"),
   async (req, res) => {
     try {
       const notification = await Notification.findByIdAndDelete(req.params.id);
@@ -157,5 +142,63 @@ router.delete(
     }
   }
 );
+
+/*======================================================
+    ADMIN: BROADCAST SYSTEM MAINTENANCE
+====================================================== */
+router.post(
+  "/broadcast-maintenance",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "system_admin") {
+        return res.status(403).json({ success: false, message: "Unauthorized: Admins only" });
+      }
+
+      const { title, message, scheduled_for, ends_at } = req.body;
+
+      if (!title || !message || !scheduled_for || !ends_at) {
+        return res.status(400).json({ success: false, message: "Missing required schedule fields" });
+      }
+
+      const notification = await Notification.create({
+        user_id: req.user.id, 
+        title,
+        message,
+        type: "maintenance",
+        is_global: true,
+        scheduled_for: new Date(scheduled_for),
+        ends_at: new Date(ends_at)
+      });
+
+      console.log("Broadcast success:", notification._id);
+      res.status(201).json({ success: true, notification });
+    } catch (err) {
+      console.error("❌ Broadcast error details:", err);
+      res.status(500).json({ success: false, message: "Server error", details: err.message });
+    }
+  }
+);
+
+/*======================================================
+    GET ACTIVE GLOBAL ALERTS (For all users)
+====================================================== */
+router.get("/global", async (req, res) => {
+  try {
+    const alerts = await Notification.find({
+      is_global: true,
+      // We show alerts that haven't ended yet
+      $or: [
+        { ends_at: { $gt: new Date() } },
+        { ends_at: null }
+      ]
+    }).sort({ created_at: -1 });
+
+    res.json({ success: true, alerts });
+  } catch (err) {
+    console.error("Global fetch error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 module.exports = router;

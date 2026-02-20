@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const adminOnly = require("../middleware/adminOnly");
-const os = require("os"); // For server health metrics
+const os = require("os"); 
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
@@ -10,7 +10,7 @@ router.use(adminOnly);
 
 /**
  * GET /api/admin/stats
- * Replaced biological counts with User Growth & Server Health
+ * Updated to calculate real-time concurrent users based on activity
  */
 router.get("/stats", async (req, res) => {
   try {
@@ -20,7 +20,14 @@ router.get("/stats", async (req, res) => {
     const farmers = await Farmer.countDocuments();
     const systemAdmins = await User.countDocuments({ role: "system_admin" });
 
-    // 2. Server Performance Data
+    // 2. REAL-TIME CONCURRENT USERS LOGIC
+    // Define activity window (e.g., users active in the last 5 minutes)
+    const activityWindow = new Date(Date.now() - 5 * 60 * 1000);
+    const concurrentUsers = await User.countDocuments({
+      lastActive: { $gte: activityWindow }
+    });
+
+    // 3. Server Performance Data
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMemPercentage = (((totalMem - freeMem) / totalMem) * 100).toFixed(2);
@@ -40,7 +47,8 @@ router.get("/stats", async (req, res) => {
         serverStatus: isHandlingLoad ? "Stable" : "Strained",
         memoryUsage: `${usedMemPercentage}%`,
         cpuLoad: cpuLoad.toFixed(2),
-        concurrentUsers: 1 // Placeholder: Integrate with Socket.io/Sessions for real-time
+        // Now returns the actual count from the database
+        concurrentUsers: concurrentUsers || 1 
       }
     });
   } catch (err) {
@@ -51,7 +59,6 @@ router.get("/stats", async (req, res) => {
 
 /**
  * GET /api/admin/users
- * Lists all users for Access Control
  */
 router.get("/users", async (req, res) => {
   try {
@@ -64,7 +71,6 @@ router.get("/users", async (req, res) => {
 
 /**
  * PUT /api/admin/user/:id
- * Update user role/status (Security Management)
  */
 router.put("/user/:id", async (req, res) => {
   try {
@@ -84,19 +90,15 @@ router.put("/user/:id", async (req, res) => {
 
 /**
  * GET /api/admin/data
- * Refocused on User Oversight and System Load details
  */
 router.get("/data", async (req, res) => {
   try {
-    // 1. Get farm managers
     const farmManagers = await User.find({ role: "farm_manager" })
       .select("first_name last_name fullName email status");
 
-    // 2. Get farmers and populate 'managerId'
     const farmers = await Farmer.find()
       .populate("managerId", "first_name last_name fullName email");
 
-    // 3. System Environment Info
     const systemInfo = {
       platform: os.platform(),
       uptime: `${(os.uptime() / 3600).toFixed(2)} hours`,

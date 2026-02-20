@@ -1,11 +1,34 @@
 document.addEventListener("DOMContentLoaded", () => {
-  loadAdminStats();
+  // Initial Load
+  refreshDashboard();
   loadUsers();
-  loadDataOversight();
+
+  // Feature: Auto-refresh system metrics every 3 seconds
+  const autoRefreshInterval = setInterval(refreshDashboard, 3000);
 
   document.getElementById("logoutBtn").addEventListener("click", logout);
   document.getElementById("searchUser").addEventListener("input", filterUsers);
+  
+  // Maintenance Broadcast Listener
+  const sendMaintBtn = document.getElementById("sendMaintBtn");
+  if (sendMaintBtn) {
+    sendMaintBtn.addEventListener("click", broadcastMaintenance);
+  }
+
+  // Optional: Listener for a manual refresh button
+  const manualBtn = document.getElementById("manualRefreshBtn");
+  if (manualBtn) {
+    manualBtn.addEventListener("click", refreshDashboard);
+  }
 });
+
+/**
+ * Combined function to update all dynamic system metrics
+ */
+function refreshDashboard() {
+  loadAdminStats();
+  loadDataOversight();
+}
 
 /**
  * HELPER: Consistently extract a display name from user objects
@@ -19,28 +42,90 @@ function getDisplayName(user) {
   return user.name || "-";
 }
 
+// FIXED: BROADCAST MAINTENANCE WITH SCHEDULED START & END
+function broadcastMaintenance() {
+  const title = document.getElementById("maintTitle").value.trim();
+  const message = document.getElementById("maintMessage").value.trim();
+  const scheduled_for = document.getElementById("maintStart").value; // Matches new EJS ID
+  const ends_at = document.getElementById("maintEnd").value;        // Matches new EJS ID
+  const btn = document.getElementById("sendMaintBtn");
+
+  if (!title || !message || !scheduled_for || !ends_at) {
+    alert("Please fill in all fields: Title, Start Time, End Time, and Message.");
+    return;
+  }
+
+  // Visual feedback
+  btn.disabled = true;
+  btn.textContent = "Broadcasting...";
+
+  // Payload matches the updated Mongoose Schema and Routes
+  const payload = {
+    title,
+    message,
+    scheduled_for,
+    ends_at,
+    type: "maintenance"
+  };
+
+  fetch("http://localhost:5000/api/notifications/broadcast-maintenance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert("Maintenance notification successfully broadcasted to all users.");
+        // Clear form
+        document.getElementById("maintTitle").value = "";
+        document.getElementById("maintMessage").value = "";
+        document.getElementById("maintStart").value = "";
+        document.getElementById("maintEnd").value = "";
+      } else {
+        alert("Broadcast failed: " + (data.message || "Unknown error"));
+      }
+    })
+    .catch(err => {
+      console.error("Maintenance Error:", err);
+      alert("Error connecting to notification service.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "🚀 Broadcast to All Users";
+    });
+}
+
 // SYSTEM & INFRASTRUCTURE OVERVIEW
 function loadAdminStats() {
   fetch("http://localhost:5000/api/admin/stats", { credentials: "include" })
     .then(res => res.json())
     .then(data => {
       if (!data.success) {
-        alert("Access denied.");
         window.location.href = "login.html";
         return;
       }
 
       const stats = data.stats || {};
       
-      // Update Server Health Cards
       const statusEl = document.getElementById("serverStatus");
-      statusEl.textContent = stats.serverStatus ?? "--";
-      statusEl.className = stats.serverStatus === "Stable" ? "status-stable" : "status-strained";
+      if (statusEl) {
+        statusEl.textContent = stats.serverStatus ?? "--";
+        statusEl.className = stats.serverStatus === "Stable" ? "status-stable" : "status-strained";
+      }
 
-      document.getElementById("cpuLoad").textContent = stats.cpuLoad ? `${stats.cpuLoad} avg` : "--";
-      document.getElementById("memoryUsage").textContent = stats.memoryUsage ?? "--";
-      document.getElementById("totalUsers").textContent = stats.totalUsers ?? 0;
-      document.getElementById("concurrentUsers").textContent = stats.concurrentUsers ?? 0;
+      const cpuEl = document.getElementById("cpuLoad");
+      if (cpuEl) cpuEl.textContent = stats.cpuLoad ? `${stats.cpuLoad} avg` : "--";
+
+      const memEl = document.getElementById("memoryUsage");
+      if (memEl) memEl.textContent = stats.memoryUsage ?? "--";
+
+      const totalUsersEl = document.getElementById("totalUsers");
+      if (totalUsersEl) totalUsersEl.textContent = stats.totalUsers ?? 0;
+
+      const concurrentEl = document.getElementById("concurrentUsers");
+      if (concurrentEl) concurrentEl.textContent = stats.concurrentUsers ?? 0;
 
     })
     .catch(err => console.error("Stats Error:", err));
@@ -144,16 +229,27 @@ function loadDataOversight() {
     .then(parsed => {
       const data = parsed.data || parsed;
 
-      // Render the new Infrastructure Metrics
       if (data.systemInfo) {
-        document.getElementById("osPlatform").textContent = data.systemInfo.platform;
-        document.getElementById("systemUptime").textContent = data.systemInfo.uptime;
-        document.getElementById("cpuModel").textContent = data.systemInfo.cpuModel;
-        document.getElementById("totalMemory").textContent = data.systemInfo.totalMemory;
+        const platformEl = document.getElementById("osPlatform");
+        const uptimeEl = document.getElementById("systemUptime");
+        const cpuModelEl = document.getElementById("cpuModel");
+        const memTotalEl = document.getElementById("totalMemory");
+
+        if (platformEl) platformEl.textContent = data.systemInfo.platform;
+        if (uptimeEl) uptimeEl.textContent = data.systemInfo.uptime;
+        if (cpuModelEl) cpuModelEl.textContent = data.systemInfo.cpuModel;
+        if (memTotalEl) memTotalEl.textContent = data.systemInfo.totalMemory;
       }
 
-      renderFarmManagersTable(data.farmManagers);
-      renderFarmersTable(data.farmers);
+      const fmTbody = document.querySelector("#farmManagersTable tbody");
+      if (fmTbody && fmTbody.children.length === 0) {
+        renderFarmManagersTable(data.farmManagers);
+      }
+      
+      const fTbody = document.querySelector("#farmersTable tbody");
+      if (fTbody && fTbody.children.length === 0) {
+        renderFarmersTable(data.farmers);
+      }
     })
     .catch(err => console.error("Data oversight Error:", err));
 }

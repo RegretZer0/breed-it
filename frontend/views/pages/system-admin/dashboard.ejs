@@ -27,14 +27,23 @@
       font-size: 20px;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+
     header button {
-      background: #ef4444;
       border: none;
       color: white;
       padding: 8px 14px;
       cursor: pointer;
       border-radius: 4px;
+      font-weight: bold;
     }
+
+    #logoutBtn { background: #ef4444; }
+    #manualRefreshBtn { background: #3b82f6; }
+    #manualRefreshBtn:hover { background: #2563eb; }
 
     .container {
       display: flex;
@@ -67,7 +76,7 @@
 
     .cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 20px;
       margin-bottom: 40px;
     }
@@ -77,12 +86,16 @@
       border-radius: 8px;
       padding: 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: relative;
+      overflow: hidden;
     }
 
     .card h2 {
       margin: 0;
       font-size: 14px;
       color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .card p {
@@ -91,17 +104,91 @@
       font-weight: bold;
     }
 
+    /* Maintenance Section Styling */
+    .maintenance-box {
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 40px;
+    }
+
+    .maintenance-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      max-width: 800px;
+    }
+
+    .maintenance-form .full-width {
+      grid-column: span 2;
+    }
+
+    .maintenance-form label {
+      font-size: 13px;
+      font-weight: bold;
+      color: #4b5563;
+      margin-bottom: -10px;
+    }
+
+    .maintenance-form input, 
+    .maintenance-form textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 100%;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .maintenance-form textarea {
+      height: 80px;
+      resize: vertical;
+    }
+
+    #sendMaintBtn {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    #sendMaintBtn:hover { background: #d97706; }
+
     /* Status styling for Server Health */
     .status-stable { color: #10b981; }
     .status-strained { color: #f59e0b; }
     .status-danger { color: #ef4444; }
 
-    input[type="text"] {
-      padding: 8px 12px;
-      width: 300px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+    /* Indicator for Active Sessions */
+    #concurrentUsers { color: #3b82f6; }
+    .pulse-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: #10b981;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    #searchUser {
+      padding: 10px 15px;
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
     }
 
     table {
@@ -115,8 +202,8 @@
     }
 
     th, td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #ddd;
+      padding: 14px 15px;
+      border-bottom: 1px solid #eee;
       text-align: left;
       font-size: 14px;
     }
@@ -124,11 +211,12 @@
     th {
       background: #1e293b;
       color: white;
+      font-weight: 500;
     }
 
     .info-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
       background: white;
       padding: 20px;
@@ -136,11 +224,18 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
+    .info-grid p {
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
     footer {
-      margin-top: 30px;
+      margin-top: 40px;
+      padding: 20px;
       text-align: center;
       font-size: 13px;
-      color: #6b7280;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
     }
   </style>
 </head>
@@ -149,13 +244,17 @@
 
 <header>
   <h1>BreedIT – System Admin Dashboard</h1>
-  <button id="logoutBtn">Logout</button>
+  <div class="header-actions">
+    <button id="manualRefreshBtn">🔄 Refresh Data</button>
+    <button id="logoutBtn">Logout</button>
+  </div>
 </header>
 
 <div class="container">
 
   <nav>
     <a href="#">📊 System Health</a>
+    <a href="#maintenance">🚧 Scheduling</a>
     <a href="#user-control">👤 User Control</a>
     <a href="#infrastructure">📁 Infrastructure</a>
   </nav>
@@ -181,10 +280,40 @@
         <p id="totalUsers">--</p>
       </div>
       <div class="card">
-        <h2>Active Sessions</h2>
+        <h2><span class="pulse-dot"></span>Active Sessions</h2>
         <p id="concurrentUsers">--</p>
       </div>
     </div>
+
+    <section id="maintenance" class="maintenance-box">
+      <h2>Broadcast System Maintenance</h2>
+      <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
+        Notify all users about upcoming downtime or system updates.
+      </p>
+      <div class="maintenance-form">
+        <div class="full-width">
+            <label for="maintTitle">Alert Title</label>
+            <input type="text" id="maintTitle" placeholder="e.g., Sunday System Upgrade">
+        </div>
+
+        <div>
+            <label for="maintStart">Maintenance Start</label>
+            <input type="datetime-local" id="maintStart">
+        </div>
+
+        <div>
+            <label for="maintEnd">Maintenance End (Notice Removal)</label>
+            <input type="datetime-local" id="maintEnd">
+        </div>
+
+        <div class="full-width">
+            <label for="maintMessage">Detailed Message</label>
+            <textarea id="maintMessage" placeholder="Detailed message for all users..."></textarea>
+        </div>
+
+        <button id="sendMaintBtn" class="full-width">🚀 Broadcast to All Users</button>
+      </div>
+    </section>
 
     <section id="user-control">
       <h2>User Access Management</h2>
