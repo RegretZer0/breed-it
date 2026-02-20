@@ -2,75 +2,171 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-   <!-- Main content -->
-    <main class="main-content">
-      <div class="container-fluid">
-            <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
-        <!-- Dashboard Header card -->
-        <div class="card page-card">
-          <div class="card-body">
-                 <!-- Rankings -->
-                    <!-- <div class="card"> -->
-                        <h4>Breed Quality Rankings</h4>
-                        <p class="muted">Ranked based on performance, physical traits, and reproductive history.</p>
+<!-- Bootstrap Icons (if not already global) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-                        <table>
-                            <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Swine ID</th>
-                                <th>Sex</th>
-                                <th>Breed</th>
-                                <th>Quality Index</th>
-                            </tr>
-                            </thead>
-                            <tbody id="rankingTable">
-                            <tr>
-                                <td colspan="5" style="text-align:center;">Loading analytics data…</td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    </div>
+<main class="main-content">
+  <div class="container-fluid">
 
-                    <!-- Compatibility -->
-                    <div class="card">
-                                  <div class="card-body">
+    <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
 
-                        <h3>🧬 Breeding Compatibility Checker</h3>
-                        <p class="muted">Analyze genetic compatibility between a selected pair to minimize inbreeding risks.</p>
+    <!-- PAGE HEADER -->
+    <div class="card page-card">
+      <div class="card-body bq-header">
+        <div class="bq-header-text">
+          <h4 class="bq-title">
+            <i class="bi bi-bar-chart-line"></i>
+            Swine Breed Quality Analysis
+          </h4>
+          <p class="muted mb-0">Rankings and breeding compatibility insights based on performance, traits, and reproductive history.</p>
+        </div>
 
-                        <div class="pair-select">
-                            <div>
-                                <label>Sow (Female)</label>
-                                <select id="femaleSelect">
-                                    <option value="">-- Select Sow --</option>
-                                </select>
-                            </div>
-
-                            <div class="pair-symbol">×</div>
-
-                            <div>
-                                <label>Boar (Male)</label>
-                                <select id="maleSelect">
-                                    <option value="">-- Select Boar --</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button id="calcBtn" onclick="calculateMatch()" class="btn-submit">
-                            Run Compatibility Analysis
-                        </button>
-
-                        <div id="matchResult" class="match-box">
-                            <small class="muted" style="text-transform: uppercase;">Estimated Match Score</small>
-                            <div id="matchScore">0%</div>
-                            <div id="matchLogs"></div>
-                        </div>
-                    </div>
-</div>  
+        <div class="bq-header-actions">
+          <div class="bq-search">
+            <i class="bi bi-search"></i>
+            <input id="rankingSearch" type="text" placeholder="Search Swine ID…" autocomplete="off">
           </div>
         </div>
       </div>
-    </main>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="bq-layout">
+
+      <!-- LEFT: RANKINGS -->
+      <section class="card page-card">
+        <div class="card-body">
+
+          <div class="section-head">
+            <div>
+              <h4 class="section-title">
+                <i class="bi bi-trophy"></i>
+                Breed Quality Rankings
+              </h4>
+              <p class="muted">Quick scan of your best candidates for breeding selection.</p>
+            </div>
+
+            <div class="legend">
+              <span class="legend-item">
+                <span class="dot good"></span> High
+              </span>
+              <span class="legend-item">
+                <span class="dot mid"></span> Medium
+              </span>
+              <span class="legend-item">
+                <span class="dot low"></span> Low
+              </span>
+            </div>
+          </div>
+
+          <!-- RANK FILTER CHIPS (All / Sows / Boars) -->
+          <div class="rank-filters" role="tablist" aria-label="Ranking filters">
+            <button type="button" class="rank-filter active" data-sex="all" aria-pressed="true">
+              <i class="bi bi-grid-1x2"></i> All
+            </button>
+            <button type="button" class="rank-filter" data-sex="Female" aria-pressed="false">
+              <i class="bi bi-gender-female"></i> Sows
+            </button>
+            <button type="button" class="rank-filter" data-sex="Male" aria-pressed="false">
+              <i class="bi bi-gender-male"></i> Boars
+            </button>
+          </div>
+
+          <!-- Loading / Empty / Cards render here -->
+          <div id="rankingGrid" class="ranking-grid">
+            <div class="state-box">
+              <div class="spinner"></div>
+              <div class="muted">Loading analytics data…</div>
+            </div>
+          </div>
+
+          <!-- Rankings Pagination (inside card body for proper spacing) -->
+          <div class="rank-pagination">
+            <button id="rankPrevBtn" type="button" class="rank-page-btn" disabled>
+              <i class="bi bi-chevron-left"></i> Prev
+            </button>
+
+            <div class="rank-page-meta">
+              <span id="rankPageLabel" class="muted">Page 1 of 1</span>
+            </div>
+
+            <button id="rankNextBtn" type="button" class="rank-page-btn" disabled>
+              Next <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- RIGHT: COMPATIBILITY -->
+      <section class="card page-card">
+        <div class="card-body">
+          <div class="section-head">
+            <div>
+              <h4 class="section-title">
+                <i class="bi bi-diagram-3"></i>
+                Breeding Compatibility Checker
+              </h4>
+              <p class="muted">Analyze compatibility between a pair to minimize inbreeding risk.</p>
+            </div>
+          </div>
+
+          <!-- Recommended Matches -->
+          <div class="recommend-wrap">
+            <div class="recommend-head">
+              <div class="recommend-title">
+                <i class="bi bi-award"></i>
+                Top Recommended Matches
+              </div>
+              <div class="muted small">Based on best matches among top quality adult sows and boars.</div>
+            </div>
+
+            <div id="recommendationsList" class="recommend-grid">
+              <div class="state-box compact">
+                <div class="spinner"></div>
+                <div class="muted">Identifying best matches…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pair selection -->
+          <div class="pair-card">
+            <div class="pair-select">
+              <div class="pair-field">
+                <label for="femaleSelect">Sow (Female)</label>
+                <select id="femaleSelect">
+                  <option value="">-- Select Sow --</option>
+                </select>
+              </div>
+
+              <div class="pair-divider" aria-hidden="true">
+                <i class="bi bi-x-lg"></i>
+              </div>
+
+              <div class="pair-field">
+                <label for="maleSelect">Boar (Male)</label>
+                <select id="maleSelect">
+                  <option value="">-- Select Boar --</option>
+                </select>
+              </div>
+            </div>
+
+            <button id="calcBtn" type="button" class="btn-submit">
+              <i class="bi bi-play-circle"></i>
+              Run Compatibility Analysis
+            </button>
+          </div>
+
+          <!-- Result -->
+          <div id="matchPanel" class="match-panel" style="display:none;">
+            <!-- JS injects score + logs here -->
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
 <%- include("../../../partials/farm-manager/footer") %>

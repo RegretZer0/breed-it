@@ -382,3 +382,72 @@ body{
   font-weight: 500;
   color: #495057;
 }
+
+/* ================= REPRO SNAPSHOT ON FARMER CARDS ================= */
+.farmer-repro-snapshot{
+  border-top: 1px solid #f1f1f1;
+  padding-top: 14px;
+}
+
+.repro-grid{
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.repro-metric{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #f8f9fa;
+  border: 1px solid #f0f0f0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-height: 54px;
+}
+
+.repro-icon{
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #ececec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.repro-icon i{
+  font-size: 16px;
+  color: #198754;
+}
+
+.repro-value{
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.1;
+}
+
+.repro-label{
+  font-size: 11px;
+  color: #6c757d;
+}
+
+
+/* ================= RESPONSIVE SNAPSHOT ================= */
+@media (max-width: 992px){
+  .repro-grid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 576px){
+  .repro-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .farmer-card-info .farmer-meta{
+    line-height: 1.35;
+  }
+}
