@@ -12,7 +12,7 @@ export async function authGuard(requiredRole = null) {
   if (!token) {
     // Not logged in
     alert("You are not logged in. Redirecting to login...");
-    window.location.href = "login.html";
+    window.location.href = "/login";
     return null;
   }
 
@@ -32,7 +32,7 @@ export async function authGuard(requiredRole = null) {
       // Session expired or invalid
       localStorage.clear();
       alert("Session expired. Redirecting to login...");
-      window.location.href = "login.html";
+      window.location.href = "/login";
       return null;
     }
 
@@ -40,7 +40,7 @@ export async function authGuard(requiredRole = null) {
     if (requiredRole && data.user.role !== requiredRole) {
       localStorage.clear();
       alert("Access denied. Redirecting to login...");
-      window.location.href = "login.html";
+      window.location.href = "/login";
       return null;
     }
 
@@ -51,7 +51,7 @@ export async function authGuard(requiredRole = null) {
     console.error("Auth check failed:", err);
     localStorage.clear();
     alert("Server error. Redirecting to login...");
-    window.location.href = "login.html";
+    window.location.href = "/login";
     return null;
   }
 }

@@ -1,0 +1,431 @@
+<!-- ================= REPORT DETAILS MODAL ================= -->
+<div id="reportDetailsModal" class="modal-overlay">
+  <div class="modal-panel">
+
+    <div class="modal-header">
+      <h5>Report Details</h5>
+      <button id="closeReportModal" class="modal-close" type="button">&times;</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="report-summary">
+
+        <!-- ================= HERO (Pig) ================= -->
+        <div class="mini-card" id="swineInfoCard" style="padding:14px;">
+
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
+            <!-- Left: Avatar + Tag -->
+            <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
+
+              <!-- Avatar Slot -->
+              <div
+                id="pigAvatarSlot"
+                style="
+                  width:58px; height:58px; border-radius:16px;
+                  border: 2px solid #dcfce7;
+                  background:#f8fafc;
+                  display:flex; align-items:center; justify-content:center;
+                  overflow:hidden;
+                  flex:0 0 auto;
+                  position:relative;
+                "
+                aria-label="Pig profile slot"
+              >
+                <!-- If you have an image URL later, set pigAvatarImg.src in JS -->
+                <img
+                  id="pigAvatarImg"
+                  src=""
+                  alt="Pig"
+                  style="width:100%; height:100%; object-fit:cover; display:none;"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+                  <i class="bi bi-piggy-bank" style="font-size:22px; color:#16a34a;"></i>
+                </div>
+              </div>
+
+              <!-- Tag + chips -->
+              <div style="min-width:0;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <i class="bi bi-tag" style="color:#16a34a;"></i>
+                  <div style="font-weight:800; font-size:18px; color:#111827; line-height:1.1;">
+                    <span id="pigTag">—</span>
+                  </div>
+                </div>
+
+                <!-- compact chips row -->
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+
+                  <!-- DATE PILL (with label) -->
+                  <div
+                    style="
+                      display:inline-flex; align-items:center; gap:8px;
+                      padding:8px 12px; border-radius:999px;
+                      border:1px solid #eef1f4; background:#f9fafb;
+                      font-weight:600; color:#374151; font-size:13px;
+                    "
+                    aria-label="Report date and time"
+                  >
+                    <i class="bi bi-calendar-event"></i>
+                    <span class="subtext" style="font-weight:700;">Date:</span>
+                    <span id="reportDateTime">—</span>
+                  </div>
+
+                  <!-- HEALTH PILL (replaces pigStage function) -->
+                  <div
+                    id="pigHealthPill"
+                    data-health="unknown"
+                    style="
+                      display:inline-flex; align-items:center; gap:8px;
+                      padding:8px 12px; border-radius:999px;
+                      border:1px solid #eef1f4; background:#f9fafb;
+                      font-weight:700; color:#374151; font-size:13px;
+                      text-transform:capitalize;
+                    "
+                    aria-label="Pig health status"
+                  >
+                    <i class="bi bi-heart-pulse"></i>
+                    <span class="subtext" style="font-weight:800;">Health:</span>
+                    <span id="pigHealthText">Unknown</span>
+                  </div>
+
+                  <!-- Keep old id (compat) but hidden -->
+                  <span id="pigStage" class="visually-hidden" aria-hidden="true">—</span>
+                </div>
+
+                <!-- Reported by (always visible) + Farmer toggle -->
+                <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                  <div class="subtext" style="display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-person-badge"></i>
+                    <span>
+                      Reported by:
+                      <strong id="reportedByName">—</strong>
+                      <span class="text-muted" id="reportedById" style="margin-left:6px;">—</span>
+                    </span>
+                  </div>
+
+                  <button
+                    id="toggleFarmerBtn"
+                    type="button"
+                    class="btn-nav secondary"
+                    style="margin-left:auto; padding:8px 12px; border-radius:999px;"
+                    aria-expanded="false"
+                    aria-controls="farmerInfoCard"
+                  >
+                    <i class="bi bi-person-vcard"></i>
+                    Show Farmer
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Right: Status badge -->
+            <div style="flex:0 0 auto;">
+              <span id="reportStatus" class="report-status" data-status="pending">pending</span>
+            </div>
+          </div>
+
+          <!-- compact pig meta row -->
+          <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:14px;">
+            <div style="min-width:140px;">
+              <div class="subtext" style="margin-bottom:2px;">Current Weight</div>
+              <div style="font-weight:800;"><span id="pigWeight">—</span></div>
+            </div>
+
+            <div style="min-width:120px;">
+              <div class="subtext" style="margin-bottom:2px;">Cycle</div>
+              <div style="font-weight:800;"><span id="pigCycle">—</span></div>
+            </div>
+
+            <div style="min-width:140px;">
+              <div class="subtext" style="margin-bottom:2px;">Probability</div>
+              <div style="font-weight:800;"><span id="reportProbabilityValue">—</span></div>
+            </div>
+          </div>
+
+          <!-- Keep old hidden id (compat) -->
+          <p id="reportProbability" class="visually-hidden" aria-hidden="true"></p>
+        </div>
+
+        <!-- ================= FARMER CARD (Hidden by default; toggled from Pig card) ================= -->
+        <div class="mini-card" id="farmerInfoCard" style="padding:14px; display:none;">
+
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <!-- Farmer Avatar Slot -->
+            <div
+              id="farmerAvatarSlot"
+              style="
+                width:54px; height:54px; border-radius:16px;
+                border: 2px solid #eef1f4;
+                background:#f8fafc;
+                display:flex; align-items:center; justify-content:center;
+                overflow:hidden;
+                flex:0 0 auto;
+                position:relative;
+              "
+              aria-label="Farmer profile slot"
+            >
+              <img
+                id="farmerAvatarImg"
+                src=""
+                alt="Farmer"
+                style="width:100%; height:100%; object-fit:cover; display:none;"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              />
+              <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+                <i class="bi bi-person-circle" style="font-size:22px; color:#64748b;"></i>
+              </div>
+            </div>
+
+            <div style="min-width:0; flex:1;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <i class="bi bi-person-badge" style="color:#64748b;"></i>
+                <div style="font-weight:800; font-size:16px; color:#111827;">
+                  <span id="farmerName">—</span>
+                </div>
+              </div>
+
+              <div style="margin-top:4px;">
+                <span class="subtext">Farmer ID:</span>
+                <strong id="farmerIdText">—</strong>
+              </div>
+
+              <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;">
+                <div style="min-width:160px;">
+                  <div class="subtext" style="margin-bottom:2px;">Phone</div>
+                  <div style="font-weight:800;"><span id="farmerPhone">—</span></div>
+                </div>
+
+                <div style="flex:1; min-width:220px;">
+                  <div class="subtext" style="margin-bottom:2px;">Address</div>
+                  <div style="font-weight:800;"><span id="farmerAddress">—</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= OBSERVED SIGNS ================= -->
+        <div class="mini-card" style="padding:14px;">
+          <div class="mini-card-top" style="margin-bottom:10px;">
+            <i class="bi bi-activity"></i>
+            <span class="mini-card-label">Observed Signs</span>
+          </div>
+          <div id="reportSigns" class="signs-container"></div>
+        </div>
+
+        <!-- ================= NOTES ================= -->
+        <div class="mini-card" id="reportNotesWrap" style="padding:14px;">
+          <div class="mini-card-top" style="margin-bottom:10px;">
+            <i class="bi bi-journal-text"></i>
+            <span class="mini-card-label">Farmer Notes</span>
+          </div>
+          <div id="reportNotes" class="subtext" style="font-size:14px;">
+            <span class="text-muted">No remarks provided.</span>
+          </div>
+        </div>
+
+        <!-- ================= EVIDENCE ================= -->
+        <div class="mini-card" id="evidenceCard" style="padding:14px;">
+          <div class="mini-card-top" style="justify-content:space-between; width:100%; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <i class="bi bi-images"></i>
+              <span class="mini-card-label">Evidence</span>
+            </div>
+            <small class="text-muted">Tap an item to preview</small>
+          </div>
+
+          <!-- Inline Preview Panel -->
+          <div id="evidencePreview" class="evidence-preview" style="display:none;"></div>
+
+          <!-- Thumbs -->
+          <div id="evidenceGallery" class="evidence-gallery"></div>
+        </div>
+
+      </div>
+
+      <!-- ================= ACTIONS ================= -->
+      <div class="modal-footer report-actions">
+        <button id="approveBtn" style="display:none;" type="button">
+          <i class="bi bi-check-circle"></i> Approve
+        </button>
+
+        <button id="rejectBtn" style="display:none;" type="button">
+          <i class="bi bi-x-circle"></i> Reject
+        </button>
+
+        <button id="confirmAIBtn" style="display:none;" type="button">
+          <i class="bi bi-droplet-half"></i> Confirm AI
+        </button>
+
+        <button id="confirmPregnancyBtn" style="display:none;" type="button">
+          <i class="bi bi-heart-pulse"></i> Confirm Pregnancy
+        </button>
+
+        <button id="followUpBtn" style="display:none;" type="button">
+          <i class="bi bi-arrow-repeat"></i> Cycle Failed
+        </button>
+
+        <button id="confirmFarrowingBtn" style="display:none;" type="button">
+          <i class="bi bi-egg-fried"></i> Confirm Farrowing
+        </button>
+
+        <button id="closeReportModalBtn" class="secondary" type="button">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= AI CONFIRM MODAL ================= -->
+<div id="aiConfirmModal" class="modal">
+  <div class="modal-content">
+    <h3>
+      <i class="bi bi-droplet-half"></i> Confirm AI Service
+    </h3>
+
+    <label>Select Sire (Boar)</label>
+    <select id="boarSelect"></select>
+
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button id="submitAI" class="btn-nav" type="button">
+        <i class="bi bi-check-circle"></i> Confirm AI
+      </button>
+
+      <button
+        type="button"
+        class="btn-nav secondary"
+        onclick="document.getElementById('aiConfirmModal').style.display='none'">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FARROWING MODAL ================= -->
+<div id="farrowingModal" class="modal">
+  <div class="modal-content">
+    <h3>
+      <i class="bi bi-egg-fried"></i> Register Farrowing Results
+    </h3>
+
+    <form id="farrowingForm">
+      <label>Actual Farrowing Date</label>
+      <input type="date" id="farrowingDateInput" required>
+
+      <div class="count-grid">
+        <div>
+          <label>Live</label>
+          <input type="number" id="liveCount" min="0" value="0">
+        </div>
+        <div>
+          <label>Mortality</label>
+          <input type="number" id="mortalityCount" min="0" value="0">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button type="submit" class="btn-nav">
+          <i class="bi bi-check-circle"></i> Confirm Farrowing
+        </button>
+
+        <button
+          type="button"
+          class="btn-nav secondary"
+          onclick="document.getElementById('farrowingModal').style.display='none'">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= REJECT MODAL ================= -->
+<div id="rejectReasonModal" class="modal">
+  <div class="modal-content">
+    <h3>Reject Report</h3>
+
+    <p class="text-muted">
+      Please provide a reason for rejecting this report.
+    </p>
+
+    <textarea
+      id="rejectReasonInput"
+      rows="4"
+      placeholder="Enter rejection reason..."
+      style="resize:none;">
+    </textarea>
+
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <button id="confirmRejectBtn" class="btn-nav" type="button">
+        <i class="bi bi-x-circle"></i> Reject
+      </button>
+
+      <button
+        type="button"
+        class="btn-nav secondary"
+        onclick="document.getElementById('rejectReasonModal').style.display='none'">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= TRACK PROGRESS PANEL ================= -->
+<div id="trackProgressPanel" class="progress-panel">
+
+  <!-- HEADER -->
+  <div class="progress-panel-header">
+    <div>
+      <h4 class="panel-title">Progress Tracking</h4>
+      <p id="progressFarmerName" class="panel-subtitle">
+        Farmer: —
+      </p>
+    </div>
+
+    <button id="closeProgressPanel" class="panel-close" type="button">&times;</button>
+  </div>
+
+  <!-- BODY -->
+  <div class="progress-panel-body">
+
+    <!-- SUMMARY CARD -->
+    <div class="cycle-summary-card">
+      <div class="cycle-summary-top">
+        <div class="cycle-swine">
+          <i class="bi bi-heart-fill text-success"></i>
+          <strong id="progressSwineId">—</strong>
+        </div>
+
+        <span id="cycleStatus" class="cycle-status-badge">
+          Active
+        </span>
+      </div>
+
+      <!-- TIME-BASED INFO -->
+      <div class="cycle-time-info">
+        <div class="time-row">
+          <span class="label">Current Stage</span>
+          <strong id="currentStage">—</strong>
+        </div>
+
+        <div class="time-row highlight">
+          <span class="label">Time Remaining</span>
+          <strong id="remainingDays">—</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="cycle-timeline" id="cycleTimeline">
+      <div class="timeline-empty text-muted">
+        No cycle data available.
+      </div>
+    </div>
+
+  </div>
+</div>

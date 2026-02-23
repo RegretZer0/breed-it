@@ -1,171 +1,699 @@
 /* =========================================================
    REPORTS – CARD LIST
 ========================================================= */
-.report-card {
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 24px;
-  border: 1px solid #eef1f4;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-  transition: 0.2s ease;
-}
 
-.report-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.08);
-}
-
-.report-card-header {
+/* LIST WRAPPER */
+#reportsCardList.reports-card-list,
+#reportsCardList .reports-card-list {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* Title */
-.swine-id {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827;
-}
-
-/* Subtitle */
-.subtext {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-/* Status Badge (Top Right like image) */
-.status-badge {
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Healthy look */
-.status-badge.lactating,
-.status-badge.pregnant {
-  background: #dcfce7;
-  color: #166534;
-}
-
-
-/* =========================================================
-   PROBABILITY BAR
-========================================================= */
-
-.probability-block {
-  margin-top: 14px;
-}
-
-.probability-block .label {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 6px;
-}
-
-.progress-row strong {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 8px;
-  background: #eee;
-  border-radius: 4px;
+/* CARD SHELL */
+#reportsCardList .report-card.compact {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid #eef1f4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
   overflow: hidden;
+  position: relative;
 }
 
-.progress-fill {
+#reportsCardList .report-card.compact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+}
+
+/* GRID LAYOUT */
+#reportsCardList .report-card-grid {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr) auto;
+  grid-template-areas: "avatar main actions";
+  gap: 14px;
+  align-items: stretch;
+}
+
+/* LEFT: PIG SLOT */
+#reportsCardList .report-pig-slot {
+  grid-area: avatar;
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  border: 2px solid #dcfce7;
+  background: #f8fafc;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#reportsCardList .report-pig-img {
+  width: 100%;
   height: 100%;
-  background: #2e7d32;
+  object-fit: cover;
+  display: block;
 }
 
-/* =========================================================
-   INDICATORS
-========================================================= */
+#reportsCardList .report-pig-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.indicators {
-  margin-top: 12px;
+#reportsCardList .report-pig-fallback i {
+  font-size: 22px;
+  color: #16a34a;
+}
+
+/* MAIN CONTENT */
+#reportsCardList .report-main {
+  grid-area: main;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 150px;
+}
+
+#reportsCardList .report-top { min-width: 0; }
+
+#reportsCardList .report-title-wrap {
+  min-width: 0;
+  padding-right: 0;
+}
+
+#reportsCardList .report-swine-id {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #111827;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#reportsCardList .report-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #6b7280;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
-.indicator-chip {
-  background: #ecfdf3;
-  color: #166534;
-  padding: 6px 12px;
+#reportsCardList .meta-item {
+  display: inline-flex;
+  gap: 6px;
+  min-width: 0;
+  align-items: center;
+}
+
+#reportsCardList .meta-label {
+  color: #374151;
+  font-weight: 800;
+}
+
+#reportsCardList .meta-dot {
+  color: #cbd5e1;
+}
+
+/* STATUS PILL */
+#reportsCardList .report-status-wrap {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 5;
+}
+
+#reportsCardList .status-badge {
+  pointer-events: none;
+  padding: 7px 10px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 500;
-}
-
-/* =========================================================
-   CARD ACTIONS
-========================================================= */
-
-.report-card-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-/* View Details – secondary */
-.btn-view {
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  background: #ffffff;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.btn-view:hover {
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border: 1px solid #e5e7eb;
   background: #f9fafb;
-  border-color: #9ca3af;
+  color: #374151;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-/* Track Progress – primary */
-.btn-track {
-  padding: 9px 18px;
+#reportsCardList .status-badge.pending {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+#reportsCardList .status-badge.approved {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+#reportsCardList .status-badge.rejected {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+#reportsCardList .status-badge.completed {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+/* PROBABILITY */
+#reportsCardList .report-prob { margin-top: 2px; }
+
+#reportsCardList .prob-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+#reportsCardList .prob-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+#reportsCardList .progress-bar {
+  flex: 1;
+  height: 10px;
+  background: #eef2f7;
   border-radius: 999px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+#reportsCardList .progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #198754;
+}
+
+#reportsCardList .prob-val-wrap {
+  flex: 0 0 auto;
+  min-width: 48px;
+  text-align: right;
+}
+
+#reportsCardList .prob-val {
+  font-size: 13px;
+  font-weight: 900;
+  color: #111827;
+}
+
+/* SIGNS */
+#reportsCardList .report-signs-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+#reportsCardList .signs-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: #374151;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+#reportsCardList .indicators.compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  align-items: center;
+}
+
+#reportsCardList .indicator-chip {
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  max-width: 100%;
+  line-height: 1;
+}
+
+#reportsCardList .indicator-chip.more {
+  border-style: dashed;
+  color: #6b7280;
+  background: #f9fafb;
+}
+
+/* ACTIONS COLUMN */
+#reportsCardList .report-actions {
+  grid-area: actions;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: flex-end;
+  white-space: nowrap;
+  align-self: end;
+  padding-left: 10px;
+}
+
+#reportsCardList .report-actions .btn-nav {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+#reportsCardList .report-actions .btn-nav.secondary {
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+#reportsCardList .report-actions .btn-nav.secondary:hover {
+  background: #e5e7eb;
+  border-color: #cbd5e1;
+}
+
+#reportsCardList .report-actions .btn-nav:not(.secondary) {
   border: none;
   background: linear-gradient(135deg, #1f7a3a, #16632f);
   color: #ffffff;
+  box-shadow: 0 6px 16px rgba(31, 122, 58, 0.18);
+}
+
+#reportsCardList .report-actions .btn-nav:not(.secondary):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(31, 122, 58, 0.26);
+}
+
+/* =========================================================
+   HEAT TOOLBAR – TABS + FILTER (DESKTOP 1 ROW FIX)
+========================================================= */
+
+.heat-toolbar {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important; /* tabs | filters */
+  align-items: center;
+  gap: 18px;
+}
+
+.heat-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+  min-width: 0;
+}
+
+.heat-tabs::-webkit-scrollbar { height: 6px; }
+.heat-tabs::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 999px;
+}
+
+.heat-tab {
+  border-radius: 999px;
+  padding: 8px 14px;
   font-size: 13px;
   font-weight: 700;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #2563eb;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(31, 122, 58, 0.25);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
-.btn-track:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(31, 122, 58, 0.35);
+.heat-tab.active {
+  background-color: #198754;
+  border-color: #198754;
+  color: #ffffff !important;
+  opacity: 1;
 }
 
-@media (max-width: 576px) {
-  .report-card-actions {
-    flex-direction: column;
-    align-items: stretch;
+.heat-tab:hover:not(.active) {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #1d4ed8;
+}
+
+/* FILTER FORM (force single row, no wrap) */
+#heatFilterForm {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap !important;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+
+
+
+/* FILTER CONTROL SIZES (make all similar) */
+#farmerDropdownBtn,
+#filterSwine,
+#reportStatusFilter {
+  height: 38px;
+  font-size: 13px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+/* Match widths so they stay 1 row */
+#farmerDropdownBtn { width: 190px; }
+#filterSwine { width: 190px; }
+#reportStatusFilter { width: 190px; }
+
+#farmerDropdownBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+#filterSwine,
+#reportStatusFilter {
+  padding: 0 12px;
+}
+
+/* Buttons group */
+#heatFilterForm .btn-group {
+  display: flex;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+#heatFilterForm .btn-group .btn,
+#heatFilterForm .btn-success,
+#heatFilterForm .btn-outline-secondary {
+  height: 38px;
+  font-size: 13px;
+  border-radius: 10px;
+  padding: 0 16px;
+  flex: 0 0 auto;
+}
+
+/* =========================================================
+   TABLET / MOBILE
+========================================================= */
+@media (max-width: 992px) {
+  .stats-grid > [class*="col-"] {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
   }
 
-  .btn-view,
-  .btn-track {
+  #reportsCardList .report-actions {
     width: 100%;
-    text-align: center;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-left: 0;
+    white-space: normal;
+  }
+
+  #reportsCardList .report-actions .btn-nav {
+    width: 100%;
+    justify-content: center;
+    height: 44px;
+  }
+
+  #reportsCardList .report-main {
+    padding-right: 120px;
   }
 }
+
+/* =========================================================
+   PATCH: MOBILE/TABLET READABILITY + STATS 2-COL + CARD/DETAILS FIX
+   Place this at the VERY END of your table.css (so it overrides older rules)
+========================================================= */
+
+@media (max-width: 768px) {
+
+  /* ================= STATS GRID: FORCE 2 COLUMNS ================= */
+  .stats-grid {
+    row-gap: 12px !important;
+  }
+
+  /* Bootstrap cols like .col-md-6/.col-lg-3 become 100% on xs; override harder */
+  .stats-grid > div,
+  .stats-grid > [class*="col"] {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+    width: 50% !important;
+  }
+
+  /* ================= TOOLBAR: FILTER FIRST, TABS BELOW ================= */
+  .heat-toolbar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+
+  #heatFilterForm,
+  .heat-filter-form {
+    order: 1 !important;
+  }
+
+  .heat-tabs {
+    order: 2 !important;
+    width: 100% !important;
+    padding: 0 6px !important;
+    gap: 10px !important;
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
+
+  /* ================= FILTER: STACK + SPACING ================= */
+  #heatFilterForm,
+  .heat-filter-form {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding: 0 8px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+  }
+
+  #heatFilterForm .form-control,
+  #heatFilterForm .form-select,
+  #farmerDropdownBtn,
+  #filterSwine,
+  #reportStatusFilter {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 44px !important;
+    font-size: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  #heatFilterForm .btn-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  #heatFilterForm .btn-group .btn,
+  #heatFilterForm .btn-success,
+  #heatFilterForm .btn-outline-secondary {
+    height: 44px !important;
+    font-size: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* ================= REPORT CARD: MAKE IT READABLE ================= */
+  #reportsCardList .report-card.compact {
+    padding: 14px !important;
+  }
+
+  #reportsCardList .report-card-grid {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "avatar main"
+      "actions actions" !important;
+    gap: 12px !important;
+    align-items: start !important;
+  }
+
+  /* Stop squeezing main content with desktop padding */
+  #reportsCardList .report-main {
+    padding-right: 0 !important;
+    gap: 10px !important;
+  }
+
+  /* Status pill: move into normal flow (no overlay) */
+  #reportsCardList .report-status-wrap {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    margin-top: 8px !important;
+    justify-content: flex-start !important;
+    pointer-events: none;
+  }
+
+  /* Title/meta: allow wrapping instead of forced ellipsis-only */
+  #reportsCardList .report-swine-id {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    line-height: 1.2 !important;
+  }
+
+  #reportsCardList .report-meta {
+    gap: 6px !important;
+  }
+
+  /* Probability: cleaner stack */
+  #reportsCardList .prob-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+
+  #reportsCardList .prob-val-wrap {
+    width: 100% !important;
+    text-align: left !important;
+    min-width: 0 !important;
+  }
+
+  /* Chips: prevent ugly vertical breaks */
+  #reportsCardList .indicator-chip {
+    white-space: normal !important;
+    line-height: 1.15 !important;
+    max-width: 100% !important;
+  }
+
+  /* Actions: 1 row, 2 columns (View | Track) */
+  #reportsCardList .report-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    padding-left: 0 !important;
+    margin-top: 12px !important;
+    white-space: normal !important;
+    align-items: stretch !important;
+  }
+
+  #reportsCardList .report-actions .btn-nav {
+    width: 100% !important;
+    height: 44px !important;
+    justify-content: center !important;
+  }
+
+  /* ================= REPORT DETAILS MODAL: SPACING + READABILITY ================= */
+    #reportDetailsModal .modal-body {
+      padding: 14px !important;
+    }
+
+    #reportDetailsModal .report-row {
+      gap: 12px !important;
+    }
+
+    #reportDetailsModal .report-summary {
+      gap: 12px !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+    }
+
+    #reportDetailsModal .mini-card {
+      padding: 14px !important;
+      border-radius: 16px !important;
+    }
+
+    #reportDetailsModal .mini-card-top {
+      gap: 10px !important;
+      flex-wrap: wrap !important;
+    }
+
+    #reportDetailsModal .evidence-gallery {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    #reportDetailsModal .dynamic-media {
+      padding: 10px !important;
+      border-radius: 14px !important;
+    }
+
+    #reportDetailsModal .report-actions {
+      gap: 10px !important;
+    }
+
+    #reportDetailsModal .report-actions .btn,
+    #reportDetailsModal .report-actions button {
+      width: 100% !important;
+    }
+  }
+
+/* =========================================================
+   VERY SMALL: 1 COLUMN STATS + STACK ACTIONS
+========================================================= */
+@media (max-width: 420px) {
+
+  /* Stats: 1 column */
+  .stats-grid > div,
+  .stats-grid > [class*="col"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Report actions: stack */
+  #reportsCardList .report-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Status badge: slightly tighter */
+  #reportsCardList .status-badge {
+    font-size: 11px !important;
+    padding: 6px 9px !important;
+  }
+}
+
 
 /* =========================================================
    REPORT DETAILS MODAL
 ========================================================= */
+.report-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 
 .report-summary {
   display: flex;
@@ -175,24 +703,7 @@
   line-height: 1.4;
 }
 
-/* Swine + Status row */
-.report-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.report-row p {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #222;
-}
-
-/* ================= STATUS BADGE ================= */
-
+/* STATUS BADGE (MODAL) */
 .report-status {
   padding: 6px 16px;
   border-radius: 999px;
@@ -206,71 +717,27 @@
   white-space: nowrap;
 }
 
-/* Pending */
-.report-status[data-status="pending"] {
-  background: #fff7e0;
-  color: #92400e;
-}
+.report-status[data-status="pending"] { background: #fff7e0; color: #92400e; }
+.report-status[data-status="approved"] { background: #dcfce7; color: #166534; }
+.report-status[data-status="rejected"] { background: #fee2e2; color: #991b1b; }
 
-/* Approved */
-.report-status[data-status="approved"] {
-  background: #dcfce7;
-  color: #166534;
-}
-
-/* Rejected */
-.report-status[data-status="rejected"] {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-/* Under Observation / Waiting */
 .report-status[data-status="under_observation"],
 .report-status[data-status="waiting_heat_check"] {
   background: #e7f3ff;
   color: #1d4ed8;
 }
 
-/* Pregnant */
-.report-status[data-status="pregnant"] {
-  background: #fdecea;
-  color: #991b1b;
-}
-
-/* Farrowing Ready */
-.report-status[data-status="farrowing_ready"] {
-  background: #e8f5e9;
-  color: #15803d;
-}
-
-/* Lactating */
-.report-status[data-status="lactating"] {
-  background: #f0fdf4;
-  color: #15803d;
-}
-
-/* Completed */
-.report-status[data-status="completed"] {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-/* ================= MOBILE TWEAKS ================= */
+.report-status[data-status="pregnant"] { background: #fdecea; color: #991b1b; }
+.report-status[data-status="farrowing_ready"] { background: #e8f5e9; color: #15803d; }
+.report-status[data-status="lactating"] { background: #f0fdf4; color: #15803d; }
+.report-status[data-status="completed"] { background: #e5e7eb; color: #374151; }
 
 @media (max-width: 576px) {
-  .report-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .report-status {
-    align-self: flex-start;
-  }
+  .report-row { flex-direction: column; align-items: flex-start; }
+  .report-status { align-self: flex-start; }
 }
 
-
-/* ================= OBSERVED SIGNS ================= */
-
+/* OBSERVED SIGNS */
 .report-signs h6 {
   margin-bottom: 8px;
   font-size: 14px;
@@ -294,11 +761,7 @@
   white-space: nowrap;
 }
 
-
-/* =========================================================
-   MEDIA
-========================================================= */
-
+/* MEDIA */
 .dynamic-media {
   background: #fafafa;
   padding: 10px;
@@ -318,16 +781,61 @@
   font-size: 12px;
   color: #6b7280;
 }
-/* ================= REPORT MODAL ACTIONS ================= */
 
-.report-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
+/* EVIDENCE INLINE EXPANDER */
+.evidence-preview {
+  border: 1px solid #eef1f4;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
 }
 
-/* Primary actions */
+.evidence-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.evidence-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.evidence-preview-close {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.evidence-preview-media img,
+.evidence-preview-media video {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.evidence-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 576px) {
+  .evidence-gallery { grid-template-columns: 1fr; }
+}
+
+/* REPORT MODAL ACTION BUTTONS */
 #confirmAIBtn,
 #approveBtn,
 #confirmPregnancyBtn,
@@ -348,7 +856,6 @@
   transform: translateY(-1px);
 }
 
-/* Reject */
 #rejectBtn {
   background: #fee2e2;
   color: #991b1b;
@@ -358,7 +865,6 @@
   font-weight: 600;
 }
 
-/* Close */
 #closeReportModalBtn {
   background: #e5e7eb;
   color: #374151;
@@ -367,10 +873,7 @@
   font-weight: 600;
 }
 
-
-/* =========================================================
-   TRACK PROGRESS PANEL
-========================================================= */
+/* TRACK PROGRESS PANEL */
 .progress-panel {
   position: fixed;
   top: 0;
@@ -386,9 +889,7 @@
   flex-direction: column;
 }
 
-.progress-panel.open {
-  right: 0;
-}
+.progress-panel.open { right: 0; }
 
 .progress-panel-header {
   padding: 16px 20px;
@@ -427,17 +928,13 @@
   border-radius: 18px;
   padding: 20px;
   margin-bottom: 20px;
-
   border: 1px solid #eef1f4;
-
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.04),
     0 12px 28px rgba(0, 0, 0, 0.06);
-
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Subtle hover lift (desktop only) */
 @media (hover: hover) {
   .cycle-summary-card:hover {
     transform: translateY(-2px);
@@ -476,7 +973,6 @@
   white-space: nowrap;
 }
 
-/* Time-based progress */
 .cycle-time-info {
   margin-top: 14px;
   display: flex;
@@ -490,16 +986,12 @@
   font-size: 14px;
 }
 
-.time-row .label {
-  color: #6b7280;
-}
+.time-row .label { color: #6b7280; }
 
 .time-row.highlight strong {
-  color: #d97706; /* subtle warning */
+  color: #d97706;
   font-weight: 700;
 }
-
-/* ================= TIMELINE ================= */
 
 .cycle-timeline {
   display: flex;
@@ -507,24 +999,11 @@
   gap: 14px;
 }
 
-/* ================= MOBILE ================= */
 @media (max-width: 576px) {
-  .progress-panel {
-    width: 100%;
-  }
-
-  .cycle-summary-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .time-row {
-    flex-direction: column;
-    gap: 2px;
-  }
+  .progress-panel { width: 100%; }
+  .cycle-summary-top { flex-direction: column; align-items: flex-start; }
+  .time-row { flex-direction: column; gap: 2px; }
 }
-
-/* ================= TRACK PROGRESS TIMELINE ================= */
 
 .timeline-step {
   display: flex;
@@ -533,11 +1012,11 @@
   border-radius: 12px;
   padding: 14px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  position: relative;
+  padding-bottom: 20px;
 }
 
-.timeline-step + .timeline-step {
-  margin-top: 12px;
-}
+.timeline-step + .timeline-step { margin-top: 12px; }
 
 .step-icon {
   width: 36px;
@@ -552,9 +1031,7 @@
   flex-shrink: 0;
 }
 
-.step-content {
-  flex: 1;
-}
+.step-content { flex: 1; }
 
 .step-header {
   display: flex;
@@ -563,9 +1040,7 @@
   gap: 8px;
 }
 
-.step-header strong {
-  font-size: 14px;
-}
+.step-header strong { font-size: 14px; }
 
 .step-status {
   font-size: 11px;
@@ -602,13 +1077,6 @@
   background: #e5e7eb;
 }
 
-.timeline-step {
-  position: relative;
-  display: flex;
-  gap: 14px;
-  padding-bottom: 20px;
-}
-
 .timeline-step .step-icon {
   position: absolute;
   left: -36px;
@@ -631,101 +1099,7 @@
   width: 100%;
 }
 
-/* =========================================================
-   HEAT TOOLBAR (MATCH SWINE INVENTORY SYSTEM)
-========================================================= */
-
-.heat-toolbar {
-  display: grid !important;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 24px;
-}
-
-/* ================= TABS ================= */
-.heat-tab {
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  background: transparent;
-  border: none;
-  color: #2563eb;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-/* ACTIVE */
-.heat-tab.active {
-  background-color: #198754;
-  color: #ffffff !important;
-  opacity: 1;
-}
-
-/* HOVER */
-.heat-tab:hover:not(.active) {
-  background: #f3f4f6;
-  color: #1d4ed8;
-}
-
-/* ================= FILTERS ================= */
-
-#heatFilterForm {
-  justify-content: flex-end;
-}
-
-/* Farmer dropdown button */
-#farmerDropdownBtn {
-  width: 140px;
-  height: 34px;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-/* Search input */
-#filterSwine {
-  height: 34px;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-/* Apply button */
-#heatFilterForm .btn-success {
-  height: 34px;
-  font-size: 13px;
-  border-radius: 8px;
-  padding: 0 14px;
-}
-
-/* Reset button */
-#heatFilterForm .btn-outline-secondary {
-  height: 34px;
-  font-size: 13px;
-  border-radius: 8px;
-  padding: 0 14px;
-}
-
-/* =========================================================
-   FILTER BUTTON SPACING
-========================================================= */
-
-#heatFilterForm .btn-group {
-  display: flex;
-  gap: 10px; /* ← adds proper spacing */
-}
-
-#heatFilterForm .btn-group .btn {
-  border-radius: 6px;
-  padding: 0 16px;
-  height: 34px;
-  font-size: 13px;
-}
-
-
-/* =========================================================
-   REPORT PAGINATION – MATCH REFERENCE IMAGE
-========================================================= */
-
+/* REPORT PAGINATION */
 #prevPageBtn,
 #nextPageBtn {
   height: 34px;
@@ -734,103 +1108,160 @@
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-
   background: #ffffff;
   border: 1px solid #cbd5e1;
   color: #374151;
-
   transition: all 0.2s ease;
 }
 
-/* Hover state */
 #prevPageBtn:hover:not(:disabled),
 #nextPageBtn:hover:not(:disabled) {
-  background: #6b7280;       /* grey */
-  color: #ffffff;            /* white text */
+  background: #6b7280;
+  color: #ffffff;
   border-color: #6b7280;
 }
 
-/* Disabled */
 #prevPageBtn:disabled,
 #nextPageBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Page indicator center styling */
 #pageIndicator {
   font-size: 14px;
   font-weight: 600;
   color: #374151;
 }
 
-/* ================= MOBILE HEAT REPORT LAYOUT ================= */
-@media (max-width: 768px) {
-
-  /* -------- TOOLBAR LAYOUT -------- */
-  .heat-toolbar {
-    display: flex !important;
-    flex-direction: column;
-    gap: 14px; /* balanced spacing */
-  }
-
-  /* -------- FILTER FORM -------- */
-  #heatFilterForm {
-    order: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* tighter vertical rhythm */
-
-    width: 100%;
-    padding: 0 12px; /* clean white space from card edge */
-    box-sizing: border-box;
-  }
-
-  /* Force full width everything */
-  #heatFilterForm .form-control,
-  #heatFilterForm .form-select,
-  #filterSwine {
-    width: 100% !important;
-    max-width: 100%;
-    flex: none;
-    height: 40px;
-    font-size: 14px;
-    border-radius: 10px;
-  }
-
-  /* Dropdown wrapper */
-  #heatFilterForm .dropdown {
-    width: 100%;
-  }
-
-  #farmerDropdownBtn {
-    width: 100% !important;
-    height: 40px;
-    border-radius: 10px;
-    font-size: 14px;
-  }
-
-  /* -------- BUTTON ROW -------- */
-  #heatFilterForm .btn-group {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-  }
-
-  #heatFilterForm .btn-group .btn {
-    flex: 1;
-    height: 40px;
-    font-size: 14px;
-    border-radius: 10px;
-  }
-
-  /* -------- TABS BELOW FILTERS -------- */
-  .heat-tabs {
-    order: 2;
-    justify-content: center;
-    gap: 10px;
-    padding: 0 8px;
-    margin-top: 4px;
-  }
-
+/* REPORT MODAL ACTIONS (SCOPED) */
+#reportDetailsModal .report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
 }
+
+/* OPTIONAL FILTER CLASS HOOK */
+.heat-filter-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+
+  /* ===== TOOLBAR LAYOUT (tabs | filters in 1 row) ===== */
+  .heat-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+  }
+
+  /* ===== FILTER FORM (force 1 row, no wrap) ===== */
+  #heatFilterForm,
+  .heat-filter-form {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important; /* tightened spacing */
+    white-space: nowrap;
+    min-width: 0;
+
+    /* scroll instead of wrap */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  /* scrollbar styling */
+  #heatFilterForm::-webkit-scrollbar,
+  .heat-filter-form::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  #heatFilterForm::-webkit-scrollbar-thumb,
+  .heat-filter-form::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 999px;
+  }
+
+  /* ===== FILTER INPUT SIZE (smaller) ===== */
+  #farmerDropdownBtn,
+  #filterSwine,
+  #reportStatusFilter {
+    height: 34px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Individual widths */
+  #farmerDropdownBtn {
+    width: 160px !important;
+    flex: 0 0 160px !important;
+  }
+
+  #filterSwine {
+    width: 180px !important;
+    flex: 0 0 180px !important;
+  }
+
+  #reportStatusFilter {
+    width: 170px !important;
+    flex: 0 0 170px !important;
+  }
+
+  /* ===== BUTTON GROUP (prevent wrap) ===== */
+  #heatFilterForm .btn-group,
+  .heat-filter-form .btn-group {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+  }
+
+  /* Reduce Apply / Reset size */
+  #heatFilterForm .btn-success,
+  #heatFilterForm .btn-outline-secondary {
+    height: 34px !important;
+    font-size: 12px !important;
+    padding: 0 14px !important;
+    border-radius: 8px !important;
+  }
+}
+
+
+
+
+/* MINI CARDS */
+#reportDetailsModal .mini-card {
+  background: #ffffff;
+  border: 1px solid #eef1f4;
+  border-radius: 16px;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.04),
+    0 10px 22px rgba(0,0,0,0.06);
+}
+
+#reportDetailsModal .mini-card + .mini-card {
+  margin-top: 14px;
+}
+
+#reportDetailsModal .mini-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#reportDetailsModal .mini-card-label {
+  font-weight: 900;
+  color: #111827;
+}
+
+#reportDetailsModal .evidence-gallery { margin-top: 10px; }
+
+#reportDetailsModal .sign-chip,
+#reportDetailsModal .indicator-chip {
+  font-weight: 800;
+}
+
