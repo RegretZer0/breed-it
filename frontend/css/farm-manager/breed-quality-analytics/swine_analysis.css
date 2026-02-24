@@ -1,708 +1,326 @@
 /* =========================================================
-   SWINE ANALYSIS MODULE – CLEAN / FIXED CSS
-   (Replace your module CSS with this)
+   SWINE ANALYSIS — REDUCED (Bootstrap-first)
+   Keeps only: theme tokens + module components + injected cards
 ========================================================= */
 
-/* ---------- Safety: avoid unexpected centering from global styles ---------- */
-.bq-layout,
-.bq-layout * {
-  box-sizing: border-box;
-}
-.bq-layout p,
-.bq-layout h4,
-.bq-layout h5 {
-  text-align: left;
-  margin: 0;
-}
-
-/* =========================================
-   LAYOUT
-========================================= */
-.bq-layout {
-  display: grid;
-  gap: 16px;
-}
-
-@media (min-width: 992px) {
-  .bq-layout {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
-    align-items: start;
-  }
-}
-
-/* Make cards visually consistent */
-.page-card .card-body {
-  padding: 16px;
-}
-
-/* =========================================
-   HEADER
-========================================= */
-.bq-header {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-}
-
-.bq-header-text {
-  min-width: 240px;
-}
-
-.bq-title {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
-  font-weight: 800;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.bq-header-actions {
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .bq-header-actions { width: auto; }
-}
-
-.bq-search {
-  position: relative;
-  width: 100%;
-  max-width: 340px;
-}
-
-.bq-search i {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--muted-text);
-  pointer-events: none;
-}
-
-.bq-search input {
-  width: 100%;
-  padding: 12px 12px 12px 38px;
-  border-radius: 14px;
-  border: 1px solid var(--muted-border);
-  background: var(--bg);
-  outline: none;
-}
-
-@media (max-width: 767px) {
-  .bq-search { max-width: 100%; }
-}
-
-/* =========================================
-   SECTION HEAD
-========================================= */
-.section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.section-title {
-  margin: 0 0 6px;
-  font-size: 1.05rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.legend {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 0.85rem;
-  color: var(--muted-text);
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-.dot.good { background: #28a745; }
-.dot.mid  { background: #ffc107; }
-.dot.low  { background: #dc3545; }
-
-/* =========================================
-   STATES
-========================================= */
-.state-box {
-  border: 1px dashed var(--muted-border);
-  border-radius: 16px;
-  padding: 18px;
-  background: #fff;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-}
-
-.state-box.compact { padding: 14px; }
-
-.spinner {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 3px solid #e8e8e8;
-  border-top-color: var(--accent-green);
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* =========================================
-   RANKING GRID + CARDS (FIXED)
-========================================= */
-
-/* IMPORTANT: keep ONLY one grid rule (no conflicting overrides) */
-.ranking-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  align-items: stretch;
-}
-
-/* Card baseline (missing in your current CSS) */
-.rank-card {
-  background: #fff;
-  border: 1px solid var(--muted-border);
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.04);
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-
-  display: flex;
-  flex-direction: column;
-  min-height: 170px;
-
-  /* prevent weird stretching from global styles */
-  width: 100%;
-}
-
-.rank-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0,0,0,0.08);
-}
-
-.rank-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.rank-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-weight: 800;
-  font-size: 0.85rem;
-  background: #f3f4f6;
-
-  /* prevent it from becoming a full-width bar */
-  width: auto;
-  max-width: max-content;
-  white-space: nowrap;
-}
-
-.rank-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
-}
-
-/* IMPORTANT: use module-local badge styles (avoid global .badge conflicts) */
-.rank-card .badge {
-  font-size: 0.78rem;
-  font-weight: 800;
-  border-radius: 999px;
-  padding: 6px 10px;
-  border: 1px solid var(--muted-border);
-  background: #fff;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1;
-}
-
-.rank-card .badge-female {
-  border-color: rgba(214, 51, 132, .35);
-  color: #d63384;
-}
-
-.rank-card .badge-male {
-  border-color: rgba(13, 110, 253, .35);
-  color: #0d6efd;
-}
-
-.rank-main {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rank-card .swine-id {
-  font-size: 1.05rem;
-  font-weight: 950;
-  margin: 0;
-  letter-spacing: 0.01em;
-}
-
-/* Quality bar aligned at bottom for consistent card height */
-.q-wrap {
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-.q-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.q-label {
-  font-weight: 900;
-  font-size: 0.85rem;
-  color: #111;
-}
-
-.q-val {
-  font-weight: 950;
-  font-size: 0.95rem;
-}
-
-.q-bar {
-  width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  background: #eee;
-  overflow: hidden;
-}
-
-.q-fill {
-  height: 100%;
-  border-radius: 999px;
-}
-
-/* =========================================
-   RECOMMENDED MATCHES
-========================================= */
-.recommend-wrap {
-  border: 1px solid var(--muted-border);
-  border-radius: 16px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #fff;
-}
-
-.recommend-head { margin-bottom: 10px; }
-
-.recommend-title {
-  font-weight: 950;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.small { font-size: 0.85rem; }
-
-.recommend-grid {
-  display: grid;
-  gap: 10px;
-}
-
-@media (min-width: 576px) {
-  .recommend-grid { grid-template-columns: 1fr; } /* keep simple */
-}
-
-.match-card {
-  border: 1px solid var(--muted-border);
-  border-radius: 14px;
-  padding: 12px;
-  background: #fff;
-
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.match-left {
-  min-width: 0;
-}
-.match-left .match-name {
-  font-weight: 950;
-  margin: 0;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.match-left .match-sub {
-  margin-top: 4px;
-  color: var(--muted-text);
-  font-size: 0.88rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.match-right {
-  text-align: right;
-  flex: 0 0 auto;
-  min-width: 110px;
-}
-
-.match-score {
-  font-weight: 950;
-  font-size: 1.05rem;
-}
-
-.btn-mini {
-  margin-top: 6px;
-  border: 1px solid var(--muted-border);
-  background: #fff;
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-weight: 900;
-  cursor: pointer;
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-mini:hover { background: #f6f6f6; }
-
-/* =========================================
-   PAIR UI
-========================================= */
-.pair-card {
-  border: 1px solid var(--muted-border);
-  border-radius: 16px;
-  padding: 12px;
-  background: #fff;
-}
-
-.pair-select {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.pair-field label {
-  font-size: 0.85rem;
-  font-weight: 900;
-  margin-bottom: 6px;
-  display: block;
-}
-
-.pair-field select {
-  width: 100%;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--muted-border);
-  background: var(--bg);
-  font-size: 0.95rem;
-}
-
-.pair-divider {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .pair-select {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-  .pair-field { flex: 1; }
-  .pair-divider {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    color: var(--muted-text);
-    padding-bottom: 10px;
-  }
-}
-
-/* Submit button (keeps your style but ensures alignment) */
-.btn-submit {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-
-/* =========================================
-   MATCH PANEL
-========================================= */
-.match-panel {
-  margin-top: 14px;
-  border: 1px solid var(--muted-border);
-  border-radius: 16px;
-  background: #fff;
-  padding: 14px;
-}
-
-.match-panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.match-panel-title {
-  font-weight: 950;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0;
-}
-
-.score-big {
-  font-size: 2rem;
-  font-weight: 1000;
-  line-height: 1;
-}
-
-.log-list {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.log-item {
-  background: #f9f9f9;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.log-item i {
-  margin-top: 2px;
-  color: var(--accent-green);
-}
-
-.warning-box {
-  margin-top: 12px;
-  border: 1px solid rgba(220,53,69,.25);
-  background: rgba(220,53,69,.06);
-  color: #dc3545;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-weight: 900;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-/* =========================================
-   FIX: RANK CARDS NOT CONTAINING CONTENT
-   (paste AFTER your existing module css)
-========================================= */
-
-.ranking-grid{
-  display: grid;
-  grid-template-columns: 1fr !important;
-  gap: 16px !important;
-}
-
-/* Make each rank-card a self-contained layout */
-.rank-card{
-  background:#fff !important;
-  border:1px solid var(--muted-border) !important;
-  border-radius:16px !important;
-  padding:16px !important;
-  box-shadow:0 6px 16px rgba(0,0,0,0.04) !important;
-
-  /* IMPORTANT: lock internal layout */
-  display:grid !important;
-  grid-template-rows: auto auto 1fr auto; /* top, id, spacer, quality */
-  row-gap:12px !important;
-
-  min-height: 190px;
-  overflow:hidden;
-}
-
-/* ensure nothing inside can escape */
-.rank-card *{
-  max-width:100%;
-}
-
-/* top row */
-.rank-top{
-  margin:0 !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:space-between !important;
-  gap:10px !important;
-}
-
-/* keep pill and badge from stretching */
-.rank-pill,
-.rank-card .badge{
-  width:auto !important;
-  max-width:max-content !important;
-  white-space:nowrap !important;
-  display:inline-flex !important;
-}
-
-/* Swine ID should sit under the top row */
-.rank-main{
-  margin:0 !important;
-  display:block !important;
-}
-.rank-card .swine-id{
-  margin:0 !important;
+:root{
+  --bq-border:#e9edf3;
+  --bq-text:#1f2937;
+  --bq-muted:#6b7280;
+  --bq-green:#198754;
+
+  /* match your screenshot roundness */
+  --bq-radius-xl:24px;
+  --bq-radius-lg:18px;
+  --bq-radius-md:16px;
+  --bq-radius-sm:12px;
+
+  --bq-shadow:0 10px 28px rgba(0,0,0,0.07);
+}
+
+/* ================= CARD ROUNDNESS + SPACING ================= */
+.bq-card{
+  border:1px solid var(--bq-border);
+  border-radius:var(--bq-radius-xl);
+  background:#fff;
+  box-shadow:var(--bq-shadow);
+}
+
+/* your base .page-card exists globally; just ensure consistent padding here */
+.page-card .card-body{
+  padding:22px 26px;
+}
+@media (max-width:576px){
+  .page-card .card-body{ padding:18px; }
+  .bq-card{ border-radius:20px; }
+}
+
+/* ================= TITLE + ICON CHIPS ================= */
+.bq-title,
+.section-title{ font-weight:900; color:var(--bq-text); }
+
+.bq-icon-chip{
+  width:44px; height:44px;
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center; justify-content:center;
+  background:rgba(25,135,84,.12);
+  color:var(--bq-green);
+  flex:0 0 auto;
+  font-size:1.2rem;
+}
+.bq-icon-chip-sm{
+  width:38px; height:38px;
+  border-radius:14px;
   font-size:1.05rem;
-  font-weight:950;
-  line-height:1.2;
 }
 
-/* Quality area must always be inside at the bottom */
-.q-wrap{
-  margin:0 !important;
-  padding-top:6px !important;
-  align-self:end !important;
+/* ================= SEARCH (Bootstrap input-group) ================= */
+.bq-search .input-group-text{
+  background:#fff;
+  border-color:var(--bq-border);
+  color:var(--bq-muted);
+  border-radius:14px 0 0 14px;
+}
+.bq-search .form-control{
+  border-color:var(--bq-border);
+  border-radius:0 14px 14px 0;
+}
+.bq-search .form-control:focus{
+  box-shadow:0 0 0 .2rem rgba(25,135,84,.12);
+  border-color:rgba(25,135,84,.35);
 }
 
-/* bar + label spacing */
-.q-row{
-  margin:0 0 8px !important;
-  display:flex !important;
-  justify-content:space-between !important;
-  align-items:center !important;
-  gap:10px !important;
-}
-.q-label{ font-weight:900; }
-.q-val{ font-weight:950; }
+/* ================= LEGEND ================= */
+.legend{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.legend-item{ display:flex; gap:8px; align-items:center; font-size:.85rem; color:var(--bq-muted); }
+.dot{ width:10px; height:10px; border-radius:999px; display:inline-block; }
+.dot.good{background:#28a745;} .dot.mid{background:#ffc107;} .dot.low{background:#dc3545;}
 
-/* prevent bar from collapsing */
-.q-bar{
-  height:10px !important;
-  border-radius:999px !important;
-  overflow:hidden !important;
+/* ================= LOADING / EMPTY STATES ================= */
+.state-box{
+  border:1px dashed var(--bq-border);
+  border-radius:var(--bq-radius-lg);
+  padding:18px;
+  background:#fff;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  text-align:center;
+}
+.state-box.compact{ padding:14px; }
+
+.spinner{
+  width:22px; height:22px;
+  border-radius:999px;
+  border:3px solid #e8e8e8;
+  border-top-color:var(--bq-green);
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ================= FILTER CHIPS ================= */
+.rank-filters{ display:flex; gap:10px; flex-wrap:wrap; }
+.rank-filter{
+  border:1px solid var(--bq-border);
+  background:#fff;
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:800;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.rank-filter.active{
+  background:rgba(25,135,84,.10);
+  border-color:rgba(25,135,84,.35);
 }
 
-/* =========================================
-   FIX: RIGHT COLUMN CARD SPACING
-========================================= */
+/* ================= RANKING GRID (Bootstrap-like breakpoints) ================= */
+.ranking-grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:1fr;
+}
+@media (min-width:576px){
+  .ranking-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+/* ================= RANK CARD (JS-INJECTED) ================= */
+.rank-card{
+  background:#fff;
+  border:1px solid var(--bq-border);
+  border-radius:var(--bq-radius-lg);
+  padding:14px;
+  box-shadow:0 6px 16px rgba(0,0,0,.04);
+  transition:transform .15s ease, box-shadow .2s ease;
+  cursor:pointer;
+
+  display:flex;
+  flex-direction:column;
+  min-height:180px;
+}
+.rank-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 26px rgba(0,0,0,.08);
+}
+.rank-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.rank-pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:.85rem;
+  background:#f3f4f6;
+  white-space:nowrap;
+}
+.rank-meta{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+
+/* local badge styling so bootstrap badge doesn't conflict */
+.rank-card .badge{
+  font-size:.78rem;
+  font-weight:900;
+  border-radius:999px;
+  padding:6px 10px;
+  border:1px solid var(--bq-border);
+  background:#fff;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  line-height:1;
+}
+.rank-card .badge-female{ border-color:rgba(214,51,132,.35); color:#d63384; }
+.rank-card .badge-male{ border-color:rgba(13,110,253,.35); color:#0d6efd; }
+
+.rank-card .swine-id{ font-size:1.05rem; font-weight:950; margin:0; color:var(--bq-text); }
+
+.q-wrap{ margin-top:auto; padding-top:12px; }
+.q-row{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; }
+.q-label{ font-weight:900; font-size:.85rem; color:#111; }
+.q-val{ font-weight:950; font-size:.95rem; }
+.q-bar{ width:100%; height:10px; border-radius:999px; background:#eee; overflow:hidden; }
+.q-fill{ height:100%; border-radius:999px; }
+
+/* ================= PAGER ================= */
+.rank-pagination{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.rank-page-btn{
+  border:1px solid var(--bq-border);
+  background:#fff;
+  border-radius:var(--bq-radius-sm);
+  padding:10px 12px;
+  font-weight:900;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.rank-page-btn:disabled{ opacity:.55; cursor:not-allowed; }
+.rank-page-meta{ text-align:center; flex:1; }
+
+/* ================= RIGHT COLUMN BLOCKS ================= */
 .recommend-wrap,
 .pair-card,
 .match-panel{
-  margin-bottom: 14px !important;
+  border:1px solid var(--bq-border);
+  border-radius:var(--bq-radius-lg);
+  padding:14px;
+  background:#fff;
 }
 
+/* recommended match cards */
 .match-card{
-  gap: 14px !important;
-  padding: 14px !important;
+  border:1px solid var(--bq-border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
 }
-
+.match-left{ min-width:0; }
+.match-left .match-name{
+  font-weight:950;
+  margin:0;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
 .match-left .match-sub{
-  white-space: normal !important; /* allow wrap to avoid overflow */
-  line-height: 1.25;
+  margin-top:4px;
+  color:var(--bq-muted);
+  font-size:.88rem;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
+@media (max-width:575px){
+  .match-left .match-sub{ white-space:normal; }
+}
+.match-right{ text-align:right; flex:0 0 auto; min-width:110px; }
+.match-score{ font-weight:950; font-size:1.05rem; }
 
-/* =========================================
-   MOBILE: make cards 1 per row, clean spacing
-========================================= */
-@media (max-width: 575px){
-  .ranking-grid{
-    grid-template-columns: 1fr !important;
+.btn-mini{
+  margin-top:6px;
+  border:1px solid var(--bq-border);
+  background:#fff;
+  border-radius:12px;
+  padding:8px 10px;
+  font-weight:900;
+  cursor:pointer;
+  width:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn-mini:hover{ background:#f6f6f6; }
+
+/* pair select spacing (bootstrap handles select styling) */
+.pair-select{ display:flex; flex-direction:column; gap:10px; }
+.pair-divider{ display:none; }
+@media (min-width:768px){
+  .pair-select{ flex-direction:row; align-items:flex-end; }
+  .pair-field{ flex:1; }
+  .pair-divider{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:34px;
+    color:var(--bq-muted);
+    padding-bottom:10px;
   }
 }
 
-.rank-pagination{
+/* match panel injected content */
+.match-panel-head{
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:flex-start;
   gap:12px;
-  margin-top: 14px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
 }
-
-.rank-page-btn{
-  border:1px solid var(--muted-border);
-  background:#fff;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-weight: 900;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.rank-page-btn:disabled{
-  opacity:0.55;
-  cursor:not-allowed;
-}
-
-.rank-page-meta{
-  text-align:center;
-  flex: 1;
-}
-
-/* filter */
-.rank-filters{
+.match-panel-title{
+  font-weight:950;
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
-  margin: 8px 0 14px;
-}
-
-.rank-filter{
-  border:1px solid var(--muted-border);
-  background:#fff;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-weight: 900;
-  cursor:pointer;
-  display:flex;
   align-items:center;
-  gap:8px;
+  margin:0;
+}
+.score-big{ font-size:2rem; font-weight:1000; line-height:1; }
+
+.log-list{ margin-top:10px; display:flex; flex-direction:column; gap:8px; }
+.log-item{
+  background:#f9f9f9;
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:10px 12px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
+.log-item i{ margin-top:2px; color:var(--bq-green); }
+
+.warning-box{
+  margin-top:12px;
+  border:1px solid rgba(220,53,69,.25);
+  background:rgba(220,53,69,.06);
+  color:#dc3545;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:900;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
 }
 
-.rank-filter.active{
-  background: rgba(31,167,116,0.10);
-  border-color: rgba(31,167,116,0.35);
+/* =========================================================
+   FORCE: 1 RANK CARD PER ROW (ALL DEVICES)
+========================================================= */
+#rankingGrid.ranking-grid{
+  grid-template-columns: 1fr !important;
 }

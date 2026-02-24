@@ -3,70 +3,101 @@
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
 <main class="main-content">
-  <div class="container-fluid">
+  <div class="container-fluid py-3 py-lg-4">
 
     <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
 
-    <!-- PAGE CARD -->
-    <div class="card page-card">
+    <!-- PAGE CARD (Theme-aligned like Swine Analysis) -->
+    <div class="card page-card bq-card">
       <div class="card-body">
 
-        <h3 class="mb-4">
-          <i class="fa-solid fa-chart-line text-primary me-2"></i>
-          Heat and Breeding Analytics
-        </h3>
+        <!-- Header -->
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+          <div class="d-flex align-items-start gap-3">
+            <div class="bq-icon-chip">
+              <i class="bi bi-activity"></i>
+            </div>
+
+            <div class="min-w-0">
+              <h4 class="bq-title mb-1">Heat and Breeding Analytics</h4>
+              <p class="text-muted mb-0">
+                Monitor heat detection trends, lifecycle distribution, farmer activity, and system confidence levels.
+              </p>
+            </div>
+          </div>
+        </div>
 
         <!-- ===== CHARTS GRID ===== -->
         <div class="row g-3">
 
           <!-- Heat Trends -->
-          <div class="col-md-6 col-lg-6">
-            <div class="card h-100">
+          <div class="col-12 col-lg-6 d-flex">
+            <div class="card bq-subcard flex-fill">
               <div class="card-body">
-                <h6 class="mb-3">
-                  <i class="fa-solid fa-fire text-danger me-2"></i>
-                  Heat Detection Trends (Current Year)
-                </h6>
-                <canvas id="monthlyReportsChart"></canvas>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <div class="bq-icon-chip bq-icon-chip-sm">
+                    <i class="bi bi-graph-up"></i>
+                  </div>
+                  <h6 class="mb-0 bq-card-title">Heat Detection Trends (Current Year)</h6>
+                </div>
+
+                <div class="bq-canvas-wrap">
+                  <canvas id="monthlyReportsChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Lifecycle Status -->
-          <div class="col-md-6 col-lg-6">
-            <div class="card h-100">
+          <div class="col-12 col-lg-6 d-flex">
+            <div class="card bq-subcard flex-fill">
               <div class="card-body">
-                <h6 class="mb-3">
-                  <i class="fa-solid fa-diagram-project text-warning me-2"></i>
-                  Lifecycle Status Distribution
-                </h6>
-                <canvas id="statusReportsChart"></canvas>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <div class="bq-icon-chip bq-icon-chip-sm">
+                    <i class="bi bi-pie-chart"></i>
+                  </div>
+                  <h6 class="mb-0 bq-card-title">Lifecycle Status Distribution</h6>
+                </div>
+
+                <div class="bq-canvas-wrap">
+                  <canvas id="statusReportsChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Farmer Activity -->
-          <div class="col-md-6 col-lg-6">
-            <div class="card h-100">
+          <div class="col-12 col-lg-6 d-flex">
+            <div class="card bq-subcard flex-fill">
               <div class="card-body">
-                <h6 class="mb-3">
-                  <i class="fa-solid fa-user-group text-success me-2"></i>
-                  Reports per Farmer
-                </h6>
-                <canvas id="farmerActivityChart"></canvas>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <div class="bq-icon-chip bq-icon-chip-sm">
+                    <i class="bi bi-people"></i>
+                  </div>
+                  <h6 class="mb-0 bq-card-title">Reports per Farmer</h6>
+                </div>
+
+                <div class="bq-canvas-wrap">
+                  <canvas id="farmerActivityChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Confidence Levels -->
-          <div class="col-md-6 col-lg-6">
-            <div class="card h-100">
+          <div class="col-12 col-lg-6 d-flex">
+            <div class="card bq-subcard flex-fill">
               <div class="card-body">
-                <h6 class="mb-3">
-                  <i class="fa-solid fa-bullseye text-info me-2"></i>
-                  System Confidence Levels
-                </h6>
-                <canvas id="probabilityChart"></canvas>
+                <div class="d-flex align-items-center gap-2 mb-3">
+                  <div class="bq-icon-chip bq-icon-chip-sm">
+                    <i class="bi bi-bullseye"></i>
+                  </div>
+                  <h6 class="mb-0 bq-card-title">System Confidence Levels</h6>
+                </div>
+
+                <div class="bq-canvas-wrap">
+                  <canvas id="probabilityChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -74,15 +105,22 @@
         </div>
 
         <!-- ===== SUMMARY TABLE ===== -->
-        <div class="card mt-4">
+        <div class="card bq-subcard mt-3">
           <div class="card-body">
-            <h6 class="mb-3">
-              <i class="fa-solid fa-lightbulb text-warning me-2"></i>
-              Quick Insights Summary
-            </h6>
+
+            <div class="d-flex align-items-start gap-2 mb-3">
+              <div class="bq-icon-chip bq-icon-chip-sm">
+                <i class="bi bi-lightbulb"></i>
+              </div>
+
+              <div class="min-w-0">
+                <h6 class="mb-0 bq-card-title">Quick Insights Summary</h6>
+                <div class="text-muted small">Auto-calculated indicators based on your current heat reports.</div>
+              </div>
+            </div>
 
             <div class="table-responsive">
-              <table class="table table-sm">
+              <table class="table table-sm align-middle mb-0">
                 <thead>
                   <tr>
                     <th>Category</th>
@@ -92,7 +130,7 @@
                 </thead>
                 <tbody id="insightSummaryBody">
                   <tr>
-                    <td colspan="3">Calculating insights...</td>
+                    <td colspan="3" class="text-muted">Calculating insights...</td>
                   </tr>
                 </tbody>
               </table>

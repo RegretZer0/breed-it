@@ -2,268 +2,381 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<main class="main-content">
+<main class="main-content manage-account-page">
   <div class="container-fluid">
 
     <%- include("../../../partials/farm-manager/farmer_panel") %>
 
-    <!-- ================= MAIN HEADER ================= -->
-    <div class="outer-card">
-      <div class="header-row">
-        <h1>MANAGE ACCOUNT</h1>
+    <!-- ================= HEADER CARD ================= -->
+    <section class="card page-card manage-hero-card mb-3">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <span class="icon-badge">
+              <i class="bi bi-people"></i>
+            </span>
+            <div>
+              <h2 class="mb-0 manage-title">Manage Account</h2>
+              <small class="text-muted">View, filter, and update Farmer and Encoder accounts.</small>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 small text-muted">
+            <i class="bi bi-pencil-square"></i>
+            <span>Edit account details anytime</span>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="inner-card">
+    <!-- ================= STATS ================= -->
+    <section class="card page-card theme-card mb-3">
+      <div class="card-body">
 
-        <!-- ===== FARMER STATS ===== -->
-        <div class="stats-row mb-3">
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Total Farmers</div>
-              <div class="stat-value" id="totalFarmers">0</div>
-            </div>
-            <div class="stat-icon amber">
-              <i class="fa-solid fa-user"></i>
-            </div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Active</div>
-              <div class="stat-value" id="activeFarmers">0</div>
-            </div>
-            <div class="stat-icon green">
-              <i class="fa-solid fa-user-check"></i>
-            </div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Inactive</div>
-              <div class="stat-value" id="inactiveFarmers">0</div>
-            </div>
-            <div class="stat-icon red">
-              <i class="fa-solid fa-user-xmark"></i>
-            </div>
-          </div>
+        <div class="section-title mb-2">
+          <i class="bi bi-bar-chart"></i>
+          <span>Overview</span>
         </div>
 
-        <!-- ===== ENCODER STATS ===== -->
-        <div class="stats-row mb-3">
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Total Encoders</div>
-              <div class="stat-value" id="totalEncoders">0</div>
-            </div>
-            <div class="stat-icon blue">
-              <i class="fa-solid fa-user-pen"></i>
-            </div>
-          </div>
+        <div class="row g-3">
+          <!-- Farmers -->
+          <div class="col-12 col-lg-6">
+            <div class="stats-block">
+              <div class="stats-block-head">
+                <i class="bi bi-person-badge"></i>
+                <span>Farmers</span>
+              </div>
 
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Active Encoders</div>
-              <div class="stat-value" id="activeEncoders">0</div>
-            </div>
-            <div class="stat-icon green">
-              <i class="fa-solid fa-user-check"></i>
-            </div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-left">
-              <div class="stat-label">Inactive Encoders</div>
-              <div class="stat-value" id="inactiveEncoders">0</div>
-            </div>
-            <div class="stat-icon red">
-              <i class="fa-solid fa-user-xmark"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- ===== FILTER CONTROLS ===== -->
-        <div class="card page-card mb-3">
-          <div class="card-body">
-            <form id="accountFiltersForm" class="row g-2 align-items-end">
-
-              <!-- ACCOUNT SEARCH FILTER -->
-              <div class="col-md-4 position-relative">
-                <label class="form-label small">Account</label>
-
-                <div class="dropdown w-100">
-                  <button
-                    class="form-select form-select-sm text-start"
-                    type="button"
-                    id="filterFarmerBtn"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Select Account
-                  </button>
-
-                  <div
-                    class="dropdown-menu w-100 p-2"
-                    style="max-height:260px; overflow-y:auto;"
-                  >
-                    <input
-                      type="text"
-                      id="filterFarmerSearch"
-                      class="form-control form-control-sm mb-2"
-                      placeholder="Search account..."
-                    />
-
-                    <div id="filterFarmerOptions">
-                      <div class="text-muted small">Loading accounts...</div>
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Total Farmers</div>
+                      <div class="stat-value" id="totalFarmers">0</div>
                     </div>
+                    <div class="stat-icon amber"><i class="bi bi-people"></i></div>
                   </div>
                 </div>
 
-                <!-- hidden selected account -->
-                <input type="hidden" id="filterFarmerId">
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Active</div>
+                      <div class="stat-value" id="activeFarmers">0</div>
+                    </div>
+                    <div class="stat-icon green"><i class="bi bi-person-check"></i></div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Inactive</div>
+                      <div class="stat-value" id="inactiveFarmers">0</div>
+                    </div>
+                    <div class="stat-icon red"><i class="bi bi-person-x"></i></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Encoders -->
+          <div class="col-12 col-lg-6">
+            <div class="stats-block">
+              <div class="stats-block-head">
+                <i class="bi bi-pencil-square"></i>
+                <span>Encoders</span>
               </div>
 
-              <!-- LOCATION -->
-              <div class="col-md-4">
-                <label class="form-label small">Location / Address</label>
-                <input
-                  id="filterLocation"
-                  class="form-control form-control-sm"
-                  placeholder="Enter address"
-                />
-              </div>
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Total Encoders</div>
+                      <div class="stat-value" id="totalEncoders">0</div>
+                    </div>
+                    <div class="stat-icon blue"><i class="bi bi-person-gear"></i></div>
+                  </div>
+                </div>
 
-              <!-- ACCOUNT TYPE -->
-              <div class="col-md-3">
-                <label class="form-label small">Account Type</label>
-                <select id="filterAccountType" class="form-select form-select-sm">
-                  <option value="" disabled selected>Select type</option>
-                  <option value="all">All</option>
-                  <option value="farmer">Farmer</option>
-                  <option value="encoder">Encoder</option>
-                </select>
-              </div>
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Active</div>
+                      <div class="stat-value" id="activeEncoders">0</div>
+                    </div>
+                    <div class="stat-icon green"><i class="bi bi-person-check"></i></div>
+                  </div>
+                </div>
 
-              <!-- STATUS -->
-              <div class="col-md-3">
-                <label class="form-label small">Account Status</label>
-                <select id="filterStatus" class="form-select form-select-sm">
-                  <option value="" disabled selected>Select status</option>
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                <div class="col-12 col-md-4">
+                  <div class="stat-card">
+                    <div class="stat-meta">
+                      <div class="stat-label">Inactive</div>
+                      <div class="stat-value" id="inactiveEncoders">0</div>
+                    </div>
+                    <div class="stat-icon red"><i class="bi bi-person-x"></i></div>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
 
-              <!-- ACTIONS -->
-              <div class="col-md-2 d-grid">
-                <button type="submit" class="btn btn-sm btn-success">Apply</button>
+        </div>
+
+      </div>
+    </section>
+
+      <!-- ================= FILTERS (1 ROW ONLY) ================= -->
+  <section class="card page-card mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <div class="section-title mb-0">
+          <i class="bi bi-funnel"></i>
+          <span>Filters</span>
+        </div>
+
+        <div class="text-muted small d-none d-md-block">
+          Use filters to narrow down the current tab.
+        </div>
+      </div>
+
+      <form id="accountFiltersForm" class="filters-inline" autocomplete="off">
+
+        <!-- ACCOUNT DROPDOWN (keep IDs) -->
+        <div class="filter-item">
+          <label class="form-label small mb-1">Account</label>
+
+          <div class="dropdown w-100">
+            <button
+              class="form-select form-select-sm text-start"
+              type="button"
+              id="filterFarmerBtn"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Select Account
+            </button>
+
+            <div class="dropdown-menu w-100 p-2" style="max-height:260px; overflow-y:auto;">
+              <input
+                type="text"
+                id="filterFarmerSearch"
+                class="form-control form-control-sm mb-2"
+                placeholder="Search account..."
+              />
+              <div id="filterFarmerOptions">
+                <div class="text-muted small">Loading accounts...</div>
               </div>
+            </div>
+          </div>
 
-              <div class="col-md-2 d-grid">
-                <button
-                  type="button"
-                  id="resetFiltersBtn"
-                  class="btn btn-sm btn-outline-secondary"
-                >
-                  Reset
-                </button>
-              </div>
+          <input type="hidden" id="filterFarmerId">
+        </div>
 
-            </form>
+        <!-- LOCATION -->
+        <div class="filter-item filter-grow">
+          <label class="form-label small mb-1">Location / Address</label>
+          <input
+            id="filterLocation"
+            class="form-control form-control-sm"
+            placeholder="Enter address"
+          />
+        </div>
+
+        <!-- STATUS -->
+        <div class="filter-item">
+          <label class="form-label small mb-1">Account Status</label>
+          <select id="filterStatus" class="form-select form-select-sm">
+            <option value="" disabled selected>Select status</option>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="filter-item filter-actions">
+          <button type="submit" class="btn btn-sm btn-success w-100">
+            <i class="bi bi-check2-circle me-1"></i> Apply
+          </button>
+        </div>
+
+        <div class="filter-item filter-actions">
+          <button type="button" id="resetFiltersBtn" class="btn btn-sm btn-outline-secondary w-100">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </section>
+
+
+    <!-- ================= LIST + TABS (replaces Recently Added panel) ================= -->
+    <section class="card page-card theme-card mb-4">
+      <div class="card-body">
+
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-2">
+          <div class="section-title mb-0">
+            <i class="bi bi-card-list"></i>
+            <span>Accounts</span>
+          </div>
+
+          <div class="small text-muted">
+            Total: <span id="accountTotalLabel">0</span>
           </div>
         </div>
 
+        <!-- Tabs -->
+        <div class="account-tabs mb-3" role="tablist" aria-label="Account list tabs">
+          <button type="button" class="acct-tab active" id="tabAll" role="tab" aria-selected="true">
+            <i class="bi bi-grid-1x2"></i> All
+          </button>
+          <button type="button" class="acct-tab" id="tabRecent" role="tab" aria-selected="false">
+            <i class="bi bi-clock-history"></i> Recently Added
+          </button>
+          <button type="button" class="acct-tab" id="tabFarmers" role="tab" aria-selected="false">
+            <i class="bi bi-person-badge"></i> Farmers
+          </button>
+          <button type="button" class="acct-tab" id="tabEncoders" role="tab" aria-selected="false">
+            <i class="bi bi-person-gear"></i> Encoders
+          </button>
+        </div>
 
-        <!-- ===== FILTERED RESULTS ===== -->
-        <div id="filteredSection" class="table-wrap mt-3 d-none">
-          <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>NAME</th>
-                <th>ADDRESS</th>
-                <th>CONTACT</th>
-                <th>PENS</th>
-                <th>CAPACITY</th>
-                <th>STATUS</th>
-                <th>ACTION</th>
-              </tr>
-            </thead>
-            <tbody id="filteredTbody"></tbody>
-          </table>
+        <!-- Cards list (1 row per user) -->
+        <div id="accountCards" class="d-grid gap-3"></div>
+
+        <!-- Pagination -->
+        <div class="list-footer mt-3">
+          <div class="small text-muted" id="accountPageLabel">Page 1</div>
+          <div class="d-flex gap-2">
+            <button type="button" id="accountPrevBtn" class="btn btn-sm btn-outline-secondary btn-pill">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" id="accountNextBtn" class="btn btn-sm btn-outline-secondary btn-pill">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Legacy table bodies (compat, hidden) -->
+        <div class="visually-hidden" aria-hidden="true">
+          <table><tbody id="farmersTbody"></tbody></table>
+          <table><tbody id="recentTbody"></tbody></table>
         </div>
 
       </div>
-    </div>
-
-    <!-- ================= RECENTLY ADDED ================= -->
-    <div class="outer-card mt-4">
-      <div class="header-row">
-        <h2>Recently Added</h2>
-      </div>
-
-      <div class="inner-card">
-        <div class="table-wrap">
-          <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>NAME</th>
-                <th>ROLE</th>
-                <th>ADDRESS</th>
-                <th>STATUS</th>
-              </tr>
-            </thead>
-            <tbody id="recentTbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- ================= ACCOUNT LIST ================= -->
-    <div class="outer-card mt-4">
-      <div class="header-row">
-        <h2>Account List</h2>
-      </div>
-
-      <div class="inner-card">
-        <div class="table-wrap">
-          <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>NAME</th>
-                <th>ROLE</th>
-                <th>ADDRESS</th>
-                <th>CONTACT</th>
-                <th>PENS</th>
-                <th>CAPACITY</th>
-                <th>STATUS</th>
-                <th>ACTION</th>
-
-              </tr>
-            </thead>
-            <tbody id="farmersTbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    </section>
 
   </div>
 </main>
 
-<!-- ================= EDIT MODAL ================= -->
+<!-- ================= VIEW PROFILE PANEL (NEW) ================= -->
+<div id="viewPanelOverlay" class="view-overlay d-none" aria-hidden="true">
+  <div id="viewPanel" class="view-panel" role="dialog" aria-modal="true" aria-label="Account profile">
+
+    <div class="view-header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-person-lines-fill"></i>
+        <div>
+          <div class="view-title">Account Profile</div>
+          <div class="view-subtitle text-muted">Full details and quick actions</div>
+        </div>
+      </div>
+
+      <button type="button" id="closeViewPanelBtn" class="view-close" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="view-body">
+      <div class="view-hero">
+        <div class="view-avatar">
+          <img id="viewAvatar" src="/images/default-avatar.png" alt="Profile" />
+        </div>
+
+        <div class="view-hero-main">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <h5 id="viewName" class="mb-0">—</h5>
+            <span id="viewRole" class="pill pill-role">—</span>
+            <span id="viewStatus" class="pill pill-status">—</span>
+          </div>
+
+          <div class="view-hero-meta">
+            <div><i class="bi bi-hash"></i> <span class="text-muted">ID:</span> <b id="viewId">—</b></div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="soft-divider my-3">
+
+      <div class="view-grid">
+        <div class="view-kv">
+          <div class="k">Email</div>
+          <div class="v" id="viewEmail">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Contact</div>
+          <div class="v" id="viewContact">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Address</div>
+          <div class="v" id="viewAddress">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Pens</div>
+          <div class="v" id="viewPens">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Capacity</div>
+          <div class="v" id="viewCapacity">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Created</div>
+          <div class="v" id="viewCreatedAt">—</div>
+        </div>
+
+        <div class="view-kv">
+          <div class="k">Last Updated</div>
+          <div class="v" id="viewUpdatedAt">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-footer">
+      <button type="button" id="viewUpdateProfileBtn" class="btn btn-success btn-pill w-100">
+        <i class="bi bi-pencil-square me-1"></i>
+        Update Profile
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= EDIT MODAL (kept IDs) ================= -->
 <div id="editModal" class="edit-modal d-none">
   <form id="editFarmerForm" class="edit-form">
 
-    <!-- Close X -->
-    <button type="button" id="closeModalX" class="modal-close-btn">&times;</button>
+    <button type="button" id="closeModalX" class="modal-close-btn" aria-label="Close">&times;</button>
 
-    <h5>Edit Account</h5>
-
-    <p class="small text-muted mb-2">
-      Account Type: <strong id="editRoleLabel"></strong>
-    </p>
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <span class="icon-badge sm">
+        <i class="bi bi-pencil-square"></i>
+      </span>
+      <div>
+        <h5 class="mb-0">Edit Account</h5>
+        <div class="small text-muted">
+          Account Type: <strong id="editRoleLabel"></strong>
+        </div>
+      </div>
+    </div>
 
     <div class="row g-2">
       <div class="col">
@@ -277,7 +390,7 @@
     </div>
 
     <label class="form-label small mt-2">Address</label>
-    <input id="editAddress" class="form-control form-control-sm" required/>
+    <input id="editAddress" class="form-control form-control-sm" required />
 
     <label class="form-label small mt-2">Contact Number</label>
     <input
@@ -285,11 +398,10 @@
       class="form-control form-control-sm"
       type="tel"
       required
-      pattern="^(09\d{9}|\+639\d{9})$"
+      pattern="^(09\\d{9}|\\+639\\d{9})$"
       placeholder="09XXXXXXXXX or +639XXXXXXXXX"
       title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
     />
-
 
     <label class="form-label small mt-2">Account Status</label>
     <select id="editStatus" class="form-select form-select-sm" required>
@@ -306,10 +418,10 @@
     </div>
 
     <div class="d-flex justify-content-end gap-2 mt-3">
-      <button type="button" id="closeModal" class="btn btn-sm btn-secondary">
+      <button type="button" id="closeModal" class="btn btn-sm btn-outline-secondary btn-pill">
         Cancel
       </button>
-      <button type="submit" class="btn btn-sm btn-primary">
+      <button type="submit" class="btn btn-sm btn-success btn-pill">
         Update
       </button>
     </div>

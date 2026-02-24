@@ -1,0 +1,159 @@
+/* =========================================================
+   BREED QUALITY ANALYTICS PANEL (HEADER + TABS)
+   Clean copy — matches panel.ejs structure:
+   <div class="card page-card bq-panel-card mb-3">
+     <div class="card-body">
+       <h4 class="page-title ..."></h4>
+       <div class="tabs-row ...">
+         <a class="tab-btn ...">...</a>
+       </div>
+     </div>
+   </div>
+========================================================= */
+
+:root{
+  --bq-panel-radius-desktop: 28px;
+  --bq-panel-radius-mobile: 22px;
+
+  --bq-panel-border: #e9edf3;
+  --bq-panel-text: #1f2937;
+  --bq-panel-green: #0f7a34;
+}
+
+/* =========================================================
+   PANEL CARD
+========================================================= */
+.page-card.bq-panel-card{
+  width: 100%;
+  border-radius: var(--bq-panel-radius-desktop) !important;
+  border: 1px solid var(--bq-panel-border);
+  overflow: hidden;
+}
+
+/* Match analytics card padding */
+.page-card.bq-panel-card > .card-body{
+  padding: 22px 26px !important;
+}
+
+/* =========================================================
+   TITLE
+========================================================= */
+.page-card.bq-panel-card .page-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--bq-panel-text);
+}
+
+.page-card.bq-panel-card .page-title i{
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* =========================================================
+   TABS ROW (Scrollable pills)
+   Note: panel.ejs may include bootstrap classes (d-flex, flex-wrap, gap-3).
+   We intentionally override wrapping + gaps for consistent pill-row UX.
+========================================================= */
+.page-card.bq-panel-card .tabs-row{
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap !important;     /* override bootstrap flex-wrap */
+  gap: 12px !important;             /* override bootstrap gap-3 */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+  margin-top: 16px !important;
+}
+
+/* Optional scrollbar polish */
+.page-card.bq-panel-card .tabs-row::-webkit-scrollbar{ height: 6px; }
+.page-card.bq-panel-card .tabs-row::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,0.12);
+  border-radius: 999px;
+}
+.page-card.bq-panel-card .tabs-row::-webkit-scrollbar-track{ background: transparent; }
+
+/* =========================================================
+   TAB BUTTONS
+========================================================= */
+.page-card.bq-panel-card .tabs-row .tab-btn,
+.page-card.bq-panel-card .tabs-row a.tab-btn{
+  flex: 0 0 auto;
+  white-space: nowrap;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  text-decoration: none !important;
+
+  padding: 11px 18px;
+  border-radius: 999px;
+
+  border: 1px solid var(--bq-panel-border);
+  background: #ffffff;
+
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--bq-panel-text);
+
+  transition:
+    transform .12s ease,
+    background .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    color .15s ease;
+}
+
+.page-card.bq-panel-card .tabs-row .tab-btn:hover{
+  transform: translateY(-1px);
+  background: rgba(25,135,84,0.06);
+  border-color: rgba(25,135,84,0.25);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+
+.page-card.bq-panel-card .tabs-row .tab-btn.active,
+.page-card.bq-panel-card .tabs-row .tab-btn[aria-current="page"],
+.page-card.bq-panel-card .tabs-row .tab-btn[aria-selected="true"]{
+  background: rgba(25,135,84,0.15);
+  border-color: rgba(25,135,84,0.40);
+  color: var(--bq-panel-green);
+}
+
+/* Optional divider support */
+.page-card.bq-panel-card .tab-divider{
+  width: 1px;
+  height: 28px;
+  background-color: #d1d5db;
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+@media (max-width: 576px){
+  .page-card.bq-panel-card{
+    border-radius: var(--bq-panel-radius-mobile) !important;
+  }
+
+  .page-card.bq-panel-card > .card-body{
+    padding: 18px !important;
+  }
+
+  .page-card.bq-panel-card .tabs-row{
+    gap: 10px !important;
+    margin-top: 14px !important;
+  }
+
+  .page-card.bq-panel-card .tabs-row .tab-btn{
+    padding: 10px 14px;
+    font-size: 13px;
+    gap: 6px;
+  }
+}

@@ -1,390 +1,857 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
 
-/* Design tokens */
+/* =========================================================
+   MANAGE ACCOUNT — Theme aligned with Create Account
+   ✅ REWORKED WITHOUT REMOVING UNRELATED STYLES
+   - Keeps ALL your existing selectors
+   - Fixes conflicts by:
+     1) removing duplicate definitions (kept one canonical block)
+     2) scoping ONLY the risky “global” overrides to .manage-account-page
+     3) removing undefined CSS variables usage at the bottom that can break radius
+   - Ensures Overview + Filter card share the same radius
+   - Ensures Filter is 1 row on desktop, stacked on mobile (NO SCROLL)
+========================================================= */
+
 :root{
-  --page-bg: #f8f9fb;
+  --shell-bg: #f6f7fb;
   --card-bg: #ffffff;
-  --outer-border: #e6e6e6;
-  --panel-border: #efefef;
-  --muted-text: #6c6c6c;
-  --text-dark: #222222;
-  --accent-green: #17c14f;
+
+  --border: #e9edf3;
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --green: #198754;
+  --green-2: #0f7a34;
+
+  --radius-lg: 18px;
+  --radius-md: 14px;
+
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
+  --shadow-md: 0 10px 26px rgba(0,0,0,0.08);
+
+  --focus: rgba(25, 135, 84, 0.22);
+
   --amber: #ffb238;
   --danger: #ff6b6b;
-
-  --gap: 18px;
-  --radius: 8px;
-  --stat-min: 220px;
-  --stat-icon-size: 44px;
-  --max-width: 1180px;
-  --font-sans: "Roboto", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-
-  --panel-bg: #ffffff;
+  --blue: #3b82f6;
 }
 
-/* Base / reset */
-* { box-sizing: border-box; }
-html,body {
-  height: 100%;
-  margin: 0;
-  font-family: var(--font-sans);
-  color: var(--text-dark);
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-.page-shell, .page-shell * { -webkit-tap-highlight-color: transparent; }
-
-/* =========== Shell layout =========== */
-.app-shell{
-  display: flex;
-  min-height: 100vh;
-  gap: var(--gutter);
-  padding: var(--gutter);
-  align-items: flex-start;
+/* Page spacing */
+.manage-account-page .container-fluid{
+  padding-top: 12px;
+  padding-bottom: 24px;
 }
 
-/* =========== Main content =========== */
-.main-content{
-  flex: 1;
-  min-width: 0;
-  padding: var(--gutter);
-  background: var(--bg);
-}
-
-.outer-card {
-  width: 100%;
-  margin: 0;
-  margin-top: 18px;
-  border-radius: var(--radius);
-  border: 1px solid var(--outer-border);
-  padding: 14px;
-  background: transparent;
-}
-
-/* Header */
-.header-row h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  padding: 8px 0 10px;
-}
-
-/* Main white content panel */
-.inner-card {
+/* Generic themed card */
+.theme-card,
+.manage-hero-card{
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
   background: var(--card-bg);
-  border-radius: var(--radius);
-  border: 1px solid var(--panel-border);
-  padding: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
-/* ----------------- STATS ----------------- */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(var(--stat-min), 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+/* Title + icon badge */
+.icon-badge{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25,135,84,0.10);
+  color: var(--green-2);
+  border: 1px solid rgba(25,135,84,0.18);
 }
-@media (max-width: 880px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .stats-row { grid-template-columns: 1fr; } }
+.icon-badge.sm{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
 
-.stat {
+.manage-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: var(--text);
+}
+
+/* Section titles */
+.section-title{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--text);
+}
+.section-title i{ color: var(--green-2); }
+
+/* Inputs */
+.form-label{
+  font-weight: 800;
+  color: var(--text);
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+
+.form-control,
+.form-select{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.form-control:focus,
+.form-select:focus{
+  border-color: rgba(25,135,84,0.45);
+  box-shadow: 0 0 0 .2rem var(--focus);
+}
+
+/* Dropdown menu height */
+.filter-dd{
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+/* Pills */
+.btn-pill{
+  border-radius: 999px !important;
+  font-weight: 900 !important;
+  letter-spacing: .02em;
+}
+
+/* =========================================================
+   STATS
+========================================================= */
+.stats-block{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  background: #fff;
+}
+
+.stats-block-head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.stats-block-head i{ color: var(--green-2); }
+
+.stat-card{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel-bg);
   gap: 12px;
-  min-height: 64px;
-  min-width: 0;
+  min-height: 72px;
 }
 
-.stat-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.stat-label {
+.stat-label{
   font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-text);
+  font-weight: 700;
+  color: var(--muted);
 }
-.stat-value {
-  font-size: 20px;
-  font-weight: 800;
-  white-space: nowrap;
+.stat-value{
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text);
 }
 
-.stat-icon {
-  width: var(--stat-icon-size);
-  height: var(--stat-icon-size);
-  border-radius: 50%;
-  display: flex;
+.stat-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   color: #fff;
+  font-size: 18px;
 }
-.stat-icon.amber { background: var(--amber); }
-.stat-icon.green { background: var(--accent-green); }
-.stat-icon.red   { background: var(--danger); }
+.stat-icon.amber{ background: var(--amber); }
+.stat-icon.green{ background: var(--green); }
+.stat-icon.red{ background: var(--danger); }
+.stat-icon.blue{ background: var(--blue); }
 
-/* ----------------- FILTERS CARD ----------------- */
-.page-card {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: var(--radius);
-}
-.page-card .card-body {
-  padding: 10px 12px;
-}
-
-/* IMPORTANT — FIX FILTER SPACING */
-#filtersForm.row.g-2 {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  align-items: center;
-  gap: 10px !important;
-  margin: 0;
-  padding: 0;
+/* =========================================================
+   TABS (All / Recent / Farmers / Encoders)
+========================================================= */
+.account-tabs{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-#filtersForm .col-auto {
-  flex: 0 0 auto;
+.acct-tab{
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
 }
 
-#filtersForm .col-auto.col-md,
-#filtersForm .col-md {
-  min-width: 120px;
+.acct-tab:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
 }
 
-#filtersForm .col-md-auto {
-  flex: 0 0 auto;
-  min-width: 110px;
+.acct-tab.active{
+  background: rgba(25,135,84,0.12);
+  color: var(--green-2);
+  border-color: rgba(25,135,84,0.25);
 }
 
-/* Input appearance */
-#filtersForm .form-select,
-#filtersForm .form-control {
-  height: 36px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #e6e6e6;
+/* =========================================================
+   ACCOUNT CARDS — 1 ROW PER USER
+========================================================= */
+.account-row{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: #fff;
-  min-width: 120px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
 }
 
-/* TO dash */
-#filtersForm .text-center {
-  display: flex;
+.account-avatar{
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: rgba(25,135,84,0.06);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 54px;
-  font-weight: 600;
-  color: #666;
 }
 
-@media (max-width: 575px) {
-  #filtersForm .text-center { display: none; }
+.account-avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-/* Search Button */
-.search-btn {
-  height: 36px;
-  padding: 6px 14px;
-  font-weight: 700;
-  border-radius: 6px;
-  background: var(--accent-green);
-  color: #fff;
-  white-space: nowrap;
+.account-main{
+  min-width: 0;
 }
 
-/* Mobile stacking */
-@media (max-width: 560px) {
-  #filtersForm.row.g-2 {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  #filtersForm .col-auto,
-  #filtersForm .col-md,
-  #filtersForm .col-md-auto {
-    flex: 1 1 100%;
-    width: 100%;
-  }
+.account-name{
+  font-weight: 900;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.2;
 }
 
-/* ----------------- TABLE ----------------- */
-.table-wrap {
-  margin-top: 12px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  overflow: auto;
+.account-sub{
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.account-sub b{
+  color: var(--text);
+}
+
+.account-meta{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.badge-role{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--border);
   background: #fff;
 }
 
-.table {
-  min-width: 1100px;
-  border-collapse: collapse;
-  width: 100%;
-}
-
-.table thead th {
-  padding: 12px 14px;
-  background: #fafafa;
-  font-size: 12px;
-  font-weight: 700;
-  border-bottom: 1px solid var(--panel-border);
-  white-space: nowrap;
-}
-
-.table tbody td {
-  padding: 12px 14px;
-  font-size: 13px;
-  border-bottom: 1px solid var(--panel-border);
-  white-space: nowrap;
-}
-
-.table tbody td:first-child {
-  font-weight: 700;
-  width: 60px;
-}
-
-.address-muted {
-  color: var(--muted-text);
-}
-
-.table tbody tr:hover td {
-  background: #fffaf6;
-}
-
-.table tbody tr.spacer td {
-  height: 38px;
-  background: transparent;
-  border-bottom: none;
-}
-
-/* ACTIONS */
-.action-col {
-  display: flex;
-  gap: 8px;
-  white-space: nowrap;
-}
-
-.btn-view {
+.badge-status{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 6px;
-  border: 1px solid rgba(13,110,253,0.15);
-  color: #0d6efd;
-  background: transparent;
-}
-
-.btn-edit {
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 6px;
-  background: var(--accent-green);
-  color: #fff;
-  border: none;
-}
-
-/* STATUS BADGE */
-.badge-activated {
-  padding: 6px 8px;
-  font-size: 12px;
-  font-weight: 700;
   border-radius: 999px;
-  background: rgba(23,193,79,0.12);
-  color: var(--accent-green);
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--border);
 }
 
-/* RESPONSIVE TABLE WIDTHS */
-@media (max-width: 1100px) { .table { min-width: 900px; } }
-@media (max-width: 880px)  { .table { min-width: 700px; } }
-@media (max-width: 720px)  { .table { min-width: 640px; } }
-@media (max-width: 520px)  {
-  .table { min-width: 520px; }
-  .table thead th { font-size: 11px; padding: 10px; }
-  .table tbody td { font-size: 12px; padding: 9px; }
+.badge-status.active{
+  background: rgba(25,135,84,0.12);
+  color: var(--green-2);
+  border-color: rgba(25,135,84,0.28);
 }
 
-/* FOCUS STATES */
-#filtersForm .form-select:focus,
-#filtersForm .form-control:focus,
-.btn-view:focus,
-.btn-edit:focus,
-.search-btn:focus {
-  outline: 3px solid rgba(21,67,255,0.12);
-  outline-offset: 2px;
-  border-radius: 6px;
+.badge-status.inactive{
+  background: rgba(255,107,107,0.12);
+  color: #b42323;
+  border-color: rgba(255,107,107,0.28);
 }
 
-/* =========================
-   EDIT MODAL OVERLAY
-========================= */
-.edit-modal {
+.row-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-soft{
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-weight: 900;
+  padding: 8px 12px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn-soft:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+.btn-soft.edit{
+  border-color: rgba(25,135,84,0.25);
+  background: rgba(25,135,84,0.12);
+  color: var(--green-2);
+}
+
+/* Pagination footer */
+.list-footer{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+/* Mobile: stack right-side meta + keep avatar left */
+@media (max-width: 576px){
+  .account-row{
+    grid-template-columns: 56px 1fr;
+    grid-template-rows: auto auto;
+    align-items: start;
+  }
+
+  .account-meta{
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .row-actions{
+    margin-left: auto;
+  }
+}
+
+/* =========================================================
+   EDIT MODAL (theme)
+========================================================= */
+.edit-modal{
   position: fixed;
-  inset: 0; /* top: 0; right: 0; bottom: 0; left: 0 */
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1050;
-
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
 }
 
-/* =========================
-   MODAL PANEL
-========================= */
-.edit-form {
-  position: relative; /* required for X button */
+.edit-form{
+  position: relative;
   background: #fff;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   max-height: 90vh;
-
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 16px;
+  border-radius: 18px;
   overflow-y: auto;
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.18);
 }
 
-/* =========================
-   CLOSE (X) BUTTON
-========================= */
-.modal-close-btn {
+.modal-close-btn{
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-
+  top: 12px;
+  right: 12px;
   background: transparent;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
-
   color: #6c757d;
 }
+.modal-close-btn:hover{ color: #000; }
 
-.modal-close-btn:hover {
-  color: #000;
-}
-
-/* =========================
-   MOBILE OPTIMIZATION
-========================= */
-@media (max-width: 576px) {
-  .edit-form {
+@media (max-width: 576px){
+  .edit-form{
     max-width: 100%;
     max-height: 100vh;
     border-radius: 0;
   }
+}
+
+/* =========================================================
+   VIEW PROFILE DRAWER (RIGHT PANEL)
+   Matches your theme: soft, rounded, clean spacing
+========================================================= */
+
+.view-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(17, 24, 39, 0.32);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+}
+
+/* Drawer panel */
+.view-panel{
+  width: min(420px, 92vw);
+  height: 100%;
+  background: #fff;
+  border-left: 1px solid #e9edf3;
+  box-shadow: -14px 0 38px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.view-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #e9edf3;
+  background: linear-gradient(180deg, rgba(255,255,255,1), rgba(246,247,251,0.92));
+}
+
+.view-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: #1f2937;
+  line-height: 1.1;
+}
+
+.view-subtitle{
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Close button */
+.view-close{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid #e9edf3;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.view-close:hover{
+  background: #f6f7fb;
+  border-color: #dfe6ef;
+  transform: translateY(-1px);
+}
+
+/* Body scroll */
+.view-body{
+  padding: 12px 14px 14px;
+  overflow: auto;
+}
+
+/* Profile cover image (prevents anime photo stretching) */
+/* =========================================================
+   FIX: VIEW PROFILE IMAGE OVERFLOW (fixed size + crop)
+========================================================= */
+
+/* Keep cover a fixed height and prevent any internal overflow */
+.view-cover{
+  width: 100%;
+  height: 220px;              /* fixed size */
+  border-radius: 16px;
+  overflow: hidden !important; /* hard clamp */
+  border: 1px solid #e9edf3;
+  background: #f6f7fb;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+  margin-bottom: 10px;
+  position: relative;         /* safe for absolute img */
+}
+
+/* Force the image to always fit the box (no stretching, no overflow) */
+.view-cover img{
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* If any global styles are affecting images, this prevents it */
+.view-body img{
+  max-width: 100%;
+  height: auto;
+}
+
+/* Mobile keeps a fixed (slightly shorter) height */
+@media (max-width: 576px){
+  .view-cover{
+    height: 200px;            /* fixed size on mobile */
+    border-radius: 16px;
+  }
+}
+
+.view-cover img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Hero info */
+.view-hero-main{
+  padding: 4px 2px 0;
+}
+
+.view-hero-meta{
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 13px;
+  display: grid;
+  gap: 6px;
+}
+
+/* Pills */
+.pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #e9edf3;
+  background: #fff;
+}
+
+.pill-role{
+  color: #0f7a34;
+  border-color: rgba(25,135,84,0.22);
+  background: rgba(25,135,84,0.10);
+}
+
+.pill-status{
+  color: #111827;
+}
+
+.pill-status.active{
+  color: #0f7a34;
+  border-color: rgba(25,135,84,0.22);
+  background: rgba(25,135,84,0.10);
+}
+
+.pill-status.inactive{
+  color: #b42318;
+  border-color: rgba(255,107,107,0.26);
+  background: rgba(255,107,107,0.12);
+}
+
+/* Key/value grid */
+.view-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.view-kv{
+  border: 1px solid #e9edf3;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.view-kv .k{
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  letter-spacing: .02em;
+  margin-bottom: 3px;
+}
+
+.view-kv .v{
+  font-size: 14px;
+  color: #111827;
+  word-break: break-word;
+}
+
+/* Footer */
+.view-footer{
+  padding: 12px 14px 14px;
+  border-top: 1px solid #e9edf3;
+  background: #fff;
+}
+
+/* Mobile: turn into bottom sheet */
+@media (max-width: 576px){
+  .view-overlay{
+    justify-content: center;
+    align-items: flex-end;
+  }
+
+  .view-panel{
+    width: 100%;
+    height: 92vh;
+    border-left: 0;
+    border-top: 1px solid #e9edf3;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .view-cover{
+    height: 200px;
+    border-radius: 16px;
+  }
+}
+
+/* =========================================================
+   MANAGE ACCOUNT — OVERVIEW + FILTERS POLISH
+========================================================= */
+
+/* Optional: a stronger “title” weight */
+.fw-black{ font-weight: 900 !important; }
+
+/* Hero header card (matches create account look) */
+.manage-hero-card .icon-badge{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25,135,84,0.10);
+  color: #0f7a34;
+  border: 1px solid rgba(25,135,84,0.18);
+}
+
+/* Section title */
+.section-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: #1f2937;
+}
+.section-title i{ color: #0f7a34; }
+
+/* Overview grouping */
+.overview-group{
+  border: 1px solid #e9edf3;
+  border-radius: 18px;
+  background: #fff;
+  padding: 12px;
+}
+
+.overview-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #111827;
+}
+
+.overview-head i{
+  color: #0f7a34;
+}
+
+/* Stat cards */
+.stat-chip{
+  border: 1px solid #e9edf3;
+  border-radius: 16px;
+  background: #fff;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 70px;
+}
+
+.stat-meta{
+  min-width: 0;
+}
+.stat-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  letter-spacing: .02em;
+}
+.stat-value{
+  font-size: 20px;
+  font-weight: 900;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.stat-ico{
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: 0 0 auto;
+}
+.stat-ico.amber{ background: #ffb238; }
+.stat-ico.green{ background: #198754; }
+.stat-ico.red{ background: #ff6b6b; }
+.stat-ico.blue{ background: #3b82f6; }
+
+/* =========================================================
+   FILTER BAR — FORCE 1 ROW
+   - No wrapping
+   - On small screens: horizontal scroll (still 1 row)
+========================================================= */
+
+.filters-inline{
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: nowrap;             /* 1 row only */
+  overflow-x: auto;              /* scroll instead of wrap */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;           /* room for scrollbar */
+}
+
+.filters-inline::-webkit-scrollbar{
+  height: 8px;
+}
+.filters-inline::-webkit-scrollbar-thumb{
+  background: #e9edf3;
+  border-radius: 999px;
+}
+
+.filter-item{
+  flex: 0 0 auto;
+  min-width: 210px;
+}
+
+.filter-grow{
+  flex: 1 1 auto;
+  min-width: 320px;
+}
+
+.filter-actions{
+  min-width: 140px;
+}
+
+/* Make inputs match your theme */
+.filters-inline .form-control,
+.filters-inline .form-select{
+  border-radius: 14px;
+  border: 1px solid #e9edf3;
+  height: 38px;
+  padding: 8px 12px;
+}
+
+.filters-inline .form-control:focus,
+.filters-inline .form-select:focus{
+  border-color: rgba(25,135,84,0.45);
+  box-shadow: 0 0 0 .2rem rgba(25,135,84,0.18);
+}
+
+/* Mobile: keep 1 row, but shrink widths so scrolling is minimal */
+@media (max-width: 576px){
+  .filter-item{ min-width: 190px; }
+  .filter-grow{ min-width: 240px; }
+  .filter-actions{ min-width: 120px; }
+}
+
+/* =========================================================
+   FILTERS: Desktop one-row, Mobile stacked (NO SCROLL)
+========================================================= */
+
+.filters-inline{
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: nowrap;     /* desktop: one row */
+}
+
+/* Mobile: stack into one column (no horizontal scrolling) */
+@media (max-width: 576px){
+  .filters-inline{
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
+
+  .filters-inline .filter-item,
+  .filters-inline .filter-grow,
+  .filters-inline .filter-actions{
+    flex: 1 1 100% !important;
+    min-width: 100% !important;
+  }
+
+  /* Buttons side-by-side on mobile (optional) */
+  .filters-inline .filter-actions{
+    flex: 1 1 calc(50% - 6px) !important;
+    min-width: calc(50% - 6px) !important;
+  }
+}
+
+/* =========================================================
+   SAFE RADIUS OVERRIDES (fixes broken undefined vars)
+   - Your previous bottom block used --card-radius/--chip-radius/--input-radius
+     which are not defined in :root, causing border-radius to drop.
+   - Keep the selectors, but bind them to existing vars.
+========================================================= */
+
+.manage-account-page .page-card{
+  border-radius: var(--radius-lg);
+}
+
+.manage-account-page .overview-group{
+  border-radius: var(--radius-lg);
+}
+
+.manage-account-page .stat-chip{
+  border-radius: 16px;
+}
+
+.manage-account-page .filters-inline .form-control,
+.manage-account-page .filters-inline .form-select{
+  border-radius: 14px;
 }

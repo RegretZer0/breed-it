@@ -6,162 +6,208 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
 <main class="main-content">
-  <div class="container-fluid">
+  <div class="container-fluid py-3 py-lg-4">
 
     <%- include("../../../partials/farm-manager/bq_analysis_panel") %>
 
-    <!-- PAGE HEADER -->
-    <div class="card page-card">
-      <div class="card-body bq-header">
-        <div class="bq-header-text">
-          <h4 class="bq-title">
-            <i class="bi bi-bar-chart-line"></i>
-            Swine Breed Quality Analysis
-          </h4>
-          <p class="muted mb-0">Rankings and breeding compatibility insights based on performance, traits, and reproductive history.</p>
-        </div>
+    <!-- =========================================================
+         MVP: PAGE HEADER (Title + Search)
+    ========================================================== -->
+    <div class="card page-card bq-card mb-3">
+      <div class="card-body">
+        <div class="row g-3 align-items-center">
+          <!-- Title / Subtitle -->
+          <div class="col-12 col-lg-7">
+            <div class="d-flex align-items-start gap-3">
+              <div class="bq-icon-chip">
+                <i class="bi bi-bar-chart-line"></i>
+              </div>
 
-        <div class="bq-header-actions">
-          <div class="bq-search">
-            <i class="bi bi-search"></i>
-            <input id="rankingSearch" type="text" placeholder="Search Swine ID…" autocomplete="off">
+              <div class="min-w-0">
+                <h4 class="bq-title mb-1">Swine Breed Quality Analysis</h4>
+                <p class="text-muted mb-0">
+                  Rankings and breeding compatibility insights based on performance, traits, and reproductive history.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div class="col-12 col-lg-5">
+            <div class="bq-search input-group">
+              <span class="input-group-text">
+                <i class="bi bi-search"></i>
+              </span>
+              <!-- KEEP ID -->
+              <input
+                id="rankingSearch"
+                type="text"
+                class="form-control"
+                placeholder="Search Swine ID…"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form-text text-muted mt-1">
+              Tip: filter quickly by Swine ID, then refine with Sex chips below.
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MAIN GRID -->
-    <div class="bq-layout">
+    <!-- =========================================================
+         MAIN GRID (Bootstrap responsive columns)
+         Desktop: 8/4
+         Tablet: 7/5
+         Mobile: stack
+    ========================================================== -->
+    <div class="row g-3 align-items-start">
 
-      <!-- LEFT: RANKINGS -->
-      <section class="card page-card">
-        <div class="card-body">
+      <!-- ================= LEFT: RANKINGS ================= -->
+      <section class="col-12 col-lg-8 col-xl-8">
+        <div class="card page-card bq-card h-100">
+          <div class="card-body">
 
-          <div class="section-head">
-            <div>
-              <h4 class="section-title">
-                <i class="bi bi-trophy"></i>
-                Breed Quality Rankings
-              </h4>
-              <p class="muted">Quick scan of your best candidates for breeding selection.</p>
+            <!-- Section Head -->
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+              <div class="min-w-0">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="bq-icon-chip bq-icon-chip-sm">
+                    <i class="bi bi-trophy"></i>
+                  </div>
+                  <h5 class="section-title mb-0">Breed Quality Rankings</h5>
+                </div>
+                <p class="text-muted mb-0 mt-1">
+                  Quick scan of your best candidates for breeding selection.
+                </p>
+              </div>
+
+              <!-- Legend -->
+              <div class="legend">
+                <span class="legend-item"><span class="dot good"></span> High</span>
+                <span class="legend-item"><span class="dot mid"></span> Medium</span>
+                <span class="legend-item"><span class="dot low"></span> Low</span>
+              </div>
             </div>
 
-            <div class="legend">
-              <span class="legend-item">
-                <span class="dot good"></span> High
-              </span>
-              <span class="legend-item">
-                <span class="dot mid"></span> Medium
-              </span>
-              <span class="legend-item">
-                <span class="dot low"></span> Low
-              </span>
-            </div>
-          </div>
-
-          <!-- RANK FILTER CHIPS (All / Sows / Boars) -->
-          <div class="rank-filters" role="tablist" aria-label="Ranking filters">
-            <button type="button" class="rank-filter active" data-sex="all" aria-pressed="true">
-              <i class="bi bi-grid-1x2"></i> All
-            </button>
-            <button type="button" class="rank-filter" data-sex="Female" aria-pressed="false">
-              <i class="bi bi-gender-female"></i> Sows
-            </button>
-            <button type="button" class="rank-filter" data-sex="Male" aria-pressed="false">
-              <i class="bi bi-gender-male"></i> Boars
-            </button>
-          </div>
-
-          <!-- Loading / Empty / Cards render here -->
-          <div id="rankingGrid" class="ranking-grid">
-            <div class="state-box">
-              <div class="spinner"></div>
-              <div class="muted">Loading analytics data…</div>
-            </div>
-          </div>
-
-          <!-- Rankings Pagination (inside card body for proper spacing) -->
-          <div class="rank-pagination">
-            <button id="rankPrevBtn" type="button" class="rank-page-btn" disabled>
-              <i class="bi bi-chevron-left"></i> Prev
-            </button>
-
-            <div class="rank-page-meta">
-              <span id="rankPageLabel" class="muted">Page 1 of 1</span>
+            <!-- Sex Filter Chips (KEEP class rank-filter) -->
+            <div class="rank-filters mb-3" role="tablist" aria-label="Ranking filters">
+              <button type="button" class="rank-filter active" data-sex="all" aria-pressed="true">
+                <i class="bi bi-grid-1x2"></i> All
+              </button>
+              <button type="button" class="rank-filter" data-sex="Female" aria-pressed="false">
+                <i class="bi bi-gender-female"></i> Sows
+              </button>
+              <button type="button" class="rank-filter" data-sex="Male" aria-pressed="false">
+                <i class="bi bi-gender-male"></i> Boars
+              </button>
             </div>
 
-            <button id="rankNextBtn" type="button" class="rank-page-btn" disabled>
-              Next <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
+            <!-- Rankings Render -->
+            <!-- KEEP ID -->
+            <div id="rankingGrid" class="ranking-grid">
+              <div class="state-box">
+                <div class="spinner"></div>
+                <div class="text-muted">Loading analytics data…</div>
+              </div>
+            </div>
 
+            <!-- Pagination (KEEP IDs) -->
+            <div class="rank-pagination mt-3">
+              <button id="rankPrevBtn" type="button" class="rank-page-btn" disabled>
+                <i class="bi bi-chevron-left"></i> Prev
+              </button>
+
+              <div class="rank-page-meta">
+                <span id="rankPageLabel" class="text-muted">Page 1 of 1</span>
+              </div>
+
+              <button id="rankNextBtn" type="button" class="rank-page-btn" disabled>
+                Next <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      <!-- RIGHT: COMPATIBILITY -->
-      <section class="card page-card">
-        <div class="card-body">
-          <div class="section-head">
-            <div>
-              <h4 class="section-title">
+      <!-- ================= RIGHT: COMPATIBILITY ================= -->
+      <section class="col-12 col-lg-4 col-xl-4">
+        <div class="card page-card bq-card">
+          <div class="card-body">
+
+            <!-- Section Head -->
+            <div class="d-flex align-items-start gap-3 mb-2">
+              <div class="bq-icon-chip bq-icon-chip-sm">
                 <i class="bi bi-diagram-3"></i>
-                Breeding Compatibility Checker
-              </h4>
-              <p class="muted">Analyze compatibility between a pair to minimize inbreeding risk.</p>
-            </div>
-          </div>
-
-          <!-- Recommended Matches -->
-          <div class="recommend-wrap">
-            <div class="recommend-head">
-              <div class="recommend-title">
-                <i class="bi bi-award"></i>
-                Top Recommended Matches
               </div>
-              <div class="muted small">Based on best matches among top quality adult sows and boars.</div>
-            </div>
-
-            <div id="recommendationsList" class="recommend-grid">
-              <div class="state-box compact">
-                <div class="spinner"></div>
-                <div class="muted">Identifying best matches…</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pair selection -->
-          <div class="pair-card">
-            <div class="pair-select">
-              <div class="pair-field">
-                <label for="femaleSelect">Sow (Female)</label>
-                <select id="femaleSelect">
-                  <option value="">-- Select Sow --</option>
-                </select>
-              </div>
-
-              <div class="pair-divider" aria-hidden="true">
-                <i class="bi bi-x-lg"></i>
-              </div>
-
-              <div class="pair-field">
-                <label for="maleSelect">Boar (Male)</label>
-                <select id="maleSelect">
-                  <option value="">-- Select Boar --</option>
-                </select>
+              <div class="min-w-0">
+                <h5 class="section-title mb-1">Breeding Compatibility Checker</h5>
+                <p class="text-muted mb-0">
+                  Analyze compatibility between a pair to minimize inbreeding risk.
+                </p>
               </div>
             </div>
 
-            <button id="calcBtn" type="button" class="btn-submit">
-              <i class="bi bi-play-circle"></i>
-              Run Compatibility Analysis
-            </button>
-          </div>
+            <!-- Recommended Matches -->
+            <div class="recommend-wrap mt-3">
+              <div class="recommend-head">
+                <div class="recommend-title">
+                  <i class="bi bi-award"></i>
+                  Top Recommended Matches
+                </div>
+                <div class="text-muted small">
+                  Based on best matches among top quality adult sows and boars.
+                </div>
+              </div>
 
-          <!-- Result -->
-          <div id="matchPanel" class="match-panel" style="display:none;">
-            <!-- JS injects score + logs here -->
-          </div>
+              <!-- KEEP ID -->
+              <div id="recommendationsList" class="recommend-grid">
+                <div class="state-box compact">
+                  <div class="spinner"></div>
+                  <div class="text-muted">Identifying best matches…</div>
+                </div>
+              </div>
+            </div>
 
+            <!-- Pair selection -->
+            <div class="pair-card mt-3">
+              <div class="pair-select">
+                <div class="pair-field">
+                  <label for="femaleSelect" class="form-label mb-1">Sow (Female)</label>
+                  <!-- KEEP ID -->
+                  <select id="femaleSelect" class="form-select">
+                    <option value="">-- Select Sow --</option>
+                  </select>
+                </div>
+
+                <div class="pair-divider" aria-hidden="true">
+                  <i class="bi bi-x-lg"></i>
+                </div>
+
+                <div class="pair-field">
+                  <label for="maleSelect" class="form-label mb-1">Boar (Male)</label>
+                  <!-- KEEP ID -->
+                  <select id="maleSelect" class="form-select">
+                    <option value="">-- Select Boar --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- KEEP ID -->
+              <button id="calcBtn" type="button" class="btn btn-success w-100 fw-semibold mt-2 d-flex align-items-center justify-content-center gap-2">
+                <i class="bi bi-play-circle"></i>
+                Run Compatibility Analysis
+              </button>
+            </div>
+
+            <!-- Result Panel -->
+            <!-- KEEP ID -->
+            <div id="matchPanel" class="match-panel mt-3" style="display:none;">
+              <!-- JS injects score + logs here -->
+            </div>
+
+          </div>
         </div>
       </section>
 

@@ -2,7 +2,7 @@
 import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔐 Protect the page
+  // Protect the page
   await authGuard(["farm_manager", "encoder"]);
 
   const token = localStorage.getItem("token");

@@ -18,8 +18,8 @@
 
   --pill-radius: 14px;
 
-  --gutter: 18px; /* ✅ REQUIRED because app-shell uses it */
-
+  /* ✅ Reduce global shell spacing */
+  --gutter: 12px; /* was 18px */
 
   /* Sidebar sizes */
   --sidebar-collapsed: 78px;   /* icon rail width */
@@ -212,7 +212,6 @@ body{
 
 /* =========================================================
    MOBILE/TABLET OFFCANVAS FIX (<= 991.98px)
-   Sidebar is hidden by default, opens via body.sidebar-open
 ========================================================= */
 
 @media (max-width: 991.98px){
@@ -224,24 +223,21 @@ body{
     width: min(86vw, 320px) !important;
     border-radius: 0 18px 18px 0;
 
-    /* IMPORTANT: hide off-screen by default */
     transform: translateX(-110%);
     box-shadow: 0 18px 55px rgba(0,0,0,0.20);
-    z-index: 1055; /* above content, below modals if needed */
+    z-index: 1055;
   }
 
   body.sidebar-open .sidebar{
     transform: translateX(0);
   }
 
-  /* Overlay should sit below sidebar but above content */
   #overlay{
     position: fixed;
     inset: 0;
     z-index: 1050;
   }
 
-  /* Main content should NOT be pushed/compressed by sidebar */
   .main-content{
     margin-left: 0 !important;
     width: 100% !important;
@@ -251,7 +247,6 @@ body{
 
 /* =========================================================
    DESKTOP HOVER-EXPAND SIDEBAR (>= 992px)
-   Collapsed by default, expands on hover/focus
 ========================================================= */
 
 @media (min-width: 992px){
@@ -259,7 +254,7 @@ body{
     width: var(--sidebar-collapsed) !important;
     padding-left: 10px;
     padding-right: 10px;
-    transform: none !important; /* ensure no mobile transform leaks */
+    transform: none !important;
     position: relative;
   }
 
@@ -312,7 +307,6 @@ body{
 }
 
 @media (min-width: 992px){
-  /* When collapsed */
   .sidebar:not(:hover):not(:focus-within) .nav-link{
     justify-content: center;
     padding: 10px 0;
@@ -324,7 +318,6 @@ body{
     border-radius: 14px;
   }
 
-  /* Make active highlight wrap icon instead of full width */
   .sidebar:not(:hover):not(:focus-within) .nav-link.active{
     background: transparent;
   }
@@ -342,15 +335,27 @@ body{
 
 /* =========================================================
    SHELL LAYOUT FIX (keeps sidebar left, content right)
-   Needed because dashboard page relies on .app-shell flex layout
 ========================================================= */
 
 .app-shell{
   display: flex;
   align-items: flex-start;
-  gap: var(--gutter, 18px);
-  padding: var(--gutter, 18px);
+
+  /* ✅ tighter gap between sidebar and card */
+  gap: var(--gutter, 12px);
+
+  /* ✅ tighter padding around the whole layout */
+  padding: var(--gutter, 12px);
+
   min-height: calc(100vh - var(--topbar-height, 56px));
+}
+
+/* Slightly tighter on very small screens */
+@media (max-width: 576px){
+  .app-shell{
+    gap: 10px;
+    padding: 10px;
+  }
 }
 
 /* main content grows beside sidebar */
@@ -359,5 +364,3 @@ body{
   min-width: 0;
   padding: 0; /* let container-fluid handle inner spacing */
 }
-
-

@@ -1,31 +1,39 @@
 <!-- Header card with tabs -->
-<div class="card page-card mb-3">
+<div class="card page-card panel-card mb-3">
   <div class="card-body">
 
-    <h4 class="page-title">ACCOUNT MANAGEMENT</h4>
+    <!-- Title row -->
+    <div class="panel-title-row">
+      <h2 class="page-title panel-title mb-0">
+        USER MANAGEMENT
+      </h2>
+    </div>
 
+    <!-- Tabs -->
     <div
-      class="tabs-row mt-3 d-flex flex-wrap gap-3"
+      class="tabs-row tabs-grid-2 mt-3"
       role="tablist"
       aria-label="Farmer management sections"
     >
-
-      <!-- NEW ACCOUNT -->
-      <a
-        href="/farm-manager/user-management/create"
-        class="tab-btn <%= current_page === 'create_account' ? 'active' : '' %>"
-        role="tab"
-      >
-        New Account
-      </a>
 
       <!-- MANAGE ACCOUNT -->
       <a
         href="/farm-manager/user-management/manage"
         class="tab-btn <%= current_page === 'manage_account' ? 'active' : '' %>"
         role="tab"
+        aria-selected="<%= current_page === 'manage_account' ? 'true' : 'false' %>"
       >
         Manage Account
+      </a>
+
+      <!-- NEW ACCOUNT -->
+      <a
+        href="/farm-manager/user-management/create"
+        class="tab-btn <%= current_page === 'create_account' ? 'active' : '' %>"
+        role="tab"
+        aria-selected="<%= current_page === 'create_account' ? 'true' : 'false' %>"
+      >
+        New Account
       </a>
 
     </div>

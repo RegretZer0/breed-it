@@ -2,227 +2,477 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<main class="main-content">
+<main class="main-content create-account-page">
   <div class="container-fluid">
+
     <%- include("../../../partials/farm-manager/farmer_panel.ejs") %>
 
-    <section class="card form-card">
-      <header class="form-header">
-        <h2>CREATE AN ACCOUNT</h2>
-      </header>
+    <!-- Page Grid -->
+    <div class="row g-3 g-lg-4 align-items-start">
 
-      <div class="card-body">
+      <!-- MAIN: FORM -->
+      <div class="col-12 col-xl-9">
 
-        <!-- Account Type -->
-        <div class="subheading">Account Type</div>
-        <div class="mb-4" style="max-width: 320px;">
-          <label class="form-label">Account Type</label>
-          <select id="accountType" class="form-select">
-            <option value="farmer" selected>Farmer</option>
-            <option value="encoder">Encoder</option>
-          </select>
-        </div>
+        <section class="card form-card create-account-card">
+          <!-- Header -->
+          <div class="card-header form-header border-0">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="icon-badge">
+                  <i class="bi bi-person-plus"></i>
+                </span>
+                <div>
+                  <h2 class="mb-0">Create an Account</h2>
+                  <small class="text-muted">Register a Farmer or Encoder and verify email via OTP.</small>
+                </div>
+              </div>
 
-        <div class="subheading">User Information</div>
-        
-        <!-- FORM FEEDBACK -->
-          <div
-            id="formAlert"
-            class="alert d-none mt-3"
-            role="alert"
-          ></div>
-
-        <form id="createAccountForm" class="grid-form" autocomplete="off">
-
-          <!-- Names -->
-          <div class="field">
-            <label>First Name</label>
-            <input type="text" id="first_name" required />
-          </div>
-
-          <div class="field">
-            <label>Last Name</label>
-            <input type="text" id="last_name" required />
-          </div>
-
-          <!-- Address -->
-          <div class="field">
-            <label>Address</label>
-            <input type="text" id="address" required />
-          </div>
-
-          <!-- Contact -->
-          <div class="field">
-            <label>Contact Number</label>
-            <input
-              type="tel"
-              id="contact_info"
-              required
-              pattern="^(09\d{9}|\+639\d{9})$"
-              placeholder="09XXXXXXXXX or +639XXXXXXXXX"
-              title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
-            />
-          </div>
-
-          <!-- Email -->
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="email" required />
-          </div>
-
-          <!-- OTP -->
-          <div class="field small">
-            <label>Email Verification (OTP)</label>
-            <div style="display: flex; gap: 8px;">
-              <input
-                type="text"
-                id="otp"
-                placeholder="Enter OTP"
-                style="flex: 1;"
-              />
-              <button
-                type="button"
-                id="sendOtpBtn"
-                class="btn btn-secondary"
-              >
-                Send OTP
-              </button>
+              <div class="d-flex align-items-center gap-2 small text-muted">
+                <i class="bi bi-shield-check"></i>
+                <span>OTP required</span>
+              </div>
             </div>
-            <small class="text-muted">
-              Click “Send OTP” to receive a verification code via email.
-            </small>
           </div>
 
-          <!-- Password -->
-          <div class="field">
-            <label>Password</label>
-            <input type="password" id="password" required />
-          </div>
+          <div class="card-body">
 
-          <!-- Confirm Password -->
-          <div class="field">
-            <label>Confirm Password</label>
-            <input type="password" id="confirm_password" required />
-          </div>
+            <!-- Account Type -->
+            <div class="section-title">
+              <i class="bi bi-ui-checks-grid"></i>
+              <span>Account Type</span>
+            </div>
 
-          <!-- FARMER-ONLY -->
-          <div class="field small farmer-only">
-            <label>Production Type</label>
-            <select id="production_type">
-              <option value="" disabled selected hidden>Select Production Type</option>
-              <option>Breeder</option>
-              <option>Fatener</option>
-              <option>Both</option>
-            </select>
-          </div>
+            <div class="row g-3 align-items-end mb-2">
+              <div class="col-12 col-md-6 col-lg-5">
+                <label class="form-label">Account Type</label>
+                <select id="accountType" class="form-select">
+                  <option value="farmer" selected>Farmer</option>
+                  <option value="encoder">Encoder</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-lg-7">
+                <div class="form-text mt-0">
+                  Choose <b>Farmer</b> to show farm details fields, or <b>Encoder</b> for encoder accounts.
+                </div>
+              </div>
+            </div>
 
-          <div class="field tiny farmer-only">
-            <label>Pen Count</label>
-            <input type="number" id="num_of_pens" min="0" required/>
-          </div>
+            <hr class="soft-divider my-4">
 
-          <div class="field tiny farmer-only">
-            <label>Pen Capacity</label>
-            <input type="number" id="pen_capacity" min="0" required/>
-          </div>
+            <!-- FORM FEEDBACK (keep ID) -->
+            <div id="formAlert" class="alert d-none mt-3" role="alert"></div>
 
-          <div class="field small farmer-only">
-            <label>Membership Date</label>
-            <input type="date" id="membership_date" readonly disabled />
-          </div>
+            <form id="createAccountForm" autocomplete="off">
+              <div class="row g-4">
 
-          <!-- Buttons -->
-          <div class="buttons">
-            <button type="reset" class="btn btn-clear">CLEAR</button>
-            <button type="submit" class="btn btn-save">SAVE</button>
-          </div>
+                <!-- ================= USER DETAILS ================= -->
+                <div class="col-12">
+                  <div class="form-block">
+                    <div class="form-block-head">
+                      <i class="bi bi-person-vcard"></i>
+                      <span>User Details</span>
+                    </div>
 
-        </form>
+                    <div class="row g-4 mt-1">
+
+                      <!-- First Name -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">First Name</label>
+                        <input type="text" id="first_name" class="form-control" required />
+                      </div>
+
+                      <!-- Last Name -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" id="last_name" class="form-control" required />
+                      </div>
+
+                      <!-- Sex / Gender -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Sex</label>
+                        <select id="sex" class="form-select" required>
+                          <option value="" selected disabled hidden>Select Sex</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+
+                      <!-- Email -->
+                      <div class="col-12 col-lg-4">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="email" class="form-control" required />
+                      </div>
+
+                      <!-- Contact -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Contact Number</label>
+                          <input
+                          type="tel"
+                          id="contact_info"
+                          class="form-control"
+                          required
+                          pattern="^(09\d{9}|\+639\d{9})$"
+                          placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+                          title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
+                        />
+                      </div>
+
+                      <!-- Spacer on large screens so it feels airy -->
+                      <div class="d-none d-lg-block col-lg-8"></div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ================= SECURITY ================= -->
+                <div class="col-12">
+                  <div class="form-block">
+                    <div class="form-block-head">
+                      <i class="bi bi-shield-lock"></i>
+                      <span>Security</span>
+                    </div>
+
+                    <div class="row g-4 mt-1 align-items-start">
+
+                      <!-- OTP -->
+                      <div class="col-12 col-lg-6">
+                        <label class="form-label">Email Verification (OTP)</label>
+
+                        <div class="input-group otp-group">
+                          <span class="input-group-text">
+                            <i class="bi bi-envelope-check"></i>
+                          </span>
+                          <input
+                            type="text"
+                            id="otp"
+                            class="form-control"
+                            placeholder="Enter OTP"
+                          />
+                          <button
+                            type="button"
+                            id="sendOtpBtn"
+                            class="btn btn-otp"
+                          >
+                            Send OTP
+                          </button>
+                        </div>
+
+                        <div class="form-text">
+                          Click “Send OTP” to receive a verification code via email.
+                        </div>
+                      </div>
+
+                      <!-- Password -->
+                      <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                          <input
+                            type="password"
+                            id="password"
+                            class="form-control"
+                            required
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-outline-secondary toggle-password"
+                            data-target="password"
+                            aria-label="Toggle password visibility"
+                          >
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Confirm Password -->
+                      <div class="col-12 col-md-6 col-lg-3">
+                        <label class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                          <input
+                            type="password"
+                            id="confirm_password"
+                            class="form-control"
+                            required
+                          />
+                          <button
+                            type="button"
+                            class="btn btn-outline-secondary toggle-password"
+                            data-target="confirm_password"
+                            aria-label="Toggle confirm password visibility"
+                          >
+                            <i class="bi bi-eye"></i>
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ================= ADDRESS ================= -->
+                <div class="col-12">
+                  <div class="form-block">
+                    <div class="form-block-head">
+                      <i class="bi bi-geo-alt"></i>
+                      <span>Address</span>
+                    </div>
+
+                    <!-- Keep #address for compatibility (JS + backend expects this string) -->
+                    <input type="hidden" id="address" />
+
+                    <div class="row g-4 mt-1">
+
+                      <!-- REGION (Dynamic - populated by JS from /data/ph-address.json) -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Region</label>
+                        <select id="ph_region" class="form-select" required>
+                          <option value="" selected disabled hidden>Select Region</option>
+                        </select>
+                        <div class="form-text">
+                          Select region → province → city/municipality → barangay.
+                        </div>
+                      </div>
+
+                      <!-- PROVINCE -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Province</label>
+                        <select id="ph_province" class="form-select" required disabled>
+                          <option value="" selected disabled hidden>Select Province</option>
+                        </select>
+                      </div>
+
+                      <!-- CITY / MUNICIPALITY -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">City / Municipality</label>
+                        <select id="ph_city" class="form-select" required disabled>
+                          <option value="" selected disabled hidden>Select City / Municipality</option>
+                        </select>
+                      </div>
+
+                      <!-- BARANGAY -->
+                      <div class="col-12 col-md-6 col-lg-4">
+                        <label class="form-label">Barangay</label>
+                        <select id="ph_barangay" class="form-select" required disabled>
+                          <option value="" selected disabled hidden>Select Barangay</option>
+                        </select>
+                      </div>
+
+                      <!-- STREET / HOUSE -->
+                      <div class="col-12 col-lg-8">
+                        <label class="form-label">House No. / Street / Subdivision</label>
+                        <input
+                          type="text"
+                          id="ph_street"
+                          class="form-control"
+                          placeholder="e.g., Blk 2 Lot 10, Sampaguita St., Sunrise Subd."
+                          required
+                        />
+                        <div class="form-text">This is required for locating the farm.</div>
+                      </div>
+
+                      <!-- PREVIEW -->
+                      <div class="col-12">
+                        <div class="ph-address-preview" id="phAddressPreview">
+                          <i class="bi bi-check-circle"></i>
+                          <span>Address will be formatted automatically.</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ================= FARMER DETAILS ================= -->
+                <div class="col-12 farmer-only">
+                  <div class="form-block farmer-block">
+                    <div class="form-block-head">
+                      <i class="bi bi-house-heart"></i>
+                      <span>Farmer Details</span>
+                    </div>
+
+                    <div class="row g-4 mt-1">
+
+                      <div class="col-12 col-md-6 col-lg-4 farmer-only">
+                        <label class="form-label">Production Type</label>
+                        <select id="production_type" class="form-select">
+                          <option value="" disabled selected hidden>Select Production Type</option>
+                          <option>Breeder</option>
+                          <option>Fatener</option>
+                          <option>Both</option>
+                        </select>
+                      </div>
+
+                      <div class="col-6 col-md-3 col-lg-2 farmer-only">
+                        <label class="form-label">Pen Count</label>
+                        <input type="number" id="num_of_pens" class="form-control" min="0" required />
+                      </div>
+
+                      <div class="col-6 col-md-3 col-lg-2 farmer-only">
+                        <label class="form-label">Pen Capacity</label>
+                        <input type="number" id="pen_capacity" class="form-control" min="0" required />
+                      </div>
+
+                      <div class="col-12 col-md-6 col-lg-4 farmer-only">
+                        <label class="form-label">Membership Date</label>
+                        <input type="date" id="membership_date" class="form-control" readonly disabled />
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ================= ACTIONS ================= -->
+                <div class="col-12">
+                  <div class="form-actions">
+                    <button type="reset" class="btn btn-outline-danger btn-pill w-100">
+                      <i class="bi bi-eraser me-1"></i> CLEAR
+                    </button>
+
+                    <button type="submit" class="btn btn-success btn-pill w-100">
+                      <i class="bi bi-check2-circle me-1"></i> SAVE
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </form>
+
+          </div>
+        </section>
       </div>
-    </section>
+
+      <!-- SIDE: HELP / GUIDE -->
+      <div class="col-12 col-xl-3">
+        <aside class="card helper-card">
+          <div class="card-body">
+            <div class="helper-title">
+              <i class="bi bi-info-circle"></i>
+              <span>Quick Guide</span>
+            </div>
+
+            <ul class="helper-list">
+              <li>
+                <span class="helper-step"><i class="bi bi-1-circle"></i></span>
+                <div class="helper-text">
+                  <div class="helper-line"><b>Select</b> account type (Farmer / Encoder)</div>
+                </div>
+              </li>
+
+              <li>
+                <span class="helper-step"><i class="bi bi-2-circle"></i></span>
+                <div class="helper-text">
+                  <div class="helper-line">Fill the required fields</div>
+                </div>
+              </li>
+
+              <li>
+                <span class="helper-step"><i class="bi bi-3-circle"></i></span>
+                <div class="helper-text">
+                  <div class="helper-line">Click <b>Send OTP</b> and enter the code</div>
+                </div>
+              </li>
+
+              <li>
+                <span class="helper-step"><i class="bi bi-4-circle"></i></span>
+                <div class="helper-text">
+                  <div class="helper-line">Click <b>Save</b> → review → confirm</div>
+                </div>
+              </li>
+            </ul>
+
+            <div class="helper-note">
+              <i class="bi bi-shield-lock"></i>
+              OTP helps prevent incorrect or fake email accounts.
+            </div>
+          </div>
+        </aside>
+      </div>
+
+    </div>
   </div>
 </main>
 
-<!-- CONFIRMATION MODAL -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
+<!-- CONFIRMATION MODAL (IDs unchanged, themed) -->
+<div class="modal fade theme-modal" id="confirmModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content theme-modal-content">
 
-      <div class="modal-header">
-        <h5 class="modal-title">Confirm Account Details</h5>
+      <div class="modal-header theme-modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="icon-badge sm">
+            <i class="bi bi-clipboard-check"></i>
+          </span>
+          <h5 class="modal-title mb-0">Confirm Account Details</h5>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body theme-modal-body">
         <p class="text-muted mb-3">
           Please review the details below before creating the account.
         </p>
 
-        <div class="row g-3">
+        <div class="row g-3 theme-preview-grid">
 
           <div class="col-md-6">
-            <strong>Account Type:</strong>
+            <strong>Account Type</strong>
             <div id="preview_account_type"></div>
           </div>
 
           <div class="col-md-6">
-            <strong>Name:</strong>
+            <strong>Name</strong>
             <div id="preview_name"></div>
           </div>
 
           <div class="col-md-6">
-            <strong>Email:</strong>
+            <strong>Sex</strong>
+            <div id="preview_sex"></div>
+          </div>
+
+          <div class="col-md-6">
+            <strong>Email</strong>
             <div id="preview_email"></div>
           </div>
 
           <div class="col-md-6">
-            <strong>Contact Info:</strong>
+            <strong>Contact Info</strong>
             <div id="preview_contact"></div>
           </div>
 
           <div class="col-12">
-            <strong>Address:</strong>
+            <strong>Address</strong>
             <div id="preview_address"></div>
           </div>
 
           <!-- FARMER ONLY -->
           <div class="col-md-4 farmer-preview">
-            <strong>Production Type:</strong>
+            <strong>Production Type</strong>
             <div id="preview_production"></div>
           </div>
 
           <div class="col-md-4 farmer-preview">
-            <strong>Pen Count:</strong>
+            <strong>Pen Count</strong>
             <div id="preview_pens"></div>
           </div>
 
           <div class="col-md-4 farmer-preview">
-            <strong>Pen Capacity:</strong>
+            <strong>Pen Capacity</strong>
             <div id="preview_capacity"></div>
           </div>
 
           <div class="col-md-6 farmer-preview">
-            <strong>Membership Date:</strong>
+            <strong>Membership Date</strong>
             <div id="preview_membership"></div>
           </div>
 
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-bs-dismiss="modal"
-        >
+      <div class="modal-footer theme-modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-pill" data-bs-dismiss="modal">
           Back
         </button>
 
-        <button
-          type="button"
-          id="confirmSubmitBtn"
-          class="btn btn-success"
-        >
+        <button type="button" id="confirmSubmitBtn" class="btn btn-success btn-pill">
           Confirm & Create
         </button>
       </div>
@@ -230,6 +480,5 @@
     </div>
   </div>
 </div>
-
 
 <%- include("../../../partials/farm-manager/footer") %>

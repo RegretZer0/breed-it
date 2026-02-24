@@ -213,7 +213,7 @@ export function initPigsModule(ctx, breedingModule) {
               ${p.health_status || "Active"}
             </span>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 linked-actions">
               <button class="btn btn-sm btn-outline-primary view-pig-btn" data-id="${p._id}">
                 View
               </button>

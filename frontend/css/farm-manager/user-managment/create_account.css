@@ -1,305 +1,478 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
 
-/* ========== Design tokens (match admin style) ========== */
+/* =========================================================
+   CREATE ACCOUNT — DASHBOARD THEME (Bootstrap-first)
+   - Soft background, rounded cards, subtle shadows
+   - Responsive by Bootstrap grid (row/col)
+   - DOES NOT change any existing IDs
+========================================================= */
+
 :root{
-  /* palette */
-  --bg: #ffffff;
-  --muted-border: #e9e9e9;
-  --card-border: #e6e6e6;
-  --text-dark: #222222;
-  --muted-text: #6c6c6c;
-  --accent-green: #17c14f;
+  --shell-bg: #f6f7fb;
+  --card-bg: #ffffff;
 
-  /* sizing */
-  --gutter: 18px;
-  --radius: 8px;
+  --border: #e9edf3;
+  --text: #1f2937;
+  --muted: #6b7280;
 
-  /* typography */
-  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --base-line-height: 1.4;
-  --base-font-size: 14px;
+  --green: #198754;
+  --green-2: #0f7a34;
+
+  --radius-lg: 18px;
+  --radius-md: 14px;
+
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
+  --shadow-md: 0 10px 26px rgba(0,0,0,0.08);
+
+  --focus: rgba(25, 135, 84, 0.22);
 }
 
-/* ========== Global reset / typography ========== */
-*, *::before, *::after { box-sizing: border-box; }
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: var(--font-family-system);
-  font-size: var(--base-font-size);
-  line-height: var(--base-line-height);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: var(--text-dark);
-  -webkit-text-size-adjust: 100%;
+/* Page spacing */
+.create-account-page .container-fluid{
+  padding-top: 12px;
+  padding-bottom: 24px;
 }
 
-button, [role="button"], a {
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-  background: transparent;
+/* =========================================================
+   MAIN FORM CARD
+========================================================= */
+.create-account-card{
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
-/* =========== Shell layout =========== */
-.app-shell{
-  display: flex;
-  min-height: 100vh;
-  gap: var(--gutter);
-  padding: var(--gutter);
-  align-items: flex-start;
-}
-
-/* Accessibility focus */
-:focus:not(:focus-visible) {
-  outline: none;
-  box-shadow: none;
-}
-:focus-visible {
-  outline: 3px solid rgba(21, 67, 255, 0.14);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
-}
-
-/* ========== Form card wrapper ========== */
-.form-card{
-  background: var(--bg);
-  border-radius: var(--radius);
-  border: 1px solid var(--card-border);
-  padding: 0;
-  width: 100%;
-  margin-top: 18px;
-}
-
-.form-header{
+.create-account-card .form-header{
+  background: linear-gradient(180deg, rgba(255,255,255,1), rgba(246,247,251,0.85));
   padding: 18px 20px;
-  background: var(--bg);
-}
-.form-header h2{
-  margin:0;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-dark);
 }
 
-.form-card .card-body{
+.create-account-card .form-header h2{
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: var(--text);
+  font-size: 20px;
+}
+
+.create-account-card .card-body{
   padding: 18px;
 }
 
-.subheading{
+/* Header icon badge */
+.icon-badge{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25,135,84,0.10);
+  color: var(--green-2);
+  border: 1px solid rgba(25,135,84,0.18);
+}
+.icon-badge.sm{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+/* Section titles */
+.section-title{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--text);
+  margin: 6px 0 10px;
+}
+.section-title i{ color: var(--green-2); }
+
+/* Divider */
+.soft-divider{
+  border-top: 1px solid var(--border);
+  opacity: 1;
+}
+
+/* Labels */
+.form-label{
+  font-weight: 800;
+  color: var(--text);
   font-size: 12px;
-  font-weight: 600;
-  color: var(--muted-text);
-  margin-bottom: 10px;
+  letter-spacing: .02em;
 }
 
-/* ========== Grid layout (UPDATED) ========== */
-.grid-form{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px 22px;
-  align-items: start;
-  width: 100%;
-}
-
-/* Field styling */
-.field{
-  display:flex;
-  flex-direction:column;
-}
-.field label{
-  font-size:12px;
-  font-weight:600;
-  margin-bottom:8px;
-  color: var(--text-dark);
-}
-
-.field input,
-.field select,
-.field textarea {
-  appearance: none;
-  height:38px;
-  padding:8px 12px;
-  border-radius: 8px;
-  border:1px solid var(--card-border);
-  font-size:13px;
+/* Inputs */
+.form-control,
+.form-select{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
   background: #fff;
-  transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-.field textarea {
-  height:auto;
-  min-height:96px;
-  padding-top:10px;
+.form-control:focus,
+.form-select:focus{
+  border-color: rgba(25,135,84,0.45);
+  box-shadow: 0 0 0 .2rem var(--focus);
 }
 
-.field input::placeholder,
-.field textarea::placeholder {
-  color:#bfbfbf;
-  font-size:13px;
+/* =========================================================
+   FORM ISOLATION — soft blocks
+========================================================= */
+.form-block{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  border-color: #d0d0d0;
-  box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+.form-block-head{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.form-block-head i{ color: var(--green-2); }
+
+/* breathe a bit more */
+.create-account-card .row.g-3{
+  --bs-gutter-y: 1rem;
 }
 
-/* ========== Address width fix ========== */
-.field.address {
-  grid-column: span 2;
+/* =========================================================
+   OTP GROUP
+========================================================= */
+.otp-group .input-group-text{
+  border-radius: 14px 0 0 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--muted);
 }
 
-/* ========== Buttons ========== */
-.buttons{
-  grid-column: 1 / -1;
-  display:flex;
-  justify-content:flex-end;
-  gap:14px;
-  margin-top:12px;
+.otp-group .form-control{
+  border-left: 0;
 }
 
-.btn-clear{
-  border:1px solid rgba(255,99,115,0.85);
-  color:rgba(255,99,115,0.95);
-  padding:10px 18px;
-  border-radius:8px;
-  font-weight:700;
-  letter-spacing:0.6px;
+.otp-group .btn-otp{
+  border-radius: 0 14px 14px 0;
 }
 
-.btn-save{
-  background: var(--accent-green);
-  color:white;
-  padding:10px 18px;
-  border-radius:8px;
-  font-weight:700;
-  border:none;
-  box-shadow: 0 6px 18px rgba(16,24,40,0.04);
-}
-
-.btn-save[disabled]{
-  opacity: 0.65;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* =========================
-   OTP BUTTON – NAVY BLUE
-========================= */
-
-#sendOtpBtn {
+/* OTP Button (ID kept) */
+#sendOtpBtn,
+.btn-otp{
+  font-weight: 900;
   white-space: nowrap;
-  padding: 10px 14px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border-radius: 6px;
-  border: 1px solid #0d3b66; /* navy */
-  background-color: #0d3b66;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  border: 1px solid rgba(15,122,52,0.25);
+  background: rgba(25,135,84,0.12);
+  color: var(--green-2);
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
 }
 
-/* Hover */
-#sendOtpBtn:hover:not(:disabled) {
-  background-color: #092c4c;
-  border-color: #092c4c;
+#sendOtpBtn:hover:not(:disabled),
+.btn-otp:hover:not(:disabled){
+  background: rgba(25,135,84,0.18);
+  border-color: rgba(15,122,52,0.35);
+  transform: translateY(-1px);
 }
 
-/* Active */
-#sendOtpBtn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-/* Disabled / Cooldown */
-#sendOtpBtn:disabled {
-  background-color: #8faac2;
-  border-color: #8faac2;
-  color: #f1f5f9;
+#sendOtpBtn:disabled{
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Mobile friendly */
-@media (max-width: 576px) {
-  #sendOtpBtn {
-    width: 100%;
+/* =========================================================
+   FARMER BLOCK — keep your visual identity but softer
+========================================================= */
+.farmer-block{
+  border: 1px dashed rgba(25,135,84,0.40);
+  background: rgba(25,135,84,0.06);
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+.btn-pill{
+  border-radius: 999px !important;
+  padding: 10px 16px !important;
+  font-weight: 900 !important;
+  letter-spacing: .02em;
+}
+
+/* Always 2-up actions on mobile */
+.form-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+/* On larger screens, keep them to the right as a compact group */
+@media (min-width: 576px){
+  .form-actions{
+    width: fit-content;
+    margin-left: auto;
   }
 }
 
+/* =========================================================
+   RIGHT HELPER CARD (Quick Guide) — improved spacing
+========================================================= */
+.helper-card{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+}
 
-/* ========== Responsive ========== */
-@media (max-width: 1100px){
-  .grid-form{
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.helper-title{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.helper-title i{ color: var(--green-2); }
+
+.helper-list{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.helper-list li{
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.helper-step{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.helper-text{ min-width: 0; }
+
+.helper-line{
+  line-height: 1.55;
+  color: var(--text);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.helper-note{
+  margin-top: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #fff;
+  line-height: 1.55;
+}
+
+/* Keep your existing behavior */
+.farmer-preview{ display: none; }
+
+/* =========================================================
+   THEMED MODAL (Confirm Account Details)
+========================================================= */
+.theme-modal .modal-dialog{
+  padding: 10px;
+}
+
+.theme-modal-content{
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+.theme-modal-header{
+  background: linear-gradient(180deg, #ffffff, rgba(246,247,251,0.9));
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.theme-modal-body{
+  padding: 16px 18px;
+}
+
+.theme-modal-footer{
+  border-top: 1px solid var(--border);
+  padding: 14px 18px;
+}
+
+.theme-preview-grid > div{
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.theme-preview-grid strong{
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+
+/* =========================================================
+   MOBILE POLISH
+========================================================= */
+@media (max-width: 576px){
+  .create-account-card .card-body{
+    padding: 14px;
   }
-  .field.address {
-    grid-column: span 3;
+  .create-account-card .form-header{
+    padding: 14px;
   }
 }
 
-@media (max-width: 800px){
-  .grid-form{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .field.address {
-    grid-column: span 2;
-  }
-  .buttons {
-    justify-content: flex-start;
-  }
+/* Confirm Account Details modal spacing */
+.confirm-modal-body{
+  padding: 6px 2px 2px;
 }
 
-@media (max-width: 520px){
-  .grid-form{
-    grid-template-columns: 1fr;
-  }
-  .field.address {
-    grid-column: span 1;
-  }
-  .buttons{
-    flex-direction: row;
-    gap:10px;
-  }
-  .form-header h2 {
-    font-size: 18px;
-  }
+.confirm-item{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  padding: 14px 16px;
+  min-height: 86px;
 }
 
-/* =========================
-   BOOTSTRAP MODAL FIX
-========================= */
-
-/* Ensure modal is above everything */
-.modal {
-  z-index: 1055 !important;
+.confirm-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: .02em;
+  margin-bottom: 6px;
 }
 
-/* Backdrop should stay below modal */
-.modal-backdrop {
-  z-index: 1050 !important;
+.confirm-value{
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.25;
+  word-break: break-word;
 }
 
-/* Allow clicks inside modal */
-.modal-dialog,
-.modal-content {
-  pointer-events: auto;
+.confirm-footer{
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
-/* Prevent layout containers from blocking clicks */
-.app-shell,
-.main-content,
-.container-fluid {
-  position: static !important;
-}
-
-.farmer-preview {
+/* =========================================================
+   PH ADDRESS PREVIEW
+========================================================= */
+.ph-address-preview{
   display: none;
+  border: 1px solid rgba(25,135,84,0.22);
+  background: rgba(25,135,84,0.08);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  gap: 10px;
+  align-items: flex-start;
+  line-height: 1.5;
+}
+.ph-address-preview i{
+  color: var(--green-2);
+  margin-top: 2px;
+}
+.ph-address-preview.show{
+  display: flex;
 }
 
+/* =========================================================
+   NEW: ADDRESS BLOCK POLISH (SAFE ADDITIONS)
+   - prevents "double-box" feeling for the nested PH address block
+   - improves disabled selects appearance (province/city/barangay)
+   - keeps style consistent with theme
+========================================================= */
+
+/* Make nested form-blocks look intentional (sub-section) */
+.form-block .form-block{
+  box-shadow: none;                 /* reduce stacked shadows */
+  background: rgba(246,247,251,0.55);
+  border-color: rgba(233,237,243,0.95);
+}
+
+/* Slightly tighter head spacing inside nested blocks */
+.form-block .form-block .form-block-head{
+  margin-bottom: 6px;
+}
+
+/* Disabled select styling (cascading selects) */
+.form-select:disabled,
+.form-control:disabled{
+  background: rgba(246,247,251,0.9) !important;
+  color: rgba(107,114,128,0.95) !important;
+  border-color: rgba(233,237,243,0.95) !important;
+  cursor: not-allowed;
+}
+
+/* Add a subtle lock icon feel to disabled selects without adding extra markup */
+.form-select:disabled{
+  background-image:
+    linear-gradient(transparent, transparent),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239CA3AF' viewBox='0 0 16 16'%3E%3Cpath d='M8 1a3 3 0 0 0-3 3v3H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-1V4a3 3 0 0 0-3-3zM6 4a2 2 0 1 1 4 0v3H6V4z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 34px center; /* keep Bootstrap caret space */
+  background-size: 14px 14px;
+}
+
+/* Password toggle buttons match rounded inputs */
+.toggle-password{
+  border-radius: 0 14px 14px 0 !important;
+  border-color: var(--border) !important;
+}
+
+/* Make outline-secondary blend with theme */
+.toggle-password.btn-outline-secondary{
+  color: var(--muted);
+  background: #fff;
+}
+.toggle-password.btn-outline-secondary:hover{
+  color: var(--text);
+  background: rgba(246,247,251,0.9);
+}
+
+/* Ensure input groups have consistent rounded corners */
+.input-group > .form-control{
+  border-radius: 14px 0 0 14px;
+}
+.input-group > .btn{
+  border-radius: 0 14px 14px 0;
+}
+
+/* Small helper text readability */
+.form-text{
+  color: var(--muted);
+}
+
+/* Slightly improve spacing when many blocks stack on mobile */
+@media (max-width: 576px){
+  .form-block{
+    padding: 12px;
+  }
+  .form-block .form-block{
+    padding: 12px;
+  }
+}
