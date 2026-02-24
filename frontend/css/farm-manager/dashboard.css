@@ -4,12 +4,15 @@
 :root{
   /* palette */
   --bg: #ffffff;
-  --muted-border: #e9e9e9;
-  --card-border: #e6e6e6;
+  --shell-bg: #f6f7fb;
+  --muted-border: #e9edf3;
+  --card-border: #e9edf3;
   --text-dark: #222222;
   --muted-text: #6c6c6c;
 
   --accent-green: #17c14f;
+
+  /* stat colors */
   --stat-orange: #ff9a1f;
   --stat-blue: #1ea7ff;
   --stat-green: #43c572;
@@ -21,7 +24,7 @@
 
   /* sizing */
   --gutter: 18px;
-  --radius: 8px;
+  --radius: 16px;
 
   /* typography */
   --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
@@ -38,7 +41,7 @@ html, body {
   font-family: var(--font-family-system);
   font-size: var(--base-font-size);
   line-height: var(--base-line-height);
-  background: var(--bg);
+  background: var(--shell-bg);
   color: var(--text-dark);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -55,7 +58,7 @@ button, [role="button"], a {
 :focus {
   outline: 3px solid rgba(21, 67, 255, 0.18);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -63,15 +66,11 @@ button, [role="button"], a {
 }
 
 /* =========== Layout =========== */
-.app-shell{
-  display: flex;
-  min-height: 100vh;
-  padding: var(--gutter);
-}
-
+/* NOTE:
+   Your shell/topbar/sidebar layout is primarily handled in sub_modules.css.
+   These are safe dashboard-only helpers.
+*/
 .main-content{
-  flex: 1;
-  padding: var(--gutter);
   min-width: 0;
 }
 
@@ -80,43 +79,55 @@ button, [role="button"], a {
   border-radius: var(--radius);
   border: 1px solid var(--card-border);
   background: var(--bg);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
 .page-card .card-body{
   padding: 18px;
 }
 
-.dashboard-welcome {
+.dashboard-welcome{
   text-transform: uppercase;
-  font-weight: 700;
-  font-size: 20px;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.6px;
   margin: 0;
 }
 
+/* =========================================================
+   STATS CARDS
+========================================================= */
 
-
-/* =========== Stats Cards =========== */
 .stat-card{
   background: var(--bg);
-  border-radius: var(--radius);
-  padding: 18px;
-  border: 1px solid #f0f0f0;
-  min-height: 86px;
+  border-radius: 16px;
+  padding: 16px;
+  border: 1px solid #eef1f6;
+  min-height: 92px;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.06);
 }
 
 .stat-label{
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted-text);
   margin-bottom: 6px;
 }
 
 .stat-number{
-  font-weight: 800;
+  font-weight: 900;
   font-size: 26px;
+  line-height: 1;
 }
 
 .stat-icon{
@@ -139,54 +150,31 @@ button, [role="button"], a {
 .stat-icon.brown{ background: var(--stat-brown); }
 .stat-icon.purple{ background: var(--stat-purple); }
 
-/* =========================
-   Desktop (Month View)
-========================= */
+/* =========================================================
+   FULLCALENDAR — Modern Card Look
+========================================================= */
 
-.fc .fc-toolbar-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.fc .fc-button {
-  background: #f4f4f4;
-  border: 1px solid var(--muted-border);
-  color: var(--text-dark);
-  border-radius: 6px;
-  font-size: 12px;
-  padding: 6px 10px;
-}
-
-.fc .fc-button-primary.fc-button-active {
-  background: var(--stat-blue);
-  border-color: var(--stat-blue);
-  color: #fff;
-}
-
-/* =============================
-   FullCalendar – Modern Card Look
-============================= */
-
-#calendar {
+#calendar{
   width: 100%;
 }
 
-/* Toolbar */
-.fc .fc-toolbar-title {
+/* Toolbar title */
+.fc .fc-toolbar-title{
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.fc .fc-button {
-  background: #f4f4f4;
+/* Buttons */
+.fc .fc-button{
+  background: #f4f6f9;
   border: 1px solid var(--muted-border);
   color: var(--text-dark);
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 12px;
   padding: 6px 10px;
 }
 
-.fc .fc-button-primary.fc-button-active {
+.fc .fc-button-primary.fc-button-active{
   background: var(--stat-blue);
   border-color: var(--stat-blue);
   color: #fff;
@@ -194,193 +182,292 @@ button, [role="button"], a {
 
 /* Remove default grid borders */
 .fc-theme-standard td,
-.fc-theme-standard th {
+.fc-theme-standard th{
   border: none !important;
 }
 
 /* Month cells as soft cards */
-.fc-daygrid-day-frame {
-  border-radius: 10px;
+.fc-daygrid-day-frame{
+  border-radius: 12px;
   border: 1px solid var(--muted-border);
   padding: 6px;
   background: #fff;
-  transition: 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.fc-daygrid-day-frame:hover {
+.fc-daygrid-day-frame:hover{
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .fc-day-today .fc-daygrid-day-frame,
-.selected-day .fc-daygrid-day-frame {
+.selected-day .fc-daygrid-day-frame{
   border: 2px solid var(--stat-blue2);
 }
 
 /* Remove default FullCalendar event pill */
-.fc-daygrid-event {
+.fc-daygrid-event{
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
   overflow: hidden;
 }
 
-/* ===== Custom Clean Event Badge ===== */
-.fc-custom-event {
+/* Custom clean event badge */
+.fc-custom-event{
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 3px 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   width: 100%;
-  background: rgba(0,0,0,0.04); /* subtle neutral background */
+  background: rgba(0,0,0,0.04);
 }
 
 /* Make text inherit icon color */
-.fc-custom-event .fc-event-title {
+.fc-custom-event .fc-event-title{
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: inherit;   /* 🔥 KEY LINE */
+  color: inherit;
 }
 
-/* =========================
-   Task Cards
-========================= */
+/* =========================================================
+   TASKS
+========================================================= */
 
-.task-list {
+.task-list{
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.task-card {
+.task-card{
   border: 1px solid var(--muted-border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 12px;
   background: #fff;
 }
 
-.task-date {
+.task-date{
   font-size: 12px;
   color: var(--muted-text);
   margin-top: 6px;
 }
 
-/* ================================
-   Task Panel Scroll
-================================ */
-
-#taskPanel {
+/* Task Panel Scroll */
+#taskPanel{
   overflow-y: auto;
   max-height: 60vh;
   padding-right: 4px;
 }
 
-#taskPanel::-webkit-scrollbar {
+#taskPanel::-webkit-scrollbar{
   width: 6px;
 }
 
-#taskPanel::-webkit-scrollbar-thumb {
+#taskPanel::-webkit-scrollbar-thumb{
   background: #ced4da;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* =========================
-   Responsive – Tablet
-========================= */
+/* =========================================================
+   RESPONSIVE — Tablet
+========================================================= */
 
-@media (max-width: 992px) {
+@media (max-width: 992px){
 
-  .fc-toolbar {
+  .fc-toolbar{
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
-  .fc-toolbar-title {
+  .fc .fc-toolbar-title{
     font-size: 14px;
   }
 
-  .fc-daygrid-day-frame {
+  .fc-daygrid-day-frame{
     padding: 4px;
     height: 100%;
   }
 
-  .task-card {
+  .task-card{
     padding: 10px;
   }
 }
 
-/* =========================
-   Responsive – Mobile
-========================= */
+/* =========================================================
+   RESPONSIVE — Mobile
+========================================================= */
 
-@media (max-width: 576px) {
+@media (max-width: 576px){
 
   /* Calendar */
-  .fc .fc-toolbar-title {
+  .fc .fc-toolbar-title{
     font-size: 13px;
   }
 
-  .fc .fc-daygrid-day-frame {
+  .fc .fc-daygrid-day-frame{
     padding: 4px;
     height: 100%;
   }
 
-  .fc .fc-daygrid-day-number {
+  .fc .fc-daygrid-day-number{
     font-size: 12px;
   }
 
-  .fc .fc-button {
+  .fc .fc-button{
     padding: 4px 8px;
     font-size: 12px;
+    border-radius: 10px;
   }
 
   /* Task */
-  .task-card {
-    padding: 8px;
+  .task-card{
+    padding: 10px;
   }
 
-  #taskPanel {
+  #taskPanel{
     max-height: 50vh;
   }
 
   /* Stats */
-  .stats-grid {
-    row-gap: 12px;
+  .stat-card{
+    padding: 14px;
+    border-radius: 14px;
+    min-height: 88px;
   }
 
-  .stat-card {
-    padding: 14px 16px;
-  }
-
-  .stat-label {
+  .stat-label{
     font-size: 12px;
   }
 
-  .stat-number {
+  .stat-number{
     font-size: 22px;
     line-height: 1.1;
   }
 
-  .stat-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 15px;
+  .stat-icon{
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
   }
 
-  .dashboard-welcome {
-    font-size: 18px;
-    margin-bottom: 10px;
+  .dashboard-welcome{
+    font-size: 16px;
+    margin-bottom: 6px;
   }
 
   /* Page card */
-  .page-card {
-    border-radius: 12px;
+  .page-card{
+    border-radius: 14px;
   }
 
-  .page-card .card-body {
+  .page-card .card-body{
     padding: 16px;
+  }
+}
+
+/* =========================================================
+   WELCOME CARD
+========================================================= */
+
+.dashboard-welcome-card{
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background:
+    radial-gradient(1200px 240px at 0% 0%, rgba(23, 193, 79, 0.10), transparent 60%),
+    #ffffff;
+}
+
+.welcome-mark{
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23, 193, 79, 0.14);
+  color: #0f7a34;
+  flex: 0 0 auto;
+}
+
+.welcome-mark i{
+  font-size: 20px;
+}
+
+.welcome-sub{
+  max-width: 520px;
+}
+
+@media (max-width: 576px){
+  .welcome-mark{
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* =========================================================
+   STATS GRID (Bootstrap row/col compatible)
+   Goal:
+   - Desktop: 4 cols
+   - Tablet/Mobile: 2 cols
+   - Very small: 1 col
+   Works with: <div class="row stats-grid"> <div class="col-md-6 col-lg-3">...</div> ...
+========================================================= */
+
+/* Use Bootstrap gutters consistently (if stats-grid is also .row) */
+.stats-grid{
+  --bs-gutter-x: 18px;
+  --bs-gutter-y: 18px;
+}
+
+/* Ensure cards fill their column */
+.stats-grid .stat-card{
+  width: 100%;
+}
+
+/* Desktop: force 4 columns even if Bootstrap breaks */
+@media (min-width: 993px){
+  .stats-grid > [class*="col"]{
+    flex: 0 0 auto !important;
+    width: 25% !important;
+    max-width: 25% !important;
+  }
+}
+
+/* Tablet + Mobile: force 2 columns */
+@media (max-width: 992px){
+  .stats-grid{
+    --bs-gutter-x: 14px;
+    --bs-gutter-y: 14px;
+  }
+
+  .stats-grid > [class*="col"]{
+    flex: 0 0 auto !important;
+    width: 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* Small phones: keep 2 columns, tighter gutters */
+@media (max-width: 576px){
+  .stats-grid{
+    --bs-gutter-x: 12px;
+    --bs-gutter-y: 12px;
+  }
+
+  .stats-grid > [class*="col"]{
+    width: 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* Ultra-small: switch to 1 column */
+@media (max-width: 380px){
+  .stats-grid > [class*="col"]{
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }

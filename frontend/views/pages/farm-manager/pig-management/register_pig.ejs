@@ -7,51 +7,55 @@
 
     <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
 
-    <div class="card pig-card">
+    <div class="card pig-card page-card">
       <div class="card-body">
 
-        <h4 class="mb-4 fw-bold">REGISTER A NATIVE PIG</h4>
+        <div class="module-head mb-3">
+          <h4 class="module-title">REGISTER A NATIVE PIG</h4>
+          <p class="module-sub">Add a new pig record with basic info, parentage, and initial measurements.</p>
+        </div>
 
-        <form id="registerSwineForm">
+        <form id="registerSwineForm" novalidate>
 
-        <!-- FARMER -->
-        <h6 class="section-title">Farmer Information</h6>
-        <div class="row mb-4">
-          <div class="col-md-6 position-relative">
-            <label class="form-label">Farmer</label>
+          <!-- FARMER -->
+          <h6 class="section-title">Farmer Information</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6 position-relative">
+              <label class="form-label">Farmer</label>
 
-            <div class="dropdown w-100">
-              <button
-                class="form-select text-start"
-                type="button"
-                id="farmerDropdownBtn"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Select Farmer
-              </button>
+              <div class="dropdown w-100">
+                <button
+                  class="form-select text-start"
+                  type="button"
+                  id="farmerDropdownBtn"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Select Farmer
+                </button>
 
-              <div
-                class="dropdown-menu w-100 p-2"
-                style="max-height: 260px; overflow-y: auto;"
-              >
-                <input
-                  type="text"
-                  id="farmerSearch"
-                  class="form-control form-control-sm mb-2"
-                  placeholder="Search farmer..."
-                />
+                <div
+                  class="dropdown-menu w-100 p-2"
+                  style="max-height: 260px; overflow-y: auto;"
+                >
+                  <input
+                    type="text"
+                    id="farmerSearch"
+                    class="form-control form-control-sm mb-2"
+                    placeholder="Search farmer..."
+                  />
 
-                <div id="farmerOptions">
-                  <div class="text-muted small">Loading farmers...</div>
+                  <div id="farmerOptions">
+                    <div class="text-muted small">Loading farmers...</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- hidden input to store farmer ID -->
-            <input type="hidden" id="farmerSelect" required />
+              <!-- hidden input to store farmer ID -->
+              <input type="hidden" id="farmerSelect" required />
+              <small class="hint-text d-block mt-2">Required to load available sows/boars.</small>
+            </div>
           </div>
-        </div>
 
           <!-- BASIC INFO -->
           <h6 class="section-title">Pig Information</h6>
@@ -60,6 +64,7 @@
             <div class="col-md-3">
               <label class="form-label">Batch ID / Source ID</label>
               <input type="text" id="batch" class="form-control" />
+              <small class="hint-text">Auto-generated for adults / inherited for piglets.</small>
             </div>
 
             <div class="col-md-3">
@@ -88,7 +93,7 @@
 
             <div class="col-md-3 d-none" id="teatAlignmentGroup">
               <label class="form-label">Teat Alignment</label>
-              <select id="teatAlignment" class="form-control">
+              <select id="teatAlignment" class="form-select">
                 <option value="Even">Even</option>
                 <option value="Uneven">Uneven</option>
               </select>
@@ -194,18 +199,18 @@
 
           <!-- DEFORMITIES -->
           <h6 class="section-title">Observed Deformities</h6>
-          <div id="deformityChecklist" class="mb-4">
-            <label><input type="checkbox" value="Splayleg"> Splayleg</label>
-            <label><input type="checkbox" value="Bent Legs"> Bent Legs</label>
-            <label><input type="checkbox" value="Scrotal Hernia"> Scrotal Hernia</label>
-            <label><input type="checkbox" value="Umbilical Hernia"> Umbilical Hernia</label>
-            <label><input type="checkbox" value="Atresia Ani"> Atresia Ani</label>
-            <label><input type="checkbox" value="Cleft Palate"> Cleft Palate</label>
+          <div id="deformityChecklist" class="checklist-grid mb-4">
+            <label class="check-pill"><input type="checkbox" value="Splayleg"> <span>Splayleg</span></label>
+            <label class="check-pill"><input type="checkbox" value="Bent Legs"> <span>Bent Legs</span></label>
+            <label class="check-pill"><input type="checkbox" value="Scrotal Hernia"> <span>Scrotal Hernia</span></label>
+            <label class="check-pill"><input type="checkbox" value="Umbilical Hernia"> <span>Umbilical Hernia</span></label>
+            <label class="check-pill"><input type="checkbox" value="Atresia Ani"> <span>Atresia Ani</span></label>
+            <label class="check-pill"><input type="checkbox" value="Cleft Palate"> <span>Cleft Palate</span></label>
           </div>
 
-          <p id="swineMessage" class="small"></p>
+          <p id="swineMessage" class="small form-message"></p>
 
-          <div class="d-flex justify-content-end gap-3">
+          <div class="form-footer">
             <button type="reset" class="btn btn-clear px-4">Clear</button>
             <button type="submit" class="btn btn-save px-4">Register Pig</button>
           </div>
@@ -246,7 +251,7 @@
     </div>
   </div>
 
-    <!-- SUCCESS MODAL -->
+  <!-- SUCCESS MODAL -->
   <div class="modal fade" id="successSwineModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content text-center">
@@ -256,7 +261,9 @@
         </div>
 
         <div class="modal-body pb-4">
-          <div class="mb-3" style="font-size: 3rem;">✅</div>
+          <div class="success-mark mb-3">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
           <h4 class="fw-bold text-success">Pig Registered Successfully</h4>
           <p class="text-muted mb-0">
             The pig has been added to the system.
@@ -276,7 +283,6 @@
       </div>
     </div>
   </div>
-
 
 </main>
 

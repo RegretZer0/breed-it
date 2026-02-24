@@ -2,15 +2,19 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<main class="main-content">
+<main class="main-content py-3 py-lg-4">
   <div class="container-fluid">
 
-    <%- include("./overview") %>
+    <!-- Module shell -->
+    <div class="heat-module-shell">
+
+      <%- include("./overview") %>
 
       <%- include("./report-table") %>
+
+    </div>
   </div>
 </main>
-
 
 <%- include("./modal") %>
 

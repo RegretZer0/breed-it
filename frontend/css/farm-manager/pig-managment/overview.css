@@ -1,613 +1,569 @@
-  /* =========== Root tokens =========== */
-  :root{
-    --bg: #ffffff;
-    --muted-border: #e9e9e9;
-    --card-border: #e6e6e6;
-    --panel-border: #ededed;
-
-    --text-dark: #222222;
-    --muted-text: #6c6c6c;
-
-    --accent-blue: #0d6efd;
-    --accent-teal: #0aa2c0;
-    --accent-gray: #6c757d;
-    --danger: #f55b66;
-
-    --gutter: 18px;
-    --radius: 10px;
-  }
-
-  /* =========== Global reset =========== */
-  *, *::before, *::after{
-    box-sizing: border-box;
-  }
-
-  html, body{
-    height: 100%;
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px;
-    background: var(--bg);
-    color: var(--text-dark);
-  }
-
-  /* =========== Shell layout =========== */
-  .app-shell{
-    display: flex;
-    min-height: 100vh;
-    gap: var(--gutter);
-    padding: var(--gutter);
-    align-items: flex-start;
-  }
-
-  /* =========================
-    MODAL BASE
-  ========================= */
-  .modal-content{
-    border-radius: var(--radius);
-  }
-
-  .modal-header{
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--panel-border);
-  }
-
-  .modal-title{
-    font-size: 18px;
-    font-weight: 700;
-  }
-
-  .modal-body{
-    padding: 20px 24px 26px;
-  }
-
-  /* =========================
-    SECTION HEADERS
-  ========================= */
-  #swineModal h6{
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 12px;
-    margin-top: 22px;
-  }
-
-  /* =========================
-    REPRODUCTIVE SUMMARY
-  ========================= */
-  #reproSummarySection{
-    margin-top: 12px;
-  }
-
-  #reproSummarySection .row{
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin: 0;
-  }
-
-  /* CARD BASE */
-  #reproSummarySection .col{
-    border-radius: var(--radius);
-    padding: 16px 14px;
-    text-align: center;
-    border: 1px solid var(--card-border);
-  }
-
-  /* LABEL */
-  #reproSummarySection label{
-    display: block;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 6px;
-  }
-
-  /* VALUE */
-  #reproSummarySection div[id^="stat"]{
-    font-size: 20px;
-    font-weight: 800;
-  }
-
-  /* =========================
-    INDIVIDUAL CARD COLORS
-  ========================= */
-
-  /* TOTAL CYCLES */
-  #statCycles{
-    color: var(--accent-gray);
-  }
-  #statCycles{
-    background: rgba(108,117,125,0.12);
-  }
-  #statCycles::before{
-    content: "";
-  }
-
-  /* TOTAL PIGLETS BORN */
-  #statTotalBorn{
-    color: var(--accent-green);
-  }
-  #statTotalBorn{
-    background: rgba(25,135,84,0.14);
-  }
-
-  /* AVG LITTER SIZE */
-  #statAvgLitter{
-    color: var(--accent-blue);
-  }
-  #statAvgLitter{
-    background: rgba(13,110,253,0.14);
-  }
-
-  /* TOTAL LIVE */
-  #statTotalLive{
-    color: var(--accent-teal);
-  }
-  #statTotalLive{
-    background: rgba(10,162,192,0.14);
-  }
-
-  /* APPLY COLOR TO CARD (NOT JUST TEXT) */
-  #statCycles,
-  #statTotalBorn,
-  #statAvgLitter,
-  #statTotalLive{
-    display: block;
-    padding: 0;
-  }
-
-  #statCycles,
-  #statTotalBorn,
-  #statAvgLitter,
-  #statTotalLive{
-    border-radius: 6px;
-  }
-
-  /* MOVE BACKGROUND TO PARENT CARD */
-  #reproSummarySection .col:has(#statCycles){
-    background: rgba(108,117,125,0.08);
-  }
-  #reproSummarySection .col:has(#statTotalBorn){
-    background: rgba(25,135,84,0.08);
-  }
-  #reproSummarySection .col:has(#statAvgLitter){
-    background: rgba(13,110,253,0.08);
-  }
-  #reproSummarySection .col:has(#statTotalLive){
-    background: rgba(10,162,192,0.08);
-  }
-
-  /* =========================
-    TABLES
-  ========================= */
-  #swineModal table{
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 6px;
-  }
-
-  #swineModal thead th{
-    background: #fafafa;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--panel-border);
-  }
-
-  #swineModal tbody td{
-    padding: 12px;
-    font-size: 13px;
-    border-bottom: 1px solid var(--panel-border);
-  }
-
-  #swineModal tbody tr:last-child td{
-    border-bottom: none;
-  }
-
-  /* =========================
-    TABLE RESPONSIVE
-  ========================= */
-  #swineModal .table-responsive{
-    border-radius: var(--radius);
-  }
-
-
-  /* ===== Growth Timeline ===== */
-
-  .growth-month-card {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 16px;
-    border: 1px solid #e5e7eb;
-    transition: box-shadow 0.2s ease;
-  }
-
-  .growth-month-card:hover {
-    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
-  }
-
-  .growth-month-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .month-title {
-    font-weight: 600;
-    font-size: 1rem;
-  }
-
-  .month-metrics {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.9rem;
-  }
-
-  .weight-range {
-    color: #374151;
-  }
-
-  .gain-badge {
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-weight: 600;
-    font-size: 0.75rem;
-  }
-
-  .gain-positive {
-    background: #e6f4ea;
-    color: #137333;
-  }
-
-  .gain-negative {
-    background: #fdecea;
-    color: #b42318;
-  }
-
-  /* Toggle button */
-  .toggle-growth {
-    font-size: 0.85rem;
-    color: #198754;
-    cursor: pointer;
-    text-decoration: none;
-  }
-
-  .toggle-growth:hover {
-    text-decoration: underline;
-  }
-
-  /* Details */
-  .growth-details {
-    margin-top: 12px;
-    border-top: 1px dashed #e5e7eb;
-    padding-top: 10px;
-  }
-
-  .growth-entry {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-top: 1px dashed #e5e7eb;
-  }
-
-  .growth-entry:first-child {
-    border-top: none;
-  }
-
-  .growth-metrics {
-    display: flex;
-    gap: 16px;
-    font-size: 0.9rem;
-  }
-
-  .growth-date {
-    font-weight: 500;
-  }
-
-  .growth-year-header {
-    font-weight: 600;
-    margin: 16px 0 8px;
-    color: #374151;
-  }
-
-  .growth-month-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 14px;
-    background: #fff;
-    margin-bottom: 12px;
-  }
-
-  .growth-month-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .month-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .month-metrics {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .gain-badge {
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
-
-  .gain-positive {
-    background: #e7f6ec;
-    color: #15803d;
-  }
-
-  .gain-negative {
-    background: #fdecec;
-    color: #b91c1c;
-  }
-
-  .growth-entry {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-top: 1px dashed #e5e7eb;
-  }
-
-  .growth-entry:first-child {
-    border-top: none;
-  }
-
-  .growth-metrics {
-    display: flex;
-    gap: 16px;
-    font-size: 0.9rem;
-  }
-
-  /* ================= GROWTH YEAR FILTER ================= */
-
-  #offspringTab .growth-filter-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 12px;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-  }
-
-  .growth-filter-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: #495057;
-  }
-
-  .growth-filter-label i {
-    color: #198754;
-    font-size: 14px;
-  }
-
-  .growth-year-select {
-    appearance: none;
-    border: 1px solid #ced4da;
-    border-radius: 10px;
-    padding: 6px 36px 6px 12px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #212529;
-    background-color: #ffffff;
-    background-image:
-      linear-gradient(45deg, transparent 50%, #6c757d 50%),
-      linear-gradient(135deg, #6c757d 50%, transparent 50%);
-    background-position:
-      calc(100% - 18px) 55%,
-      calc(100% - 13px) 55%;
-    background-size: 5px 5px;
-    background-repeat: no-repeat;
-    cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .growth-year-select:hover {
-    border-color: #198754;
-  }
-
-  .growth-year-select:focus {
-    outline: none;
-    border-color: #198754;
-    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
-  }
-
-  /* Mobile */
-  @media (max-width: 576px) {
-    .growth-filter-bar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 8px;
-    }
-
-    .growth-year-select {
-      width: 100%;
-    }
-  }
-
-  /* ===== Offspring Cycle Card ===== */
-  #offspringTab .offspring-cycle-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #fff;
-  }
-
-  .offspring-cycle-header {
-    padding: 12px 16px;
-    border-bottom: 1px dashed #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .offspring-cycle-title {
-    font-weight: 600;
-  }
-
-  .offspring-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto;
-    gap: 12px;
-    padding: 12px 16px;
-    border-top: 1px solid #f1f5f9;
-    align-items: center;
-  }
-
-  .offspring-row:first-child {
-    border-top: none;
-  }
-
-  .offspring-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-  }
-
-  .offspring-value {
-    font-weight: 500;
-  }
-
-  @media (max-width: 768px) {
-    .offspring-row {
-      grid-template-columns: 1fr;
-      gap: 6px;
-    }
-  }
-
-  /* ===== Offspring Filter ===== */
-  .offspring-filter {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .filter-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #6c757d;
-  }
-
-  #offspringCycleFilter {
-    min-width: 180px;
-    border-radius: 8px;
-    padding: 6px 10px;
-  }
-
-  /* ===== Offspring Cards ===== */
-  #offspringTab .offspring-cycle-body {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
-    margin-top: 12px;
-  }
-
-  .offspring-card {
-    border: 1px solid #e9ecef;
-    border-radius: 12px;
-    padding: 12px 14px;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  /* Header */
-  .offspring-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .offspring-id {
-    font-weight: 600;
-    font-size: 14px;
-  }
-
-  .offspring-breed {
-    display: block;
-    font-size: 12px;
-    color: #6c757d;
-    font-weight: 400;
-  }
-
-  /* Meta row */
-  .offspring-meta {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    font-size: 12px;
-    color: #495057;
-  }
-
-  .offspring-meta span {
-    display: block;
-    font-size: 11px;
-    color: #adb5bd;
-  }
-
-  /* Badge */
-  .badge-healthy {
-    background: #d1e7dd;
-    color: #0f5132;
-    font-size: 11px;
-    padding: 4px 8px;
-    border-radius: 999px;
-  }
-
-  .badge-default {
-    background: #e9ecef;
-    color: #495057;
-  }
-
-  /* Button */
-  .offspring-view {
-    align-self: stretch;
-    font-size: 12px;
-    padding: 4px;
-  }
-
-  /* ================= TAB VISIBILITY GUARANTEE ================= */
-
-  /* Hide all profile tabs by default */
-  .profile-tab {
-    display: none !important;
-  }
-
-  /* Only show active tab */
-  .profile-tab:not(.d-none) {
-    display: block !important;
-  }
-
-  .modal {
-    position: fixed !important;
-    z-index: 1055 !important;
-  }
-
-  .modal-backdrop {
-    z-index: 1050 !important;
-  }
-
-  /* ================= FORCE GLOBAL LOADER ABOVE EVERYTHING ================= */
-/* ================= GLOBAL LOADER (FIXED + ABOVE EVERYTHING) ================= */
-
-#globalLoader {
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
+
+/* =========================================================
+   SWINE MANAGEMENT — THEME ALIGNED (Duolingo-like)
+   Compatible: Desktop / Tablet / Mobile
+========================================================= */
+
+:root{
+  /* Match your app shell */
+  --shell-bg: #f6f7fb;
+  --card-bg: #ffffff;
+
+  --border: #e9edf3;
+  --border-2: #e6e6e6;
+
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --green: #198754;
+  --green-2: #0f7a34;
+
+  --radius-lg: 18px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
+  --shadow-md: 0 10px 26px rgba(0,0,0,0.08);
+
+  --gutter: 18px;
+}
+
+html, body{
+  height: 100%;
+  margin: 0;
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--shell-bg);
+  color: var(--text);
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+/* =========================================================
+   MAIN CONTENT SAFETY
+   (prevents “content dropping below sidebar” issues)
+========================================================= */
+.main-content{
+  min-width: 0; /* important for flex layouts */
+}
+
+/* =========================================================
+   PAGE CARD BASE (matches dashboard style)
+========================================================= */
+.page-card{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.page-card .card-body{
+  padding: 18px;
+}
+
+/* =========================================================
+   MODULE HEADER CARD (SWINE MANAGEMENT + tabs)
+========================================================= */
+.page-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+  margin: 0;
+}
+
+.tabs-row{
+  margin-top: 12px;
+}
+
+/* "tab buttons" (the <a> tags) */
+.tab-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--text);
+
+  transition: transform .12s ease, background .15s ease, border-color .15s ease;
+}
+
+.tab-btn:hover{
+  transform: translateY(-1px);
+  background: rgba(25,135,84,0.06);
+  border-color: rgba(25,135,84,0.25);
+}
+
+.tab-btn.active{
+  background: rgba(25,135,84,0.12);
+  border-color: rgba(25,135,84,0.35);
+  color: var(--green-2);
+}
+
+/* =========================================================
+   SWINE LIST HEADER + TOOLBAR
+========================================================= */
+.swine-title{
+  font-weight: 900;
+  margin: 0;
+}
+
+.swine-toolbar{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Left category pills (All / Piglets / Sows / Boars / Master) */
+#swineCategoryTabs.nav-pills{
+  gap: 8px;
+}
+
+#swineCategoryTabs.nav-pills .nav-link{
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 12px;
+  color: var(--text);
+
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+
+#swineCategoryTabs.nav-pills .nav-link:hover{
+  transform: translateY(-1px);
+  background: rgba(25,135,84,0.06);
+  border-color: rgba(25,135,84,0.25);
+}
+
+#swineCategoryTabs.nav-pills .nav-link.active{
+  background: rgba(25,135,84,0.12);
+  border-color: rgba(25,135,84,0.35);
+  color: var(--green-2);
+}
+
+/* Right filters area */
+.swine-filters{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* =========================================================
+   FILTER FORM
+========================================================= */
+.swine-filter-form{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.swine-filter-form .form-control,
+.swine-filter-form .form-select{
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+#farmerDropdownBtn.form-select{
+  cursor: pointer;
+  user-select: none;
+}
+
+.dropdown-menu{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.dropdown-item{
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.dropdown-item:hover{
+  background: rgba(25,135,84,0.10);
+}
+
+.swine-filter-form .btn-group .btn{
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+/* =========================================================
+   SWINE CARD LIST
+========================================================= */
+#swineCardList{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Swine card (Duolingo-ish: soft shadow + rounded + hover lift) */
+.swine-card{
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+
+.swine-card:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: rgba(25,135,84,0.22);
+}
+
+/* Details row */
+.swine-details-row{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* Each detail pill */
+.detail-item{
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.detail-item i{
+  color: var(--green);
+  font-size: 14px;
+}
+
+.detail-item .label{
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.detail-item .value{
+  grid-column: 2 / -1;
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* small buttons */
+.btn-xs{
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 12px;
+}
+
+/* Pagination */
+#swinePageIndicator{
+  font-weight: 800;
+}
+
+/* =========================================================
+   MODAL BASE
+========================================================= */
+.modal-content{
+  border-radius: 18px;
+  border: 1px solid var(--border);
+}
+
+.modal-header{
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-title{
+  font-weight: 900;
+}
+
+.modal-body{
+  padding: 16px 18px 18px;
+}
+
+/* =========================================================
+   MODAL PROFILE HEADER
+========================================================= */
+.pig-profile-header{
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(900px 240px at 0% 0%, rgba(25,135,84,0.12), transparent 55%),
+    #fff;
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.profile-main{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pig-avatar{
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25,135,84,0.14);
+  color: var(--green-2);
+}
+
+.pig-avatar i{ font-size: 18px; }
+
+.profile-stats-row{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-stats-row .stat{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+}
+
+.profile-stats-row .stat .label{
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+
+.profile-stats-row .stat .value{
+  font-size: 14px;
+  font-weight: 900;
+}
+
+/* Modal tab buttons */
+#pigProfileTabs.nav-pills{
+  gap: 8px;
+}
+
+#pigProfileTabs.nav-pills .nav-link{
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+}
+
+#pigProfileTabs.nav-pills .nav-link.active{
+  background: rgba(25,135,84,0.12);
+  border-color: rgba(25,135,84,0.35);
+  color: var(--green-2);
+}
+
+/* Your JS uses d-none toggling */
+.profile-tab{ display: none !important; }
+.profile-tab:not(.d-none){ display: block !important; }
+
+/* =========================================================
+   REPRODUCTION + OFFSPRING + GROWTH
+========================================================= */
+.reproduction-card{
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
+.growth-filter-bar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.growth-filter-label{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+.growth-filter-label i{
+  color: var(--green);
+  font-size: 14px;
+}
+
+.growth-year-select{
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 36px 8px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+  background-color: #fff;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 55%,
+    calc(100% - 13px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.growth-year-select:focus{
+  outline: none;
+  border-color: rgba(25,135,84,0.45);
+  box-shadow: 0 0 0 3px rgba(25,135,84,0.14);
+}
+
+.growth-year-header{
+  font-weight: 900;
+  color: var(--text);
+  margin: 8px 0 6px;
+}
+
+.growth-month-card{
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  transition: box-shadow .14s ease, transform .14s ease;
+}
+
+.growth-month-card:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.growth-month-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.month-title{
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.month-metrics{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.weight-range{
+  color: var(--text);
+  font-weight: 900;
+}
+
+.gain-badge{
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.gain-positive{
+  background: rgba(25,135,84,0.14);
+  color: var(--green-2);
+}
+
+.gain-negative{
+  background: rgba(245,91,102,0.14);
+  color: #b42318;
+}
+
+.growth-details{
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.growth-entry{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+
+.growth-entry:first-child{ border-top: none; }
+
+.growth-metrics{
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.metric-label{
+  display: block;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.metric-value{
+  font-weight: 900;
+  color: var(--text);
+}
+
+.offspring-cycle-card{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 12px;
+}
+
+.offspring-cycle-header{
+  padding: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+
+/* =========================================================
+   GLOBAL LOADER (yours, keep)
+========================================================= */
+#globalLoader{
   position: fixed;
-  inset: 0;                 /* top:0; right:0; bottom:0; left:0 */
+  inset: 0;
   width: 100vw;
   height: 100vh;
 
@@ -615,17 +571,59 @@
   align-items: center;
   justify-content: center;
 
-  background: rgba(255, 255, 255, 0.96);
-
-  z-index: 999999;          /* higher than modals (1055) */
+  background: rgba(255,255,255,0.95);
+  z-index: 999999;
 }
 
-/* Center content properly */
-#globalLoader .loader-content {
-  text-align: center;
+/* =========================================================
+   RESPONSIVE RULES
+========================================================= */
+
+/* Tablet */
+@media (max-width: 992px){
+  .swine-details-row{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-stats-row{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-/* Prevent layout shift */
-body.loading {
-  overflow: hidden;
+/* Mobile */
+@media (max-width: 576px){
+  .page-card .card-body{
+    padding: 14px;
+  }
+
+  .swine-toolbar{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .swine-filters{
+    justify-content: flex-start;
+  }
+
+  .swine-filter-form{
+    width: 100%;
+  }
+
+  .swine-filter-form .form-control,
+  .swine-filter-form .form-select{
+    width: 100%;
+  }
+
+  .swine-details-row{
+    grid-template-columns: 1fr;
+  }
+
+  .growth-filter-bar{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .growth-year-select{
+    width: 100%;
+  }
 }

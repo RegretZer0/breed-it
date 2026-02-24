@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const otherColorInput = document.getElementById("otherColorInput");
   const batchInput = document.getElementById("batch");
 
-
   // ================= DEFAULT DATE REGISTERED =================
   const dateTransferInput = document.getElementById("date_transfer");
 
@@ -40,7 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     dateTransferInput.value = today;
     dateTransferInput.max = today; // optional: block future dates
   }
-
 
   // ================= LOCK BREED =================
   const breedInput = document.getElementById("breed");
@@ -61,22 +59,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ================= UI TOGGLES =================
   function toggleTeatField() {
-  if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
-    teatGroup.classList.remove("d-none");
-    teatAlignmentGroup.classList.remove("d-none"); // Show alignment
-  } else {
-    teatGroup.classList.add("d-none");
-    teatAlignmentGroup.classList.add("d-none"); // Hide alignment
-    
-    const teatInput = document.getElementById("teatCount");
-    if (teatInput) teatInput.value = "";
-    if (teatAlignmentSelect) teatAlignmentSelect.value = "Even"; // Reset to default
+    if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
+      teatGroup.classList.remove("d-none");
+      teatAlignmentGroup.classList.remove("d-none"); // Show alignment
+    } else {
+      teatGroup.classList.add("d-none");
+      teatAlignmentGroup.classList.add("d-none"); // Hide alignment
+
+      const teatInput = document.getElementById("teatCount");
+      if (teatInput) teatInput.value = "";
+      if (teatAlignmentSelect) teatAlignmentSelect.value = "Even"; // Reset to default
+    }
   }
-}
 
   function toggleDeformities() {
     deformityChecklist.style.display =
-      ageStageSelect.value === "adult" ? "none" : "block";
+      ageStageSelect.value === "adult" ? "none" : "grid";
 
     if (ageStageSelect.value === "adult") {
       deformityChecklist
@@ -127,7 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       div.onclick = () => {
         farmerDropdownBtn.textContent = div.textContent;
         document.getElementById("farmerSelect").value = f._id;
-        updateSows(f._id); 
+        updateSows(f._id);
       };
 
       farmerOptions.appendChild(div);
@@ -183,34 +181,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateBatchField();
   });
 
-  // ================= BATCH AUTO (UPDATED FOR A-0002 LOGIC) =================
+  // ================= BATCH AUTO =================
   async function updateBatchField() {
     const isAdult = ageStageSelect.value === "adult";
     const isPiglet = ageStageSelect.value === "piglet";
-    
+
     if (isPiglet && damSelect.value) {
-      // Extract the Mother's Batch Letter from her full ID (e.g., "LIPA-A-0001" -> "A")
       const idParts = damSelect.value.split("-");
       if (idParts.length >= 2) {
-        // If the ID structure is PREFIX-BATCH-NUMBER, index 1 is the batch letter
-        batchInput.value = idParts[1]; 
+        batchInput.value = idParts[1];
       } else {
-        batchInput.value = damSelect.value; // Fallback to full ID if parts not found
+        batchInput.value = damSelect.value;
       }
       batchInput.readOnly = true;
     } else if (isAdult) {
       batchInput.readOnly = true;
       batchInput.placeholder = "Generating...";
-      
+
       try {
-        // Fetch the next letter specifically for THIS manager
         const res = await fetch(`/api/swine/preview/next-batch-letter`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        
+
         if (data.success) {
-          batchInput.value = data.nextLetter; 
+          batchInput.value = data.nextLetter;
         } else {
           batchInput.value = "A";
         }
@@ -259,8 +254,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       teatCount: document.getElementById("teatCount")
         ? document.getElementById("teatCount").value
         : null,
-      teat_alignment: document.getElementById("teatAlignment") // Add this
-        ? document.getElementById("teatAlignment").value 
+      teat_alignment: document.getElementById("teatAlignment")
+        ? document.getElementById("teatAlignment").value
         : "N/A",
       deformities: deformities.length ? deformities : ["None"],
       managerId
@@ -284,11 +279,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       form.reset();
       messageEl.textContent = "";
+      messageEl.className = "small form-message";
 
-      if (farmerDropdownBtn)
-        farmerDropdownBtn.textContent = "Search/Select Farmer";
-      if (teatAlignmentSelect) 
-        teatAlignmentSelect.value = "Even";
+      if (farmerDropdownBtn) farmerDropdownBtn.textContent = "Select Farmer";
+      if (teatAlignmentSelect) teatAlignmentSelect.value = "Even";
 
       breedInput.value = "Native";
       handleColorChange();
@@ -296,15 +290,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       toggleDeformities();
 
       setTimeout(updateBatchField, 500);
-
     } else {
-      messageEl.className = "text-danger fw-bold";
-      messageEl.textContent = "❌ " + data.message;
+      messageEl.className = "small form-message text-danger fw-bold";
+      messageEl.textContent = data.message || "Failed to register pig.";
     }
   });
 
-  
-  // ================= MODAL CLEANUP (PUT IT HERE) =================
+  // ================= MODAL CLEANUP =================
   document.addEventListener("hidden.bs.modal", event => {
     if (event.target.classList.contains("modal")) {
       document.body.classList.remove("modal-open");

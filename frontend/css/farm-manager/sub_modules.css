@@ -1,302 +1,363 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+/* =========================================================
+   THEME PATCH — Sidebar + Topbar (Clean rail)
+========================================================= */
 
-/* =========== Root tokens (topbar & sidebar relevant) =========== */
 :root{
-  /* palette */
-  --bg: #ffffff;
-  --muted-border: #e9e9e9;
-  --card-border: #e6e6e6;
-  --text-dark: #222222;
-  --muted-text: #6c6c6c;
+  --shell-bg: #f6f7fb;
 
-  --accent-green: #17c14f; /* sidebar active */
+  --rail-bg: #0f3b2e;    /* deep forest green */
+  --rail-bg-2: #0b2c22;  /* darker base */
+  --rail-text: rgba(255,255,255,.86);
+  --rail-muted: rgba(255,255,255,.62);
 
-  /* sizing */
-  --topbar-height: 64px;
-  --sidebar-width: 210px;
-  --sidebar-width-overlay: 260px;
-  --gutter: 18px;
-  --radius: 8px;
+  --rail-active-bg: rgba(255,255,255,.16);
+  --rail-hover-bg: rgba(255,255,255,.10);
 
-  /* typography */
-  --font-family-system: 'Roboto', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  --base-line-height: 1.4;
-  --base-font-size: 14px;
+  --topbar-bg: #ffffff;
+  --topbar-border: #e9edf3;
+
+  --pill-radius: 14px;
+
+  --gutter: 18px; /* ✅ REQUIRED because app-shell uses it */
+
+
+  /* Sidebar sizes */
+  --sidebar-collapsed: 78px;   /* icon rail width */
+  --sidebar-expanded: 240px;   /* full width */
+
+  /* Keep topbar slim */
+  --topbar-height: 56px; /* smaller like modern dashboards */
 }
 
-/* =========== Global reset / basics =========== */
-*, *::before, *::after { box-sizing: border-box; }
-html, body {
-  height: 100%;
-  margin: 0;
-  font-family: var(--font-family-system);
-  font-size: var(--base-font-size);
-  line-height: var(--base-line-height);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: var(--bg);
-  color: var(--text-dark);
-  -webkit-text-size-adjust: 100%;
+/* App background */
+body{
+  background: var(--shell-bg);
 }
 
-/* Make interactive elements obvious and keyboard accessible */
-button, [role="button"], a {
-  cursor: pointer;
-  outline: none;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-}
+/* =========================================================
+   TOPBAR
+========================================================= */
 
-/* Keyboard focus styles (visible and high-contrast) */
-:focus {
-  outline: 3px solid rgba(21, 67, 255, 0.18);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
-/* Honor reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
-}
-
-/* =========== Topbar =========== */
 .topbar{
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--topbar-border);
   height: var(--topbar-height);
-  border-bottom: 1px solid var(--muted-border);
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 calc(var(--gutter) - 6px);
-  z-index: 1100;
+  padding: 0 12px;
 }
 
+/* Shrink logo */
 .brand-logo{
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
-  display: inline-block;
-}
-.brand-text{
-  font-weight: 700;
-  font-size: 22px;
-  color: var(--text-dark);
-  letter-spacing: 0.6px;
-  margin: 0;
 }
 
-/* Top-right icons */
-.icon-btn, .burger-btn {
-  padding: 6px;
-  border-radius: 6px;
+/* Shrink brand text */
+.brand-text{
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  line-height: 1;
+}
+
+/* Icon buttons consistent (NO BORDER) */
+.icon-btn, .burger-btn{
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #111;
   background: transparent;
-  border: none;
-}
-.icon-btn:hover, .burger-btn:hover { background: rgba(0,0,0,0.03); }
-
-/* =========== Shell layout (keeps topbar height accounted for) =========== */
-.app-shell{
-  display: flex;
-  min-height: calc(100vh - var(--topbar-height));
-  position: relative;
-  gap: var(--gutter);
-  align-items: flex-start;
-  padding: var(--gutter);
-  padding-top: 0; /* topbar sits above the shell */
+  border: none !important;
+  outline: none;
+  box-shadow: none !important;
 }
 
-/* notification */
-#notificationHistoryModal {
-  z-index: 2000;
+.icon-btn:hover, .burger-btn:hover{
+  background: rgba(0,0,0,0.04);
 }
 
-
-/* =========================
-   Fix sidebar when offcanvas is open
-========================= */
-
-/* When any Bootstrap offcanvas is open */
-body.offcanvas-open .sidebar {
-  pointer-events: none;     /* disable interaction */
-  filter: grayscale(0.2);   /* subtle visual deactivation */
+/* Bootstrap Icons sizing */
+.icon-btn i, .burger-btn i{
+  font-size: 18px;
 }
 
-/* Ensure offcanvas sits above sidebar */
-.offcanvas {
-  z-index: 1200;
+/* On very small screens, hide BREED-IT text */
+@media (max-width: 420px){
+  .brand-text{ display: none; }
 }
 
-.offcanvas-backdrop {
-  z-index: 1150;
-}
+/* =========================================================
+   SIDEBAR RAIL (BASE)
+========================================================= */
 
-
-/* =========================
-   SAFETY: prevent stuck overlays
-========================= */
-
-/* If no modal or offcanvas is visible, allow interaction */
-body:not(.modal-open):not(.offcanvas-open) {
-  pointer-events: auto;
-}
-
-/* Ensure backdrops never exceed modal */
-.modal-backdrop {
-  z-index: 1500;
-}
-
-/* Remove lingering offcanvas backdrop issues */
-.offcanvas-backdrop.show {
-  pointer-events: auto;
-}
-
-
-/* =========== Sidebar =========== */
 .sidebar{
-  width: var(--sidebar-width);
-  border-right: 1px solid var(--muted-border);
-  padding-top: 18px;
-  padding-left: 12px;
-  padding-right: 12px;
-  background: var(--bg);
-  z-index: 1050;
-  transition: transform .25s ease, box-shadow .25s ease;
-  border-radius: 0;
+  background: linear-gradient(180deg, var(--rail-bg), var(--rail-bg-2));
+  border-right: none;
+  padding-top: 14px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 18px;
+  overflow: hidden;
+
+  transition: width .18s ease, transform .25s ease, box-shadow .25s ease;
 }
 
-/* Close icon wrapper inside sidebar (small screens) */
-.sidebar-close-wrap{
-  display:flex;
-  justify-content:flex-end;
-  padding-right:6px;
-  padding-bottom:6px;
+/* Optional brand block */
+.sidebar-brand{
+  padding: 10px 10px 8px;
 }
-.sidebar-close-btn{
-  border:none;
-  background:transparent;
-  font-size:18px;
-  padding:6px;
-  border-radius:6px;
-}
-.sidebar-close-btn:hover{ background: rgba(0,0,0,0.03); }
-
-/* Sidebar nav links */
-.sidebar .nav-link{
-  color: #111;
-  padding: 12px;
-  border-radius: var(--radius);
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-  gap: 8px;
-}
-.sidebar .nav-link i{ width: 24px; text-align: center; margin-right: 6px; }
-.sidebar .nav-link.active{
-  background: var(--accent-green);
+.sidebar-brand-mark{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.12);
   color: #fff;
-  box-shadow: none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 16px;
+}
+.sidebar-brand-title{
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: .6px;
+  font-size: 14px;
+  line-height: 1.1;
+}
+.sidebar-brand-sub{
+  color: var(--rail-muted);
+  font-size: 12px;
+  margin-top: 2px;
 }
 
-/* overlay used when sidebar is open on small screens */
+/* Nav links */
+.sidebar .nav-link{
+  color: var(--rail-text);
+  border-radius: var(--pill-radius);
+  padding: 12px 12px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  gap: 10px;
+  align-items: center;
+}
+
+.sidebar .nav-link .nav-ic{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(255,255,255,.10);
+  flex: 0 0 auto;
+}
+.sidebar .nav-link .nav-ic i{
+  font-size: 16px;
+  color: #fff;
+}
+.sidebar .nav-link .nav-tx{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hover/Active */
+.sidebar .nav-link:hover{
+  background: var(--rail-hover-bg);
+}
+.sidebar .nav-link.active{
+  background: var(--rail-active-bg);
+  color: #fff;
+}
+.sidebar .nav-link.active .nav-ic{
+  background: rgba(255,255,255,.20);
+}
+
+/* Mobile close button style */
+.sidebar-close-btn{
+  color: #fff;
+  border: none !important;
+  box-shadow: none !important;
+}
+.sidebar-close-btn:hover{
+  background: rgba(255,255,255,.10);
+}
+
+/* Overlay keeps working */
 .overlay{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.25);
-  z-index: 1040;
-  transition: opacity .2s ease;
+  background: rgba(0,0,0,0.30);
 }
 
-/* --- RESPONSIVE: make sidebar collapse & slide in on small screens --- */
-/* Default: small screens (<992px) hide sidebar (off-canvas to left) and show burger */
+/* Footer helper card */
+.sidebar-foot-card{
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 10px 10px;
+  color: var(--rail-text);
+}
+.sidebar-foot-title{
+  font-weight: 800;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+.sidebar-foot-text{
+  font-size: 12px;
+  color: var(--rail-muted);
+  line-height: 1.3;
+}
+
+/* =========================================================
+   MOBILE/TABLET OFFCANVAS FIX (<= 991.98px)
+   Sidebar is hidden by default, opens via body.sidebar-open
+========================================================= */
+
 @media (max-width: 991.98px){
   .sidebar{
     position: fixed;
+    top: var(--topbar-height);
     left: 0;
-    top: var(--topbar-height); /* below topbar */
     height: calc(100vh - var(--topbar-height));
-    transform: translateX(-110%); /* hidden by default */
-    box-shadow: none;
-    width: var(--sidebar-width-overlay); /* slightly wider when overlayed */
-    border-right: 1px solid rgba(0,0,0,0.06);
-    border-radius: 0 6px 6px 0;
+    width: min(86vw, 320px) !important;
+    border-radius: 0 18px 18px 0;
+
+    /* IMPORTANT: hide off-screen by default */
+    transform: translateX(-110%);
+    box-shadow: 0 18px 55px rgba(0,0,0,0.20);
+    z-index: 1055; /* above content, below modals if needed */
   }
 
   body.sidebar-open .sidebar{
     transform: translateX(0);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   }
 
-  /* show overlay when open */
-  #overlay.d-none{ display: none; }
-  body.sidebar-open #overlay{
-    display: block;
+  /* Overlay should sit below sidebar but above content */
+  #overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
   }
 
-  /* show burger on small */
-  .burger-btn{ display: inline-flex; }
-
-  /* show close wrap on small screens */
-  .sidebar-close-wrap{ display: flex; }
+  /* Main content should NOT be pushed/compressed by sidebar */
+  .main-content{
+    margin-left: 0 !important;
+    width: 100% !important;
+    min-width: 0;
+  }
 }
 
-/* Large screens (>=992px): sidebar visible as normal, burger hidden, overlay never used */
+/* =========================================================
+   DESKTOP HOVER-EXPAND SIDEBAR (>= 992px)
+   Collapsed by default, expands on hover/focus
+========================================================= */
+
 @media (min-width: 992px){
   .sidebar{
+    width: var(--sidebar-collapsed) !important;
+    padding-left: 10px;
+    padding-right: 10px;
+    transform: none !important; /* ensure no mobile transform leaks */
     position: relative;
-    transform: none;
-    height: auto;
-    width: var(--sidebar-width);
-    box-shadow: none;
-    border-radius: 0;
   }
-  .burger-btn{ display: none; }
-  .sidebar-close-wrap{ display:none; }
-  #overlay{ display: none !important; }
+
+  .sidebar:hover,
+  .sidebar:focus-within{
+    width: var(--sidebar-expanded) !important;
+  }
+
+  .sidebar .nav-link .nav-tx{
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-6px);
+    transition: opacity .12s ease, transform .12s ease, visibility .12s ease;
+  }
+
+  .sidebar:hover .nav-link .nav-tx,
+  .sidebar:focus-within .nav-link .nav-tx{
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+  }
+
+  .sidebar .sidebar-brand{
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity .12s ease;
+  }
+
+  .sidebar:hover .sidebar-brand,
+  .sidebar:focus-within .sidebar-brand{
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar .sidebar-foot{
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    transition: opacity .12s ease;
+  }
+
+  .sidebar:hover .sidebar-foot,
+  .sidebar:focus-within .sidebar-foot{
+    opacity: 1;
+    height: auto;
+    overflow: visible;
+  }
 }
 
-/* =========================
-   BOOTSTRAP BACKDROP FAILSAFE
-========================= */
+@media (min-width: 992px){
+  /* When collapsed */
+  .sidebar:not(:hover):not(:focus-within) .nav-link{
+    justify-content: center;
+    padding: 10px 0;
+  }
 
-/* If no modal or offcanvas is visible, nothing should block clicks */
-body:not(.modal-open):not(.offcanvas-open) {
-  pointer-events: auto !important;
-  overflow: auto !important;
+  .sidebar:not(:hover):not(:focus-within) .nav-link .nav-ic{
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+
+  /* Make active highlight wrap icon instead of full width */
+  .sidebar:not(:hover):not(:focus-within) .nav-link.active{
+    background: transparent;
+  }
+
+  .sidebar:not(:hover):not(:focus-within) .nav-link.active .nav-ic{
+    background: rgba(255,255,255,.22);
+  }
 }
 
-/* Never allow invisible backdrops to trap clicks */
-.modal-backdrop,
-.offcanvas-backdrop {
-  pointer-events: none;
+.sidebar-header-mobile{
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
 }
 
-/* When visible, allow interaction */
-.modal-backdrop.show,
-.offcanvas-backdrop.show {
-  pointer-events: auto;
+/* =========================================================
+   SHELL LAYOUT FIX (keeps sidebar left, content right)
+   Needed because dashboard page relies on .app-shell flex layout
+========================================================= */
+
+.app-shell{
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gutter, 18px);
+  padding: var(--gutter, 18px);
+  min-height: calc(100vh - var(--topbar-height, 56px));
 }
 
-/* =========================
-   REMOVE BACKDROP FLASH
-========================= */
-
-/* Disable backdrop fade animation */
-.modal-backdrop,
-.offcanvas-backdrop {
-  transition: none !important;
+/* main content grows beside sidebar */
+.main-content{
+  flex: 1;
+  min-width: 0;
+  padding: 0; /* let container-fluid handle inner spacing */
 }
 
-/* Ensure backdrops are fully transparent when not shown */
-.modal-backdrop:not(.show),
-.offcanvas-backdrop:not(.show) {
-  opacity: 0 !important;
-}
+

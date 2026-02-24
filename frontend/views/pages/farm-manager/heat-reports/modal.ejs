@@ -2,91 +2,88 @@
 <div id="reportDetailsModal" class="modal-overlay">
   <div class="modal-panel">
 
+    <!-- HEADER -->
     <div class="modal-header">
-      <h5>Report Details</h5>
-      <button id="closeReportModal" class="modal-close" type="button">&times;</button>
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-clipboard-check"></i>
+        <h5 class="mb-0">Report Details</h5>
+      </div>
+
+      <button
+        id="closeReportModal"
+        class="modal-close"
+        type="button"
+        aria-label="Close"
+      >
+        &times;
+      </button>
     </div>
 
+    <!-- BODY -->
     <div class="modal-body">
 
-      <div class="report-summary">
+      <!-- =======================================================
+           LEGACY / COMPAT (DO NOT REMOVE)
+           These IDs are still referenced by reports.js as fallback.
+      ======================================================== -->
+      <div class="visually-hidden" aria-hidden="true">
+        <div id="reportSwine"></div>
+        <div id="reportFarmer"></div>
+      </div>
+
+      <div class="report-summary d-flex flex-column gap-3">
 
         <!-- ================= HERO (Pig) ================= -->
-        <div class="mini-card" id="swineInfoCard" style="padding:14px;">
+        <div class="mini-card p-3 heat-soft-card" id="swineInfoCard">
 
-          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
-            <!-- Left: Avatar + Tag -->
-            <div style="display:flex; gap:12px; align-items:flex-start; min-width:0;">
+          <div class="d-flex align-items-start justify-content-between gap-3">
 
-              <!-- Avatar Slot -->
-              <div
-                id="pigAvatarSlot"
-                style="
-                  width:58px; height:58px; border-radius:16px;
-                  border: 2px solid #dcfce7;
-                  background:#f8fafc;
-                  display:flex; align-items:center; justify-content:center;
-                  overflow:hidden;
-                  flex:0 0 auto;
-                  position:relative;
-                "
-                aria-label="Pig profile slot"
-              >
-                <!-- If you have an image URL later, set pigAvatarImg.src in JS -->
+            <!-- Left: Avatar + Content -->
+            <div class="d-flex align-items-start gap-3 flex-grow-1" style="min-width:0;">
+
+              <!-- Avatar Slot (ID preserved) -->
+              <div id="pigAvatarSlot" class="heat-avatar-slot" aria-label="Pig profile slot">
                 <img
                   id="pigAvatarImg"
                   src=""
                   alt="Pig"
-                  style="width:100%; height:100%; object-fit:cover; display:none;"
+                  class="heat-avatar-img"
+                  style="display:none;"
                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 />
-                <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
-                  <i class="bi bi-piggy-bank" style="font-size:22px; color:#16a34a;"></i>
+                <div class="heat-avatar-fallback">
+                  <i class="bi bi-piggy-bank"></i>
                 </div>
               </div>
 
               <!-- Tag + chips -->
-              <div style="min-width:0;">
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <i class="bi bi-tag" style="color:#16a34a;"></i>
-                  <div style="font-weight:800; font-size:18px; color:#111827; line-height:1.1;">
+              <div class="flex-grow-1" style="min-width:0;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <i class="bi bi-tag text-success"></i>
+                  <div class="fw-bold heat-hero-title text-truncate">
                     <span id="pigTag">—</span>
                   </div>
                 </div>
 
-                <!-- compact chips row -->
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+                <!-- Chips -->
+                <div class="d-flex flex-wrap gap-2 mt-2">
 
-                  <!-- DATE PILL (with label) -->
-                  <div
-                    style="
-                      display:inline-flex; align-items:center; gap:8px;
-                      padding:8px 12px; border-radius:999px;
-                      border:1px solid #eef1f4; background:#f9fafb;
-                      font-weight:600; color:#374151; font-size:13px;
-                    "
-                    aria-label="Report date and time"
-                  >
+                  <!-- DATE PILL -->
+                  <div class="heat-pill" aria-label="Report date and time">
                     <i class="bi bi-calendar-event"></i>
-                    <span class="subtext" style="font-weight:700;">Date:</span>
+                    <span class="heat-pill-label">Date:</span>
                     <span id="reportDateTime">—</span>
                   </div>
 
-                  <!-- HEALTH PILL (replaces pigStage function) -->
+                  <!-- HEALTH PILL -->
                   <div
                     id="pigHealthPill"
                     data-health="unknown"
-                    style="
-                      display:inline-flex; align-items:center; gap:8px;
-                      padding:8px 12px; border-radius:999px;
-                      border:1px solid #eef1f4; background:#f9fafb;
-                      font-weight:700; color:#374151; font-size:13px;
-                      text-transform:capitalize;
-                    "
+                    class="heat-pill text-capitalize"
                     aria-label="Pig health status"
                   >
                     <i class="bi bi-heart-pulse"></i>
-                    <span class="subtext" style="font-weight:800;">Health:</span>
+                    <span class="heat-pill-label">Health:</span>
                     <span id="pigHealthText">Unknown</span>
                   </div>
 
@@ -94,26 +91,25 @@
                   <span id="pigStage" class="visually-hidden" aria-hidden="true">—</span>
                 </div>
 
-                <!-- Reported by (always visible) + Farmer toggle -->
-                <div style="margin-top:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                  <div class="subtext" style="display:flex; align-items:center; gap:8px;">
+                <!-- Reported by + Farmer toggle -->
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                  <div class="text-muted small d-flex align-items-center gap-2">
                     <i class="bi bi-person-badge"></i>
                     <span>
                       Reported by:
                       <strong id="reportedByName">—</strong>
-                      <span class="text-muted" id="reportedById" style="margin-left:6px;">—</span>
+                      <span class="text-muted" id="reportedById">—</span>
                     </span>
                   </div>
 
                   <button
                     id="toggleFarmerBtn"
                     type="button"
-                    class="btn-nav secondary"
-                    style="margin-left:auto; padding:8px 12px; border-radius:999px;"
+                    class="btn-nav secondary ms-auto"
                     aria-expanded="false"
                     aria-controls="farmerInfoCard"
                   >
-                    <i class="bi bi-person-vcard"></i>
+                    <i class="bi bi-person-vcard me-1"></i>
                     Show Farmer
                   </button>
                 </div>
@@ -122,26 +118,27 @@
             </div>
 
             <!-- Right: Status badge -->
-            <div style="flex:0 0 auto;">
+            <div class="flex-shrink-0">
               <span id="reportStatus" class="report-status" data-status="pending">pending</span>
             </div>
+
           </div>
 
-          <!-- compact pig meta row -->
-          <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:14px;">
-            <div style="min-width:140px;">
-              <div class="subtext" style="margin-bottom:2px;">Current Weight</div>
-              <div style="font-weight:800;"><span id="pigWeight">—</span></div>
+          <!-- Pig meta row -->
+          <div class="row g-2 mt-3">
+            <div class="col-12 col-sm-4">
+              <div class="text-muted small mb-1">Current Weight</div>
+              <div class="fw-bold"><span id="pigWeight">—</span></div>
             </div>
 
-            <div style="min-width:120px;">
-              <div class="subtext" style="margin-bottom:2px;">Cycle</div>
-              <div style="font-weight:800;"><span id="pigCycle">—</span></div>
+            <div class="col-12 col-sm-4">
+              <div class="text-muted small mb-1">Cycle</div>
+              <div class="fw-bold"><span id="pigCycle">—</span></div>
             </div>
 
-            <div style="min-width:140px;">
-              <div class="subtext" style="margin-bottom:2px;">Probability</div>
-              <div style="font-weight:800;"><span id="reportProbabilityValue">—</span></div>
+            <div class="col-12 col-sm-4">
+              <div class="text-muted small mb-1">Probability</div>
+              <div class="fw-bold"><span id="reportProbabilityValue">—</span></div>
             </div>
           </div>
 
@@ -150,66 +147,57 @@
         </div>
 
         <!-- ================= FARMER CARD (Hidden by default; toggled from Pig card) ================= -->
-        <div class="mini-card" id="farmerInfoCard" style="padding:14px; display:none;">
+        <div class="mini-card p-3 heat-soft-card" id="farmerInfoCard" style="display:none;">
 
-          <div style="display:flex; gap:12px; align-items:flex-start;">
+          <div class="d-flex gap-3 align-items-start">
+
             <!-- Farmer Avatar Slot -->
-            <div
-              id="farmerAvatarSlot"
-              style="
-                width:54px; height:54px; border-radius:16px;
-                border: 2px solid #eef1f4;
-                background:#f8fafc;
-                display:flex; align-items:center; justify-content:center;
-                overflow:hidden;
-                flex:0 0 auto;
-                position:relative;
-              "
-              aria-label="Farmer profile slot"
-            >
+            <div id="farmerAvatarSlot" class="heat-avatar-slot heat-avatar-slot--neutral" aria-label="Farmer profile slot">
               <img
                 id="farmerAvatarImg"
                 src=""
                 alt="Farmer"
-                style="width:100%; height:100%; object-fit:cover; display:none;"
+                class="heat-avatar-img"
+                style="display:none;"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
               />
-              <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
-                <i class="bi bi-person-circle" style="font-size:22px; color:#64748b;"></i>
+              <div class="heat-avatar-fallback heat-avatar-fallback--neutral">
+                <i class="bi bi-person-circle"></i>
               </div>
             </div>
 
-            <div style="min-width:0; flex:1;">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <i class="bi bi-person-badge" style="color:#64748b;"></i>
-                <div style="font-weight:800; font-size:16px; color:#111827;">
+            <div class="flex-grow-1" style="min-width:0;">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                <i class="bi bi-person-badge text-secondary"></i>
+                <div class="fw-bold" style="font-size:16px; color:#111827;">
                   <span id="farmerName">—</span>
                 </div>
               </div>
 
-              <div style="margin-top:4px;">
-                <span class="subtext">Farmer ID:</span>
+              <div class="mt-1">
+                <span class="text-muted small">Farmer ID:</span>
                 <strong id="farmerIdText">—</strong>
               </div>
 
-              <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;">
-                <div style="min-width:160px;">
-                  <div class="subtext" style="margin-bottom:2px;">Phone</div>
-                  <div style="font-weight:800;"><span id="farmerPhone">—</span></div>
+              <div class="row g-2 mt-2">
+                <div class="col-12 col-sm-5">
+                  <div class="text-muted small mb-1">Phone</div>
+                  <div class="fw-bold"><span id="farmerPhone">—</span></div>
                 </div>
 
-                <div style="flex:1; min-width:220px;">
-                  <div class="subtext" style="margin-bottom:2px;">Address</div>
-                  <div style="font-weight:800;"><span id="farmerAddress">—</span></div>
+                <div class="col-12 col-sm-7">
+                  <div class="text-muted small mb-1">Address</div>
+                  <div class="fw-bold"><span id="farmerAddress">—</span></div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
 
         <!-- ================= OBSERVED SIGNS ================= -->
-        <div class="mini-card" style="padding:14px;">
-          <div class="mini-card-top" style="margin-bottom:10px;">
+        <div class="mini-card p-3 heat-soft-card">
+          <div class="d-flex align-items-center gap-2 mb-2">
             <i class="bi bi-activity"></i>
             <span class="mini-card-label">Observed Signs</span>
           </div>
@@ -217,20 +205,21 @@
         </div>
 
         <!-- ================= NOTES ================= -->
-        <div class="mini-card" id="reportNotesWrap" style="padding:14px;">
-          <div class="mini-card-top" style="margin-bottom:10px;">
+        <div class="mini-card p-3 heat-soft-card" id="reportNotesWrap">
+          <div class="d-flex align-items-center gap-2 mb-2">
             <i class="bi bi-journal-text"></i>
             <span class="mini-card-label">Farmer Notes</span>
           </div>
+
           <div id="reportNotes" class="subtext" style="font-size:14px;">
             <span class="text-muted">No remarks provided.</span>
           </div>
         </div>
 
         <!-- ================= EVIDENCE ================= -->
-        <div class="mini-card" id="evidenceCard" style="padding:14px;">
-          <div class="mini-card-top" style="justify-content:space-between; width:100%; margin-bottom:10px;">
-            <div style="display:flex; align-items:center; gap:8px;">
+        <div class="mini-card p-3 heat-soft-card" id="evidenceCard">
+          <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
               <i class="bi bi-images"></i>
               <span class="mini-card-label">Evidence</span>
             </div>
@@ -245,39 +234,39 @@
         </div>
 
       </div>
-
-      <!-- ================= ACTIONS ================= -->
-      <div class="modal-footer report-actions">
-        <button id="approveBtn" style="display:none;" type="button">
-          <i class="bi bi-check-circle"></i> Approve
-        </button>
-
-        <button id="rejectBtn" style="display:none;" type="button">
-          <i class="bi bi-x-circle"></i> Reject
-        </button>
-
-        <button id="confirmAIBtn" style="display:none;" type="button">
-          <i class="bi bi-droplet-half"></i> Confirm AI
-        </button>
-
-        <button id="confirmPregnancyBtn" style="display:none;" type="button">
-          <i class="bi bi-heart-pulse"></i> Confirm Pregnancy
-        </button>
-
-        <button id="followUpBtn" style="display:none;" type="button">
-          <i class="bi bi-arrow-repeat"></i> Cycle Failed
-        </button>
-
-        <button id="confirmFarrowingBtn" style="display:none;" type="button">
-          <i class="bi bi-egg-fried"></i> Confirm Farrowing
-        </button>
-
-        <button id="closeReportModalBtn" class="secondary" type="button">
-          Close
-        </button>
-      </div>
-
     </div>
+
+    <!-- FOOTER / ACTIONS -->
+    <div class="modal-footer report-actions">
+      <button id="approveBtn" style="display:none;" type="button">
+        <i class="bi bi-check-circle"></i> Approve
+      </button>
+
+      <button id="rejectBtn" style="display:none;" type="button">
+        <i class="bi bi-x-circle"></i> Reject
+      </button>
+
+      <button id="confirmAIBtn" style="display:none;" type="button">
+        <i class="bi bi-droplet-half"></i> Confirm AI
+      </button>
+
+      <button id="confirmPregnancyBtn" style="display:none;" type="button">
+        <i class="bi bi-heart-pulse"></i> Confirm Pregnancy
+      </button>
+
+      <button id="followUpBtn" style="display:none;" type="button">
+        <i class="bi bi-arrow-repeat"></i> Cycle Failed
+      </button>
+
+      <button id="confirmFarrowingBtn" style="display:none;" type="button">
+        <i class="bi bi-egg-fried"></i> Confirm Farrowing
+      </button>
+
+      <button id="closeReportModalBtn" class="secondary" type="button">
+        Close
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -291,7 +280,7 @@
     <label>Select Sire (Boar)</label>
     <select id="boarSelect"></select>
 
-    <div style="display:flex; gap:10px; margin-top:15px;">
+    <div class="d-flex gap-2 mt-3 flex-wrap">
       <button id="submitAI" class="btn-nav" type="button">
         <i class="bi bi-check-circle"></i> Confirm AI
       </button>
@@ -328,7 +317,7 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:10px; margin-top:15px;">
+      <div class="d-flex gap-2 mt-3 flex-wrap">
         <button type="submit" class="btn-nav">
           <i class="bi bi-check-circle"></i> Confirm Farrowing
         </button>
@@ -360,7 +349,7 @@
       style="resize:none;">
     </textarea>
 
-    <div style="display:flex; gap:10px; margin-top:14px;">
+    <div class="d-flex gap-2 mt-3 flex-wrap">
       <button id="confirmRejectBtn" class="btn-nav" type="button">
         <i class="bi bi-x-circle"></i> Reject
       </button>
@@ -387,7 +376,7 @@
       </p>
     </div>
 
-    <button id="closeProgressPanel" class="panel-close" type="button">&times;</button>
+    <button id="closeProgressPanel" class="panel-close" type="button" aria-label="Close">&times;</button>
   </div>
 
   <!-- BODY -->

@@ -1,21 +1,34 @@
 /* =========================================================
-   ROOT TOKENS (UPDATED / SAFE)
-   - Adds missing tokens used by heat-reports css
-   - Avoids conflicts with card/button classes
+   ROOT TOKENS (SAFE + THEME ALIGNED)
+   - Adds tokens used by heat-reports/table.css
+   - Keeps your existing naming so older CSS won't break
 ========================================================= */
 :root {
-  --bg: #ffffff;
+  /* shell / surfaces */
+  --shell-bg: #f6f7fb;
+  --card-bg: #ffffff;
+  --bg: var(--shell-bg);
 
   /* neutrals */
-  --text-dark: #111827;
-  --muted-text: #6b7280;
-  --muted-border: #eef1f4;
-  --card-border: #eef1f4;
+  --text: #111827;
+  --text-dark: var(--text);
+  --muted: #6b7280;
+  --muted-text: var(--muted);
+
+  --border: #e9edf3;
+  --border-soft: #eef1f4;
+  --muted-border: var(--border-soft);
+  --card-border: var(--border-soft);
 
   /* brand */
-  --accent-green: #198754;
+  --green: #198754;
+  --green-2: #0f7a34;
+  --accent-green: var(--green);
 
-  /* stats */
+  /* focus */
+  --focus: 0 0 0 3px rgba(25, 135, 84, 0.14);
+
+  /* stats palette (if you still want the colored icon circles) */
   --stat-orange: #ff9a1f;
   --stat-blue: #1ea7ff;
   --stat-green: #43c572;
@@ -24,7 +37,10 @@
 
   /* layout */
   --gutter: 16px;
-  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --radius: var(--radius-md);
 
   /* shared sizes */
   --control-h: 38px;
@@ -48,9 +64,9 @@
 html,
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text-dark);
+  font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--shell-bg);
+  color: var(--text);
 }
 
 /* prevent iOS font zoom quirks on inputs */
@@ -62,77 +78,73 @@ button {
 }
 
 /* =========================================================
-   MAIN LAYOUT
+   MAIN LAYOUT (light touch)
+   - keep base minimal so module css can own styling
 ========================================================= */
-.main-content {
-  padding: var(--gutter);
-  min-width: 0;
-}
-
 .page-card {
-  background: var(--bg);
-  border-radius: var(--radius);
-  border: 1px solid var(--card-border);
-  padding: var(--gutter);
-  box-shadow: 0 2px 0 rgba(17, 24, 39, 0.02);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 
+/* If you rely on page-card padding here, keep it,
+   but note: your swine-list theme uses .page-card .card-body padding */
+.page-card > *:first-child {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* Page title base only */
 .page-title {
   font-size: 20px;
-  font-weight: 800;
-  margin-bottom: 10px;
-  color: var(--text-dark);
+  font-weight: 900;
+  margin: 0;
+  color: var(--text);
 }
 
-/* =========== Shell layout =========== */
-.app-shell {
-  display: flex;
-  min-height: 100vh;
-  gap: var(--gutter);
-  padding: var(--gutter);
-  align-items: flex-start;
-}
 
 /* =========================================================
    STATS GRID (GLOBAL DASHBOARD)
-   - keeps your design, improves consistency w/ new radius/shadows
+   - Keep compatibility, but don’t fight module/table.css
 ========================================================= */
 .stats-grid {
   margin-top: 10px;
 }
 
+/* NOTE: module/table.css already styles `.stats-grid .stat-card`.
+   Keep this neutral. */
 .stat-card {
   background: #fff;
-  border-radius: var(--radius);
-  padding: 16px;
-  border: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-soft);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
+  border-color: rgba(25,135,84,0.20);
 }
 
 .stat-label {
-  font-size: 13px;
-  color: var(--muted-text);
-  margin-bottom: 4px;
-  font-weight: 700;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
 }
 
 .stat-number {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
 }
 
+/* Icon bubbles (optional, keep if used outside heat module) */
 .stat-icon {
   width: 42px;
   height: 42px;
-  border-radius: 999px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,31 +159,34 @@ button {
 .stat-icon.pink   { background: var(--stat-pink); }
 
 /* =========================================================
-   GENERIC BUTTONS (SAFE)
-   - Keep .btn-nav base generic but DO NOT style it aggressively here
-   - Heat-report CSS will scope card buttons itself
+   GENERIC BUTTONS (SAFE / NEUTRAL)
+   - Do NOT skin too much here to avoid conflicts with module buttons
 ========================================================= */
 .btn-nav {
   border: 1px solid transparent;
   border-radius: 12px;
   padding: 10px 14px;
-  font-weight: 800;
+  font-weight: 900;
   cursor: pointer;
+  background: transparent;
+  color: inherit;
 }
 
 .btn-nav.secondary {
-  background: #e5e7eb;
-  color: #374151;
   border-color: #d1d5db;
+  background: #fff;
+  color: #111827;
 }
 
 .btn-nav.secondary:hover {
-  background: #d1d5db;
+  background: #f3f4f6;
+  border-color: #cbd5e1;
 }
 
 /* =========================================================
-   GENERIC MODAL BASE (LEGACY) – keep but soften conflicts
-   NOTE: Your heat-report modals mostly use .modal-overlay/.modal-panel.
+   GENERIC MODAL BASE (LEGACY) – softened to reduce Bootstrap clashes
+   - WARNING: Bootstrap uses .modal/.modal-content too
+   - Keep these minimal; your module details uses .modal-overlay/.modal-panel.
 ========================================================= */
 .modal {
   position: fixed;
@@ -180,7 +195,7 @@ button {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(17, 24, 39, 0.55);
   padding: 16px;
 }
 
@@ -188,51 +203,41 @@ body.modal-open {
   overflow: hidden;
 }
 
-/* IMPORTANT:
-   Do NOT globally style .modal-content too strongly because Bootstrap also uses it.
-   Keep it minimal; your report details uses .modal-panel anyway.
-*/
+/* Keep minimal so it won't override Bootstrap heavily */
 .modal-content {
   background: #fff;
   width: 100%;
   max-width: 420px;
-  border-radius: 14px;
-  padding: 22px;
+  border-radius: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
-  animation: modalPop 0.25s ease-out;
 }
 
-@keyframes modalPop {
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.modal-content h3 {
-  margin: 0 0 12px;
-}
-
-.modal-content label {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
+/* Inputs inside custom modals */
 .modal-content input,
 .modal-content select,
 .modal-content textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
+  border-radius: 12px;
+  border: 1px solid var(--border);
   margin-bottom: 14px;
   font-size: 14px;
+  font-weight: 800;
+  outline: none;
+}
+
+.modal-content input:focus,
+.modal-content select:focus,
+.modal-content textarea:focus {
+  border-color: rgba(25,135,84,0.45);
+  box-shadow: var(--focus);
 }
 
 /* =========================================================
-   GENERIC MODAL SYSTEM (GLOBAL) – used by your report details
+   GENERIC MODAL SYSTEM (GLOBAL) – used by report details
 ========================================================= */
-
-/* Overlay */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -244,67 +249,75 @@ body.modal-open {
   padding: 12px;
 }
 
-/* Panel */
 .modal-panel {
   background: #fff;
   width: 100%;
   max-width: 720px;
   max-height: 90vh;
-  border-radius: 16px;
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--muted-border);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
 }
 
-/* Header */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--muted-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-header h5 {
   margin: 0;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 900;
 }
 
-/* Body */
 .modal-body {
   padding: 16px;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  background: #fbfcfd;
 }
 
-/* Footer */
 .modal-footer {
   padding: 12px 16px;
-  border-top: 1px solid var(--muted-border);
+  border-top: 1px solid var(--border);
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  background: #fff;
 }
 
-/* Close button */
 .modal-close {
-  background: none;
-  border: none;
-  font-size: 22px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 999px;
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   cursor: pointer;
   line-height: 1;
   color: #111827;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  border-color: #cbd5e1;
 }
 
 /* =========================================================
    MODAL SCROLLBAR (SUBTLE) – scoped to report details only
 ========================================================= */
 #reportDetailsModal .modal-body {
-  scrollbar-width: thin; /* Firefox */
+  scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
 }
 
@@ -334,7 +347,7 @@ body.modal-open {
 @media (max-width: 576px) {
   .modal-panel {
     max-height: 95vh;
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
   .modal-footer button {

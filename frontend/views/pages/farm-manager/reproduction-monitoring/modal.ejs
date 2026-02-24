@@ -1,123 +1,116 @@
 <div class="modal fade" id="farmerModal" tabindex="-1">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content profile-modal">
+    <div class="modal-content profile-modal border-0">
 
       <!-- HEADER -->
       <div class="modal-header border-0 pb-0">
         <h5 class="modal-title fw-semibold">Farmer Profile</h5>
-        <button type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
       <!-- BODY -->
       <div class="modal-body pt-3">
 
-        <!-- ================= PROFILE HERO ================= -->
-        <div class="profile-hero mb-4">
+        <!-- PROFILE HEADER CARD -->
+        <div class="card border-0 shadow-sm mb-3 profile-header-modern">
+          <div class="card-body p-3 p-md-4">
 
-          <div class="profile-hero-top">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
 
-            <!-- LEFT SIDE -->
-            <div class="profile-hero-left">
+              <!-- Left: Avatar + name -->
+              <div class="d-flex align-items-center gap-3">
+                <div class="profile-avatar-lg">
+                  <img id="profileAvatar"
+                       src="/images/default-avatar.png"
+                       alt="Profile"
+                       loading="lazy">
+                </div>
 
-              <div class="profile-avatar-lg">
-                <img id="profileAvatar"
-                     src="/images/default-avatar.png"
-                     alt="Profile">
+                <div>
+                  <h4 id="profileFarmerName" class="mb-1">—</h4>
+                  <div class="text-muted small" id="profileFarmerContact">—</div>
+                </div>
               </div>
 
-              <div>
-                <h4 id="profileFarmerName" class="mb-1">—</h4>
-                <div class="text-muted small"
-                     id="profileFarmerContact">—</div>
+              <!-- Right: Status -->
+              <div class="text-md-end">
+                <span id="profileFarmerStatus" class="badge profile-status-badge">—</span>
               </div>
 
             </div>
 
-            <!-- STATUS (TOP RIGHT) -->
-            <div>
-              <span id="profileFarmerStatus"
-                    class="badge profile-status-badge">
-                —
-              </span>
+            <!-- STATS GRID -->
+            <div class="row g-2 g-md-3 mt-3">
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statTotalPigs">0</div>
+                  <div class="stat-label"><i class="bi bi-grid-3x3-gap"></i> Total Pigs</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statPiglets">0</div>
+                  <div class="stat-label"><i class="bi bi-egg"></i> Piglets</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statAdultSows">0</div>
+                  <div class="stat-label"><i class="bi bi-gender-female"></i> Adult Sows</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statAdultBoars">0</div>
+                  <div class="stat-label"><i class="bi bi-gender-male"></i> Adult Boars</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statPregnant">0</div>
+                  <div class="stat-label"><i class="bi bi-patch-check"></i> Pregnant</div>
+                </div>
+              </div>
+
+              <div class="col-6 col-md-4 col-lg-2">
+                <div class="stat-tile">
+                  <div class="stat-number" id="statMortality">0.0%</div>
+                  <div class="stat-label"><i class="bi bi-activity"></i> Mortality</div>
+                </div>
+              </div>
+
             </div>
 
           </div>
-
         </div>
 
-        <!-- ================= SUMMARY CARDS ================= -->
-        <div class="profile-stat-grid">
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statTotalPigs">0</div>
-            <div class="stat-label"><i class="bi bi-grid-3x3-gap"></i> Total Pigs</div>
-          </div>
+        <!-- TOP TABS (Scrollable on mobile) -->
+        <div class="tabs-scroll mb-3">
+          <ul class="nav nav-pills profile-tabs flex-nowrap" id="farmerProfileTabs">
+            <li class="nav-item">
+              <button class="nav-link active" data-target="farmerOverviewTab" type="button">Overview</button>
+            </li>
 
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statPiglets">0</div>
-            <div class="stat-label"><i class="bi bi-egg"></i> Piglets</div>
-          </div>
+            <li class="nav-item">
+              <button class="nav-link" data-target="farmerPigsTab" type="button">Pigs</button>
+            </li>
 
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statAdultSows">0</div>
-            <div class="stat-label"><i class="bi bi-gender-female"></i> Adult Sows</div>
-          </div>
-
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statAdultBoars">0</div>
-            <div class="stat-label"><i class="bi bi-gender-male"></i> Adult Boars</div>
-          </div>
-
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statPregnant">0</div>
-            <div class="stat-label"><i class="bi bi-patch-check"></i> Pregnant</div>
-          </div>
-
-          <div class="profile-stat-card">
-            <div class="stat-number" id="statMortality">0.0%</div>
-            <div class="stat-label"><i class="bi bi-activity"></i> Mortality</div>
-          </div>
+            <li class="nav-item">
+              <button class="nav-link" data-target="breedingPerformanceTab" type="button">Breeding Performance</button>
+            </li>
+          </ul>
         </div>
-
-
-        <!-- ================= TABS ================= -->
-        <ul class="nav nav-pills profile-tabs mb-3"
-            id="farmerProfileTabs">
-
-          <li class="nav-item">
-            <button class="nav-link active"
-                    data-target="farmerOverviewTab"
-                    type="button">
-              Overview
-            </button>
-          </li>
-
-          <li class="nav-item">
-            <button class="nav-link"
-                    data-target="farmerPigsTab"
-                    type="button">
-              Pigs
-            </button>
-          </li>
-
-          <li class="nav-item">
-            <button class="nav-link"
-                    data-target="breedingPerformanceTab">
-              Breeding Performance
-            </button>
-          </li>
-
-
-        </ul>
 
         <!-- ================= OVERVIEW TAB ================= -->
         <div id="farmerOverviewTab" class="farmer-tab">
 
-          <div class="row g-4">
-
-            <!-- Farmer Info -->
-            <div class="col-md-6">
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
               <div class="profile-card">
                 <h6 class="profile-card-title">Farmer Information</h6>
 
@@ -138,8 +131,7 @@
               </div>
             </div>
 
-            <!-- Contact Info -->
-            <div class="col-md-6">
+            <div class="col-12 col-lg-6">
               <div class="profile-card">
                 <h6 class="profile-card-title">Contact Details</h6>
 
@@ -159,78 +151,58 @@
                 </div>
               </div>
             </div>
-
           </div>
 
         </div>
 
         <!-- ================= PIGS TAB ================= -->
-        <div id="farmerPigsTab"
-             class="farmer-tab d-none">
+        <div id="farmerPigsTab" class="farmer-tab d-none">
 
-          <!-- CATEGORY FILTER -->
-          <ul class="nav nav-pills mb-3"
-              id="farmerPigCategoryTabs">
-            <li class="nav-item">
-              <button class="nav-link active"
-                      data-type="all">All</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link"
-                      data-type="piglet">Piglets</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link"
-                      data-type="sow">Sows</button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link"
-                      data-type="boar">Boars</button>
-            </li>
-          </ul>
+          <!-- Category tabs (scrollable on mobile) -->
+          <div class="tabs-scroll mb-3">
+            <ul class="nav nav-pills flex-nowrap" id="farmerPigCategoryTabs">
+              <li class="nav-item"><button class="nav-link active" data-type="all" type="button">All</button></li>
+              <li class="nav-item"><button class="nav-link" data-type="piglet" type="button">Piglets</button></li>
+              <li class="nav-item"><button class="nav-link" data-type="sow" type="button">Sows</button></li>
+              <li class="nav-item"><button class="nav-link" data-type="boar" type="button">Boars</button></li>
+            </ul>
+          </div>
 
-          <!-- FILTER BAR -->
+          <!-- Filters: responsive -->
           <div id="pigFilterSection">
-            <form id="farmerPigFilters"
-                  class="d-flex gap-2 mb-3">
+            <form id="farmerPigFilters" class="row g-2 align-items-end mb-3">
+              <div class="col-12 col-md-6 col-lg-5">
+                <label class="form-label small text-muted mb-1">Search Tag</label>
+                <input type="text" id="pigSearchTag" class="form-control form-control-sm" placeholder="Search tag">
+              </div>
 
-              <input type="text"
-                    id="pigSearchTag"
-                    class="form-control form-control-sm"
-                    placeholder="Search tag">
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label small text-muted mb-1">Status</label>
+                <select id="pigStatusFilter" class="form-select form-select-sm">
+                  <option value="">Status</option>
+                  <option value="Healthy">Healthy</option>
+                  <option value="Sick">Sick</option>
+                  <option value="Deceased">Deceased</option>
+                </select>
+              </div>
 
-              <select id="pigStatusFilter"
-                      class="form-select form-select-sm">
-                <option value="">Status</option>
-                <option value="Healthy">Healthy</option>
-                <option value="Sick">Sick</option>
-                <option value="Deceased">Deceased</option>
-              </select>
-
-              <button class="btn btn-success btn-sm"
-                      type="submit">
-                Apply
-              </button>
-
-              <button class="btn btn-outline-secondary btn-sm"
-                      type="button"
-                      id="resetPigFilters">
-                Reset
-              </button>
+              <div class="col-12 col-lg-4">
+                <div class="d-grid d-sm-flex gap-2">
+                  <button class="btn btn-success btn-sm" type="submit">Apply</button>
+                  <button class="btn btn-outline-secondary btn-sm" type="button" id="resetPigFilters">Reset</button>
+                </div>
+              </div>
             </form>
           </div>
 
-          <!-- LIST -->
-          <div id="linkedPigList"
-               class="d-flex flex-column gap-3">
-
+          <!-- Pig list -->
+          <div id="linkedPigList" class="d-flex flex-column gap-3">
             <div class="text-muted text-center py-3">
               Select a farmer to view pigs
             </div>
-
           </div>
-  
-          <!-- ================= PIG ANALYSIS PANEL ================= -->
+
+          <!-- Pig analysis panel (unchanged IDs) -->
           <div id="pigAnalysisPanel" class="d-none">
 
             <button class="btn btn-sm btn-outline-secondary mb-3 d-inline-flex align-items-center gap-2"
@@ -239,51 +211,23 @@
               <span>Back to Pig List</span>
             </button>
 
-            <div class="profile-hero mb-3">
-              <h5 id="analysisPigTitle">Pig Analysis</h5>
-              <div class="text-muted small" id="analysisPigMeta">—</div>
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-body">
+                <h5 id="analysisPigTitle" class="mb-1">Pig Analysis</h5>
+                <div class="text-muted small" id="analysisPigMeta">—</div>
+              </div>
             </div>
 
-            <!-- Tabs -->
-            <ul class="nav nav-pills mb-3"
-                id="pigAnalysisTabs">
-              <li class="nav-item">
-                <button class="nav-link active"
-                        data-target="pigProfileTab">
-                  Profile
-                </button>
-              </li>
+            <div class="tabs-scroll mb-3">
+              <ul class="nav nav-pills flex-nowrap" id="pigAnalysisTabs">
+                <li class="nav-item"><button class="nav-link active" data-target="pigProfileTab" type="button">Profile</button></li>
+                <li class="nav-item"><button class="nav-link" data-target="pigBreedingTab" type="button">Artificial Insemination Record</button></li>
+                <li class="nav-item"><button class="nav-link" data-target="pigPerformanceTab" type="button">Piglets Growth Records</button></li>
+                <li class="nav-item"><button class="nav-link" data-target="pigHealthTab" type="button">Health & Defects</button></li>
+                <li class="nav-item"><button class="nav-link" data-target="pigSelectionTab" type="button">Selection Status</button></li>
+              </ul>
+            </div>
 
-              <li class="nav-item">
-                <button class="nav-link"
-                        data-target="pigBreedingTab">
-                  Artificial Insemination Record
-                </button>
-              </li>
-
-              <li class="nav-item">
-                <button class="nav-link"
-                        data-target="pigPerformanceTab">
-                  Piglets Growth Records
-                </button>
-              </li>
-
-              <li class="nav-item">
-                <button class="nav-link"
-                        data-target="pigHealthTab">
-                  Health & Defects
-                </button>
-              </li>
-
-              <li class="nav-item">
-                <button class="nav-link"
-                        data-target="pigSelectionTab">
-                  Selection Status
-                </button>
-              </li>
-            </ul>
-
-            <!-- TAB CONTENTS -->
             <div id="pigProfileTab" class="pig-analysis-tab"></div>
             <div id="pigBreedingTab" class="pig-analysis-tab d-none"></div>
             <div id="pigPerformanceTab" class="pig-analysis-tab d-none"></div>
@@ -291,42 +235,27 @@
             <div id="pigSelectionTab" class="pig-analysis-tab d-none"></div>
 
           </div>
+
         </div>
 
-          <!-- ================= BREEDING PERFORMANCE TAB ================= -->
-          <div id="breedingPerformanceTab"
-              class="farmer-tab d-none">
+        <!-- ================= BREEDING PERFORMANCE TAB ================= -->
+        <div id="breedingPerformanceTab" class="farmer-tab d-none">
 
-            <!-- KPI SECTION -->
-            <div id="breedingKpiSection"
-                class="row g-3 mb-4">
-            </div>
+          <div id="breedingKpiSection" class="row g-2 g-md-3 mb-3"></div>
 
-            <!-- SOW LIST -->
-            <div id="breedingSowList"
-                class="d-flex flex-column gap-3">
-            </div>
+          <div id="breedingSowList" class="d-flex flex-column gap-3"></div>
 
-            <!-- CYCLE PANEL -->
-            <div id="breedingCyclePanel"
-                class="mt-4 d-none">
-
-              <div class="card shadow-sm border-0 mb-3">
-                <div class="card-body">
-                  <h6 class="mb-3">Mortality Rate per Cycle</h6>
-                  <canvas id="breedingMortalityChart"
-                          height="100">
-                  </canvas>
-                </div>
+          <div id="breedingCyclePanel" class="mt-3 d-none">
+            <div class="card shadow-sm border-0 mb-3">
+              <div class="card-body">
+                <h6 class="mb-3">Mortality Rate per Cycle</h6>
+                <canvas id="breedingMortalityChart" height="100"></canvas>
               </div>
-
-              <div id="breedingCycleCards"
-                  class="d-flex flex-column gap-3">
-              </div>
-
             </div>
 
+            <div id="breedingCycleCards" class="d-flex flex-column gap-3"></div>
           </div>
+
         </div>
 
       </div>

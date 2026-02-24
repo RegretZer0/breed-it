@@ -3,16 +3,19 @@
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
 <main class="main-content">
-  <div class="container-fluid">
+  <div class="container-fluid py-3 py-lg-4">
 
+    <!-- Page shell (soft dashboard look like the reference image) -->
+    <div class="repro-page">
 
-    <%- include("./table") %>
-    <%- include("./modal") %>
-    <%- include("./edit-modal") %>
+      <%- include("./table") %>
+      <%- include("./modal") %>
+      <%- include("./edit-modal") %>
+
+    </div>
 
   </div>
 </main>
-
 
 <!-- Global Loading Overlay -->
 <div id="globalLoader" class="global-loader d-none">

@@ -2,8 +2,8 @@
 <header class="topbar d-flex align-items-center">
   <div class="container-fluid d-flex align-items-center px-3">
 
-    <!-- Left section -->
-    <div class="d-flex align-items-center top-left">
+    <!-- Left -->
+    <div class="d-flex align-items-center top-left flex-shrink-0">
       <!-- Burger icon -->
       <button
         type="button"
@@ -11,7 +11,7 @@
         class="burger-btn me-2 d-lg-none"
         aria-label="Open sidebar"
       >
-        <i class="fa-solid fa-bars fa-lg"></i>
+        <i class="bi bi-list"></i>
       </button>
 
       <img
@@ -22,8 +22,8 @@
       <div class="brand-text ms-2">BREED-IT</div>
     </div>
 
-    <!-- Right section -->
-    <div class="ms-auto d-flex align-items-center gap-3 top-icons">
+    <!-- Right -->
+    <div class="ms-auto d-flex align-items-center gap-2 top-icons">
 
       <!-- Notifications -->
       <button
@@ -33,7 +33,7 @@
         data-bs-toggle="offcanvas"
         data-bs-target="#notificationsPanel"
       >
-        <i class="fa-regular fa-bell fa-lg"></i>
+        <i class="bi bi-bell"></i>
       </button>
 
       <!-- Settings -->
@@ -44,7 +44,7 @@
         data-bs-toggle="offcanvas"
         data-bs-target="#settingsPanel"
       >
-        <i class="fa-solid fa-gear fa-lg"></i>
+        <i class="bi bi-gear"></i>
       </button>
 
       <!-- User dropdown -->
@@ -57,17 +57,15 @@
           aria-expanded="false"
           title="User"
         >
-          <i class="fa-regular fa-user fa-lg"></i>
+          <i class="bi bi-person-circle"></i>
         </button>
 
-        <ul
-          class="dropdown-menu dropdown-menu-end"
-          aria-labelledby="userDropdown"
-        >
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
           <li>
             <button
               type="button"
               class="dropdown-item"
+              id="accountSettingsBtn"
               data-bs-toggle="modal"
               data-bs-target="#accountSettingsModal"
             >
@@ -79,6 +77,7 @@
             <button
               type="button"
               class="dropdown-item"
+              id="helpBtn"
               data-bs-toggle="modal"
               data-bs-target="#helpModal"
             >
@@ -99,263 +98,10 @@
           </li>
         </ul>
       </div>
+
     </div>
   </div>
 </header>
-
-<!-- =======================
-     NOTIFICATIONS PANEL
-======================= -->
-<div
-  class="offcanvas offcanvas-end"
-  tabindex="-1"
-  id="notificationsPanel"
->
-  <div class="offcanvas-header">
-    <h5>Recent Notifications</h5>
-    <button class="btn-close" data-bs-dismiss="offcanvas"></button>
-  </div>
-
-  <div class="offcanvas-body">
-    <ul class="list-group list-group-flush small" id="notificationsList">
-      <!-- JS will inject here -->
-    </ul>
-
-
-    <div class="text-center mt-3">
-     <button class="btn btn-outline-secondary btn-sm" id="viewAllNotificationsBtn">View all</button>
-    </div>
-  </div>
-</div>
-
-<!-- =======================
-     NOTIFICATION HISTORY MODAL
-======================= -->
-<div
-  class="modal fade"
-  id="notificationHistoryModal"
-  tabindex="-1"
-  aria-hidden="true"
->
-  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Notification History</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-
-        <!-- Filters -->
-        <div class="d-flex flex-wrap gap-2 mb-3">
-          <select class="form-select form-select-sm w-auto" id="notifFilterType">
-            <option value="">All Types</option>
-            <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="alert">Alert</option>
-            <option value="error">Error</option>
-          </select>
-
-          <select class="form-select form-select-sm w-auto" id="notifFilterTime">
-            <option value="">All Time</option>
-            <option value="24h">Last 24 hours</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-          </select>
-        </div>
-
-        <!-- Notification list -->
-        <ul
-          class="list-group list-group-flush"
-          id="notificationHistoryList"
-        >
-          <li class="list-group-item text-muted">
-            Loading notifications…
-          </li>
-        </ul>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-
-<!-- =======================
-     SETTINGS PANEL
-======================= -->
-<div
-  class="offcanvas offcanvas-end"
-  tabindex="-1"
-  id="settingsPanel"
->
-  <div class="offcanvas-header">
-    <h5>Settings</h5>
-    <button class="btn-close" data-bs-dismiss="offcanvas"></button>
-  </div>
-
-  <div class="offcanvas-body small">
-    <form>
-
-      <div class="form-check form-switch mb-3">
-        <input class="form-check-input" type="checkbox" id="darkModeToggle">
-        <label class="form-check-label" for="darkModeToggle">
-          Dark Mode
-        </label>
-      </div>
-
-      <div class="form-check form-switch mb-3">
-        <input class="form-check-input" type="checkbox" id="emailNotifToggle" checked>
-        <label class="form-check-label" for="emailNotifToggle">
-          Email Notifications
-        </label>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Language</label>
-        <select class="form-select form-select-sm">
-          <option selected>English</option>
-          <option>Filipino</option>
-          <option>Spanish</option>
-        </select>
-      </div>
-
-      <button class="btn btn-outline-primary btn-sm w-100" disabled>
-        Save Changes (Coming Soon)
-      </button>
-    </form>
-  </div>
-</div>
-
-<!-- =======================
-     ACCOUNT SETTINGS MODAL
-======================= -->
-<div
-  class="modal fade"
-  id="accountSettingsModal"
-  tabindex="-1"
->
-  <div class="modal-dialog modal-dialog-end modal-dialog-centered">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Account Settings</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-        <p><strong>Name:</strong> <%= user?.name || "—" %></p>
-        <p><strong>Email:</strong> <%= user?.email || "—" %></p>
-        <p><strong>Role:</strong> <%= user?.role || "—" %></p>
-
-        <button
-          class="btn btn-outline-primary w-100 mt-3"
-          data-bs-toggle="modal"
-          data-bs-target="#changePasswordModal"
-        >
-          Change Password
-        </button>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<!-- =======================
-     CHANGE PASSWORD MODAL
-======================= -->
-<div
-  class="modal fade"
-  id="changePasswordModal"
-  tabindex="-1"
->
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Change Password</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-
-        <!-- STEP 1: REQUEST OTP -->
-        <button
-          class="btn btn-outline-secondary w-100 mb-3"
-          id="requestChangeOtpBtn"
-        >
-          Send OTP to Email
-        </button>
-
-        <!-- STEP 2: CONFIRM -->
-        <form id="changePasswordForm">
-          <div class="mb-3">
-            <label class="form-label small">OTP</label>
-            <input
-              type="text"
-              class="form-control otp-input"
-              id="changeOtp"
-              required
-            />
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label small">New Password</label>
-            <input
-              type="password"
-              class="form-control"
-              id="changeNewPassword"
-              required
-            />
-          </div>
-
-          <button class="btn btn-primary w-100">
-            Change Password
-          </button>
-        </form>
-
-        <p id="changePasswordMessage" class="small text-center mt-3"></p>
-
-      </div>
-
-    </div>
-  </div>
-</div>
-
-
-<!-- =======================
-     HELP MODAL
-======================= -->
-<div
-  class="modal fade"
-  id="helpModal"
-  tabindex="-1"
->
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-
-      <div class="modal-header">
-        <h5 class="modal-title">Help</h5>
-        <button class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-        <ul class="small">
-          <li>Use the sidebar to navigate modules.</li>
-          <li>Your session expires after inactivity.</li>
-          <li>Contact admin for account issues.</li>
-        </ul>
-
-        <p class="small mt-2 text-muted">
-          Support: support@breedit.local
-        </p>
-      </div>
-
-    </div>
-  </div>
-</div>
 
 <!-- App shell -->
 <div class="app-shell">

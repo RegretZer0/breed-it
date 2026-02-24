@@ -1,28 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const accountBtn = document.getElementById("accountSettingsBtn");
-  const helpBtn = document.getElementById("helpBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const darkToggle = document.getElementById("darkModeToggle");
 
-  // Account Settings modal
-  if (accountBtn) {
-    accountBtn.addEventListener("click", () => {
-      new bootstrap.Modal(
-        document.getElementById("accountSettingsModal")
-      ).show();
-    });
-  }
-
-  // Help modal
-  if (helpBtn) {
-    helpBtn.addEventListener("click", () => {
-      new bootstrap.Modal(
-        document.getElementById("helpModal")
-      ).show();
-    });
-  }
-
+  // =========================
   // Logout
+  // =========================
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
@@ -64,31 +46,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(notificationsPanel);
   const modal = bootstrap.Modal.getOrCreateInstance(notificationHistoryModal);
 
-  // 🔥 HARD CLEANUP FUNCTION
+  // HARD CLEANUP FUNCTION
   const forceCleanup = () => {
     document.body.classList.remove("modal-open", "offcanvas-open");
     document.body.style.removeProperty("overflow");
 
-    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach(b => b.remove());
+    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach((b) => b.remove());
   };
 
   viewAllBtn.addEventListener("click", () => {
-    // Close offcanvas
+    // Close offcanvas first
     offcanvas.hide();
 
-  notificationsPanel.addEventListener(
-    "hidden.bs.offcanvas",
-    () => {
-      forceCleanup();
-      requestAnimationFrame(() => {
-        modal.show();
-      });
-    },
-    { once: true }
-  );
-});
+    notificationsPanel.addEventListener(
+      "hidden.bs.offcanvas",
+      () => {
+        forceCleanup();
+        requestAnimationFrame(() => {
+          modal.show();
+        });
+      },
+      { once: true }
+    );
+  });
 
-  // When modal closes → CLEAN AGAIN
+  // When modal closes → clean again
   notificationHistoryModal.addEventListener("hidden.bs.modal", () => {
     forceCleanup();
   });

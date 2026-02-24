@@ -1,42 +1,39 @@
-<div class="card page-card">
-  <div class="card-body">
+<div class="card page-card border-0 shadow-sm">
+  <div class="card-body p-3 p-md-4">
 
-    <!-- TITLE -->
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+    <!-- TITLE / SUBTITLE -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
       <div>
-        <h5 class="mb-0">Reproduction Monitoring</h5>
-        <div class="text-muted small">Select a farmer to monitor breeding status and sow performance</div>
+        <h5 class="mb-1">Reproduction Monitoring</h5>
+        <div class="text-muted small">
+          Select a farmer to monitor breeding status and sow performance
+        </div>
       </div>
     </div>
 
-
     <!-- TOOLBAR -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-3">
+      <div class="flex-grow-1"></div>
 
-      <!-- LEFT (Empty now - tabs removed) -->
-      <div></div>
-
-      <!-- RIGHT: FILTERS -->
-      <div>
+      <div class="w-100">
         <%- include("./filter") %>
       </div>
-
     </div>
 
     <hr class="my-3" />
 
     <!-- CARD LIST -->
-    <div id="farmerCardList" class="d-flex flex-column">
+    <div id="farmerCardList" class="d-flex flex-column gap-3">
       <div class="text-center text-muted py-4">
         Loading farmer records...
       </div>
     </div>
 
     <!-- PAGINATION -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <button id="farmerPrevBtn" class="btn btn-sm btn-outline-secondary">Prev</button>
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-4">
+      <button id="farmerPrevBtn" class="btn btn-sm btn-outline-secondary w-100 w-sm-auto">Prev</button>
       <span id="farmerPageIndicator" class="small fw-semibold text-muted"></span>
-      <button id="farmerNextBtn" class="btn btn-sm btn-outline-secondary">Next</button>
+      <button id="farmerNextBtn" class="btn btn-sm btn-outline-secondary w-100 w-sm-auto">Next</button>
     </div>
 
   </div>

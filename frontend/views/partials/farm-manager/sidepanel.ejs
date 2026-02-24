@@ -1,77 +1,115 @@
 <!-- Sidebar -->
 <aside class="sidebar d-flex flex-column" id="sidebar">
 
-  <!-- Close icon inside sidebar -->
+  <!-- Close icon inside sidebar (mobile) -->
   <div class="sidebar-close-wrap d-lg-none">
     <button
       id="sidebarCloseBtn"
       class="sidebar-close-btn"
       aria-label="Close sidebar"
+      type="button"
     >
-      <i class="fa-solid fa-xmark"></i>
+      <i class="bi bi-x-lg"></i>
     </button>
   </div>
 
-  <nav class="nav flex-column w-100 px-2">
+  <!-- Brand (optional, compact like the reference) -->
+  <div class="sidebar-brand px-2 mb-2 d-none d-lg-flex align-items-center gap-2">
+    <div class="sidebar-brand-mark">
+      <i class="bi bi-grid-1x2-fill"></i>
+    </div>
+    <div class="sidebar-brand-text">
+      <div class="sidebar-brand-title">BREED-IT</div>
+      <div class="sidebar-brand-sub">Farm Manager</div>
+    </div>
+  </div>
+
+  <nav class="nav flex-column w-100 px-2 sidebar-nav">
 
       <!-- DASHBOARD -->
       <a
         href="/farm-manager/dashboard/"
         class="nav-link <%= current_page === 'dashboard' ? 'active' : '' %>"
+        data-bs-toggle="tooltip"
+        data-bs-placement="right"
+        title="Dashboard"
       >
-        <i class="fa-solid fa-border-all me-2"></i>
-        Dashboard
+        <span class="nav-ic" aria-hidden="true"><i class="bi bi-speedometer2"></i></span>
+        <span class="nav-tx">Dashboard</span>
       </a>
 
       <!-- PIG MANAGEMENT -->
       <a
         href="/farm-manager/pig-management/swine-list"
         class="nav-link <%= current_section === 'pig_management' ? 'active' : '' %>"
+        data-bs-toggle="tooltip"
+        data-bs-placement="right"
+        title="Swine Management"
       >
-        <i class="fa-solid fa-piggy-bank me-2"></i>
-        Swine Management
+        <span class="nav-ic" aria-hidden="true"><i class="bi bi-house-heart"></i></span>
+        <span class="nav-tx">Swine Management</span>
       </a>
 
       <!-- REPORTS -->
       <a
         href="/farm-manager/heat-reports/index"
         class="nav-link <%= current_page === 'reports' ? 'active' : '' %>"
+        data-bs-toggle="tooltip"
+        data-bs-placement="right"
+        title="Heat Reports Verification"
       >
-        <i class="fa-solid fa-clipboard-check me-2"></i>
-        Heat Reports Verification
+        <span class="nav-ic" aria-hidden="true"><i class="bi bi-clipboard-check"></i></span>
+        <span class="nav-tx">Heat Reports Verification</span>
       </a>
 
       <!-- REPRODUCTION MONITORING -->
       <a
         href="/farm-manager/reproduction-monitoring/index"
         class="nav-link <%= current_page === 'reproduction_monitoring' ? 'active' : '' %>"
+        data-bs-toggle="tooltip"
+        data-bs-placement="right"
+        title="Reproduction Monitoring"
       >
-        <i class="fa-solid fa-venus-mars me-2"></i>
-        Reproduction Monitoring
+        <span class="nav-ic" aria-hidden="true"><i class="bi bi-calendar2-week"></i></span>
+        <span class="nav-tx">Reproduction Monitoring</span>
       </a>
 
       <!-- SWINE ANALYSIS -->
       <a
         href="/farm-manager/breed-quality-analytics/swine-analysis"
         class="nav-link <%= current_page === 'swine_analysis' ? 'active' : '' %>"
+        data-bs-toggle="tooltip"
+        data-bs-placement="right"
+        title="Breed Quality Analytics"
       >
-        <i class="fa-solid fa-dna me-2"></i>
-        Breed Quality Analytics
+        <span class="nav-ic" aria-hidden="true"><i class="bi bi-activity"></i></span>
+        <span class="nav-tx">Breed Quality Analytics</span>
       </a>
-
 
       <!-- ACCOUNT MANAGEMENT -->
       <% if (user?.role === "farm_manager") { %>
         <a
           href="/farm-manager/user-management/manage"
           class="nav-link <%= current_section === 'user_management' ? 'active' : '' %>"
+          data-bs-toggle="tooltip"
+          data-bs-placement="right"
+          title="Account Management"
         >
-          <i class="fa-solid fa-user-gear me-2"></i>
-          Account Management
+          <span class="nav-ic" aria-hidden="true"><i class="bi bi-person-gear"></i></span>
+          <span class="nav-tx">Account Management</span>
         </a>
-      <% } %> 
+      <% } %>
 
   </nav>
+
+  <!-- Bottom helper area (optional) -->
+  <div class="sidebar-foot mt-auto px-2 pb-2 d-none d-lg-block">
+    <div class="sidebar-foot-card">
+      <div class="sidebar-foot-title">Tip</div>
+      <div class="sidebar-foot-text">Use the sidebar to jump between modules quickly.</div>
+    </div>
+  </div>
+
 </aside>
 
 <!-- Overlay for small-screen sidebar -->
