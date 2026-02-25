@@ -1,12 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
 
 /* =========================================================
-   SWINE MANAGEMENT — THEME ALIGNED (Duolingo-like)
-   Compatible: Desktop / Tablet / Mobile
+   SWINE MANAGEMENT — THEME ALIGNED (Bootstrap-friendly)
+   - Uses Bootstrap layout/components where possible
+   - Avoids custom tab hiding that can break .tab-pane switching
 ========================================================= */
 
 :root{
-  /* Match your app shell */
   --shell-bg: #f6f7fb;
   --card-bg: #ffffff;
 
@@ -41,11 +41,8 @@ html, body{
 
 /* =========================================================
    MAIN CONTENT SAFETY
-   (prevents “content dropping below sidebar” issues)
 ========================================================= */
-.main-content{
-  min-width: 0; /* important for flex layouts */
-}
+.main-content{ min-width: 0; }
 
 /* =========================================================
    PAGE CARD BASE (matches dashboard style)
@@ -57,9 +54,7 @@ html, body{
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 
-.page-card .card-body{
-  padding: 18px;
-}
+.page-card .card-body{ padding: 18px; }
 
 /* =========================================================
    MODULE HEADER CARD (SWINE MANAGEMENT + tabs)
@@ -70,9 +65,7 @@ html, body{
   margin: 0;
 }
 
-.tabs-row{
-  margin-top: 12px;
-}
+.tabs-row{ margin-top: 12px; }
 
 /* "tab buttons" (the <a> tags) */
 .tab-btn{
@@ -108,10 +101,7 @@ html, body{
 /* =========================================================
    SWINE LIST HEADER + TOOLBAR
 ========================================================= */
-.swine-title{
-  font-weight: 900;
-  margin: 0;
-}
+.swine-title{ font-weight: 900; margin: 0; }
 
 .swine-toolbar{
   display: flex;
@@ -122,9 +112,7 @@ html, body{
 }
 
 /* Left category pills (All / Piglets / Sows / Boars / Master) */
-#swineCategoryTabs.nav-pills{
-  gap: 8px;
-}
+#swineCategoryTabs.nav-pills{ gap: 8px; }
 
 #swineCategoryTabs.nav-pills .nav-link{
   border-radius: 999px;
@@ -190,9 +178,7 @@ html, body{
   padding: 8px 10px;
 }
 
-.dropdown-item:hover{
-  background: rgba(25,135,84,0.10);
-}
+.dropdown-item:hover{ background: rgba(25,135,84,0.10); }
 
 .swine-filter-form .btn-group .btn{
   border-radius: 12px;
@@ -210,7 +196,6 @@ html, body{
   gap: 14px;
 }
 
-/* Swine card (Duolingo-ish: soft shadow + rounded + hover lift) */
 .swine-card{
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
@@ -276,44 +261,50 @@ html, body{
 }
 
 /* Pagination */
-#swinePageIndicator{
-  font-weight: 800;
-}
+#swinePageIndicator{ font-weight: 800; }
 
 /* =========================================================
-   MODAL BASE
+   SWINE HISTORY MODAL (scoped) — keep other modals safe
 ========================================================= */
-.modal-content{
-  border-radius: 18px;
+#swineModal .modal-content{
+  border-radius: 22px;
   border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
-.modal-header{
-  padding: 14px 18px;
+#swineModal .modal-header{
+  padding: 18px 22px;
   border-bottom: 1px solid var(--border);
+  background: #fff;
 }
 
-.modal-title{
+#swineModal .modal-title{
   font-weight: 900;
+  letter-spacing: .01em;
+  color: var(--text);
 }
 
-.modal-body{
-  padding: 16px 18px 18px;
+#swineModal .modal-body{
+  padding: 18px 22px 22px;
+  background: #fff;
 }
 
 /* =========================================================
-   MODAL PROFILE HEADER
+   MODAL PROFILE HEADER (Hero)
 ========================================================= */
-.pig-profile-header{
+#swineModal .pig-profile-header,
+#swineModal .profile-hero{
   border: 1px solid var(--border);
   background:
     radial-gradient(900px 240px at 0% 0%, rgba(25,135,84,0.12), transparent 55%),
     #fff;
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 22px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
-.profile-main{
+#swineModal .profile-main{
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -321,33 +312,74 @@ html, body{
   flex-wrap: wrap;
 }
 
-.pig-avatar{
-  width: 48px;
-  height: 48px;
+#swineModal .pig-avatar,
+#swineModal .profile-avatar-lg,
+#swineModal .profile-avatar,
+#swineModal .profile-hero-avatar{
+  width: 56px;
+  height: 56px;
   border-radius: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
   background: rgba(25,135,84,0.14);
   color: var(--green-2);
+  display: grid;
+  place-items: center;
 }
 
-.pig-avatar i{ font-size: 18px; }
+#swineModal .pig-avatar i{ font-size: 18px; }
 
-.profile-stats-row{
+#swineModal #profilePigImg{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display:block;
+}
+
+/* Hero name + meta */
+#swineModal .profile-hero-info h4,
+#swineModal #profileSwineId{
+  font-weight: 900;
+  color: var(--text);
+}
+
+#swineModal .profile-hero-info .text-muted,
+#swineModal .profile-hero-info small,
+#swineModal #profileFarmer{
+  color: var(--muted) !important;
+}
+
+/* Status badge */
+#swineModal #profileHealthBadge,
+#swineModal .hero-status-badge{
+  border-radius: 999px;
+  padding: 10px 16px !important;
+  font-weight: 900;
+  letter-spacing: .01em;
+  border: 1px solid rgba(25,135,84,0.18);
+}
+
+/* Stat cards row */
+#swineModal .profile-stats-row{
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+  margin-top: 12px;
 }
 
-.profile-stats-row .stat{
+#swineModal .profile-stats-row .stat,
+#swineModal .stat-card,
+#swineModal .mini-stat-card,
+#swineModal .profile-stat{
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 10px;
+  padding: 12px 14px;
   background: #fff;
+  box-shadow: var(--shadow-sm);
 }
 
-.profile-stats-row .stat .label{
+#swineModal .profile-stats-row .stat .label,
+#swineModal .stat-card .stat-label{
   font-size: 11px;
   font-weight: 900;
   color: var(--muted);
@@ -356,35 +388,87 @@ html, body{
   margin-bottom: 6px;
 }
 
-.profile-stats-row .stat .value{
+#swineModal .profile-stats-row .stat .value,
+#swineModal .stat-card .stat-value{
   font-size: 14px;
   font-weight: 900;
-}
-
-/* Modal tab buttons */
-#pigProfileTabs.nav-pills{
-  gap: 8px;
-}
-
-#pigProfileTabs.nav-pills .nav-link{
-  border-radius: 999px;
-  font-weight: 900;
-  font-size: 13px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  background: #fff;
   color: var(--text);
 }
 
-#pigProfileTabs.nav-pills .nav-link.active{
+/* =========================================================
+   MODAL TABS (Bootstrap pills)
+   FIX: Do NOT force-hide tab panels with custom CSS.
+   - Bootstrap will handle: .tab-pane (hidden), .tab-pane.active.show (visible)
+   - If your panes have "d-none", remove it in HTML/JS, or they will never show.
+========================================================= */
+#swineModal #pigProfileTabs.nav-pills{ gap: 8px; }
+
+#swineModal #pigProfileTabs.nav-pills .nav-link{
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+#swineModal #pigProfileTabs.nav-pills .nav-link:hover{
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(25,135,84,0.25);
+}
+
+#swineModal #pigProfileTabs.nav-pills .nav-link.active{
   background: rgba(25,135,84,0.12);
   border-color: rgba(25,135,84,0.35);
   color: var(--green-2);
 }
 
-/* Your JS uses d-none toggling */
-.profile-tab{ display: none !important; }
-.profile-tab:not(.d-none){ display: block !important; }
+/* Ensure bootstrap tab panes animate nicely without breaking visibility */
+#swineModal .tab-content{ margin-top: 14px; }
+#swineModal .tab-pane{ min-height: 1px; } /* prevents "nothing" height flashes */
+
+/* =========================================================
+   OVERVIEW CONTENT CARDS (Current Condition / Latest Measurements)
+========================================================= */
+#swineModal .overview-card,
+#swineModal .info-card,
+#swineModal .card.overview-panel{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+#swineModal .overview-card .card-header,
+#swineModal .info-card .card-header{
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  font-weight: 900;
+  color: var(--text);
+}
+
+#swineModal .overview-card .card-body,
+#swineModal .info-card .card-body{
+  padding: 16px;
+}
+
+/* Key-value rows (optional utility if you use it) */
+#swineModal .kv-row{
+  display:flex;
+  justify-content:space-between;
+  gap: 14px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(233,237,243,0.95);
+}
+#swineModal .kv-row:last-child{ border-bottom: 0; padding-bottom: 0; }
+#swineModal .kv-row .k{ color: var(--muted); font-weight: 800; }
+#swineModal .kv-row .v{ color: var(--text); font-weight: 900; text-align: right; }
+
+#swineModal .text-muted.small{ color: var(--muted) !important; }
 
 /* =========================================================
    REPRODUCTION + OFFSPRING + GROWTH
@@ -392,6 +476,7 @@ html, body{
 .reproduction-card{
   border-radius: 16px;
   border: 1px solid var(--border);
+  background: #fff;
 }
 
 .growth-filter-bar{
@@ -487,10 +572,7 @@ html, body{
   flex-wrap: wrap;
 }
 
-.weight-range{
-  color: var(--text);
-  font-weight: 900;
-}
+.weight-range{ color: var(--text); font-weight: 900; }
 
 .gain-badge{
   padding: 4px 10px;
@@ -499,15 +581,8 @@ html, body{
   font-size: 12px;
 }
 
-.gain-positive{
-  background: rgba(25,135,84,0.14);
-  color: var(--green-2);
-}
-
-.gain-negative{
-  background: rgba(245,91,102,0.14);
-  color: #b42318;
-}
+.gain-positive{ background: rgba(25,135,84,0.14); color: var(--green-2); }
+.gain-negative{ background: rgba(245,91,102,0.14); color: #b42318; }
 
 .growth-details{
   margin-top: 12px;
@@ -522,7 +597,6 @@ html, body{
   padding: 10px 0;
   border-top: 1px dashed var(--border);
 }
-
 .growth-entry:first-child{ border-top: none; }
 
 .growth-metrics{
@@ -546,6 +620,7 @@ html, body{
   color: var(--text);
 }
 
+/* Offspring */
 .offspring-cycle-card{
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -559,7 +634,174 @@ html, body{
 }
 
 /* =========================================================
-   GLOBAL LOADER (yours, keep)
+   OFFSPRING OVERVIEW (MODAL)
+========================================================= */
+.offspring-head h5{ font-weight: 900; margin: 0; }
+
+.metric-card{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(600px 200px at 0% 0%, rgba(25,135,84,0.10), transparent 55%),
+    #fff;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+  padding: 14px;
+  height: 100%;
+  text-align: center;
+}
+
+.metric-card .metric-label{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.metric-card .metric-value{
+  font-size: 22px;
+  font-weight: 900;
+  margin-top: 6px;
+  color: var(--text);
+}
+
+.chart-wrap{
+  width: 100%;
+  min-height: 240px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+/* Cycle select bar */
+.cycle-bar{
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  justify-content: space-between;
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(700px 220px at 0% 0%, rgba(25,135,84,0.08), transparent 55%),
+    #fff;
+  padding: 12px;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+}
+
+.cycle-bar-left{ flex: 1; min-width: 0; }
+
+.cycle-bar-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: var(--green-2);
+  margin-bottom: 8px;
+}
+
+.cycle-bar-title .bi{ font-size: 16px; }
+
+#offspringCycleFilter.form-select{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  font-weight: 900;
+  padding: 12px 14px;
+}
+
+.cycle-latest-btn{
+  border-radius: 16px;
+  font-weight: 900;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Parent cards */
+.parent-card{
+  border: 1px solid rgba(25,135,84,0.18);
+  background: rgba(25,135,84,0.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.parent-label{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 6px;
+}
+
+.parent-value{
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--text);
+}
+
+/* Tip */
+.tip-box{
+  border: 1px solid rgba(25,135,84,0.18);
+  background: rgba(25,135,84,0.06);
+  border-radius: 16px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.tip-box .bi{ color: var(--green); }
+
+/* Cycle cards */
+.cycle-card{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+  margin-bottom: 14px;
+}
+
+.cycle-card-head{
+  padding: 18px 18px 16px;
+  background:
+    radial-gradient(900px 260px at 0% 0%, rgba(25,135,84,0.10), transparent 55%),
+    #fff;
+}
+
+.cycle-pill{
+  font-weight: 900;
+  letter-spacing: .01em;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.cycle-toggle-btn{
+  border-radius: 14px;
+  font-weight: 900;
+  padding: 8px 14px;
+}
+
+.cycle-filter-group .btn{
+  font-weight: 900;
+  border-radius: 12px !important;
+}
+
+#offspringCycleList .card-body{
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+#offspringCycleList [id^="cyclePigletsWrap-"] .card{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+#offspringCycleList [id^="cyclePigletsWrap-"] .card-body{
+  padding: 14px 14px 10px;
+}
+
+/* =========================================================
+   GLOBAL LOADER (keep)
 ========================================================= */
 #globalLoader{
   position: fixed;
@@ -576,46 +818,174 @@ html, body{
 }
 
 /* =========================================================
-   RESPONSIVE RULES
+   OFFCANVAS THEME — MATCH OVERVIEW PANEL
+   Targets:
+   - #pigInfoCanvas (Update Pig Info)
+   - #growthCanvas  (Update Growth)
 ========================================================= */
-
-/* Tablet */
-@media (max-width: 992px){
-  .swine-details-row{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .profile-stats-row{
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+#pigInfoCanvas.offcanvas,
+#growthCanvas.offcanvas{
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px rgba(0,0,0,.08);
+  background: #ffffff;
 }
 
-/* Mobile */
+#pigInfoCanvas .offcanvas-header,
+#growthCanvas .offcanvas-header{
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+#pigInfoCanvas .offcanvas-title,
+#growthCanvas .offcanvas-title{
+  font-weight: 900;
+  letter-spacing: .01em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#pigInfoCanvas .offcanvas-title i,
+#growthCanvas .offcanvas-title i{
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(25,135,84,.10);
+  color: var(--green);
+}
+
+#pigInfoCanvas .offcanvas-body,
+#growthCanvas .offcanvas-body{
+  padding: 16px 18px 18px;
+}
+
+/* section card */
+.offcanvas-panel-card{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(0,0,0,.05);
+}
+
+.offcanvas-panel-card + .offcanvas-panel-card{ margin-top: 14px; }
+
+.offcanvas-help{
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+#pigInfoCanvas .form-control,
+#pigInfoCanvas .form-select,
+#growthCanvas .form-control,
+#growthCanvas .form-select{
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 11px 12px;
+  box-shadow: none !important;
+}
+
+#pigInfoCanvas .form-control:focus,
+#pigInfoCanvas .form-select:focus,
+#growthCanvas .form-control:focus,
+#growthCanvas .form-select:focus{
+  border-color: rgba(25,135,84,.45);
+  box-shadow: 0 0 0 .25rem rgba(25,135,84,.12) !important;
+}
+
+/* profile photo row */
+.profile-photo-row{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-photo-preview{
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--shell-bg);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
+.profile-photo-preview img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* footer buttons */
+.offcanvas-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.offcanvas-actions .btn{
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 900;
+}
+
+.offcanvas-actions .btn-success{
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.offcanvas-actions .btn-success:hover{
+  background: var(--green-2);
+  border-color: var(--green-2);
+}
+
+.offcanvas-actions .btn-outline-secondary{
+  border-color: #d9e1ea;
+}
+
+/* =========================================================
+   RESPONSIVE RULES
+========================================================= */
+@media (max-width: 992px){
+  .swine-details-row{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #swineModal .profile-stats-row{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 576px){
-  .page-card .card-body{
-    padding: 14px;
-  }
+  .page-card .card-body{ padding: 14px; }
 
   .swine-toolbar{
     flex-direction: column;
     align-items: stretch;
   }
 
-  .swine-filters{
-    justify-content: flex-start;
-  }
+  .swine-filters{ justify-content: flex-start; }
 
-  .swine-filter-form{
-    width: 100%;
-  }
+  .swine-filter-form{ width: 100%; }
 
   .swine-filter-form .form-control,
-  .swine-filter-form .form-select{
-    width: 100%;
+  .swine-filter-form .form-select{ width: 100%; }
+
+  .swine-details-row{ grid-template-columns: 1fr; }
+
+  #swineModal .modal-header{ padding: 14px 14px; }
+  #swineModal .modal-body{ padding: 14px 14px 18px; }
+  #swineModal .pig-profile-header,
+  #swineModal .profile-hero{
+    padding: 14px;
+    border-radius: 18px;
   }
 
-  .swine-details-row{
-    grid-template-columns: 1fr;
+  #swineModal #pigProfileTabs.nav-pills .nav-link{
+    padding: 9px 12px;
+    font-size: 14px;
   }
 
   .growth-filter-bar{
@@ -623,7 +993,12 @@ html, body{
     align-items: stretch;
   }
 
-  .growth-year-select{
-    width: 100%;
-  }
+  .growth-year-select{ width: 100%; }
+
+  .cycle-bar{ flex-direction: column; }
+  .cycle-latest-btn{ width: 100%; }
+  .chart-wrap{ min-height: 200px; }
+
+  .cycle-card-head{ padding: 14px; }
+  .cycle-toggle-btn{ width: 100%; }
 }

@@ -39,6 +39,7 @@ import { authGuard } from "/js/authGuard.js";
     let offspringByCycle = {};
     let activeSwineForView = null;
     let growthChartInstance = null;  
+    let offspringChartInstance = null;
 
     // ================= PAGINATION =================
     let swinePage = 1;
@@ -388,128 +389,156 @@ import { authGuard } from "/js/authGuard.js";
 
     /* ================= OFFSPRING ================= */
     function renderOffspring() {
-    const wrap = document.getElementById("offspringCycleList");
-    const empty = document.getElementById("offspringEmptyState");
+      const wrap = document.getElementById("offspringCycleList");
+      const empty = document.getElementById("offspringEmptyState");
 
-    if (!wrap || !empty) return;
+      // New (optional) UI parts from merged tab layout
+      const countLabel = document.getElementById("pigletsCountLabel");
 
-    wrap.innerHTML = "";
+      if (!wrap || !empty) return;
 
-    const cyclesToRender =
-      activeOffspringCycle === "all"
-        ? Object.entries(offspringByCycle)
-        : Object.entries(offspringByCycle)
-            .filter(([c]) => String(c) === String(activeOffspringCycle));
+      wrap.innerHTML = "";
 
-    if (!cyclesToRender.length) {
-      empty.classList.remove("d-none");
-      return;
-    }
+      const entries = Object.entries(offspringByCycle || {});
+      const cyclesToRender =
+        activeOffspringCycle === "all"
+          ? entries
+          : entries.filter(([c]) => String(c) === String(activeOffspringCycle));
 
-    empty.classList.add("d-none");
+      if (!cyclesToRender.length) {
+        empty.classList.remove("d-none");
+        if (countLabel) countLabel.textContent = "0";
+        return;
+      }
 
-    cyclesToRender
-      .sort((a, b) => Number(b[0]) - Number(a[0]))
-      .forEach(([cycle, piglets]) => {
-        wrap.insertAdjacentHTML("beforeend", `
-          <div class="offspring-cycle-card mb-4">
+      empty.classList.add("d-none");
 
-            <div class="offspring-cycle-header d-flex justify-content-between align-items-center mb-2">
-              <div>
-                <div class="fw-semibold">Farrowing Cycle ${cycle}</div>
-                <div class="small text-muted">
-                  ${piglets.length} piglet${piglets.length > 1 ? "s" : ""}
-                </div>
+      // Update record count label (for merged design)
+      if (countLabel) {
+        const totalShown =
+          activeOffspringCycle === "all"
+            ? cyclesToRender.reduce((sum, [, piglets]) => sum + (piglets?.length || 0), 0)
+            : (cyclesToRender[0]?.[1]?.length || 0);
+
+        countLabel.textContent = String(totalShown);
+      }
+
+      const renderPigletRow = (p) => {
+        const isHealthy = p.health_status === "Healthy";
+
+        const statusText = p.health_status || "Unrecorded";
+        const statusClass = isHealthy
+          ? "bg-success-subtle text-success"
+          : "bg-secondary-subtle text-secondary";
+
+        const metaLeft = `${p.breed || "Native"} · ${formatStageDisplay(p.age_stage)}`;
+        const metaRight = `${p.sex || "—"} · ${p.current_status || "Active"}`;
+
+        return `
+          <div class="offspring-item card border-0 shadow-sm">
+            <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center gap-3">
+
+              <div class="min-w-0">
+                <div class="fw-semibold text-truncate">${p.swine_id || "Piglet"}</div>
+                <div class="small text-muted text-truncate">${metaLeft}</div>
+                <div class="small text-muted text-truncate">${metaRight}</div>
               </div>
 
-              <button class="btn btn-sm btn-outline-primary toggle-cycle">
-                View
-              </button>
+              <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                <span class="badge rounded-pill px-3 py-2 ${statusClass}">
+                  ${statusText}
+                </span>
+
+                <button
+                  class="btn btn-xs btn-outline-primary view-btn"
+                  data-id="${p._id}">
+                  View
+                </button>
+              </div>
+
             </div>
-
-            <div class="offspring-cycle-body d-none d-flex flex-column gap-2">
-              ${piglets.map(p => `
-                <div class="card border-0 shadow-sm">
-                  <div class="card-body py-2 px-3 d-flex justify-content-between">
-
-                    <div>
-                      <div class="fw-semibold">${p.swine_id}</div>
-                      <div class="small text-muted">
-                        ${p.breed || "Native"} · ${formatStageDisplay(p.age_stage)}
-                      </div>
-                      <div class="small text-muted">
-                        ${p.sex || "—"} · ${p.current_status || "Active"}
-                      </div>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="badge ${
-                        p.health_status === "Healthy"
-                          ? "bg-success-subtle text-success"
-                          : "bg-secondary-subtle text-secondary"
-                      }">
-                        ${p.health_status || "Active"}
-                      </span>
-
-                      <button
-                        class="btn btn-xs btn-outline-primary view-btn"
-                        data-id="${p._id}">
-                        View
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              `).join("")}
-            </div>
-
           </div>
-        `);
-      });
-  }
+        `;
+      };
 
-  function renderFarmerDropdown(list) {
-    const wrap = document.getElementById("farmerOptions");
-    const searchInput = document.getElementById("farmerSearch");
+      // Sort cycles latest first
+      cyclesToRender
+        .sort((a, b) => Number(b[0]) - Number(a[0]))
+        .forEach(([cycle, piglets]) => {
+          const list = Array.isArray(piglets) ? piglets : [];
 
-    if (!wrap) return;
-    wrap.innerHTML = "";
+          // If a specific cycle is selected (not "all"), show ONLY the piglets list (no nested toggle)
+          if (activeOffspringCycle !== "all") {
+            wrap.insertAdjacentHTML("beforeend", list.map(renderPigletRow).join(""));
+            return;
+          }
 
-    if (!list.length) {
-      wrap.innerHTML = `<div class="text-muted small">No farmers found</div>`;
-      return;
+          // If "all" selected, keep grouped sections but cleaner + smaller header
+          wrap.insertAdjacentHTML("beforeend", `
+            <div class="offspring-cycle-card mb-3">
+
+              <div class="offspring-cycle-header d-flex justify-content-between align-items-center">
+                <div class="min-w-0">
+                  <div class="fw-semibold text-truncate">Cycle ${cycle}</div>
+                  <div class="small text-muted">${list.length} piglet${list.length > 1 ? "s" : ""}</div>
+                </div>
+
+                <button class="btn btn-sm btn-outline-primary toggle-cycle">
+                  View
+                </button>
+              </div>
+
+              <div class="offspring-cycle-body d-none d-flex flex-column gap-2 mt-2">
+                ${list.map(renderPigletRow).join("")}
+              </div>
+
+            </div>
+          `);
+        });
     }
 
-    list.forEach(f => {
-      const div = document.createElement("div");
-      div.className = "dropdown-item small";
-      div.textContent = `${f.first_name} ${f.last_name}`.trim();
+    function renderFarmerDropdown(list) {
+      const wrap = document.getElementById("farmerOptions");
+      const searchInput = document.getElementById("farmerSearch");
 
-      div.addEventListener("click", () => {
-        selectedFarmerId = f._id;
-        document.getElementById("farmerDropdownBtn").textContent =
-          `${f.first_name} ${f.last_name}`.trim();
+      if (!wrap) return;
+      wrap.innerHTML = "";
 
-        bootstrap.Dropdown
-          .getInstance(document.getElementById("farmerDropdownBtn"))
-          ?.hide();
+      if (!list.length) {
+        wrap.innerHTML = `<div class="text-muted small">No farmers found</div>`;
+        return;
+      }
+
+      list.forEach(f => {
+        const div = document.createElement("div");
+        div.className = "dropdown-item small";
+        div.textContent = `${f.first_name} ${f.last_name}`.trim();
+
+        div.addEventListener("click", () => {
+          selectedFarmerId = f._id;
+          document.getElementById("farmerDropdownBtn").textContent =
+            `${f.first_name} ${f.last_name}`.trim();
+
+          bootstrap.Dropdown
+            .getInstance(document.getElementById("farmerDropdownBtn"))
+            ?.hide();
+        });
+
+        wrap.appendChild(div);
       });
 
-      wrap.appendChild(div);
-    });
-
-    if (searchInput && !searchInput.dataset.bound) {
-      searchInput.dataset.bound = "true";
-      searchInput.addEventListener("input", () => {
-        const term = searchInput.value.toLowerCase();
-        renderFarmerDropdown(
-          list.filter(f =>
-            `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
-          )
-        );
-      });
+      if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = "true";
+        searchInput.addEventListener("input", () => {
+          const term = searchInput.value.toLowerCase();
+          renderFarmerDropdown(
+            list.filter(f =>
+              `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
+            )
+          );
+        });
+      }
     }
-  }
 
     // ================= FARMERS =================
     async function loadFarmers() {
@@ -653,6 +682,7 @@ import { authGuard } from "/js/authGuard.js";
     cycleSelect.value = activeOffspringCycle;
     
     renderOffspring();
+    renderOffspringOverview(cycles);
   }
 
   // ================= PROFILE HEADER DATA =================
@@ -742,15 +772,9 @@ import { authGuard } from "/js/authGuard.js";
     swineModalInstance.show();
 
       // ================= TAB NAV VISIBILITY =================
-      document.getElementById("reproNav")?.classList.toggle(
-        "d-none",
-        !isParent || sw.sex !== "Female"
-      );
+      document.getElementById("reproNav")?.classList.add("d-none");
 
-      document.getElementById("offspringNav")?.classList.toggle(
-        "d-none",
-        !isParent
-      );
+      document.getElementById("offspringNav")?.classList.toggle("d-none", !isParent);
 
       // ================= REPRO STATS (SOURCE = offspringByCycle) =================
       const cycleKeys = Object.keys(offspringByCycle);
@@ -1155,8 +1179,10 @@ import { authGuard } from "/js/authGuard.js";
       ?.addEventListener("change", (e) => {
         activeOffspringCycle = e.target.value;
         renderOffspring();
-    });
 
+        const cycles = activeSwineForView?.breeding_cycles || [];
+        hydrateCycleDetail(cycles);
+    });
 
     // ================= FILTERS =================
     filtersForm.addEventListener("submit", (e) => {
@@ -1241,6 +1267,8 @@ import { authGuard } from "/js/authGuard.js";
         // ✅ Render offspring ONLY when tab is opened
         if (target === "offspringTab") {
           renderOffspring();
+          const cycles = activeSwineForView?.breeding_cycles || [];
+          renderOffspringOverview(cycles);
         }
       });
     });

@@ -1,11 +1,12 @@
-<div class="modal" id="swineModal" tabindex="-1">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
+<!-- ================= SWINE PROFILE MODAL ================= -->
+<div class="modal" id="swineModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
 
       <!-- ================= MODAL HEADER ================= -->
       <div class="modal-header">
         <h5 class="modal-title" id="modalSwineId">Swine Profile</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <div class="modal-body">
@@ -15,8 +16,17 @@
           <div class="profile-main">
             <div class="d-flex align-items-center gap-3">
               <div class="pig-avatar">
-                <i class="fa-solid fa-piggy-bank"></i>
+                <!-- profile image (falls back to icon if no img) -->
+                <img
+                  id="profilePigImg"
+                  src="/images/default-pig.png"
+                  alt="Pig"
+                  class="d-none"
+                  style="width:56px;height:56px;object-fit:cover;border-radius:16px;"
+                />
+                <i id="profilePigIcon" class="bi bi-piggy-bank"></i>
               </div>
+
               <div>
                 <h5 class="mb-1" id="profileSwineId">—</h5>
                 <div class="small text-muted" id="profileBreedType">—</div>
@@ -29,210 +39,469 @@
 
           <div class="profile-stats-row mt-3">
             <div class="stat">
-              <div class="label"><i class="fa-solid fa-calendar-days me-1"></i> Age</div>
+              <div class="label"><i class="bi bi-calendar3 me-1"></i> Age</div>
               <div class="value" id="profileAge">—</div>
             </div>
             <div class="stat">
-              <div class="label"><i class="fa-solid fa-weight-scale me-1"></i> Weight</div>
+              <div class="label"><i class="bi bi-speedometer2 me-1"></i> Weight</div>
               <div class="value" id="profileWeight">—</div>
             </div>
             <div class="stat">
-              <div class="label"><i class="fa-solid fa-layer-group me-1"></i> Stage</div>
+              <div class="label"><i class="bi bi-layers me-1"></i> Stage</div>
               <div class="value" id="profileStage">—</div>
             </div>
             <div class="stat">
-              <div class="label"><i class="fa-solid fa-venus-mars me-1"></i> Sex</div>
+              <div class="label"><i class="bi bi-gender-ambiguous me-1"></i> Sex</div>
               <div class="value" id="profileSex">—</div>
             </div>
           </div>
         </div>
 
-        <!-- ================= PROFILE TABS ================= -->
-        <ul class="nav nav-pills mb-3 gap-2" id="pigProfileTabs">
-          <li class="nav-item">
-            <button class="nav-link active" data-target="profileTab" type="button">Overview</button>
+        <!-- ================= PROFILE TABS (BOOTSTRAP) ================= -->
+        <ul class="nav nav-pills mb-3 gap-2" id="pigProfileTabs" role="tablist">
+
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="overview-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#profileTab"
+              type="button"
+              role="tab"
+              aria-controls="profileTab"
+              aria-selected="true"
+              data-target="profileTab"
+            >
+              Overview
+            </button>
           </li>
 
-          <li class="nav-item d-none" id="reproNav">
-            <button class="nav-link" data-target="reproductionTab" type="button">Reproduction</button>
+          <!-- keep but hidden -->
+          <li class="nav-item d-none" id="reproNav" role="presentation">
+            <button
+              class="nav-link"
+              id="repro-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#reproductionTab"
+              type="button"
+              role="tab"
+              aria-controls="reproductionTab"
+              aria-selected="false"
+              data-target="reproductionTab"
+            >
+              Reproduction
+            </button>
           </li>
 
-          <li class="nav-item d-none" id="offspringNav">
-            <button class="nav-link" data-target="offspringTab" type="button">Offspring</button>
+          <!-- show/hide via JS depending on sow -->
+          <li class="nav-item" id="offspringNav" role="presentation">
+            <button
+              class="nav-link"
+              id="offspring-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#offspringTab"
+              type="button"
+              role="tab"
+              aria-controls="offspringTab"
+              aria-selected="false"
+              data-target="offspringTab"
+            >
+              Offspring Overview
+            </button>
           </li>
 
-          <li class="nav-item">
-            <button class="nav-link" data-target="performanceTab" type="button">Growth</button>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="growth-tab"
+              data-bs-toggle="pill"
+              data-bs-target="#performanceTab"
+              type="button"
+              role="tab"
+              aria-controls="performanceTab"
+              aria-selected="false"
+              data-target="performanceTab"
+            >
+              Growth
+            </button>
           </li>
         </ul>
 
-        <!-- ================= OVERVIEW TAB ================= -->
-        <div id="profileTab" class="profile-tab">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <h6 class="mb-3">Current Condition</h6>
-                  <div class="d-flex justify-content-between"><span>Status</span><span id="profileStatus">—</span></div>
-                  <div class="d-flex justify-content-between"><span>Stage</span><span id="profileStageDisplay">—</span></div>
-                  <div class="d-flex justify-content-between"><span>Age</span><span id="profileAgeDisplay">—</span></div>
-                  <div class="d-flex justify-content-between"><span>Sex</span><span id="profileSexDisplay">—</span></div>
+        <!-- ================= TAB CONTENT ================= -->
+        <div class="tab-content" id="pigProfileTabContent">
+
+          <!-- ================= OVERVIEW TAB ================= -->
+          <div
+            id="profileTab"
+            class="tab-pane fade show active"
+            role="tabpanel"
+            aria-labelledby="overview-tab"
+            tabindex="0"
+          >
+            <!-- ACTION BUTTONS -->
+            <div class="d-flex flex-wrap gap-2 justify-content-end mb-3">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="openPigInfoBtn">
+                <i class="bi bi-person-vcard me-1"></i> Update Pig Info
+              </button>
+
+              <button type="button" class="btn btn-success btn-sm" id="openGrowthUpdateBtn">
+                <i class="bi bi-activity me-1"></i> Update Growth
+              </button>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                  <div class="card-body">
+                    <h6 class="mb-3">Current Condition</h6>
+                    <div class="d-flex justify-content-between"><span>Status</span><span id="profileStatus">—</span></div>
+                    <div class="d-flex justify-content-between"><span>Stage</span><span id="profileStageDisplay">—</span></div>
+                    <div class="d-flex justify-content-between"><span>Age</span><span id="profileAgeDisplay">—</span></div>
+                    <div class="d-flex justify-content-between"><span>Sex</span><span id="profileSexDisplay">—</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                  <div class="card-body">
+                    <h6 class="mb-3">Latest Measurements</h6>
+                    <div class="d-flex justify-content-between"><span>Weight</span><span id="profileWeightDisplay">—</span></div>
+                    <div class="d-flex justify-content-between"><span>Body Length</span><span id="profileLengthDisplay">—</span></div>
+                    <div class="d-flex justify-content-between"><span>Heart Girth</span><span id="profileGirthDisplay">—</span></div>
+                    <div class="small text-muted mt-2">Last updated: <span id="profileLastUpdate">—</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ================= REPRO TAB (deprecated/hidden) ================= -->
+          <div
+            id="reproductionTab"
+            class="tab-pane fade"
+            role="tabpanel"
+            aria-labelledby="repro-tab"
+            tabindex="0"
+          ></div>
+
+          <!-- ================= OFFSPRING OVERVIEW TAB ================= -->
+          <div
+            id="offspringTab"
+            class="tab-pane fade"
+            role="tabpanel"
+            aria-labelledby="offspring-tab"
+            tabindex="0"
+          >
+            <div class="offspring-head mb-3">
+              <div>
+                <h5 class="mb-1">Offspring Overview</h5>
+                <div class="text-muted small">Cycle summary, outcomes, parents, and piglet list</div>
+              </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                  <div class="metric-label">Total Piglets</div>
+                  <div class="metric-value" id="offspringStatTotal">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                  <div class="metric-label">Live</div>
+                  <div class="metric-value text-success" id="offspringStatLive">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                  <div class="metric-label">Dead</div>
+                  <div class="metric-value text-danger" id="offspringStatDead">0</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                  <div class="metric-label">Cycles</div>
+                  <div class="metric-value" id="offspringStatCycles">0</div>
                 </div>
               </div>
             </div>
 
-            <div class="col-md-6">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <h6 class="mb-3">Latest Measurements</h6>
-                  <div class="d-flex justify-content-between"><span>Weight</span><span id="profileWeightDisplay">—</span></div>
-                  <div class="d-flex justify-content-between"><span>Body Length</span><span id="profileLengthDisplay">—</span></div>
-                  <div class="d-flex justify-content-between"><span>Heart Girth</span><span id="profileGirthDisplay">—</span></div>
-                  <div class="small text-muted mt-2">Last updated: <span id="profileLastUpdate">—</span></div>
+            <div class="card border-0 shadow-sm mb-3">
+              <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                  <div>
+                    <div class="fw-bold">Piglets per Cycle</div>
+                    <div class="text-muted small">Alive vs Dead comparison</div>
+                  </div>
                 </div>
+                <div class="chart-wrap">
+                  <canvas id="offspringChart" height="120"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="cycle-bar mb-3">
+              <div class="cycle-bar-left">
+                <div class="cycle-bar-title">
+                  <i class="bi bi-funnel"></i>
+                  <span>Select Cycle</span>
+                </div>
+                <select id="offspringCycleFilter" class="form-select"></select>
+              </div>
+
+              <button type="button" class="btn btn-outline-success cycle-latest-btn" id="offspringLatestBtn">
+                <i class="bi bi-arrow-clockwise me-1"></i> Latest
+              </button>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0" id="offspringPanelTitle">Farrowing Cycles</h6>
+                  <div class="text-muted small"><span id="pigletsCountLabel">0</span> record(s)</div>
+                </div>
+
+                <div id="offspringEmptyState" class="text-muted text-center d-none">
+                  No offspring found
+                </div>
+
+                <div id="offspringCycleList" class="d-flex flex-column gap-3"></div>
+              </div>
+            </div>
+
+            <div id="reproSummarySection" class="card border-0 shadow-sm mb-3 d-none">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Reproductive Overview</h6>
+                </div>
+
+                <div class="row text-center g-3">
+                  <div class="col">
+                    <div class="border rounded py-2">
+                      <div class="small text-muted">Cycles</div>
+                      <div id="statCycles" class="fw-bold fs-5">0</div>
+                    </div>
+                  </div>
+
+                  <div class="col">
+                    <div class="border rounded py-2">
+                      <div class="small text-muted">Total Born</div>
+                      <div id="statTotalBorn" class="fw-bold fs-5">0</div>
+                    </div>
+                  </div>
+
+                  <div class="col">
+                    <div class="border rounded py-2">
+                      <div class="small text-muted">Avg Litter</div>
+                      <div id="statAvgLitter" class="fw-bold fs-5">0</div>
+                    </div>
+                  </div>
+
+                  <div class="col">
+                    <div class="border rounded py-2">
+                      <div class="small text-muted">Live</div>
+                      <div id="statTotalLive" class="fw-bold fs-5">0</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================= GROWTH TAB ================= -->
+          <div
+            id="performanceTab"
+            class="tab-pane fade"
+            role="tabpanel"
+            aria-labelledby="growth-tab"
+            tabindex="0"
+          >
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Weight Trend</h6>
+                <small class="text-muted">Auto-updated</small>
+              </div>
+              <div class="bg-white rounded p-3 shadow-sm">
+                <canvas id="growthChart" height="120"></canvas>
+              </div>
+            </div>
+
+            <div>
+              <h6 class="mb-3">Monthly Growth Summary</h6>
+
+              <div class="growth-filter-bar">
+                <div class="growth-filter-label">
+                  <i class="bi bi-calendar3"></i>
+                  <span>Year</span>
+                </div>
+
+                <select id="growthYearFilter" class="growth-year-select"></select>
+              </div>
+
+              <div id="growthTimeline" class="d-flex flex-column gap-3"></div>
+            </div>
+          </div>
+
+        </div><!-- /tab-content -->
+
+
+        <!-- =======================================================
+          OFFCANVAS: UPDATE PIG INFO (KEEP OUTSIDE TAB PANES)
+        ======================================================= -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="pigInfoCanvas" aria-labelledby="pigInfoCanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="pigInfoCanvasLabel">
+              <i class="bi bi-person-vcard"></i> Update Pig Info
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+          </div>
+
+          <div class="offcanvas-body">
+            <form id="pigInfoForm" novalidate>
+              <input type="hidden" id="pigInfoSwineId" />
+
+              <div class="offcanvas-panel-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="offcanvas-strong">Profile Photo</div>
+                  <span class="offcanvas-mini">Max 5MB</span>
+                </div>
+
+                <div class="profile-photo-row">
+                  <div class="profile-photo-preview">
+                    <img id="pigProfilePreview" src="/images/default-pig.png" alt="Profile" />
+                  </div>
+
+                  <div class="flex-grow-1">
+                    <input
+                      id="pigProfileFile"
+                      type="file"
+                      class="form-control"
+                      accept="image/png,image/jpeg,image/webp"
+                    />
+                    <div class="offcanvas-help">JPG / PNG / WebP</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="offcanvas-panel-card">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                  <div class="offcanvas-strong">Pig Details</div>
+                  <div class="offcanvas-mini">Update basic info</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label mb-1">Breed</label>
+                  <input id="pigInfoBreed" type="text" class="form-control" placeholder="e.g., Native" />
+                </div>
+
+                <div class="row g-2">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label mb-1">Sex</label>
+                    <select id="pigInfoSex" class="form-select">
+                      <option value="">—</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label mb-1">Stage</label>
+                    <select id="pigInfoStage" class="form-select">
+                      <option value="">—</option>
+                      <option value="piglet">Piglet</option>
+                      <option value="growing">Weaner</option>
+                      <option value="adult">Adult</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="mt-3">
+                  <label class="form-label mb-1">Health Status</label>
+                  <select id="pigInfoHealthStatus" class="form-select">
+                    <option value="">—</option>
+                    <option value="Healthy">Healthy</option>
+                    <option value="Sick">Sick</option>
+                    <option value="Deceased (Before Weaning)">Deceased (Before Weaning)</option>
+                    <option value="Deceased">Deceased</option>
+                  </select>
+                </div>
+
+                <div class="mt-3">
+                  <label class="form-label mb-1">Birth Date</label>
+                  <input id="pigInfoBirthDate" type="date" class="form-control" />
+                </div>
+
+                <div class="offcanvas-actions">
+                  <button class="btn btn-success flex-grow-1" id="savePigInfoBtn" type="submit">
+                    <i class="bi bi-save2 me-2"></i>Save
+                  </button>
+                  <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="offcanvas">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- =======================================================
+          OFFCANVAS: UPDATE GROWTH (KEEP OUTSIDE TAB PANES)
+        ======================================================= -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="growthCanvas" aria-labelledby="growthCanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="growthCanvasLabel">
+              <i class="bi bi-activity"></i> Update Growth
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+          </div>
+
+          <div class="offcanvas-body">
+            <div class="offcanvas-panel-card">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="offcanvas-strong">Current Pig</div>
+                <span class="growth-id-pill">
+                  <i class="bi bi-upc-scan"></i>
+                  Swine ID: <span id="growthCanvasSwineIdLabel">—</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="offcanvas-panel-card">
+              <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="offcanvas-strong">Measurements</div>
+                <div class="offcanvas-mini">Latest update</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label mb-1">Weight (kg)</label>
+                <input class="form-control" id="growthWeight" type="number" step="0.1" placeholder="e.g., 26.3" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label mb-1">Body Length (cm)</label>
+                <input class="form-control" id="growthLength" type="number" step="0.1" placeholder="e.g., 36" />
+              </div>
+
+              <div class="mb-0">
+                <label class="form-label mb-1">Heart Girth (cm)</label>
+                <input class="form-control" id="growthGirth" type="number" step="0.1" placeholder="e.g., 36.7" />
+              </div>
+
+              <div class="offcanvas-actions">
+                <button class="btn btn-success flex-grow-1" id="saveGrowthCanvasBtn" type="button">
+                  <i class="bi bi-box-arrow-down me-2"></i>Save Growth
+                </button>
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="offcanvas">
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-      <!-- ================= REPRODUCTION TAB ================= -->
-      <div id="reproductionTab" class="profile-tab d-none">
-
-        <!-- ===== SUMMARY / OVERVIEW ===== -->
-        <div
-          id="reproSummarySection"
-          class="card border-0 shadow-sm mb-4 d-none"
-        >
-          <div class="card-body">
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h6 class="mb-0">Reproductive Overview</h6>
-            </div>
-
-            <div class="row text-center g-3">
-
-              <div class="col">
-                <div class="border rounded py-2">
-                  <div class="small text-muted">Cycles</div>
-                  <div id="statCycles" class="fw-bold fs-5">0</div>
-                </div>
-              </div>
-
-              <div class="col">
-                <div class="border rounded py-2">
-                  <div class="small text-muted">Total Born</div>
-                  <div id="statTotalBorn" class="fw-bold fs-5">0</div>
-                </div>
-              </div>
-
-              <div class="col">
-                <div class="border rounded py-2">
-                  <div class="small text-muted">Avg Litter</div>
-                  <div id="statAvgLitter" class="fw-bold fs-5">0</div>
-                </div>
-              </div>
-
-              <div class="col">
-                <div class="border rounded py-2">
-                  <div class="small text-muted">Live</div>
-                  <div id="statTotalLive" class="fw-bold fs-5">0</div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        <!-- ===== SECTION TITLE ===== -->
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="mb-0">Breeding & Farrowing History</h6>
-        </div>
-
-        <!-- ===== CYCLE CARDS ===== -->
-        <div
-          id="reproductionCardList"
-          class="d-flex flex-column gap-3"
-        ></div>
-
-        <!-- ===== EMPTY STATE ===== -->
-        <div
-          id="reproductionEmptyState"
-          class="text-center text-muted py-4 d-none"
-        >
-          No breeding or farrowing records yet.
-        </div>
-
-      </div>
-
-      <!-- ================= OFFSPRING TAB ================= -->
-      <div id="offspringTab" class="profile-tab d-none">
-
-        <!-- FILTER BAR (MATCHES GROWTH YEAR FILTER) -->
-        <div class="growth-filter-bar mb-3">
-          <div class="growth-filter-label">
-            <i class="fa-solid fa-arrows-rotate"></i>
-            <span>Cycle</span>
-          </div>
-
-          <select
-            id="offspringCycleFilter"
-            class="growth-year-select">
-            <!-- populated via JS -->
-          </select>
-        </div>
-
-        <!-- EMPTY STATE -->
-        <div
-          id="offspringEmptyState"
-          class="text-muted text-center d-none">
-          No offspring found
-        </div>
-
-        <!-- CYCLE GROUPED LIST -->
-        <div
-          id="offspringCycleList"
-          class="d-flex flex-column gap-3">
-        </div>
-
-      </div>
-
-        <!-- ================= GROWTH TAB ================= -->
-        <div id="performanceTab" class="profile-tab d-none">
-
-          <!-- 📊 WEIGHT TREND -->
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h6 class="mb-0">Weight Trend</h6>
-              <small class="text-muted">Auto-updated</small>
-            </div>
-            <div class="bg-white rounded p-3 shadow-sm">
-              <canvas id="growthChart" height="120"></canvas>
-            </div>
-          </div>
-
-          <!-- 📅 MONTHLY GROWTH -->
-          <div>
-            <h6 class="mb-3">Monthly Growth Summary</h6>
-
-            <!-- YEAR FILTER BAR -->
-            <div class="growth-filter-bar">
-              <div class="growth-filter-label">
-                <i class="fa-solid fa-calendar"></i>
-                <span>Year</span>
-              </div>
-
-              <select
-                id="growthYearFilter"
-                class="growth-year-select">
-              </select>
-            </div>
-
-            <div id="growthTimeline" class="d-flex flex-column gap-3"></div>
-          </div>
-
-        </div>
-
-      </div>
+      </div><!-- /modal-body -->
     </div>
   </div>
 </div>

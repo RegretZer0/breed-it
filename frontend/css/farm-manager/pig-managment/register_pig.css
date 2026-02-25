@@ -1,55 +1,54 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
 
 /* =========================================================
-   REGISTER PIG — BASED ON SWINE-LIST THEME
-   (Same tokens + same panel tabs + same card look)
-   NOTE: No .app-shell layout overrides here.
+   REGISTER PIG — BOOTSTRAP DASHBOARD THEME (DUOLINGO-LIKE)
+   Goals:
+   - Bootstrap grid for responsiveness (no custom grid required)
+   - Soft cards, rounded corners, subtle green accents
+   - Keep existing IDs intact (JS-safe)
 ========================================================= */
 
 :root{
-  /* Match your app shell */
-  --shell-bg: #f6f7fb;
-  --card-bg: #ffffff;
+  --shell-bg:#f6f7fb;
+  --card-bg:#ffffff;
 
-  --border: #e9edf3;
-  --border-2: #e6e6e6;
+  --border:#e9edf3;
+  --text:#1f2937;
+  --muted:#6b7280;
 
-  --text: #1f2937;
-  --muted: #6b7280;
+  --green:#198754;
+  --green-2:#0f7a34;
 
-  --green: #198754;
-  --green-2: #0f7a34;
+  --radius-xl:24px;
+  --radius-lg:20px;
+  --radius-md:16px;
+  --radius-sm:12px;
 
-  --radius-lg: 18px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-
-  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
-  --shadow-md: 0 10px 26px rgba(0,0,0,0.08);
+  --shadow-1: 0 2px 10px rgba(0,0,0,0.03);
+  --shadow-2: 0 10px 26px rgba(0,0,0,0.08);
 
   --gutter: 18px;
+
 }
 
+/* Base */
 html, body{
-  height: 100%;
-  margin: 0;
-  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  background: var(--shell-bg);
-  color: var(--text);
+  height:100%;
+  margin:0;
+  font-family:"Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background:var(--shell-bg);
+  color:var(--text);
 }
 
-*, *::before, *::after{ box-sizing: border-box; }
+*, *::before, *::after{ box-sizing:border-box; }
 
 /* =========================================================
    MAIN CONTENT SAFETY
 ========================================================= */
-.main-content{
-  min-width: 0; /* important for flex layouts */
-}
+.main-content{ min-width:0; }
 
 /* =========================================================
-   PAGE CARD BASE (matches swine-list)
-   pigmanagement_panel uses these
+   PAGE CARD
 ========================================================= */
 .page-card{
   border: 1px solid var(--border);
@@ -58,9 +57,7 @@ html, body{
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
 
-.page-card .card-body{
-  padding: 18px;
-}
+.page-card .card-body{ padding: 18px; }
 
 /* =========================================================
    MODULE HEADER CARD (SWINE MANAGEMENT + tabs)
@@ -70,308 +67,881 @@ html, body{
   letter-spacing: .02em;
   margin: 0;
 }
-
-.tabs-row{
-  margin-top: 12px;
+/* Shell */
+.register-shell{
+  border-radius:var(--radius-xl);
+  overflow:hidden;
 }
 
-/* "tab buttons" (the <a> tags) */
-.tab-btn{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fff;
-
-  font-weight: 900;
-  font-size: 13px;
-  color: var(--text);
-
-  transition: transform .12s ease, background .15s ease, border-color .15s ease;
+/* Header */
+.module-head{ margin-bottom:14px; }
+.module-title{
+  font-weight:900;
+  letter-spacing:.02em;
+  margin:0;
+}
+.module-sub{
+  color:var(--muted);
+  font-weight:700;
+  margin:6px 0 0;
 }
 
-.tab-btn:hover{
-  transform: translateY(-1px);
-  background: rgba(25,135,84,0.06);
-  border-color: rgba(25,135,84,0.25);
+.module-hint-card{
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:999px;
+  padding:10px 12px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.04);
+  color:var(--muted);
 }
-
-.tab-btn.active{
-  background: rgba(25,135,84,0.12);
-  border-color: rgba(25,135,84,0.35);
-  color: var(--green-2);
+.module-hint-card i{
+  color:var(--green);
+  font-size:16px;
 }
 
 /* =========================================================
-   REGISTER PIG CARD (make it match swine-list cards)
+   SECTION CARDS
 ========================================================= */
-.pig-card{
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card-bg);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+.section-card{
+  border:1px solid var(--border);
+  border-radius:var(--radius-xl);
+  background:
+    radial-gradient(900px 260px at 0% 0%, rgba(25,135,84,0.07), transparent 55%),
+    #fff;
+  box-shadow:0 2px 14px rgba(0,0,0,0.05);
+  overflow:hidden;
+  margin-bottom:14px;
 }
 
-.pig-card .card-body{
-  padding: 18px;
+.section-card-head{
+  padding:14px 16px;
+  border-bottom:1px solid rgba(233,237,243,0.95);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
 }
 
-/* Title inside register card */
-.pig-card h4{
-  font-weight: 900;
-  letter-spacing: .02em;
-  margin: 0 0 14px 0 !important;
+.section-left{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  min-width:0;
 }
 
-/* =========================================================
-   SECTION TITLES (match swine-list label style)
-========================================================= */
+.section-icon{
+  width:44px;
+  height:44px;
+  border-radius:16px;
+  background:rgba(25,135,84,0.10);
+  border:1px solid var(--border);
+  display:grid;
+  place-items:center;
+  color:var(--green-2);
+  flex:0 0 auto;
+}
+
 .section-title{
-  margin-top: 18px;
-  margin-bottom: 10px;
-
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: .08em;
+  font-weight:900;
+  letter-spacing:.01em;
+  margin:0;
 }
 
+.section-sub{
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.section-card-body{ padding:16px; }
+
 /* =========================================================
-   LABELS + INPUTS (bold like swine-list)
+   INPUTS (Bootstrap-friendly)
 ========================================================= */
 .form-label{
-  display: block;
-  margin-bottom: 6px;
-
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--text);
+  font-size:12px;
+  font-weight:900;
+  margin-bottom:6px;
+  color:var(--text);
 }
 
-/* Form controls */
-input.form-control,
-select.form-select,
-textarea.form-control{
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  min-height: 42px;
-  background: #fff;
-
-  font-weight: 900;
-  font-size: 13px;
-  color: var(--text);
+.form-control,
+.form-select{
+  border-radius:14px;
+  border:1px solid var(--border);
+  min-height:44px;
+  font-weight:900;
+  font-size:13px;
+  color:var(--text);
 }
 
-input.form-control::placeholder,
-textarea.form-control::placeholder{
-  color: rgba(107,114,128,0.85);
-  font-weight: 700;
+.form-control::placeholder{
+  color:rgba(107,114,128,0.85);
+  font-weight:700;
 }
 
-input.form-control:focus,
-select.form-select:focus,
-textarea.form-control:focus{
-  outline: none;
-  border-color: rgba(25,135,84,0.45);
-  box-shadow: 0 0 0 3px rgba(25,135,84,0.14);
+.form-control:focus,
+.form-select:focus{
+  outline:none;
+  border-color:rgba(25,135,84,0.45);
+  box-shadow:0 0 0 3px rgba(25,135,84,0.14);
 }
 
-/* =========================================================
-   FARMER DROPDOWN (same style as swine-list filter)
-========================================================= */
-#farmerDropdownBtn.form-select{
-  cursor: pointer;
-  user-select: none;
-}
-
-.dropdown-menu{
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-.dropdown-item{
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-weight: 900;
-  font-size: 13px;
-}
-
-.dropdown-item:hover{
-  background: rgba(25,135,84,0.10);
+.field-hint{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:700;
+  margin-top:6px;
 }
 
 /* =========================================================
-   DEFORMITIES CHECKLIST (match pill style)
+   FARMER EMPTY + SELECTED CARD
 ========================================================= */
-#deformityChecklist{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  padding: 8px 2px;
+.empty-card{
+  border:1px dashed rgba(107,114,128,0.35);
+  background:#fff;
+  border-radius:18px;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
 }
 
-#deformityChecklist label{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.empty-left{ display:flex; align-items:center; gap:12px; min-width:0; }
 
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fff;
-
-  font-weight: 900;
-  font-size: 12px;
-  color: var(--text);
-  cursor: pointer;
-  user-select: none;
+.empty-icon{
+  width:46px; height:46px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  background:#f6f7fb;
+  display:grid; place-items:center;
+  color:var(--muted);
+  flex:0 0 auto;
 }
 
-#deformityChecklist input[type="checkbox"]{
-  margin: 0;
-  transform: translateY(1px);
+.empty-title{ font-weight:900; margin:0; }
+.empty-sub{
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
+  margin-top:3px;
 }
+
+.selected-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.selected-card-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.selected-card .avatar{
+  width:58px; height:58px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  overflow:hidden;
+  background:#f6f7fb;
+  flex:0 0 auto;
+}
+
+.selected-card .avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.selected-card .meta{ min-width:0; }
+
+.selected-card .name{
+  font-weight:900;
+  font-size:14px;
+  line-height:1.2;
+}
+
+.selected-card .sub{
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+  margin-top:3px;
+}
+
+.pill-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  color:var(--text);
+  max-width:100%;
+}
+
+.pill i{ color:var(--green); font-size:13px; }
+
+.selected-card-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+  flex:0 0 auto;
+}
+
+.badge-soft{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(25,135,84,0.18);
+  background:rgba(25,135,84,0.10);
+  color:var(--green-2);
+  font-weight:900;
+  font-size:12px;
+}
+
+.btn-row{ display:flex; gap:8px; flex-wrap:wrap; }
 
 /* =========================================================
-   ACTION BUTTONS (consistent with theme)
+   PILL CHECKLIST
 ========================================================= */
-.btn-save,
-.btn-clear{
-  border-radius: 12px;
-  font-weight: 900;
-  font-size: 13px;
-  padding: 10px 16px;
-  min-height: 42px;
+.pill-checklist{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px 12px;
 }
 
-/* Register */
-.btn-save{
-  background: var(--green);
-  border: 1px solid var(--green);
-  color: #fff;
+.pill-check{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  cursor:pointer;
+  user-select:none;
 }
 
-.btn-save:hover,
-.btn-save:focus{
-  background: var(--green-2);
-  border-color: var(--green-2);
-  color: #fff;
+.pill-check input{ margin:0; transform: translateY(1px); }
+
+/* Smaller action buttons (instead of big btn-lg look) */
+.form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:10px;
 }
 
-/* Clear */
-.btn-clear{
-  background: #f55b66;
-  border: 1px solid #f55b66;
-  color: #fff;
+.form-actions .btn-md{
+  border-radius:14px;
+  font-weight:900;
+  padding:10px 14px;   /* smaller */
+  font-size:13px;      /* smaller */
+  line-height:1.2;
 }
 
-.btn-clear:hover,
-.btn-clear:focus{
-  background: #e55362;
-  border-color: #e55362;
-  color: #fff;
-}
-
-.btn-save:disabled,
-.btn-clear:disabled{
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Status message */
-#swineMessage{
-  margin-top: 10px;
-  font-weight: 900;
-}
-
-/* =========================================================
-   MODALS (same base as swine-list)
-========================================================= */
-.modal-content{
-  border-radius: 18px;
-  border: 1px solid var(--border);
-}
-
-.modal-header{
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal-title{
-  font-weight: 900;
-}
-
-.modal-body{
-  padding: 16px 18px 18px;
-}
-
-/* Preview content */
-.preview-content{
-  font-size: 13px;
-}
-
-.preview-content .preview-row{
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px dashed var(--border);
-}
-
-.preview-content .preview-row span:first-child{
-  font-weight: 900;
-  color: var(--muted);
-}
-
-.preview-content .preview-row span:last-child{
-  font-weight: 900;
-  color: var(--text);
-}
-
-.preview-section{
-  margin-top: 14px;
-  margin-bottom: 8px;
-  font-weight: 900;
-}
-
-/* Bootstrap modal layering */
-.modal{ z-index: 1055 !important; }
-.modal-backdrop{ z-index: 1050 !important; }
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-
-/* Tablet */
-@media (max-width: 992px){
-  .pig-card .card-body{
-    padding: 16px;
-  }
-}
-
-/* Mobile */
+/* Mobile: full width still */
 @media (max-width: 576px){
-  .pig-card .card-body{
-    padding: 14px;
+  .form-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .form-actions .btn{
+    width:100%;
+  }
+}
+
+/* =========================================================
+   RIGHT SUMMARY (XL)
+========================================================= */
+.sticky-xl{ position:sticky; top:88px; }
+@media (max-width: 1199.98px){
+  .sticky-xl{ position:static; top:auto; }
+}
+
+.side-summary{
+  border-radius:var(--radius-xl);
+  overflow:hidden;
+}
+
+.fw-black{ font-weight:900; }
+
+.chip-soft{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(25,135,84,0.18);
+  background:rgba(25,135,84,0.10);
+  color:var(--green-2);
+  font-weight:900;
+  font-size:12px;
+}
+
+.checklist{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.check-item{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:#fff;
+}
+
+.check-item i{
+  font-size:18px;
+  color:var(--green);
+  flex:0 0 auto;
+  margin-top:2px;
+}
+
+.check-title{
+  font-weight:900;
+  font-size:13px;
+}
+
+.check-sub{
+  font-weight:700;
+  font-size:12px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.mini-stat{
+  flex:1;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:10px 12px;
+  background:#fff;
+}
+
+.mini-stat-top{
+  font-size:12px;
+  font-weight:900;
+  color:var(--muted);
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+.mini-stat-top i{ color:var(--green); }
+
+.mini-stat-val{
+  margin-top:6px;
+  font-weight:900;
+  font-size:12px;
+  color:var(--text);
+}
+
+/* =========================================================
+   MODALS (keep your existing theme)
+========================================================= */
+.farmer-modal,
+.feedback-modal{
+  border-radius:22px;
+  border:1px solid var(--border);
+  overflow:hidden;
+  box-shadow:var(--shadow-2);
+}
+
+.farmer-modal .modal-header,
+.feedback-modal .modal-header{
+  padding:16px 18px;
+  border-bottom:1px solid var(--border);
+}
+
+.farmer-modal .modal-title,
+.feedback-modal .modal-title{ font-weight:900; }
+
+.farmer-modal .modal-body,
+.feedback-modal .modal-body{ padding:16px 18px 18px; }
+
+.farmer-modal-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.searchbox{ position:relative; flex:1; }
+.searchbox i{
+  position:absolute;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--muted);
+  font-size:14px;
+}
+.searchbox input{ padding-left:36px !important; }
+
+.farmer-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.farmer-card{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:#fff;
+  padding:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.03);
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  cursor:pointer;
+}
+
+.farmer-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  border-color: rgba(25,135,84,0.22);
+}
+
+.farmer-card.selected{
+  background:
+    radial-gradient(800px 220px at 0% 0%, rgba(25,135,84,0.08), transparent 55%),
+    #fff;
+  border-color: rgba(25,135,84,0.28);
+}
+
+.farmer-card-left{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.farmer-avatar{
+  width:56px;
+  height:56px;
+  border-radius:16px;
+  border:1px solid var(--border);
+  overflow:hidden;
+  background:#f6f7fb;
+  flex:0 0 auto;
+}
+
+.farmer-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.farmer-meta{ min-width:0; }
+.farmer-name{
+  font-weight:900;
+  font-size:14px;
+  line-height:1.2;
+}
+.farmer-sub{
+  margin-top:3px;
+  font-size:12px;
+  font-weight:800;
+  color:var(--muted);
+}
+
+.farmer-badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+
+.mini-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:#fff;
+  font-weight:900;
+  font-size:12px;
+  color:var(--text);
+}
+
+.mini-pill i{ color:var(--green); }
+
+.feedback-body{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+}
+
+.feedback-icon{
+  width:52px;
+  height:52px;
+  border-radius:18px;
+  border:1px solid var(--border);
+  background:rgba(25,135,84,0.10);
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+}
+
+#feedbackIcon{ font-size:22px; color:var(--green-2); }
+#feedbackIcon[data-type="error"]{ color:#b42318; }
+#feedbackIcon[data-type="warn"]{ color:#b54708; }
+#feedbackIcon[data-type="info"]{ color:#175cd3; }
+#feedbackIcon[data-type="success"]{ color:var(--green-2); }
+
+.feedback-title{
+  font-weight:900;
+  font-size:14px;
+}
+
+.feedback-msg{
+  margin-top:6px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--muted);
+}
+
+.feedback-modal .modal-footer{
+  border-top:1px solid var(--border);
+  padding:12px 18px;
+}
+
+/* =========================================================
+   RESPONSIVE FIXES
+========================================================= */
+@media (max-width: 992px){
+  .selected-card{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .selected-card-right{
+    align-items:flex-start;
+    width:100%;
+  }
+  .empty-card{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .empty-card .btn{
+    width:100%;
+  }
+}
+
+@media (max-width: 576px){
+  .register-shell .card-body{ padding:14px; }
+
+  .form-actions{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .form-actions .btn{ width:100%; }
+
+  .farmer-modal-controls{
+    flex-direction:column;
+    align-items:stretch;
+  }
+}
+
+/* =========================================================
+   ✅ SWINE MANAGEMENT PANEL TABS — ULTRA OVERRIDE (kept)
+========================================================= */
+
+.pigmanagement-panel,
+.pig-management-panel,
+.pigmanagement-panel-wrap,
+.pigmanagement_panel,
+#pigmanagementPanel,
+#pigManagementPanel,
+.swine-management-panel,
+.swine-management-wrap,
+.swine-panel,
+.pig-panel{
+  margin-bottom:16px;
+}
+
+.pigmanagement-panel.page-card,
+.pig-management-panel.page-card,
+.pigmanagement-panel-wrap.page-card,
+.pigmanagement_panel.page-card,
+#pigmanagementPanel.page-card,
+#pigManagementPanel.page-card,
+.swine-management-panel.page-card,
+.swine-panel.page-card{
+  border:1px solid var(--border) !important;
+  border-radius:var(--radius-lg) !important;
+  background:#fff !important;
+  box-shadow:0 2px 10px rgba(0,0,0,0.03) !important;
+}
+
+.pigmanagement-panel.page-card > .card-body,
+.pig-management-panel.page-card > .card-body,
+.pigmanagement-panel-wrap.page-card > .card-body,
+.pigmanagement_panel.page-card > .card-body,
+#pigmanagementPanel.page-card > .card-body,
+#pigManagementPanel.page-card > .card-body,
+.swine-management-panel.page-card > .card-body,
+.swine-panel.page-card > .card-body{
+  padding:18px !important;
+}
+
+.pigmanagement-panel .page-title,
+.pig-management-panel .page-title,
+.pigmanagement-panel-wrap .page-title,
+.pigmanagement_panel .page-title,
+#pigmanagementPanel .page-title,
+#pigManagementPanel .page-title,
+.swine-management-panel .page-title,
+.swine-panel .page-title{
+  font-weight:900 !important;
+  letter-spacing:.02em !important;
+  margin:0 !important;
+}
+
+.pigmanagement-panel .tabs-row,
+.pig-management-panel .tabs-row,
+.pigmanagement-panel-wrap .tabs-row,
+.pigmanagement_panel .tabs-row,
+#pigmanagementPanel .tabs-row,
+#pigManagementPanel .tabs-row,
+.swine-management-panel .tabs-row,
+.swine-panel .tabs-row,
+.pigmanagement-panel .nav,
+.pig-management-panel .nav,
+.pigmanagement-panel-wrap .nav,
+.pigmanagement_panel .nav,
+#pigmanagementPanel .nav,
+#pigManagementPanel .nav,
+.swine-management-panel .nav,
+.swine-panel .nav{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  flex-wrap:nowrap !important;
+  overflow-x:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  padding-bottom:6px !important;
+  margin-top:12px !important;
+}
+
+.pigmanagement-panel .tabs-row .tab-btn,
+.pig-management-panel .tabs-row .tab-btn,
+.pigmanagement-panel-wrap .tabs-row .tab-btn,
+.pigmanagement_panel .tabs-row .tab-btn,
+#pigmanagementPanel .tabs-row .tab-btn,
+#pigManagementPanel .tabs-row .tab-btn,
+.swine-management-panel .tabs-row .tab-btn,
+.swine-panel .tabs-row .tab-btn,
+
+.pigmanagement-panel .tabs-row .nav-link,
+.pig-management-panel .tabs-row .nav-link,
+.pigmanagement-panel-wrap .tabs-row .nav-link,
+.pigmanagement_panel .tabs-row .nav-link,
+#pigmanagementPanel .tabs-row .nav-link,
+#pigManagementPanel .tabs-row .nav-link,
+.swine-management-panel .tabs-row .nav-link,
+.swine-panel .tabs-row .nav-link,
+
+.pigmanagement-panel .tabs-row a,
+.pig-management-panel .tabs-row a,
+.pigmanagement-panel-wrap .tabs-row a,
+.pigmanagement_panel .tabs-row a,
+#pigmanagementPanel .tabs-row a,
+#pigManagementPanel .tabs-row a,
+.swine-management-panel .tabs-row a,
+.swine-panel .tabs-row a,
+
+.pigmanagement-panel .nav .nav-link,
+.pig-management-panel .nav .nav-link,
+.pigmanagement-panel-wrap .nav .nav-link,
+.pigmanagement_panel .nav .nav-link,
+#pigmanagementPanel .nav .nav-link,
+#pigManagementPanel .nav .nav-link,
+.swine-management-panel .nav .nav-link,
+.swine-panel .nav .nav-link{
+  flex:0 0 auto !important;
+  white-space:nowrap !important;
+
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  text-decoration:none !important;
+
+  padding:10px 14px !important;
+  border-radius:999px !important;
+
+  border:1px solid var(--border) !important;
+  background:#fff !important;
+
+  font-weight:900 !important;
+  font-size:13px !important;
+  color:var(--text) !important;
+
+  transition: transform .12s ease, background .15s ease, border-color .15s ease !important;
+}
+
+.pigmanagement-panel .tabs-row .tab-btn:hover,
+.pig-management-panel .tabs-row .tab-btn:hover,
+.pigmanagement-panel-wrap .tabs-row .tab-btn:hover,
+.pigmanagement_panel .tabs-row .tab-btn:hover,
+#pigmanagementPanel .tabs-row .tab-btn:hover,
+#pigManagementPanel .tabs-row .tab-btn:hover,
+.swine-management-panel .tabs-row .tab-btn:hover,
+.swine-panel .tabs-row .tab-btn:hover,
+
+.pigmanagement-panel .tabs-row .nav-link:hover,
+.pig-management-panel .tabs-row .nav-link:hover,
+.pigmanagement-panel-wrap .tabs-row .nav-link:hover,
+.pigmanagement_panel .tabs-row .nav-link:hover,
+#pigmanagementPanel .tabs-row .nav-link:hover,
+#pigManagementPanel .tabs-row .nav-link:hover,
+.swine-management-panel .tabs-row .nav-link:hover,
+.swine-panel .tabs-row .nav-link:hover,
+
+.pigmanagement-panel .tabs-row a:hover,
+.pig-management-panel .tabs-row a:hover,
+.pigmanagement-panel-wrap .tabs-row a:hover,
+.pigmanagement_panel .tabs-row a:hover,
+#pigmanagementPanel .tabs-row a:hover,
+#pigManagementPanel .tabs-row a:hover,
+.swine-management-panel .tabs-row a:hover,
+.swine-panel .tabs-row a:hover{
+  transform: translateY(-1px) !important;
+  background: rgba(25,135,84,0.06) !important;
+  border-color: rgba(25,135,84,0.25) !important;
+}
+
+.pigmanagement-panel .tabs-row .tab-btn.active,
+.pig-management-panel .tabs-row .tab-btn.active,
+.pigmanagement-panel-wrap .tabs-row .tab-btn.active,
+.pigmanagement_panel .tabs-row .tab-btn.active,
+#pigmanagementPanel .tabs-row .tab-btn.active,
+#pigManagementPanel .tabs-row .tab-btn.active,
+.swine-management-panel .tabs-row .tab-btn.active,
+.swine-panel .tabs-row .tab-btn.active,
+
+.pigmanagement-panel .tabs-row .tab-btn[aria-current="page"],
+.pig-management-panel .tabs-row .tab-btn[aria-current="page"],
+.pigmanagement-panel-wrap .tabs-row .tab-btn[aria-current="page"],
+.pigmanagement_panel .tabs-row .tab-btn[aria-current="page"],
+#pigmanagementPanel .tabs-row .tab-btn[aria-current="page"],
+#pigManagementPanel .tabs-row .tab-btn[aria-current="page"],
+.swine-management-panel .tabs-row .tab-btn[aria-current="page"],
+.swine-panel .tabs-row .tab-btn[aria-current="page"],
+
+.pigmanagement-panel .tabs-row .nav-link.active,
+.pig-management-panel .tabs-row .nav-link.active,
+.pigmanagement-panel-wrap .tabs-row .nav-link.active,
+.pigmanagement_panel .tabs-row .nav-link.active,
+#pigmanagementPanel .tabs-row .nav-link.active,
+#pigManagementPanel .tabs-row .nav-link.active,
+.swine-management-panel .tabs-row .nav-link.active,
+.swine-panel .tabs-row .nav-link.active,
+
+.pigmanagement-panel .tabs-row .nav-link[aria-current="page"],
+.pig-management-panel .tabs-row .nav-link[aria-current="page"],
+.pigmanagement-panel-wrap .tabs-row .nav-link[aria-current="page"],
+.pigmanagement_panel .tabs-row .nav-link[aria-current="page"],
+#pigmanagementPanel .tabs-row .nav-link[aria-current="page"],
+#pigManagementPanel .tabs-row .nav-link[aria-current="page"],
+.swine-management-panel .tabs-row .nav-link[aria-current="page"],
+.swine-panel .tabs-row .nav-link[aria-current="page"]{
+  background: rgba(25,135,84,0.12) !important;
+  border-color: rgba(25,135,84,0.35) !important;
+  color: var(--green-2) !important;
+}
+
+.pigmanagement-panel .tab-divider,
+.pig-management-panel .tab-divider,
+.pigmanagement-panel-wrap .tab-divider,
+.pigmanagement_panel .tab-divider,
+#pigmanagementPanel .tab-divider,
+#pigManagementPanel .tab-divider,
+.swine-management-panel .tab-divider,
+.swine-panel .tab-divider{
+  width:1px !important;
+  height:28px !important;
+  background-color:#d1d5db !important;
+  align-self:center !important;
+  flex:0 0 auto !important;
+}
+
+@media (max-width: 576px){
+  .pigmanagement-panel .tabs-row,
+  .pig-management-panel .tabs-row,
+  .pigmanagement-panel-wrap .tabs-row,
+  .pigmanagement_panel .tabs-row,
+  #pigmanagementPanel .tabs-row,
+  #pigManagementPanel .tabs-row,
+  .swine-management-panel .tabs-row,
+  .swine-panel .tabs-row,
+  .pigmanagement-panel .nav,
+  .pig-management-panel .nav,
+  .pigmanagement-panel-wrap .nav,
+  .pigmanagement_panel .nav,
+  #pigmanagementPanel .nav,
+  #pigManagementPanel .nav,
+  .swine-management-panel .nav,
+  .swine-panel .nav{
+    gap:8px !important;
   }
 
-  /* Buttons stack */
-  .pig-card form .d-flex.justify-content-end{
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .pig-card form .d-flex.justify-content-end .btn{
-    width: 100%;
-  }
-
-  #deformityChecklist{
-    gap: 10px;
+  .pigmanagement-panel .tabs-row .tab-btn,
+  .pig-management-panel .tabs-row .tab-btn,
+  .pigmanagement-panel-wrap .tabs-row .tab-btn,
+  .pigmanagement_panel .tabs-row .tab-btn,
+  #pigmanagementPanel .tabs-row .tab-btn,
+  #pigManagementPanel .tabs-row .tab-btn,
+  .swine-management-panel .tabs-row .tab-btn,
+  .swine-panel .tabs-row .tab-btn,
+  .pigmanagement-panel .tabs-row .nav-link,
+  .pig-management-panel .tabs-row .nav-link,
+  .pigmanagement-panel-wrap .tabs-row .nav-link,
+  .pigmanagement_panel .tabs-row .nav-link,
+  #pigmanagementPanel .tabs-row .nav-link,
+  #pigManagementPanel .tabs-row .nav-link,
+  .swine-management-panel .tabs-row .nav-link,
+  .swine-panel .tabs-row .nav-link,
+  .pigmanagement-panel .tabs-row a,
+  .pig-management-panel .tabs-row a,
+  .pigmanagement-panel-wrap .tabs-row a,
+  .pigmanagement_panel .tabs-row a,
+  #pigmanagementPanel .tabs-row a,
+  #pigManagementPanel .tabs-row a,
+  .swine-management-panel .tabs-row a,
+  .swine-panel .tabs-row a{
+    padding:9px 12px !important;
+    font-size:13px !important;
   }
 }

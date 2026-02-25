@@ -22,6 +22,9 @@ const swineSchema = new mongoose.Schema({
   // Link piglet to a specific breeding cycle of the dam
   birth_cycle_number: { type: Number, required: false },
 
+  // Profile photo (public URL path)
+  profile_photo: { type: String, default: "" },
+  
   // ------------------- Current Lifecycle State -------------------
   current_status: {
     type: String,

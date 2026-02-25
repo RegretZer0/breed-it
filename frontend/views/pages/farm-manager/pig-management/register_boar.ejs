@@ -7,37 +7,62 @@
 
     <%- include("../../../partials/farm-manager/pigmanagement_panel") %>
 
-    <div class="card pig-card">
+    <!-- =========================================================
+         OUTER CARD (THEME MATCHED)
+    ========================================================== -->
+    <div class="card page-card register-shell">
       <div class="card-body">
 
-        <h4 class="mb-4 fw-bold">REGISTER MASTER BOAR</h4>
+        <!-- HEADER -->
+        <div class="module-head d-flex flex-column flex-lg-row align-items-lg-start justify-content-between gap-3 mb-3">
+          <div class="min-w-0">
+            <h4 class="module-title mb-1">REGISTER MASTER BOAR</h4>
+            <p class="module-sub mb-0">
+              A unique Boar ID will be generated automatically (e.g. <strong>BOAR-0001</strong>).
+              Breed is fixed to <strong>Native</strong>.
+            </p>
+          </div>
+        </div>
 
-        <p class="text-muted mb-4">
-          Note: A unique Boar ID will be generated automatically (e.g. <strong>BOAR-0001</strong>).
-          Breed is fixed to <strong>Native</strong> for station-owned boars.
-        </p>
+        <form id="registerBoarForm" novalidate>
 
-            <form id="registerBoarForm">
+          <!-- =========================================================
+               SECTION: BASIC INFO
+          ========================================================== -->
+          <section class="section-card">
+            <div class="section-card-head">
+              <div class="section-left">
+                <div class="section-icon"><i class="bi bi-piggy-bank"></i></div>
+                <div class="min-w-0">
+                  <div class="section-title">Boar Information</div>
+                  <div class="section-sub">General identity & health information.</div>
+                </div>
+              </div>
+            </div>
 
-            <!-- BASIC INFO -->
-            <h6 class="section-title">Boar Information</h6>
-            <div class="row g-3 mb-4">
+            <div class="section-card-body">
+              <div class="row g-3">
 
-                <div class="col-md-4">
-                <label class="form-label">Breed</label>
-                <input
+                <!-- Batch ID / Source ID -->
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Batch ID / Source ID</label>
+                  <input
                     type="text"
-                    id="breed"
+                    id="batch"
                     class="form-control"
-                    value="Native"
-                    readonly
-                />
+                    placeholder="Enter Batch ID"
+                  />
+                  <!-- <div class="field-hint">Optional reference (same meaning as in pig registration).</div> -->
                 </div>
 
-                <!-- COLOR -->
-                <div class="col-md-4">
-                <label class="form-label">Color</label>
-                <select id="colorSelect" class="form-select" required>
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Breed</label>
+                  <input type="text" id="breed" class="form-control" value="Native" readonly />
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Color</label>
+                  <select id="colorSelect" class="form-select" required>
                     <option value="">Select Color</option>
                     <option value="Black">Black</option>
                     <option value="Black with White Markings">Black with White Markings</option>
@@ -46,129 +71,140 @@
                     <option value="Spotted (Black & White)">Spotted (Black & White)</option>
                     <option value="Gray">Gray</option>
                     <option value="Other">Other (Specify)</option>
-                </select>
+                  </select>
                 </div>
 
-                <!-- OTHER COLOR (SAME FIELD PATH) -->
-                <div class="col-md-4 d-none" id="otherColorGroup">
-                <label class="form-label">Specify Color</label>
-                <input
-                    type="text"
-                    id="otherColorInput"
-                    class="form-control"
-                    placeholder="Enter color description"
-                />
+                <div class="col-12 col-md-6 col-lg-4 d-none" id="otherColorGroup">
+                  <label class="form-label">Specify Color</label>
+                  <input type="text" id="otherColorInput" class="form-control" />
                 </div>
 
-
-                <div class="col-md-4">
-                <label class="form-label">Date Registered / Transferred</label>
-                <input
-                    type="date"
-                    id="dateTransfer"
-                    class="form-control"
-                    required
-                />
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Birth Date</label>
+                  <input type="date" id="birthDate" class="form-control" required />
                 </div>
 
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Date Registered / Transferred</label>
+                  <input type="date" id="dateTransfer" class="form-control" required />
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-4">
+                  <label class="form-label">Health Status</label>
+                  <select id="healthStatus" class="form-select">
+                    <option value="Healthy">Healthy</option>
+                    <option value="Sick">Sick</option>
+                    <option value="Injured">Injured</option>
+                  </select>
+                </div>
+
+              </div>
+            </div>
+          </section>
+
+          <!-- =========================================================
+               SECTION: MEASUREMENTS
+          ========================================================== -->
+          <section class="section-card">
+            <div class="section-card-head">
+              <div class="section-left">
+                <div class="section-icon"><i class="bi bi-rulers"></i></div>
+                <div class="min-w-0">
+                  <div class="section-title">Initial Physical Measurements</div>
+                  <div class="section-sub">All measurements required for baseline data.</div>
+                </div>
+              </div>
             </div>
 
-            <!-- MEASUREMENTS -->
-            <h6 class="section-title">Initial Physical Measurements</h6>
-            <div class="row g-3 mb-4">
+            <div class="section-card-body">
+              <div class="row g-3">
 
-                <div class="col-md-3">
-                <label class="form-label">Weight (kg)</label>
-                <input type="number" id="weight" step="0.01" class="form-control" required />
+                <div class="col-12 col-md-6 col-lg-3">
+                  <label class="form-label">Weight (kg)</label>
+                  <input type="number" id="weight" step="0.01" class="form-control" required />
                 </div>
 
-                <div class="col-md-3">
-                <label class="form-label">Body Length (cm)</label>
-                <input type="number" id="bodyLength" step="0.1" class="form-control" required />
+                <div class="col-12 col-md-6 col-lg-3">
+                  <label class="form-label">Body Length (cm)</label>
+                  <input type="number" id="bodyLength" step="0.1" class="form-control" required />
                 </div>
 
-                <div class="col-md-3">
-                <label class="form-label">Heart Girth (cm)</label>
-                <input type="number" id="heartGirth" step="0.1" class="form-control" required />
+                <div class="col-12 col-md-6 col-lg-3">
+                  <label class="form-label">Heart Girth (cm)</label>
+                  <input type="number" id="heartGirth" step="0.1" class="form-control" required />
                 </div>
 
-                <div class="col-md-3">
-                <label class="form-label">Teeth Count</label>
-                <input type="number" id="teethCount" class="form-control" required />
+                <div class="col-12 col-md-6 col-lg-3">
+                  <label class="form-label">Teeth Count</label>
+                  <input type="number" id="teethCount" class="form-control" required />
                 </div>
 
+              </div>
             </div>
+          </section>
 
-            <p id="boarMessage" class="small"></p>
+          <!-- ACTIONS (smaller) -->
+          <div class="form-actions mt-2">
+            <button type="reset" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-eraser me-1"></i> Clear
+            </button>
 
-            <div class="d-flex justify-content-end gap-3">
-                <button type="reset" class="btn btn-clear px-4">CLEAR</button>
-                <button type="submit" class="btn btn-save px-4">REGISTER BOAR</button>
-            </div>
+            <button type="submit" class="btn btn-success btn-sm">
+              <i class="bi bi-check2-circle me-1"></i> Register Boar
+            </button>
+          </div>
 
-            </form>
-
-
+        </form>
       </div>
     </div>
   </div>
 
-    <!-- PREVIEW BOAR MODAL -->
-        <div class="modal fade" id="previewBoarModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Master Boar Registration</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-
-            <div class="modal-body">
-                <p class="text-muted mb-3">
-                Please review the information before confirming.
-                </p>
-
-                <div id="previewBoarContent" class="preview-content"></div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-clear" data-bs-dismiss="modal">
-                Cancel
-                </button>
-                <button type="button" id="confirmBoarBtn" class="btn btn-save">
-                Confirm & Register
-                </button>
-            </div>
-
+  <!-- ================= PREVIEW MODAL ================= -->
+  <div class="modal fade" id="previewBoarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirm Master Boar Registration</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+        <div class="modal-body">
+          <p class="text-muted mb-3">Please review the information before confirming.</p>
+          <div id="previewBoarContent" class="preview-content"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button" id="confirmBoarBtn" class="btn btn-success">
+            Confirm & Register
+          </button>
+        </div>
+      </div>
     </div>
-    </div>
+  </div>
 
-    <!-- SUCCESS BOAR MODAL -->
-    <div class="modal fade" id="successBoarModal" tabindex="-1">
+  <!-- ================= SUCCESS MODAL ================= -->
+  <div class="modal fade" id="successBoarModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center">
-
+      <div class="modal-content text-center">
         <div class="modal-header border-0">
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-
         <div class="modal-body pb-4">
-            <div class="mb-3" style="font-size: 3rem;">✅</div>
-            <h4 class="fw-bold text-success">Master Boar Registered</h4>
-            <p id="successBoarId" class="text-muted mb-0"></p>
+          <div class="mb-3" style="font-size: 3rem;">
+            <i class="bi bi-check-circle-fill text-success"></i>
+          </div>
+          <h4 class="fw-bold text-success">Master Boar Registered</h4>
+          <p id="successBoarId" class="text-muted mb-0"></p>
         </div>
-
         <div class="modal-footer border-0 justify-content-center">
-            <button type="button" class="btn btn-save px-4" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">
             OK
-            </button>
+          </button>
         </div>
-
-        </div>
+      </div>
     </div>
-    </div>
-
+  </div>
 
 </main>
 

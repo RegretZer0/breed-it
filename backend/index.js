@@ -7,6 +7,7 @@ const path = require("path");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const initHeatCron = require("./utils/cronJobs");
+const fs = require("fs");
 
 // ROUTES
 const adminRoutes = require("./routes/adminRoutes");
@@ -107,6 +108,23 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 // Uploaded & public assets
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "public")));
+
+
+/* =========================
+    UPLOADS FOLDER (ENSURE EXISTS)
+========================= */
+const uploadsDir = path.join(__dirname, "uploads");
+const pigUploadsDir = path.join(uploadsDir, "pigs");
+
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(pigUploadsDir)) fs.mkdirSync(pigUploadsDir, { recursive: true });
+
+/* =========================
+    BODY LIMITS (OPTIONAL, HELPS WITH FORMS)
+========================= */
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 
 /* =========================
     MONGODB CONNECTION
