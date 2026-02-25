@@ -1,3 +1,4 @@
+// overview.pigs.js
 export function initPigsModule(ctx, breedingModule) {
   const { BACKEND_URL, token, state, dom } = ctx;
   const { setText, setImage, showGlobalLoader, hideGlobalLoader } = ctx;
@@ -30,6 +31,7 @@ export function initPigsModule(ctx, breedingModule) {
         state.rawPerformanceData.deformities = perf.deformities || [];
       }
 
+      // reproductionRoute.js returns { success:true, data:[...] }
       if (ai.success) state.rawAiData = ai.data || [];
       if (sel.success) state.rawSelectionData = sel.data || [];
       if (swine.success) state.allSwineData = swine.swine || swine.data || [];
@@ -91,11 +93,7 @@ export function initPigsModule(ctx, breedingModule) {
       ?.classList.remove("d-none");
 
     // ensure pigs panel is in list mode
-    document.getElementById("pigAnalysisPanel")?.classList.add("d-none");
-    document.getElementById("linkedPigList")?.classList.remove("d-none");
-    document.getElementById("farmerPigCategoryTabs")?.classList.remove("hidden-section");
-    document.getElementById("pigFilterSection")?.classList.remove("hidden-section");
-    document.getElementById("farmerProfileTabs")?.classList.remove("hidden-section");
+    closePigAnalysisView();
 
     if (dom.farmerModal) dom.farmerModal.show();
 
@@ -106,18 +104,14 @@ export function initPigsModule(ctx, breedingModule) {
   /* ================= LOAD LINKED PIGS ================= */
   async function loadLinkedPigs(farmerId) {
     // Reset analysis view when switching farmer
-    document.getElementById("pigAnalysisPanel")?.classList.add("d-none");
-    document.getElementById("linkedPigList")?.classList.remove("d-none");
-    document.getElementById("farmerPigCategoryTabs")?.classList.remove("hidden-section");
-    document.getElementById("pigFilterSection")?.classList.remove("hidden-section");
-    document.getElementById("farmerProfileTabs")?.classList.remove("hidden-section");
+    closePigAnalysisView();
 
     state.pigPage = 1;
     state.litterPage = 1;
     state.aiPage = 1;
     state.filteredPigList = [];
 
-    // ✅ FIX: reset breeding pagination/state per farmer
+    // reset breeding pagination/state per farmer
     state.breedingSowPage = 1;
     state.breedingCyclePage = 1;
     state.breedingPigletPage = 1;
@@ -170,7 +164,7 @@ export function initPigsModule(ctx, breedingModule) {
     const wrap = document.getElementById("linkedPigList");
     if (!wrap) return;
 
-    // ✅ FIX: prevent "No pigs found" when category != all but filters not applied yet
+    // prevent "No pigs found" when category != all but filters not applied yet
     const list =
       (state.filteredPigList && state.filteredPigList.length)
         ? state.filteredPigList
@@ -295,17 +289,278 @@ export function initPigsModule(ctx, breedingModule) {
       });
     }
 
-    if (tag) {
-      filtered = filtered.filter(p => p.swine_id?.toLowerCase().includes(tag));
-    }
-
-    if (status) {
-      filtered = filtered.filter(p => p.health_status === status);
-    }
+    if (tag) filtered = filtered.filter(p => p.swine_id?.toLowerCase().includes(tag));
+    if (status) filtered = filtered.filter(p => p.health_status === status);
 
     state.filteredPigList = filtered;
     state.pigPage = 1;
     renderFarmerPigs();
+  }
+
+  /* ================= PIG ANALYSIS ================= */
+  function closePigAnalysisView() {
+    document.getElementById("pigAnalysisPanel")?.classList.add("d-none");
+    document.getElementById("linkedPigList")?.classList.remove("d-none");
+
+    document.getElementById("farmerPigCategoryTabs")?.classList.remove("hidden-section");
+    document.getElementById("pigFilterSection")?.classList.remove("hidden-section");
+    document.getElementById("farmerProfileTabs")?.classList.remove("hidden-section");
+  }
+
+  function openPigAnalysis(pigId) {
+    const pig = state.currentFarmerPigs.find(p => (p._id || "").toString() === (pigId || "").toString());
+    if (!pig) return;
+
+    // Ensure research data exists for analysis tabs
+    if ((!state.rawAiData || !state.rawAiData.length) &&
+        (!state.rawPerformanceData?.morphology || !state.rawPerformanceData.morphology.length) &&
+        (!state.rawSelectionData || !state.rawSelectionData.length)) {
+      // fire and forget; UI still opens and will show "No data" until fetched
+      loadResearchData().catch(() => {});
+    }
+
+    // switch UI
+    document.getElementById("linkedPigList")?.classList.add("d-none");
+    document.getElementById("farmerPigCategoryTabs")?.classList.add("hidden-section");
+    document.getElementById("pigFilterSection")?.classList.add("hidden-section");
+    document.getElementById("farmerProfileTabs")?.classList.add("hidden-section");
+
+    const panel = document.getElementById("pigAnalysisPanel");
+    if (!panel) return;
+    panel.classList.remove("d-none");
+
+    // header meta
+    setText("analysisPigTitle", `Pig Analysis: ${pig.swine_id || "—"}`);
+    setText(
+      "analysisPigMeta",
+      `${pig.breed || "Native"} · ${pig.sex || "—"} · ${pig.age_stage || "—"} · Status: ${pig.health_status || "—"}`
+    );
+
+    // reset tabs -> Profile
+    document.querySelectorAll("#pigAnalysisTabs .nav-link").forEach(b => b.classList.remove("active"));
+    document.querySelector('#pigAnalysisTabs .nav-link[data-target="pigProfileTab"]')?.classList.add("active");
+
+    document.querySelectorAll(".pig-analysis-tab").forEach(t => t.classList.add("d-none"));
+    document.getElementById("pigProfileTab")?.classList.remove("d-none");
+
+    // render content
+    renderPigProfileTab(pig);
+    renderPigBreedingTab(pig);
+    renderPigPerformanceTab(pig);
+    renderPigHealthTab(pig);
+    renderPigSelectionTab(pig);
+
+    // back button
+    document.getElementById("backToPigList")?.addEventListener("click", () => {
+      closePigAnalysisView();
+    }, { once: true });
+  }
+
+  function renderCardBlock(title, bodyHtml) {
+    return `
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h6 class="mb-0 fw-semibold">${title}</h6>
+          </div>
+          ${bodyHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderKeyValueRows(rows = []) {
+    return rows.map(r => `
+      <div class="d-flex justify-content-between gap-3 py-2 border-bottom" style="border-color: rgba(233,237,243,.85) !important;">
+        <span class="text-muted">${r.label}</span>
+        <span class="fw-semibold text-end">${r.value ?? "—"}</span>
+      </div>
+    `).join("") + `<div class="pt-2"></div>`;
+  }
+
+  function safeDate(d) {
+    if (!d) return "—";
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return "—";
+    return dt.toLocaleDateString();
+  }
+
+  // ✅ FIX: match against your actual route payloads
+  function matchByPig(pig, rec) {
+    const pigMongoId = (pig?._id || "").toString().trim();
+    const pigTag = (pig?.swine_id || "").toString().trim();
+
+    // ai-history: sow_tag
+    // performance-analytics: swine_tag
+    // selection-candidates: swine_tag
+    const candidates = [
+      rec?.swine_tag,
+      rec?.sow_tag,
+      rec?.swine_id,     // if ever sent as raw swine tag
+      rec?.swine_code,
+      rec?.pig_id,
+      rec?.swineId,
+      rec?._id,
+      rec?.id
+    ].map(x => (x ?? "").toString().trim()).filter(Boolean);
+
+    return candidates.includes(pigTag) || candidates.includes(pigMongoId);
+  }
+
+  function renderPigProfileTab(pig) {
+    const el = document.getElementById("pigProfileTab");
+    if (!el) return;
+
+    el.innerHTML = renderCardBlock(
+      `<i class="bi bi-person-vcard me-2"></i>Profile`,
+      renderKeyValueRows([
+        { label: "Swine ID", value: pig.swine_id },
+        { label: "Breed", value: pig.breed || "Native" },
+        { label: "Sex", value: pig.sex },
+        { label: "Age Stage", value: pig.age_stage },
+        { label: "Current Status", value: pig.current_status || "—" },
+        { label: "Health Status", value: pig.health_status },
+        { label: "Dam ID", value: pig.dam_id || "—" },
+        { label: "Sire ID", value: pig.sire_id || "—" },
+        { label: "Birth Date", value: safeDate(pig.birth_date) }
+      ])
+    );
+  }
+
+  function renderPigBreedingTab(pig) {
+    const el = document.getElementById("pigBreedingTab");
+    if (!el) return;
+
+    const records = Array.isArray(state.rawAiData)
+      ? state.rawAiData.filter(r => matchByPig(pig, r))
+      : [];
+
+    if (!records.length) {
+      el.innerHTML = renderCardBlock(
+        `<i class="bi bi-droplet-half me-2"></i>Artificial Insemination Record`,
+        `<div class="text-muted">No AI records found for this pig.</div>`
+      );
+      return;
+    }
+
+    const list = records.slice(0, 10).map(r => `
+      <div class="py-2 border-bottom" style="border-color: rgba(233,237,243,.85) !important;">
+        <div class="fw-semibold">AI Record</div>
+        <div class="small text-muted">
+          Date: ${safeDate(r.date)} · Boar: ${r.boar_tag || "N/A"} · Status: ${r.status || "—"}
+        </div>
+      </div>
+    `).join("");
+
+    el.innerHTML = renderCardBlock(
+      `<i class="bi bi-droplet-half me-2"></i>Artificial Insemination Record`,
+      `
+        <div class="small text-muted mb-2">Showing latest ${Math.min(records.length, 10)} record(s).</div>
+        ${list}
+      `
+    );
+  }
+
+  function renderPigPerformanceTab(pig) {
+    const el = document.getElementById("pigPerformanceTab");
+    if (!el) return;
+
+    const morph = Array.isArray(state.rawPerformanceData?.morphology)
+      ? state.rawPerformanceData.morphology.filter(r => matchByPig(pig, r))
+      : [];
+
+    if (!morph.length) {
+      el.innerHTML = renderCardBlock(
+        `<i class="bi bi-graph-up me-2"></i>Piglets Growth Records`,
+        `<div class="text-muted">No growth/performance records found.</div>`
+      );
+      return;
+    }
+
+    const latest = morph
+      .slice()
+      .sort((a, b) => new Date(b?.morphology?.date || 0) - new Date(a?.morphology?.date || 0))[0];
+
+    const m = latest?.morphology || {};
+
+    el.innerHTML = renderCardBlock(
+      `<i class="bi bi-graph-up me-2"></i>Piglets Growth Records`,
+      `
+        <div class="small text-muted mb-2">Latest record</div>
+        ${renderKeyValueRows([
+          { label: "Stage", value: m.stage || "—" },
+          { label: "Date", value: safeDate(m.date) },
+          { label: "Weight (kg)", value: m.weight ?? "—" },
+          { label: "Body Length (cm)", value: m.body_length ?? "—" },
+          { label: "Heart Girth (cm)", value: m.heart_girth ?? "—" },
+          { label: "Teat Count", value: m.teat_count ?? "—" },
+          { label: "Teeth", value: m.teeth ?? "—" }
+        ])}
+      `
+    );
+  }
+
+  function renderPigHealthTab(pig) {
+    const el = document.getElementById("pigHealthTab");
+    if (!el) return;
+
+    const defs = Array.isArray(state.rawPerformanceData?.deformities)
+      ? state.rawPerformanceData.deformities.filter(r => matchByPig(pig, r))
+      : [];
+
+    const meds = Array.isArray(pig.medical_records) ? pig.medical_records : [];
+
+    const defectsBlock = !defs.length
+      ? `<div class="text-muted">No deformity records found.</div>`
+      : defs.slice(0, 10).map(d => `
+          <div class="py-2 border-bottom" style="border-color: rgba(233,237,243,.85) !important;">
+            <div class="fw-semibold">${d.deformity_types || "Deformity"}</div>
+            <div class="small text-muted">Date detected: ${safeDate(d.date_detected)}</div>
+          </div>
+        `).join("");
+
+    const medsBlock = !meds.length
+      ? `<div class="text-muted">No medical records found.</div>`
+      : meds.slice().reverse().slice(0, 10).map(m => `
+          <div class="py-2 border-bottom" style="border-color: rgba(233,237,243,.85) !important;">
+            <div class="fw-semibold">${m.treatment_type || "Treatment"}</div>
+            <div class="small text-muted">
+              Medicine: ${m.medicine_name || "—"} · Dosage: ${m.dosage || "—"} · Date: ${safeDate(m.admin_date)}
+            </div>
+            ${m.remarks ? `<div class="small text-muted">Remarks: ${m.remarks}</div>` : ""}
+          </div>
+        `).join("");
+
+    el.innerHTML = `
+      ${renderCardBlock(`<i class="bi bi-bug me-2"></i>Defects`, defectsBlock)}
+      ${renderCardBlock(`<i class="bi bi-shield-check me-2"></i>Medical Records`, medsBlock)}
+    `;
+  }
+
+  function renderPigSelectionTab(pig) {
+    const el = document.getElementById("pigSelectionTab");
+    if (!el) return;
+
+    const sel = Array.isArray(state.rawSelectionData)
+      ? state.rawSelectionData.find(r => matchByPig(pig, r))
+      : null;
+
+    if (!sel) {
+      el.innerHTML = renderCardBlock(
+        `<i class="bi bi-award me-2"></i>Selection Status`,
+        `<div class="text-muted">No selection status found for this pig.</div>`
+      );
+      return;
+    }
+
+    el.innerHTML = renderCardBlock(
+      `<i class="bi bi-award me-2"></i>Selection Status`,
+      renderKeyValueRows([
+        { label: "Current Stage", value: sel.current_stage ?? "—" },
+        { label: "Can Promote", value: sel.can_promote === true ? "Yes" : sel.can_promote === false ? "No" : "—" },
+        { label: "Recommendation", value: sel.recommendation ?? "—" }
+      ])
+    );
   }
 
   /* ================= REPRO SNAPSHOT (MODAL STATS) ================= */
@@ -357,7 +612,7 @@ export function initPigsModule(ctx, breedingModule) {
 
     const totalBorn = bornPiglets.length;
 
-    // ✅ FIX: true deaths only
+    // true deaths only
     const totalDead = bornPiglets.filter(x => ctx.isDeadStatus(x.health_status)).length;
 
     const mortalityPct = totalBorn > 0
@@ -379,7 +634,7 @@ export function initPigsModule(ctx, breedingModule) {
 
   /* ================= EVENT WIRING ================= */
 
-  // Global click handler (kept your behavior)
+  // Global click handler
   document.addEventListener("click", (e) => {
     const farmerBtn = e.target.closest(".view-farmer-btn");
     if (farmerBtn) {
@@ -396,9 +651,7 @@ export function initPigsModule(ctx, breedingModule) {
 
     const analyzeBtn = e.target.closest(".analyze-pig-btn");
     if (analyzeBtn) {
-      // keep your openPigAnalysis flow if it exists in your full file
-      // (this snippet version doesn’t include the full analysis renderer)
-      console.warn("openPigAnalysis() not included in this module snippet.");
+      openPigAnalysis(analyzeBtn.dataset.id);
       return;
     }
 
@@ -428,7 +681,7 @@ export function initPigsModule(ctx, breedingModule) {
     }
   });
 
-  // Farmer tab switch (kept)
+  // Farmer tab switch
   document.querySelectorAll("#farmerProfileTabs .nav-link")
     .forEach(btn => {
       btn.addEventListener("click", () => {
@@ -486,6 +739,24 @@ export function initPigsModule(ctx, breedingModule) {
 
       state.filteredPigList = [];
       renderFarmerPigs();
+    });
+
+  // Pig analysis tab switch (inside analysis panel)
+  document.getElementById("pigAnalysisTabs")
+    ?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".nav-link");
+      if (!btn) return;
+
+      document.querySelectorAll("#pigAnalysisTabs .nav-link")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+
+      document.querySelectorAll(".pig-analysis-tab")
+        .forEach(tab => tab.classList.add("d-none"));
+
+      const target = btn.dataset.target;
+      document.getElementById(target)?.classList.remove("d-none");
     });
 
   return {

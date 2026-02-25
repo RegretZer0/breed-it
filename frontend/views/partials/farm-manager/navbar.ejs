@@ -25,26 +25,25 @@
     <!-- Right -->
     <div class="ms-auto d-flex align-items-center gap-2 top-icons">
 
-      <!-- Notifications -->
+      <!-- Notifications (badge optional) -->
       <button
         type="button"
-        class="icon-btn"
+        class="icon-btn position-relative"
+        id="notificationsBtn"
         title="Notifications"
         data-bs-toggle="offcanvas"
         data-bs-target="#notificationsPanel"
+        aria-controls="notificationsPanel"
       >
         <i class="bi bi-bell"></i>
-      </button>
 
-      <!-- Settings -->
-      <button
-        type="button"
-        class="icon-btn"
-        title="Settings"
-        data-bs-toggle="offcanvas"
-        data-bs-target="#settingsPanel"
-      >
-        <i class="bi bi-gear"></i>
+        <!-- Unread dot (JS toggles display) -->
+        <span
+          id="notificationBadge"
+          class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+          style="display:none;"
+          aria-label="Unread notifications"
+        ></span>
       </button>
 
       <!-- User dropdown -->
@@ -102,6 +101,90 @@
     </div>
   </div>
 </header>
+
+<!-- =========================================================
+     REQUIRED BOOTSTRAP TARGETS (Prevents "backdrop undefined")
+     - Keep IDs exactly as referenced in navbar.js and notifications.js
+========================================================== -->
+
+<!-- Notifications Offcanvas -->
+<div
+  class="offcanvas offcanvas-end"
+  tabindex="-1"
+  id="notificationsPanel"
+  aria-labelledby="notificationsPanelLabel"
+>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="notificationsPanelLabel">Notifications</h5>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="offcanvas"
+      aria-label="Close"
+    ></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <!-- Recent notifications list (filled by /js/notifications.js) -->
+    <div id="notificationsList" class="d-flex flex-column gap-2"></div>
+
+    <div class="mt-3">
+      <button
+        type="button"
+        class="btn btn-outline-secondary w-100"
+        id="viewAllNotificationsBtn"
+      >
+        View all
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Settings Modal -->
+<div class="modal fade" id="accountSettingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Account Settings</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted">Account settings content here.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Help</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="text-muted">Help content here.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notification History Modal -->
+<div class="modal fade" id="notificationHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Notification History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Full history list (filled by /js/notifications.js) -->
+        <div id="notificationHistoryList" class="d-flex flex-column gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- App shell -->
 <div class="app-shell">

@@ -1,5 +1,6 @@
 /* =========================================================
    THEME PATCH — Sidebar + Topbar (Clean rail)
+   ✅ Updated: click / overlay safety + topbar z-index layer
 ========================================================= */
 
 :root{
@@ -43,8 +44,14 @@ body{
   border-bottom: 1px solid var(--topbar-border);
   height: var(--topbar-height);
   padding: 0 12px;
-}
 
+  position: fixed;   /* stronger than sticky */
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 2000;     /* higher than everything */
+}
 /* Shrink logo */
 .brand-logo{
   width: 32px;
@@ -186,9 +193,24 @@ body{
   background: rgba(255,255,255,.10);
 }
 
-/* Overlay keeps working */
+/* Overlay base */
 .overlay{
   background: rgba(0,0,0,0.30);
+}
+
+/* =========================================================
+   ✅ OVERLAY CLICK SAFETY
+   - Overlay must NOT block navbar clicks unless sidebar is open.
+   - Works with your existing #overlay element.
+========================================================= */
+#overlay{
+  display: none;
+  pointer-events: none;
+}
+
+body.sidebar-open #overlay{
+  display: block;
+  pointer-events: auto;
 }
 
 /* Footer helper card */
@@ -341,10 +363,10 @@ body{
   display: flex;
   align-items: flex-start;
 
-  /* ✅ tighter gap between sidebar and card */
+  /* tighter gap between sidebar and card */
   gap: var(--gutter, 12px);
 
-  /* ✅ tighter padding around the whole layout */
+  /* tighter padding around the whole layout */
   padding: var(--gutter, 12px);
 
   min-height: calc(100vh - var(--topbar-height, 56px));
