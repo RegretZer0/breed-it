@@ -2,20 +2,29 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 <%- include("../../../partials/farm-manager/sidepanel") %>
 
-<main class="main-content py-3 py-lg-4">
-  <div class="container-fluid">
+<main class="main-content heat-page">
+  <div class="container-fluid heat-container">
 
-    <!-- Module shell -->
-    <div class="heat-module-shell">
+    <!-- ================= TITLE CARD ================= -->
+    <div class="card page-card heat-title-card mb-3">
+      <div class="card-body d-flex align-items-start align-items-md-center justify-content-between flex-wrap gap-3">
+        <div class="min-w-0">
+          <h3 class="page-title mb-1">Heat Reports</h3>
+          <p class="heat-sub mb-0">
+            Review heat detection reports and track cycle progress.
+          </p>
+        </div>
 
-      <%- include("./overview") %>
-
-      <%- include("./report-table") %>
-
+        <div class="d-flex align-items-center gap-2">
+        </div>
+      </div>
     </div>
+
+    <%- include("./overview") %>
+    <%- include("./report-table") %>
+
   </div>
 </main>
 
 <%- include("./modal") %>
-
 <%- include("../../../partials/farm-manager/footer") %>

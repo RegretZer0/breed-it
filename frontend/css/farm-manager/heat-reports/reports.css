@@ -1,56 +1,25 @@
+
 /* =========================================================
-   ROOT TOKENS (SAFE + THEME ALIGNED)
-   - Adds tokens used by heat-reports/table.css
-   - Keeps your existing naming so older CSS won't break
+   ROOT TOKENS
 ========================================================= */
 :root {
-  /* shell / surfaces */
-  --shell-bg: #f6f7fb;
-  --card-bg: #ffffff;
-  --bg: var(--shell-bg);
+  --bg: #ffffff;
+  --muted-border: #e9e9e9;
+  --card-border: #e6e6e6;
+  --text-dark: #222222;
+  --muted-text: #6c6c6c;
 
-  /* neutrals */
-  --text: #111827;
-  --text-dark: var(--text);
-  --muted: #6b7280;
-  --muted-text: var(--muted);
-
-  --border: #e9edf3;
-  --border-soft: #eef1f4;
-  --muted-border: var(--border-soft);
-  --card-border: var(--border-soft);
-
-  /* brand */
-  --green: #198754;
-  --green-2: #0f7a34;
-  --accent-green: var(--green);
-
-  /* focus */
-  --focus: 0 0 0 3px rgba(25, 135, 84, 0.14);
-
-  /* stats palette (if you still want the colored icon circles) */
+  --accent-green: #17c14f;
   --stat-orange: #ff9a1f;
   --stat-blue: #1ea7ff;
   --stat-green: #43c572;
   --stat-red: #cf2631;
   --stat-pink: #eb79ae;
 
-  /* layout */
   --gutter: 16px;
-  --radius-lg: 18px;
-  --radius-md: 16px;
-  --radius-sm: 12px;
-  --radius: var(--radius-md);
-
-  /* shared sizes */
-  --control-h: 38px;
-  --control-h-lg: 44px;
-
-  /* shadows */
-  --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 10px 26px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 18px 60px rgba(0, 0, 0, 0.18);
+  --radius: 10px;
 }
+
 
 /* =========================================================
    RESET / BASE
@@ -64,87 +33,81 @@
 html,
 body {
   margin: 0;
-  font-family: "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--shell-bg);
-  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text-dark);
 }
 
-/* prevent iOS font zoom quirks on inputs */
-input,
-select,
-textarea,
-button {
-  font: inherit;
-}
 
 /* =========================================================
-   MAIN LAYOUT (light touch)
-   - keep base minimal so module css can own styling
+   MAIN LAYOUT
 ========================================================= */
+.main-content {
+  padding: var(--gutter);
+  min-width: 0;
+}
+
 .page-card {
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--card-border);
+  padding: var(--gutter);
 }
 
-/* If you rely on page-card padding here, keep it,
-   but note: your swine-list theme uses .page-card .card-body padding */
-.page-card > *:first-child {
-  border-top-left-radius: inherit;
-  border-top-right-radius: inherit;
-}
-
-/* Page title base only */
 .page-title {
   font-size: 20px;
-  font-weight: 900;
-  margin: 0;
-  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* =========== Shell layout =========== */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  align-items: flex-start;
 }
 
 
 /* =========================================================
    STATS GRID (GLOBAL DASHBOARD)
-   - Keep compatibility, but don’t fight module/table.css
 ========================================================= */
 .stats-grid {
   margin-top: 10px;
 }
 
-/* NOTE: module/table.css already styles `.stats-grid .stat-card`.
-   Keep this neutral. */
 .stat-card {
   background: #fff;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-soft);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  border-radius: var(--radius);
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-  border-color: rgba(25,135,84,0.20);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
 .stat-label {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 900;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--muted-text);
+  margin-bottom: 4px;
 }
 
 .stat-number {
-  font-size: 24px;
-  font-weight: 900;
+  font-size: 26px;
+  font-weight: 800;
 }
 
-/* Icon bubbles (optional, keep if used outside heat module) */
 .stat-icon {
   width: 42px;
   height: 42px;
-  border-radius: 14px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,37 +119,10 @@ button {
 .stat-icon.blue   { background: var(--stat-blue); }
 .stat-icon.green  { background: var(--stat-green); }
 .stat-icon.red    { background: var(--stat-red); }
-.stat-icon.pink   { background: var(--stat-pink); }
+.stat-icon.pink    { background: var(--stat-pink); }
 
 /* =========================================================
-   GENERIC BUTTONS (SAFE / NEUTRAL)
-   - Do NOT skin too much here to avoid conflicts with module buttons
-========================================================= */
-.btn-nav {
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-weight: 900;
-  cursor: pointer;
-  background: transparent;
-  color: inherit;
-}
-
-.btn-nav.secondary {
-  border-color: #d1d5db;
-  background: #fff;
-  color: #111827;
-}
-
-.btn-nav.secondary:hover {
-  background: #f3f4f6;
-  border-color: #cbd5e1;
-}
-
-/* =========================================================
-   GENERIC MODAL BASE (LEGACY) – softened to reduce Bootstrap clashes
-   - WARNING: Bootstrap uses .modal/.modal-content too
-   - Keep these minimal; your module details uses .modal-overlay/.modal-panel.
+   GENERIC MODAL BASE (REUSABLE)
 ========================================================= */
 .modal {
   position: fixed;
@@ -195,7 +131,7 @@ button {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(17, 24, 39, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   padding: 16px;
 }
 
@@ -203,45 +139,71 @@ body.modal-open {
   overflow: hidden;
 }
 
-/* Keep minimal so it won't override Bootstrap heavily */
 .modal-content {
   background: #fff;
   width: 100%;
   max-width: 420px;
-  border-radius: 18px;
-  padding: 18px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  animation: modalPop 0.25s ease-out;
 }
 
-/* Inputs inside custom modals */
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-content h3 {
+  margin: 0 0 12px;
+}
+
+.modal-content label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 .modal-content input,
 .modal-content select,
 .modal-content textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  border-radius: 8px;
+  border: 1px solid #ddd;
   margin-bottom: 14px;
   font-size: 14px;
-  font-weight: 800;
-  outline: none;
 }
 
-.modal-content input:focus,
-.modal-content select:focus,
-.modal-content textarea:focus {
-  border-color: rgba(25,135,84,0.45);
-  box-shadow: var(--focus);
+.modal-content .btn-nav {
+  padding: 10px 14px;
+  font-weight: 600;
+}
+
+.btn-nav.secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-nav.secondary:hover {
+  background: #d1d5db;
 }
 
 /* =========================================================
-   GENERIC MODAL SYSTEM (GLOBAL) – used by report details
+   GENERIC MODAL SYSTEM (GLOBAL)
 ========================================================= */
+
+/* Overlay */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, 0.55);
+  background: rgba(0, 0, 0, 0.55);
   display: none;
   justify-content: center;
   align-items: center;
@@ -249,118 +211,64 @@ body.modal-open {
   padding: 12px;
 }
 
+/* Panel */
 .modal-panel {
   background: #fff;
   width: 100%;
   max-width: 720px;
   max-height: 90vh;
-  border-radius: 18px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
 }
 
+/* Header */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid #eee;
 }
 
 .modal-header h5 {
   margin: 0;
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
+/* Body */
 .modal-body {
   padding: 16px;
   overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  background: #fbfcfd;
 }
 
+/* Footer */
 .modal-footer {
   padding: 12px 16px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #eee;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  background: #fff;
 }
 
+/* Close button */
 .modal-close {
-  border: 1px solid #d1d5db;
-  background: #fff;
-  border-radius: 999px;
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
+  background: none;
+  border: none;
+  font-size: 22px;
   cursor: pointer;
   line-height: 1;
-  color: #111827;
 }
 
-.modal-close:hover {
-  background: #f3f4f6;
-  border-color: #cbd5e1;
-}
-
-/* =========================================================
-   MODAL SCROLLBAR (SUBTLE) – scoped to report details only
-========================================================= */
-#reportDetailsModal .modal-body {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
-}
-
-#reportDetailsModal .modal-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-#reportDetailsModal .modal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#reportDetailsModal .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-
-#reportDetailsModal .modal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.28);
-  background-clip: content-box;
-}
-
-/* =========================================================
-   MOBILE SAFETY
-========================================================= */
+/* Mobile safety */
 @media (max-width: 576px) {
   .modal-panel {
     max-height: 95vh;
-    border-radius: 16px;
   }
 
   .modal-footer button {
     flex: 1 1 100%;
-  }
-
-  .app-shell {
-    flex-direction: column;
-    padding: 12px;
-    gap: 12px;
-  }
-
-  .main-content {
-    padding: 12px;
   }
 }

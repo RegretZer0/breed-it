@@ -1,90 +1,62 @@
-<div class="heat-toolbar">
+<div class="heat-toolbar theme-toolbar">
 
-  <!-- LEFT: STATUS TABS -->
-  <div class="heat-tabs d-flex align-items-center gap-2 flex-wrap">
-    <button class="heat-tab active" data-status="">
-      <i class="bi bi-grid-1x2 me-1"></i> All
-    </button>
-
-    <button class="heat-tab" data-status="pending">
-      <i class="bi bi-fire me-1"></i> In-Heat
-    </button>
-
-    <button class="heat-tab" data-status="under_observation">
-      <i class="bi bi-clipboard2-pulse me-1"></i> Observation
-    </button>
-
-    <button class="heat-tab" data-status="pregnant">
-      <i class="bi bi-heart-fill me-1"></i> Pregnant
-    </button>
-
-    <button class="heat-tab" data-status="lactating">
-      <i class="bi bi-droplet-fill me-1"></i> Lactating
-    </button>
+  <!-- LEFT: TABS -->
+  <div class="heat-tabs" role="tablist" aria-label="Cycle status filters">
+    <button type="button" class="heat-tab active" data-status="">All</button>
+    <button type="button" class="heat-tab" data-status="pending">In-Heat</button>
+    <button type="button" class="heat-tab" data-status="under_observation">Observation</button>
+    <button type="button" class="heat-tab" data-status="pregnant">Pregnant</button>
+    <button type="button" class="heat-tab" data-status="farrowing_ready">Farrowing</button>
+    <button type="button" class="heat-tab" data-status="lactating">Lactating</button>
   </div>
 
   <!-- RIGHT: FILTERS -->
-  <form id="heatFilterForm" class="heat-filter-form">
+  <form id="heatFilterForm" class="heat-filter-form" autocomplete="off">
 
-    <!-- Farmer Dropdown -->
-    <div class="dropdown">
+    <!-- Farmer dropdown -->
+    <div class="dropdown heat-filter-item">
       <button
         class="form-select form-select-sm text-start"
         type="button"
         id="farmerDropdownBtn"
         data-bs-toggle="dropdown"
-        aria-expanded="false"
       >
-        <span><i class="bi bi-person-lines-fill me-2"></i>Farmer</span>
+        Farmer
       </button>
 
       <div class="dropdown-menu p-2 heat-dropdown-menu">
-        <input
-          id="farmerSearch"
-          class="form-control form-control-sm mb-2"
-          placeholder="Search farmer…"
-        />
-
+        <input id="farmerSearch" class="form-control form-control-sm mb-2" placeholder="Search farmer…">
         <div id="farmerOptions">
-          <div class="text-muted small">Loading farmers…</div>
+          <div class="text-muted small px-2">Loading farmers…</div>
         </div>
       </div>
     </div>
 
-    <!-- Tag Search -->
-    <div class="heat-input-icon in-input-icon">
-        <i class="bi bi-tag"></i>
-        <input
-            id="filterSwine"
-            type="text"
-            class="form-control form-control-sm"
-            placeholder="Search tag"
-        />
+    <!-- Report status -->
+    <div class="heat-filter-item">
+      <select id="reportStatusFilter" class="form-select form-select-sm">
+        <option value="">Report Status (All)</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="completed">Completed</option>
+        <option value="ai_confirmed">AI Confirmed</option>
+        <option value="waiting_heat_check">Waiting Heat Check</option>
+      </select>
     </div>
 
-    <!-- Report Status -->
-    <div class="heat-input-icon in-input-icon">
-        <i class="bi bi-check2-circle"></i>
-        <select
-            id="reportStatusFilter"
-            class="form-select form-select-sm"
-        >
-            <option value="">All Report Status</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="completed">Completed</option>
-        </select>
+    <!-- Search -->
+    <div class="heat-filter-item heat-search-wrap">
+      <input id="filterSwine" class="form-control form-control-sm" placeholder="Search tag">
     </div>
-    
-    <!-- Buttons -->
-    <div class="btn-group">
-      <button type="submit" class="btn btn-success btn-sm">
-        <i class="bi bi-funnel me-1"></i> Apply
+
+    <!-- Actions -->
+    <div class="heat-filter-actions">
+      <button type="submit" class="btn btn-success btn-sm heat-apply-btn">
+        <i class="bi bi-funnel-fill me-1"></i> Apply
       </button>
-
-      <button type="button" id="clearFilter" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+      <button type="button" id="clearFilter" class="btn btn-outline-secondary btn-sm heat-reset-btn">
+        Reset
       </button>
     </div>
 

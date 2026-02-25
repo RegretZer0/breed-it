@@ -1,23 +1,20 @@
-<div class="card page-card overview-card heat-soft-card">
+<div class="card page-card overview-card mb-3">
   <div class="card-body">
 
-    <!-- Title row (dashboard style) -->
-    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 mb-3">
-      <div>
-        <h4 class="page-title mb-1">FARMER REPORTS</h4>
-        <div class="text-muted small">
-          Review heat monitoring reports and track reproductive progress.
-        </div>
+    <div class="d-flex align-items-start align-items-md-center justify-content-between flex-wrap gap-2 mb-3">
+      <div class="min-w-0">
+        <h5 class="mb-1 fw-bold">Overview</h5>
+        <div class="text-muted small">Quick counts by cycle status.</div>
       </div>
     </div>
 
-    <!-- Stats (5 cards) -->
-    <div class="row g-3 row-cols-1 row-cols-sm-2 row-cols-lg-4 row-cols-xl-5 stats-grid">
+    <!-- Responsive stats grid -->
+    <div class="row g-3">
 
       <!-- In-Heat -->
-      <div class="col">
-        <div class="stat-card heat-stat-card">
-          <div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div class="min-w-0">
             <div class="stat-label">In-Heat</div>
             <div class="stat-number" id="countInHeat">0</div>
           </div>
@@ -28,22 +25,22 @@
       </div>
 
       <!-- Under Observation -->
-      <div class="col">
-        <div class="stat-card heat-stat-card">
-          <div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div class="min-w-0">
             <div class="stat-label">Under Observation</div>
             <div class="stat-number" id="countAwaitingRecheck">0</div>
           </div>
           <div class="stat-icon blue">
-            <i class="bi bi-clipboard2-pulse"></i>
+            <i class="bi bi-search"></i>
           </div>
         </div>
       </div>
 
       <!-- Pregnant -->
-      <div class="col">
-        <div class="stat-card heat-stat-card">
-          <div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div class="min-w-0">
             <div class="stat-label">Pregnant</div>
             <div class="stat-number" id="countPregnant">0</div>
           </div>
@@ -54,9 +51,9 @@
       </div>
 
       <!-- Farrowing -->
-      <div class="col">
-        <div class="stat-card heat-stat-card">
-          <div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div class="min-w-0">
             <div class="stat-label">Farrowing</div>
             <div class="stat-number" id="countFarrowingReady">0</div>
           </div>
@@ -66,10 +63,10 @@
         </div>
       </div>
 
-      <!-- Lactating -->
-      <div class="col">
-        <div class="stat-card heat-stat-card">
-          <div>
+      <!-- Lactating (keeps same ID) -->
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card d-flex justify-content-between align-items-center">
+          <div class="min-w-0">
             <div class="stat-label">Lactating</div>
             <div class="stat-number" id="countLactating">0</div>
           </div>
