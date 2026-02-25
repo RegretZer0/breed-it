@@ -162,6 +162,67 @@ router.post(
 );
 
 /* ======================================================
+    MARK ALL NOTIFICATIONS AS READ (supports multiple IDs)
+====================================================== */
+router.post(
+  "/user/:userIds/read-all",
+  requireSessionAndToken,
+  allowRoles("farmer", "farm_manager", "encoder", "system_admin"),
+  async (req, res) => {
+    try {
+      const { userIds } = req.params;
+
+      if (!userIds) {
+        return res.status(400).json({ success: false, message: "No user IDs provided" });
+      }
+
+      const idsArray = userIds
+        .split(",")
+        .map(id => id.trim())
+        .filter(id => mongoose.Types.ObjectId.isValid(id))
+        .map(id => new mongoose.Types.ObjectId(id));
+
+      if (idsArray.length === 0) {
+        return res.status(400).json({ success: false, message: "No valid user IDs provided" });
+      }
+
+      // 🔐 Restrict farmers/encoders to only mark their own notifications
+      if ((req.user.role === "encoder" || req.user.role === "farmer") && userIds.includes(",")) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only mark notifications as read for your own account",
+        });
+      }
+
+      if (req.user.role === "encoder" || req.user.role === "farmer") {
+        const onlyId = idsArray[0]?.toString();
+        if (onlyId !== req.user.id) {
+          return res.status(403).json({
+            success: false,
+            message: "You can only mark notifications as read for your own account",
+          });
+        }
+      }
+
+      // Add current user's id into read_by for all matching notifications
+      const result = await Notification.updateMany(
+        { user_id: { $in: idsArray }, read_by: { $ne: req.user.id } },
+        { $addToSet: { read_by: req.user.id } }
+      );
+
+      res.json({
+        success: true,
+        message: "All notifications marked as read",
+        modified: result.modifiedCount ?? result.nModified ?? 0
+      });
+    } catch (err) {
+      console.error("Mark all as read error:", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+/* ======================================================
     DELETE NOTIFICATION
 ====================================================== */
 router.delete(

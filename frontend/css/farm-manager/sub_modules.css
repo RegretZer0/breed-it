@@ -1,10 +1,21 @@
 /* =========================================================
-   THEME PATCH — Sidebar + Topbar (Clean rail)
-   ✅ Updated: click / overlay safety + topbar z-index layer
+   THEME PATCH — Sidebar + Topbar + Notifications UI
+   - Bootstrap-first, theme-aligned
+   - Responsive (desktop/tablet/mobile)
 ========================================================= */
 
 :root{
   --shell-bg: #f6f7fb;
+  --card-bg: #ffffff;
+
+  --border: #e9edf3;
+  --border-2: #e6e6e6;
+
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --green: #198754;
+  --green-2: #0f7a34;
 
   --rail-bg: #0f3b2e;    /* deep forest green */
   --rail-bg-2: #0b2c22;  /* darker base */
@@ -17,22 +28,29 @@
   --topbar-bg: #ffffff;
   --topbar-border: #e9edf3;
 
+  --radius-lg: 18px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
+  --shadow-md: 0 14px 44px rgba(0,0,0,0.10);
+
   --pill-radius: 14px;
 
-  /* ✅ Reduce global shell spacing */
-  --gutter: 12px; /* was 18px */
+  /* Layout spacing */
+  --gutter: 12px;
 
   /* Sidebar sizes */
-  --sidebar-collapsed: 78px;   /* icon rail width */
-  --sidebar-expanded: 240px;   /* full width */
+  --sidebar-collapsed: 78px;
+  --sidebar-expanded: 240px;
 
-  /* Keep topbar slim */
-  --topbar-height: 56px; /* smaller like modern dashboards */
+  /* Topbar height */
+  --topbar-height: 56px;
 }
 
-/* App background */
 body{
   background: var(--shell-bg);
+  color: var(--text);
 }
 
 /* =========================================================
@@ -44,30 +62,39 @@ body{
   border-bottom: 1px solid var(--topbar-border);
   height: var(--topbar-height);
   padding: 0 12px;
-
-  position: fixed;   /* stronger than sticky */
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-
-  z-index: 2000;     /* higher than everything */
+  z-index: 1030; /* above content; below offcanvas */
 }
-/* Shrink logo */
+
+/* Prevent weird “highlight”/ring effects */
+.topbar *:focus{
+  outline: none !important;
+  box-shadow: none !important;
+}
+.topbar *:focus-visible{
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .brand-logo{
   width: 32px;
   height: 32px;
   object-fit: contain;
 }
 
-/* Shrink brand text */
 .brand-text{
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: .4px;
   line-height: 1;
 }
 
-/* Icon buttons consistent (NO BORDER) */
+/* Hide text on very small screens */
+@media (max-width: 420px){
+  .brand-text{ display:none; }
+}
+
 .icon-btn, .burger-btn{
   width: 40px;
   height: 40px;
@@ -76,24 +103,61 @@ body{
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   background: transparent;
   border: none !important;
+
   outline: none;
   box-shadow: none !important;
+  transition: background .12s ease, transform .12s ease;
 }
 
 .icon-btn:hover, .burger-btn:hover{
-  background: rgba(0,0,0,0.04);
+  background: rgba(0,0,0,0.05);
 }
 
-/* Bootstrap Icons sizing */
+.icon-btn:active, .burger-btn:active{
+  transform: translateY(1px);
+}
+
 .icon-btn i, .burger-btn i{
   font-size: 18px;
+  color: var(--text);
 }
 
-/* On very small screens, hide BREED-IT text */
-@media (max-width: 420px){
-  .brand-text{ display: none; }
+/* Dropdown toggle caret spacing + remove Bootstrap default background */
+.dropdown .icon-btn.dropdown-toggle{
+  background: transparent !important;
+}
+.dropdown .dropdown-toggle::after{
+  margin-left: .35rem;
+  vertical-align: middle;
+}
+
+/* Dropdown menu theme */
+.dropdown-menu{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  padding: 8px;
+}
+.dropdown-item{
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dropdown-item:hover{
+  background: rgba(15, 122, 52, 0.08);
+  color: var(--text);
+}
+
+/* Notification badge (small, clean) */
+#notificationBadge.badge{
+  font-size: 10px;
+  line-height: 1;
+  padding: .35em .5em;
+  border: 2px solid #fff;
 }
 
 /* =========================================================
@@ -128,7 +192,7 @@ body{
   font-size: 16px;
 }
 .sidebar-brand-title{
-  font-weight: 800;
+  font-weight: 900;
   color: #fff;
   letter-spacing: .6px;
   font-size: 14px;
@@ -146,7 +210,7 @@ body{
   border-radius: var(--pill-radius);
   padding: 12px 12px;
   margin-bottom: 8px;
-  font-weight: 700;
+  font-weight: 800;
   gap: 10px;
   align-items: center;
 }
@@ -193,24 +257,15 @@ body{
   background: rgba(255,255,255,.10);
 }
 
-/* Overlay base */
+/* Overlay keeps working */
 .overlay{
   background: rgba(0,0,0,0.30);
 }
 
-/* =========================================================
-   ✅ OVERLAY CLICK SAFETY
-   - Overlay must NOT block navbar clicks unless sidebar is open.
-   - Works with your existing #overlay element.
-========================================================= */
-#overlay{
-  display: none;
-  pointer-events: none;
-}
-
-body.sidebar-open #overlay{
-  display: block;
-  pointer-events: auto;
+.sidebar-header-mobile{
+  display:flex;
+  justify-content:flex-end;
+  padding: 8px 10px;
 }
 
 /* Footer helper card */
@@ -222,7 +277,7 @@ body.sidebar-open #overlay{
   color: var(--rail-text);
 }
 .sidebar-foot-title{
-  font-weight: 800;
+  font-weight: 900;
   font-size: 12px;
   margin-bottom: 2px;
 }
@@ -299,20 +354,7 @@ body.sidebar-open #overlay{
     transform: translateX(0);
   }
 
-  .sidebar .sidebar-brand{
-    opacity: 0;
-    height: 0;
-    overflow: hidden;
-    transition: opacity .12s ease;
-  }
-
-  .sidebar:hover .sidebar-brand,
-  .sidebar:focus-within .sidebar-brand{
-    opacity: 1;
-    height: auto;
-    overflow: visible;
-  }
-
+  .sidebar .sidebar-brand,
   .sidebar .sidebar-foot{
     opacity: 0;
     height: 0;
@@ -320,6 +362,8 @@ body.sidebar-open #overlay{
     transition: opacity .12s ease;
   }
 
+  .sidebar:hover .sidebar-brand,
+  .sidebar:focus-within .sidebar-brand,
   .sidebar:hover .sidebar-foot,
   .sidebar:focus-within .sidebar-foot{
     opacity: 1;
@@ -349,30 +393,18 @@ body.sidebar-open #overlay{
   }
 }
 
-.sidebar-header-mobile{
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px;
-}
-
 /* =========================================================
-   SHELL LAYOUT FIX (keeps sidebar left, content right)
+   SHELL LAYOUT
 ========================================================= */
 
 .app-shell{
-  display: flex;
-  align-items: flex-start;
-
-  /* tighter gap between sidebar and card */
-  gap: var(--gutter, 12px);
-
-  /* tighter padding around the whole layout */
-  padding: var(--gutter, 12px);
-
-  min-height: calc(100vh - var(--topbar-height, 56px));
+  display:flex;
+  align-items:flex-start;
+  gap: var(--gutter);
+  padding: var(--gutter);
+  min-height: calc(100vh - var(--topbar-height));
 }
 
-/* Slightly tighter on very small screens */
 @media (max-width: 576px){
   .app-shell{
     gap: 10px;
@@ -380,9 +412,182 @@ body.sidebar-open #overlay{
   }
 }
 
-/* main content grows beside sidebar */
 .main-content{
   flex: 1;
   min-width: 0;
-  padding: 0; /* let container-fluid handle inner spacing */
+  padding: 0;
+}
+
+/* =========================================================
+   NOTIFICATIONS OFFCANVAS — THEME
+========================================================= */
+
+.offcanvas{
+  border-left: 1px solid var(--border);
+  background: var(--card-bg);
+}
+
+.offcanvas.offcanvas-end{
+  width: min(92vw, 420px);
+}
+
+.offcanvas-header{
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+}
+
+.offcanvas-title{
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.offcanvas-body{
+  padding: 14px 16px;
+}
+
+/* Make list look like modern feed */
+#notificationsList{
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item{
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 12px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+.notification-item:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.08);
+  border-color: rgba(25,135,84,.25);
+}
+
+.notification-item.unread{
+  border-color: rgba(25,135,84,.35);
+  background: rgba(25,135,84,0.06);
+}
+
+.notification-title{
+  font-weight: 900;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.notification-message{
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.notification-time{
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* =========================================================
+   NOTIFICATION HISTORY MODAL — THEME
+========================================================= */
+
+.modal-content{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-md);
+}
+
+.modal-header{
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.modal-title{
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.modal-body{
+  padding: 14px 16px;
+}
+
+#notificationHistoryList{
+  display: grid;
+  gap: 10px;
+}
+
+/* History items reuse same card styling */
+.notification-item.history{
+  cursor: default;
+}
+
+.notification-header{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.notification-type{
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: rgba(0,0,0,0.02);
+  text-transform: uppercase;
+}
+
+/* Optional type accents (used by your JS: typeClass) */
+.notification-type.info{ border-color: rgba(13,110,253,.25); color: #0d6efd; background: rgba(13,110,253,.06); }
+.notification-type.success{ border-color: rgba(25,135,84,.25); color: #198754; background: rgba(25,135,84,.06); }
+.notification-type.alert{ border-color: rgba(255,193,7,.35); color: #b58100; background: rgba(255,193,7,.10); }
+.notification-type.error{ border-color: rgba(220,53,69,.25); color: #dc3545; background: rgba(220,53,69,.06); }
+.notification-type.maintenance{ border-color: rgba(111,66,193,.25); color: #6f42c1; background: rgba(111,66,193,.06); }
+
+/* =========================================================
+   BOOTSTRAP CONTROLS — SOFTENED
+========================================================= */
+
+.form-select, .form-control{
+  border-radius: 12px;
+  border-color: var(--border);
+}
+
+.form-select:focus, .form-control:focus{
+  border-color: rgba(25,135,84,.35);
+  box-shadow: 0 0 0 .2rem rgba(25,135,84,.12);
+}
+
+/* Buttons slightly rounded like theme */
+.btn{
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* Close button visual consistency */
+.btn-close{
+  box-shadow: none !important;
+  opacity: .7;
+}
+.btn-close:hover{ opacity: 1; }
+
+/* =========================================================
+   WHY NAVBAR LOOKS “HIGHLIGHTED” WHEN OFFCANVAS OPENS
+   - Bootstrap adds backdrops and manages scroll locking.
+   - We keep the topbar consistent and prevent unwanted focus rings.
+========================================================= */
+
+/* Keep backdrop subtle (optional) */
+.offcanvas-backdrop.show{
+  opacity: .35;
+}
+.modal-backdrop.show{
+  opacity: .35;
 }
