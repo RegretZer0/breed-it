@@ -188,3 +188,72 @@ if (sidebar) {
     });
   });
 }
+
+// =========================
+// Desktop hover delay (anti-flicker)
+// =========================
+document.addEventListener("DOMContentLoaded", function () {
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar) return;
+
+  const DESKTOP_BP = 992;
+
+  let openTimer = null;
+  let closeTimer = null;
+
+  const OPEN_DELAY = 140;  // ms (feel free to tune: 100–200)
+  const CLOSE_DELAY = 220; // ms (feel free to tune: 180–320)
+
+  const isDesktopNow = () => window.innerWidth >= DESKTOP_BP;
+
+  function setOpen(on) {
+    if (on) sidebar.classList.add("is-open");
+    else sidebar.classList.remove("is-open");
+  }
+
+  function clearTimers() {
+    if (openTimer) clearTimeout(openTimer);
+    if (closeTimer) clearTimeout(closeTimer);
+    openTimer = null;
+    closeTimer = null;
+  }
+
+  // Only apply hover delay on desktop
+  sidebar.addEventListener("mouseenter", () => {
+    if (!isDesktopNow()) return;
+
+    clearTimers();
+    openTimer = setTimeout(() => setOpen(true), OPEN_DELAY);
+  });
+
+  sidebar.addEventListener("mouseleave", () => {
+    if (!isDesktopNow()) return;
+
+    clearTimers();
+    closeTimer = setTimeout(() => setOpen(false), CLOSE_DELAY);
+  });
+
+  // If user tabs into sidebar, keep it open
+  sidebar.addEventListener("focusin", () => {
+    if (!isDesktopNow()) return;
+
+    clearTimers();
+    setOpen(true);
+  });
+
+  sidebar.addEventListener("focusout", (e) => {
+    if (!isDesktopNow()) return;
+
+    // If focus moved outside sidebar, close after delay
+    if (!sidebar.contains(e.relatedTarget)) {
+      clearTimers();
+      closeTimer = setTimeout(() => setOpen(false), CLOSE_DELAY);
+    }
+  });
+
+  // On resize, reset state
+  window.addEventListener("resize", () => {
+    clearTimers();
+    sidebar.classList.remove("is-open");
+  });
+});

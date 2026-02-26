@@ -106,7 +106,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   // Main pagination
   let currentPage = 1;
-  const ROWS_PER_PAGE = 10;
+  const ROWS_PER_PAGE = 5;
 
   // Archive pagination (limit to 5)
   let archivePage = 1;

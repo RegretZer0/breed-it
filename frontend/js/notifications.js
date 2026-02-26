@@ -11,7 +11,12 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   const notifBadge = document.getElementById("notificationBadge");
 
-  // Pagination UI (NEW)
+  // Buttons
+  const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
+  const markAllBtn = document.getElementById("markAllNotificationsReadBtn"); // offcanvas
+  const markAllBtnModal = document.getElementById("markAllNotificationsReadBtnModal"); // modal
+
+  // Pagination UI
   const prevBtn = document.getElementById("notifPrevPageBtn");
   const nextBtn = document.getElementById("notifNextPageBtn");
   const pageLabel = document.getElementById("notifPageLabel");
@@ -20,9 +25,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   let allNotifications = [];
 
-  // Pagination state
   const PAGE_SIZE = 10;
-  let historyPage = 1; // 1-based
+  let historyPage = 1;
 
   /* =========================
       FETCH
@@ -53,6 +57,25 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     return Number.isNaN(dt.getTime()) ? null : dt;
   }
 
+  function isUnread(n) {
+    if (!n) return false;
+
+    if (typeof n.is_read === "boolean") return n.is_read === false;
+    if (typeof n.read === "boolean") return n.read === false;
+    if (typeof n.isRead === "boolean") return n.isRead === false;
+
+    if (n.read_at || n.readAt) return false;
+
+    if (typeof n.status === "string") {
+      const s = n.status.trim().toLowerCase();
+      if (s === "unread") return true;
+      if (s === "read") return false;
+    }
+
+    // avoid total-count bug when field missing
+    return false;
+  }
+
   function withinTimeWindow(createdAt, windowValue) {
     if (!windowValue) return true;
 
@@ -78,8 +101,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     const typeVal = (typeFilter?.value || "").trim().toLowerCase();
     const timeVal = (timeFilter?.value || "").trim().toLowerCase();
 
-    if (typeVal) filtered = filtered.filter(n => normalizeType(n.type) === typeVal);
-    if (timeVal) filtered = filtered.filter(n => withinTimeWindow(n.created_at, timeVal));
+    if (typeVal) filtered = filtered.filter((n) => normalizeType(n.type) === typeVal);
+    if (timeVal) filtered = filtered.filter((n) => withinTimeWindow(n.created_at, timeVal));
 
     return filtered;
   }
@@ -87,7 +110,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function setBadgeCount() {
     if (!notifBadge) return;
 
-    const unreadCount = allNotifications.filter(n => !n.is_read).length;
+    const unreadCount = allNotifications.filter(isUnread).length;
 
     if (unreadCount <= 0) {
       notifBadge.style.display = "none";
@@ -99,8 +122,13 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     notifBadge.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
   }
 
+  function setMarkAllButtonsDisabled(disabled) {
+    if (markAllBtn) markAllBtn.disabled = disabled;
+    if (markAllBtnModal) markAllBtnModal.disabled = disabled;
+  }
+
   /* =========================
-      RENDER RECENT (LIMIT 8)
+      RENDER RECENT
   ========================= */
   function renderRecent() {
     recentList.innerHTML = "";
@@ -115,9 +143,11 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       return;
     }
 
-    recent.forEach(n => {
+    recent.forEach((n) => {
+      const unread = isUnread(n);
+
       const div = document.createElement("div");
-      div.className = `notification-item ${!n.is_read ? "unread" : ""}`;
+      div.className = `notification-item ${unread ? "unread" : ""}`;
 
       div.innerHTML = `
         <div class="notification-title">${n.title || "Notification"}</div>
@@ -139,7 +169,6 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     const total = list.length;
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-    // clamp page
     if (historyPage > totalPages) historyPage = totalPages;
     if (historyPage < 1) historyPage = 1;
 
@@ -151,7 +180,6 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   function updatePagerUI(totalPages) {
     if (pageLabel) pageLabel.textContent = `Page ${historyPage} / ${totalPages}`;
-
     if (prevBtn) prevBtn.disabled = historyPage <= 1;
     if (nextBtn) nextBtn.disabled = historyPage >= totalPages;
   }
@@ -175,8 +203,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
     updatePagerUI(totalPages);
 
-    pageItems.forEach(n => {
-      const unread = !n.is_read;
+    pageItems.forEach((n) => {
+      const unread = isUnread(n);
       const typeClass = normalizeType(n.type);
 
       const div = document.createElement("div");
@@ -185,9 +213,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       div.innerHTML = `
         <div class="notification-header">
           <strong>${n.title || "Notification"}</strong>
-          <span class="notification-type ${typeClass}">
-            ${(n.type || "INFO").toString()}
-          </span>
+          <span class="notification-type ${typeClass}">${(n.type || "INFO").toString()}</span>
         </div>
         <div class="notification-message">${n.message || ""}</div>
         <div class="notification-time">
@@ -195,7 +221,6 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
         </div>
       `;
 
-      // Optional: click history item to mark read
       if (unread && n._id) {
         div.style.cursor = "pointer";
         div.addEventListener("click", () => markAsRead(n._id, { rerenderHistory: true }));
@@ -219,8 +244,16 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       });
 
       if (res.ok) {
-        allNotifications = allNotifications.map(n =>
-          n._id === id ? { ...n, is_read: true } : n
+        allNotifications = allNotifications.map((n) =>
+          n._id === id
+            ? {
+                ...n,
+                is_read: true,
+                read: true,
+                isRead: true,
+                read_at: n.read_at || new Date().toISOString(),
+              }
+            : n
         );
 
         setBadgeCount();
@@ -233,20 +266,71 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   }
 
   /* =========================
+      MARK ALL READ (FIX)
+      - tries bulk endpoint if you have one
+      - falls back to marking each unread item
+  ========================= */
+  async function markAllRead() {
+    try {
+      setMarkAllButtonsDisabled(true);
+
+      // Prefer a bulk endpoint if your backend supports it
+      // (If not, it will just fail and we'll fallback.)
+      let bulkWorked = false;
+      try {
+        const bulkRes = await fetch(`${backendUrl}/api/notifications/user/${userId}/read-all`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
+        });
+        if (bulkRes.ok) bulkWorked = true;
+      } catch (_) {
+        // ignore, fallback below
+      }
+
+      if (!bulkWorked) {
+        // Fallback: mark each unread notification via existing endpoint
+        const unread = allNotifications.filter((n) => isUnread(n) && n._id);
+        for (const n of unread) {
+          await fetch(`${backendUrl}/api/notifications/${n._id}/read`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            credentials: "include",
+          });
+        }
+      }
+
+      // Update local state
+      const nowIso = new Date().toISOString();
+      allNotifications = allNotifications.map((n) =>
+        isUnread(n)
+          ? { ...n, is_read: true, read: true, isRead: true, read_at: n.read_at || nowIso }
+          : n
+      );
+
+      setBadgeCount();
+      renderRecent();
+      renderHistory();
+    } catch (err) {
+      console.error("Mark All Read Error:", err);
+    } finally {
+      setMarkAllButtonsDisabled(false);
+    }
+  }
+
+  /* =========================
       LOAD
   ========================= */
   async function load() {
     allNotifications = await fetchNotifications();
     setBadgeCount();
     renderRecent();
-    renderHistory(); // safe even if modal isn't open
+    renderHistory();
   }
 
   /* =========================
       EVENTS
   ========================= */
-
-  // Filters: reset to page 1
   typeFilter?.addEventListener("change", () => {
     historyPage = 1;
     renderHistory();
@@ -257,7 +341,6 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     renderHistory();
   });
 
-  // Pagination
   prevBtn?.addEventListener("click", () => {
     historyPage = Math.max(1, historyPage - 1);
     renderHistory();
@@ -268,7 +351,18 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     renderHistory();
   });
 
-  // When modal opens, reset page to 1 and render (Bootstrap event)
+  // View all -> open modal
+  viewAllBtn?.addEventListener("click", () => {
+    const modalEl = document.getElementById("notificationHistoryModal");
+    if (!modalEl || !window.bootstrap?.Modal) return;
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  });
+
+  // ✅ MARK ALL (offcanvas + modal)
+  markAllBtn?.addEventListener("click", markAllRead);
+  markAllBtnModal?.addEventListener("click", markAllRead);
+
+  // When modal opens, reset page to 1
   const modalEl = document.getElementById("notificationHistoryModal");
   modalEl?.addEventListener("shown.bs.modal", () => {
     historyPage = 1;
