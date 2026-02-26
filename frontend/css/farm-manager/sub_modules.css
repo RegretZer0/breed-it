@@ -580,8 +580,6 @@ body{
 
 /* =========================================================
    WHY NAVBAR LOOKS “HIGHLIGHTED” WHEN OFFCANVAS OPENS
-   - Bootstrap adds backdrops and manages scroll locking.
-   - We keep the topbar consistent and prevent unwanted focus rings.
 ========================================================= */
 
 /* Keep backdrop subtle (optional) */

@@ -1,9 +1,5 @@
 /* =========================================================
-   REPRODUCTION MONITORING — CLEAN MODULE CSS (CONSOLIDATED)
-   - Bootstrap handles layout; this file themes + polishes UI.
-   - Keep ALL existing IDs intact (JS relies on them).
-   - Includes: farmer list, filters, pagination, farmer modal UI,
-     pig list, breeding performance cards, and reduced outer gaps.
+   REPRODUCTION MONITORING — CLEAN MODULE CSS
 ========================================================= */
 
 /* =========================================================
@@ -13,22 +9,17 @@
 
 /* =========================================================
    1) REDUCE OUTER GAPS (NAVBAR ↔ MODULE ↔ SIDEPANEL)
-   IMPORTANT: your container uses Bootstrap: .container-fluid.py-3.py-lg-4
-   so we override those paddings here.
 ========================================================= */
 
 /* If this CSS is only loaded on this page, it's safe to target directly */
 .main-content{
-  padding-top: 10px !important;      /* was large due to other shell css */
+  padding-top: 10px !important;   
   padding-bottom: 10px !important;
 }
 
-/* Override bootstrap py-3 / py-lg-4 spacing on this module page */
 .main-content .container-fluid{
   padding-top: 10px !important;
   padding-bottom: 10px !important;
-
-  /* reduce side gaps between sidepanel and card */
   padding-left: 14px !important;
   padding-right: 14px !important;
 }
