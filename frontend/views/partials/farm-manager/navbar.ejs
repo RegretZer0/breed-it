@@ -198,87 +198,351 @@
   </div>
 
 <!-- =======================
-     ACCOUNT SETTINGS MODAL
+     ACCOUNT SETTINGS MODAL (REDESIGNED)
 ======================= -->
 <div class="modal fade" id="accountSettingsModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-end modal-dialog-centered">
-    <div class="modal-content">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content acct-modal">
 
-      <div class="modal-header">
-        <h5 class="modal-title">Account Settings</h5>
+      <div class="modal-header acct-modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-gear"></i>
+          <h5 class="modal-title mb-0">Account Settings</h5>
+        </div>
+
+        <!-- Close [x] -->
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
-      <div class="modal-body">
-        <p class="mb-1"><strong>Name:</strong> <%= user?.name || "—" %></p>
-        <p class="mb-1"><strong>Email:</strong> <%= user?.email || "—" %></p>
-        <p class="mb-0"><strong>Role:</strong> <%= user?.role || "—" %></p>
+      <div class="modal-body acct-modal-body">
 
-        <button
-          class="btn btn-outline-primary w-100 mt-3"
-          type="button"
-          data-bs-toggle="modal"
-          data-bs-target="#changePasswordModal"
-        >
-          Change Password
-        </button>
+        <!-- HERO / SUMMARY -->
+        <div class="acct-hero card border-0 mb-3">
+          <div class="card-body d-flex flex-column flex-md-row align-items-md-center gap-3">
+
+            <div class="d-flex align-items-center gap-3 min-w-0">
+              <div class="acct-avatar">
+                <img
+                  id="accountProfileImg"
+                  src="<%= user?.profile_photo || '/images/default-avatar.png' %>"
+                  alt="Profile picture"
+                />
+              </div>
+
+              <div class="min-w-0">
+                <div class="acct-name" id="acctDisplayName"><%= user?.name || "—" %></div>
+                <div class="acct-meta text-truncate">
+                  <i class="bi bi-envelope me-1"></i><span id="acctDisplayEmail"><%= user?.email || "—" %></span>
+                </div>
+                <div class="acct-meta text-truncate">
+                  <i class="bi bi-shield-check me-1"></i><span id="acctDisplayRole"><%= user?.role || "—" %></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ms-md-auto d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="editProfileBtn">
+                <i class="bi bi-pencil-square me-1"></i> Edit Profile
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="row g-3">
+
+          <!-- LEFT: PHOTO CARD -->
+          <div class="col-12 col-lg-4">
+            <div class="card acct-card h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-image"></i>
+                    <div class="fw-bold">Profile Photo</div>
+                  </div>
+                  <span class="badge text-bg-light border">Global</span>
+                </div>
+
+                <input
+                  type="file"
+                  class="form-control form-control-sm"
+                  id="accountProfilePhotoInput"
+                  accept="image/*"
+                  disabled
+                />
+
+                <div class="small text-muted mt-2">
+                  Recommended: square image. Max ~2MB.
+                </div>
+
+                <div class="acct-photo-preview mt-3">
+                  <img
+                    id="accountProfileImgPreview"
+                    src="<%= user?.profile_photo || '/images/default-avatar.png' %>"
+                    alt="Preview"
+                  />
+                </div>
+
+                <div class="d-flex gap-2 mt-3">
+                  <button type="button" class="btn btn-outline-secondary btn-sm w-50" id="resetProfilePhotoBtn" disabled>
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                  </button>
+                  <button type="button" class="btn btn-success btn-sm w-50" id="uploadProfilePhotoBtn" disabled>
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Upload
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: FORM -->
+          <div class="col-12 col-lg-8">
+            <div class="card acct-card">
+              <div class="card-body">
+
+                <form id="accountProfileForm" autocomplete="off">
+                  <div class="row g-3">
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">First Name</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="accountFirstName"
+                        value="<%= user?.first_name || '' %>"
+                        disabled
+                        required
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">Last Name</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="accountLastName"
+                        value="<%= user?.last_name || '' %>"
+                        disabled
+                        required
+                      />
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Address</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="accountAddress"
+                        value="<%= user?.address || '' %>"
+                        disabled
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">Contact</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="accountContact"
+                        value="<%= user?.contact_info || '' %>"
+                        disabled
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">Email</label>
+                      <input
+                        type="email"
+                        class="form-control"
+                        id="accountEmail"
+                        value="<%= user?.email || '' %>"
+                        readonly
+                      />
+                      <div class="small text-muted mt-1">
+                        Email updates require backend rules. (Readonly for safety)
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div class="d-flex flex-wrap gap-2 justify-content-end mt-3">
+                    <button type="button" class="btn btn-outline-secondary" id="cancelProfileEditBtn" disabled>
+                      <i class="bi bi-x-circle me-1"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success" id="saveProfileBtn" disabled>
+                      <i class="bi bi-check-circle me-1"></i> Save Changes
+                    </button>
+                  </div>
+
+                  <div class="small text-muted mt-2 d-flex align-items-center gap-2 justify-content-end">
+                    <i class="bi bi-info-circle"></i>
+                    Works for <b>farm_manager</b> &amp; <b>encoder</b>
+                  </div>
+
+                </form>
+
+              </div>
+            </div>
+
+            <button
+              class="btn btn-outline-primary w-100 mt-3"
+              type="button"
+              data-bs-toggle="modal"
+              data-bs-target="#changePasswordModal"
+            >
+              Change Password
+            </button>
+
+          </div>
+        </div>
+
       </div>
-
     </div>
   </div>
 </div>
 
 <!-- =======================
-     CHANGE PASSWORD MODAL
+     ACCOUNT FEEDBACK MODAL (NEW)
+======================= -->
+<div class="modal fade" id="accountFeedbackModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content acct-modal">
+      <div class="modal-header acct-modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-info-circle"></i>
+          <h6 class="modal-title mb-0" id="accountFeedbackTitle">Message</h6>
+        </div>
+        <!-- Close [x] -->
+        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="accountFeedbackMessage" class="small mb-0">...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" type="button" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =======================
+     CHANGE PASSWORD MODAL (THEME ALIGNED)
 ======================= -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content acct-modal">
 
-      <div class="modal-header">
-        <h5 class="modal-title">Change Password</h5>
+      <!-- HEADER -->
+      <div class="modal-header acct-modal-header">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-shield-lock"></i>
+          <h6 class="modal-title mb-0">Change Password</h6>
+        </div>
+
+        <!-- Close [x] -->
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
+      <!-- BODY -->
       <div class="modal-body">
 
-        <!-- STEP 1 -->
-        <button
-          class="btn btn-outline-secondary w-100 mb-3"
-          type="button"
-          id="requestChangeOtpBtn"
-        >
-          Send OTP to Email
-        </button>
+        <div class="acct-card p-3">
 
-        <!-- STEP 2 -->
-        <form id="changePasswordForm">
-          <div class="mb-3">
-            <label class="form-label small">OTP</label>
-            <input
-              type="text"
-              class="form-control otp-input"
-              id="changeOtp"
-              required
-            />
-          </div>
+          <form id="changePasswordForm" autocomplete="off">
 
-          <div class="mb-3">
-            <label class="form-label small">New Password</label>
-            <input
-              type="password"
-              class="form-control"
-              id="changeNewPassword"
-              required
-            />
-          </div>
+            <!-- Step 1: Request OTP -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Verification Code</label>
+              <div class="d-flex gap-2">
+                <input
+                  type="text"
+                  id="changePasswordOtp"
+                  class="form-control"
+                  placeholder="Enter OTP"
+                  required
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-success"
+                  id="requestChangePasswordOtpBtn"
+                >
+                  Send Code
+                </button>
+              </div>
+              <div class="small text-muted mt-1">
+                A 6-digit code will be sent to your registered email.
+              </div>
+            </div>
 
-          <button class="btn btn-primary w-100" type="submit">
-            Change Password
-          </button>
-        </form>
+            <!-- New Password -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">New Password</label>
 
-        <p id="changePasswordMessage" class="small text-center mt-3 mb-0"></p>
+              <div class="input-group password-group">
+                <input
+                  type="password"
+                  id="changePasswordNew"
+                  class="form-control"
+                  placeholder="Minimum 8 characters"
+                  required
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary toggle-password-btn"
+                  data-target="changePasswordNew"
+                  aria-label="Toggle password visibility"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold">Confirm Password</label>
+
+              <div class="input-group password-group">
+                <input
+                  type="password"
+                  id="changePasswordConfirm"
+                  class="form-control"
+                  placeholder="Re-enter password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary toggle-password-btn"
+                  data-target="changePasswordConfirm"
+                  aria-label="Toggle password visibility"
+                >
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="d-flex justify-content-end gap-2 mt-3">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                data-bs-dismiss="modal"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                class="btn btn-success"
+                id="confirmChangePasswordBtn"
+              >
+                <i class="bi bi-check-circle me-1"></i>
+                Update Password
+              </button>
+            </div>
+
+          </form>
+
+        </div>
 
       </div>
 

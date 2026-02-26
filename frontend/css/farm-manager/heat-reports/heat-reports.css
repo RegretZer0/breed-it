@@ -1525,3 +1525,100 @@ html, body{
     font-size: 12px !important;
   }
 }
+
+/* =========================
+   MODAL STACKING (FIX)
+========================= */
+/* Report Details overlay */
+#reportDetailsModal.modal-overlay{
+  z-index: 2000;
+}
+
+/* Farrowing modal MUST be above report details */
+#farrowingModal.modal-overlay{
+  z-index: 2600;
+}
+
+/* Evidence viewer should be on top of all */
+#evidenceViewerModal.modal-overlay{
+  z-index: 3000;
+}
+
+/* =========================
+   FARROWING MODAL THEME
+========================= */
+#farrowingModal .modal-panel{
+  width: min(560px, calc(100vw - 28px));
+  border-radius: 18px;
+  border: 1px solid #e9edf3;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.12);
+  overflow: hidden;
+}
+
+#farrowingModal .modal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+#farrowingModal .modal-title{
+  font-weight: 900;
+  letter-spacing: .01em;
+  margin: 0;
+}
+
+#farrowingModal .modal-body{
+  padding: 16px;
+}
+
+#farrowingModal .modal-footer{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid #eef2f7;
+}
+
+/* Inputs grid */
+.farrow-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px){
+  .farrow-grid{ grid-template-columns: 1fr; }
+}
+
+/* Subtle scrollbar (exists but not obvious) */
+.rd-body,
+#farrowingModal .modal-body{
+  scrollbar-width: thin;                 /* Firefox */
+  scrollbar-color: rgba(31,41,55,.18) transparent;
+}
+
+.rd-body::-webkit-scrollbar,
+#farrowingModal .modal-body::-webkit-scrollbar{
+  width: 8px;
+}
+
+.rd-body::-webkit-scrollbar-track,
+#farrowingModal .modal-body::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+.rd-body::-webkit-scrollbar-thumb,
+#farrowingModal .modal-body::-webkit-scrollbar-thumb{
+  background: rgba(31,41,55,.12);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.rd-body::-webkit-scrollbar-thumb:hover,
+#farrowingModal .modal-body::-webkit-scrollbar-thumb:hover{
+  background: rgba(31,41,55,.18);
+  background-clip: content-box;
+}

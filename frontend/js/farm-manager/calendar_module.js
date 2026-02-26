@@ -43,9 +43,7 @@ export function initFarmCalendar(BACKEND_URL, token) {
     const s = startDate instanceof Date ? startDate : null;
     if (!s) return false;
 
-    if (!endDateExclusive) {
-      return toYMD(s) === targetYMD;
-    }
+    if (!endDateExclusive) return toYMD(s) === targetYMD;
 
     const e = endDateExclusive instanceof Date ? endDateExclusive : null;
     if (!e) return toYMD(s) === targetYMD;
@@ -157,10 +155,7 @@ export function initFarmCalendar(BACKEND_URL, token) {
         return toYMD(ev.start) === dateStr;
       }
 
-      if (ev.start instanceof Date) {
-        return toYMD(ev.start) === dateStr;
-      }
-
+      if (ev.start instanceof Date) return toYMD(ev.start) === dateStr;
       return ev.startStr === dateStr;
     });
   }
@@ -188,8 +183,6 @@ export function initFarmCalendar(BACKEND_URL, token) {
   }
 
   function extractSwineCodeFromTitle(title) {
-    // Handles: "AI Due – SWINE001" or "Expected Farrowing – SWINE001" or "CRITICAL: Heat Report Due – SWINE001"
-    // Uses dash/en-dash separation; if none, returns null
     const t = String(title || "");
     const parts = t.split("–"); // en-dash
     if (parts.length >= 2) return parts[parts.length - 1].trim();
@@ -423,6 +416,21 @@ export function initFarmCalendar(BACKEND_URL, token) {
   }
 
   // ================================
+  // Button enhance (fix "This WeekThis Week")
+  // ================================
+  function enhanceWeekBtn() {
+    const btn = calendarEl.querySelector(".fc-weekPigs-button");
+    if (!btn) return;
+
+    // prevent double-enhance
+    if (btn.dataset.enhanced === "1") return;
+    btn.dataset.enhanced = "1";
+
+    btn.innerHTML = `<i class="bi bi-calendar-week me-1"></i><span>This Week</span>`;
+    btn.setAttribute("title", "Show pigs with events this week");
+  }
+
+  // ================================
   // Calendar Setup
   // ================================
   const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -450,6 +458,11 @@ export function initFarmCalendar(BACKEND_URL, token) {
       right: "weekPigs"
     },
 
+    // ✅ called whenever navigating (prev/next/today) or changing view
+    datesSet: () => {
+      enhanceWeekBtn();
+    },
+
     events: fetchCalendarEvents,
     eventContent: renderCustomEvent,
     eventClick: handleEventClick,
@@ -458,11 +471,8 @@ export function initFarmCalendar(BACKEND_URL, token) {
 
   calendar.render();
 
-  // Add Bootstrap icon to custom button after render (FullCalendar uses plain text by default)
-  const weekBtn = calendarEl.querySelector(".fc-weekPigs-button");
-  if (weekBtn) {
-    weekBtn.innerHTML = `<i class="bi bi-calendar-week me-1"></i><span>This Week</span>`;
-  }
+  // Ensure button is enhanced on first render
+  enhanceWeekBtn();
 
   // Initial load (today)
   highlightDate(todayStr);
@@ -500,9 +510,7 @@ export function initFarmCalendar(BACKEND_URL, token) {
     const status = (arg.event.extendedProps.status || "").toLowerCase();
 
     // Background range highlight should not render a pill
-    if (type === "heat_window_range") {
-      return { html: "" };
-    }
+    if (type === "heat_window_range") return { html: "" };
 
     const statusMap = {
       "in-heat": { color: "#ff9a1f", icon: "bi-fire" },

@@ -116,8 +116,12 @@ app.use(express.static(path.join(__dirname, "public")));
 const uploadsDir = path.join(__dirname, "uploads");
 const pigUploadsDir = path.join(uploadsDir, "pigs");
 
+const userProfileUploadsDir = path.join(uploadsDir, "user_profiles");
+
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(pigUploadsDir)) fs.mkdirSync(pigUploadsDir, { recursive: true });
+
+if (!fs.existsSync(userProfileUploadsDir)) fs.mkdirSync(userProfileUploadsDir, { recursive: true });
 
 /* =========================
     BODY LIMITS (OPTIONAL, HELPS WITH FORMS)

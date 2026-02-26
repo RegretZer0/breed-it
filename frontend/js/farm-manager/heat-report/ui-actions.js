@@ -35,6 +35,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const farrowingModal = document.getElementById("farrowingModal");
   const farrowingForm = document.getElementById("farrowingForm");
 
+  // Farrowing modal controls (must exist in your updated HTML)
+  const closeFarrowingModal = document.getElementById("closeFarrowingModal");
+  const cancelFarrowingBtn = document.getElementById("cancelFarrowingBtn");
+
+  // Farrowing inputs (must exist in your updated HTML)
+  const maleCountInput = document.getElementById("maleCount");
+  const femaleCountInput = document.getElementById("femaleCount");
+  const totalLiveLabel = document.getElementById("totalLiveLabel");
+
   const toggleFarmerCardBtn = document.getElementById("toggleFarmerCardBtn");
   const farmerMiniCardWrap = document.getElementById("farmerMiniCardWrap");
   const farmerMiniCard = document.getElementById("farmerMiniCard");
@@ -97,6 +106,30 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   let allReports = [];
   let filteredReports = [];
   let currentReportId = null;
+
+  let urlAutoOpened = false;
+
+  function getUrlReportId() {
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("reportId");
+  }
+
+  async function autoOpenReportFromUrl() {
+    if (urlAutoOpened) return;
+
+    const rid = getUrlReportId();
+    if (!rid) return;
+
+    urlAutoOpened = true;
+
+    // open Report Details modal directly
+    await viewReport(rid);
+
+    // optional: remove reportId from URL after opening (prevents reopening on refresh)
+    // const url = new URL(window.location.href);
+    // url.searchParams.delete("reportId");
+    // window.history.replaceState({}, "", url.toString());
+  }
 
   const filterState = {
     selectedStatus: "",        // cycle tabs
@@ -188,7 +221,46 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   // =========================
-  // URL + CHIP HELPERS (NEW)
+  // FARROWING MODAL STACK FIX + CONTROLS
+  // =========================
+  function openFarrowingModal() {
+    if (!farrowingModal) return;
+
+    // ensure it sits above report details
+    farrowingModal.style.zIndex = "2600";
+    farrowingModal.style.display = "flex";
+
+    // keep scroll locked (report modal already locks it, but safe)
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeFarrowingModalFn() {
+    if (!farrowingModal) return;
+    farrowingModal.style.display = "none";
+    // do NOT unlock body scroll here (report modal may still be open)
+  }
+
+  closeFarrowingModal?.addEventListener("click", closeFarrowingModalFn);
+  cancelFarrowingBtn?.addEventListener("click", closeFarrowingModalFn);
+  farrowingModal?.addEventListener("click", (e) => {
+    if (e.target === farrowingModal) closeFarrowingModalFn();
+  });
+
+  function syncTotalLive() {
+    const m = Number(maleCountInput?.value || 0);
+    const f = Number(femaleCountInput?.value || 0);
+    const total = Math.max(m + f, 0);
+
+    const liveHidden = document.getElementById("liveCount");
+    if (liveHidden) liveHidden.value = String(total);
+    if (totalLiveLabel) totalLiveLabel.textContent = String(total);
+  }
+
+  maleCountInput?.addEventListener("input", syncTotalLive);
+  femaleCountInput?.addEventListener("input", syncTotalLive);
+
+  // =========================
+  // URL + CHIP HELPERS
   // =========================
   function toPublicUrl(path) {
     if (!path) return "";
@@ -253,10 +325,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   function closeArchiveAndThen(fn) {
-    // ✅ Fix: Track progress / view details must not go under the archive modal
+    // Track progress / view details must not go under the archive modal
     if (archiveModal && archiveModal.style.display === "flex") {
       closeArchive();
-      // let DOM paint
       setTimeout(fn, 0);
       return;
     }
@@ -396,6 +467,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       currentPage = 1;
       renderCards(filteredReports);
+      await autoOpenReportFromUrl();
 
       // If archive modal open, keep it updated
       if (archiveModal && archiveModal.style.display === "flex") {
@@ -586,7 +658,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
 
-      // ✅ smaller card: add class hook "is-archive"
+      // smaller card: add class hook "is-archive"
       const card = document.createElement("div");
       card.className = "report-card is-archive";
 
@@ -652,7 +724,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (archivePrevBtn) archivePrevBtn.disabled = archivePage === 1;
     if (archiveNextBtn) archiveNextBtn.disabled = archivePage === totalPages || totalPages === 0;
 
-    // ✅ Important fix: close archive before opening overlays/panels
+    // Important fix: close archive before opening overlays/panels
     archiveCardList.querySelectorAll(".btn-view").forEach(btn => {
       btn.onclick = () => closeArchiveAndThen(() => viewReport(btn.dataset.id));
     });
@@ -806,24 +878,21 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       currentReportId = id;
 
       // =========================
-      // Pig profile photo
+      // Pig profile photo (default pig profile)
       // =========================
       if (reportSwinePhoto) {
         const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
-
         reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
-
         reportSwinePhoto.onerror = () => {
           reportSwinePhoto.onerror = null;
           reportSwinePhoto.src = "/images/default-pig-profile.png";
         };
       }
 
-      // Health status chip text (NEW chip in your EJS)
+      // Health status chip text
       const hs = r?.swine_id?.health_status || "—";
       setChipText("reportHealthStatus", hs);
 
-      // Optional: dataset for styling (only if your CSS uses it)
       const hsEl = document.getElementById("reportHealthStatus");
       if (hsEl) hsEl.dataset.health = hs;
 
@@ -837,7 +906,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
 
       // =========================
-      // Farmer mini card (View/Hide) — UPDATED (profile_picture fixed)
+      // Farmer mini card (View/Hide) — UPDATED default avatar
       // =========================
       (function setupFarmerMiniCard() {
         if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
@@ -849,7 +918,6 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
         const f = r?.farmer_id && typeof r.farmer_id === "object" ? r.farmer_id : null;
 
-        // Build a safe, best-effort card from available fields
         const fullName = f ? `${f.first_name || ""} ${f.last_name || ""}`.trim() : "Unknown Farmer";
         const farmerCode = f?.farmer_id || "—";
         const address = f?.address || "—";
@@ -857,16 +925,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         const pens = (f?.num_of_pens ?? "—");
         const cap = (f?.pen_capacity ?? "—");
 
-        // farmer profile picture
         const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
-
-        // fallback initials (only used if image fails)
-        const initials = fullName
-          .split(" ")
-          .filter(Boolean)
-          .slice(0, 2)
-          .map(x => x[0].toUpperCase())
-          .join("") || "F";
 
         farmerMiniCard.innerHTML = `
           <div class="rd-farmer-row">
@@ -922,7 +981,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
       }
 
-      // Notes / remarks (NEW)
+      // Notes / remarks
       const notesEl = document.getElementById("reportNotes");
       if (notesEl) {
         const notes =
@@ -939,22 +998,21 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           : `<em class="text-muted">No notes provided.</em>`;
       }
 
-      // Created at + cycle stage chips (NEW)
+      // Created at + cycle stage chips
       const d = r.createdAt ? new Date(r.createdAt) : null;
       const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
       setChipText("reportCreatedAt", createdText);
 
       const stageEl = document.getElementById("reportCycleStage");
       if (stageEl) {
-        const st =
-          (r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—");
+        const st = (r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—");
         const label = String(st || "—").replace(/_/g, " ");
         const span = stageEl.querySelector(".rd-chip-text");
         if (span) span.textContent = label;
       }
 
       // Media
-      evidenceGallery.innerHTML = "";
+      if (evidenceGallery) evidenceGallery.innerHTML = "";
       const evidences = Array.isArray(r.evidence_url)
         ? r.evidence_url
         : r.evidence_url
@@ -962,12 +1020,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           : [];
 
       if (!evidences.length) {
-        evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
+        if (evidenceGallery) evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
       } else {
         evidences.forEach(path => {
-          if (!path) return;
+          if (!path || !evidenceGallery) return;
 
-          const cleanPath = path.replace(/\\/g, "/");
+          const cleanPath = String(path).replace(/\\/g, "/");
           const fullUrl = cleanPath.startsWith("http")
             ? cleanPath
             : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
@@ -1011,21 +1069,21 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       }
 
       // Action buttons
-      approveBtn.style.display = "none";
+      if (approveBtn) approveBtn.style.display = "none";
       if (rejectBtn) rejectBtn.style.display = "none";
-      confirmAIBtn.style.display = "none";
+      if (confirmAIBtn) confirmAIBtn.style.display = "none";
       if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
       if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
       if (followUpBtn) followUpBtn.style.display = "none";
 
       switch (safeLower(r.status)) {
         case "pending":
-          approveBtn.style.display = "inline-block";
+          if (approveBtn) approveBtn.style.display = "inline-block";
           if (rejectBtn) rejectBtn.style.display = "inline-block";
           break;
 
         case "approved":
-          confirmAIBtn.style.display = "inline-block";
+          if (confirmAIBtn) confirmAIBtn.style.display = "inline-block";
           break;
 
         case "ai_confirmed":
@@ -1045,13 +1103,13 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           farrowDate.setHours(0, 0, 0, 0);
 
           if (today >= farrowDate) {
-            confirmFarrowingBtn.style.display = "inline-block";
+            if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "inline-block";
           }
           break;
         }
       }
 
-      reportDetailsModal.style.display = "flex";
+      if (reportDetailsModal) reportDetailsModal.style.display = "flex";
       document.body.style.overflow = "hidden";
     } catch (err) {
       console.error(err);
@@ -1081,12 +1139,14 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       alert(message);
       closeReportDetails();
       loadReports();
+      return data;
     } catch (err) {
       alert(err.message || "Action failed");
+      throw err;
     }
   }
 
-  approveBtn && (approveBtn.onclick = () => action("approve", "Report approved. AI is now scheduled."));
+  if (approveBtn) approveBtn.onclick = () => action("approve", "Report approved. AI is now scheduled.");
 
   if (rejectBtn) {
     rejectBtn.onclick = () => {
@@ -1095,46 +1155,57 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     };
   }
 
-  confirmAIBtn && (confirmAIBtn.onclick = async () => {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/swine/all?sex=Male&age_stage=adult`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
-      });
+  if (confirmAIBtn) {
+    confirmAIBtn.onclick = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/swine/all?sex=Male&age_stage=adult`, {
+          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include"
+        });
 
-      const data = await res.json();
-      if (!data.success || !data.swine?.length) return alert("No adult boars found.");
+        const data = await res.json();
+        if (!data.success || !data.swine?.length) return alert("No adult boars found.");
 
-      const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
-      if (!masterBoars.length) return alert("No Master Boars available.");
+        const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
+        if (!masterBoars.length) return alert("No Master Boars available.");
 
-      if (boarSelect) boarSelect.innerHTML = masterBoars.map(b => `<option value="${b._id}">${b.swine_id}</option>`).join("");
-      if (aiConfirmModal) aiConfirmModal.style.display = "flex";
-    } catch (err) {
-      console.error(err);
-      alert("Failed to load boars.");
-    }
-  });
+        if (boarSelect) {
+          boarSelect.innerHTML = masterBoars
+            .map(b => `<option value="${b._id}">${b.swine_id}</option>`)
+            .join("");
+        }
 
-  submitAIBtn && (submitAIBtn.onclick = async () => {
-    const maleSwineId = boarSelect?.value;
-    if (!maleSwineId) return alert("Please select a boar.");
-    await action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
-    if (aiConfirmModal) aiConfirmModal.style.display = "none";
-  });
+        if (aiConfirmModal) aiConfirmModal.style.display = "flex";
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load boars.");
+      }
+    };
+  }
 
-  confirmRejectBtn && (confirmRejectBtn.onclick = () => {
-    const reason = rejectReasonInput?.value.trim() || "";
-    if (!reason) {
-      alert("Rejection reason is required.");
-      return;
-    }
+  if (submitAIBtn) {
+    submitAIBtn.onclick = async () => {
+      const maleSwineId = boarSelect?.value;
+      if (!maleSwineId) return alert("Please select a boar.");
+      await action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
+      if (aiConfirmModal) aiConfirmModal.style.display = "none";
+    };
+  }
 
-    action("reject", "Report rejected successfully.", { reason });
+  if (confirmRejectBtn) {
+    confirmRejectBtn.onclick = () => {
+      const reason = rejectReasonInput?.value.trim() || "";
+      if (!reason) {
+        alert("Rejection reason is required.");
+        return;
+      }
 
-    if (rejectReasonModal) rejectReasonModal.style.display = "none";
-    if (rejectReasonInput) rejectReasonInput.value = "";
-  });
+      action("reject", "Report rejected successfully.", { reason });
+
+      if (rejectReasonModal) rejectReasonModal.style.display = "none";
+      if (rejectReasonInput) rejectReasonInput.value = "";
+    };
+  }
 
   if (confirmPregnancyBtn) {
     confirmPregnancyBtn.onclick = () => {
@@ -1143,19 +1214,29 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     };
   }
 
+  // ✅ Fix: backend route is /still-heat (not /cycle-failed)
   if (followUpBtn) {
     followUpBtn.onclick = () => {
       if (!confirm("Mark cycle as failed and return sow to heat?")) return;
-      action("cycle-failed", "Cycle failed. Sow returned to In-Heat status.");
+      action("still-heat", "Cycle reset. Sow returned to In-Heat status.");
     };
   }
 
+  // ✅ Fix: Open farrowing modal ABOVE report details + reset values + calc total live
   if (confirmFarrowingBtn) {
     confirmFarrowingBtn.onclick = () => {
       if (!farrowingModal) return;
-      farrowingModal.style.display = "flex";
+
       const dt = document.getElementById("farrowingDateInput");
       if (dt) dt.valueAsDate = new Date();
+
+      const mortalityInput = document.getElementById("mortalityCount");
+      if (mortalityInput) mortalityInput.value = "0";
+      if (maleCountInput) maleCountInput.value = "0";
+      if (femaleCountInput) femaleCountInput.value = "0";
+      syncTotalLive();
+
+      openFarrowingModal();
     };
   }
 
@@ -1174,22 +1255,45 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       const farrowingDateInput = document.getElementById("farrowingDateInput");
       const liveInput = document.getElementById("liveCount");
-      const mortalityinput = document.getElementById("mortalityCount");
+      const mortalityInput = document.getElementById("mortalityCount");
+
+      const male = Number(maleCountInput?.value || 0);
+      const female = Number(femaleCountInput?.value || 0);
+      const total_live = Number(liveInput?.value || (male + female));
+      const mortality = Number(mortalityInput?.value || 0);
+
+      if (male + female !== total_live) {
+        alert("Male + Female must equal Total Live.");
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalText;
+        }
+        return;
+      }
 
       const payload = {
         farrowing_date: farrowingDateInput?.value || null,
-        total_live: Number(liveInput?.value || 0),
-        mortality_born: Number(mortalityinput?.value || 0),
+        total_live,
+        mortality,
+        male_count: male,
+        female_count: female
       };
 
       try {
         await action("confirm-farrowing", "Farrowing registered! Sow is now Lactating.", payload);
 
-        if (farrowingModal) farrowingModal.style.display = "none";
+        closeFarrowingModalFn();
         farrowingForm.reset();
+
+        // reset derived label/hidden after reset()
+        if (maleCountInput) maleCountInput.value = "0";
+        if (femaleCountInput) femaleCountInput.value = "0";
+        const liveHidden = document.getElementById("liveCount");
+        if (liveHidden) liveHidden.value = "0";
+        if (totalLiveLabel) totalLiveLabel.textContent = "0";
       } catch (err) {
         console.error("Farrowing registration failed:", err);
-        alert("Error: " + err.message);
+        alert("Error: " + (err.message || "Action failed"));
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -1200,7 +1304,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-   EVIDENCE VIEWER (IMAGE/VIDEO)
+     EVIDENCE VIEWER (IMAGE/VIDEO)
   ========================= */
   let evScale = 1;
   let isDragging = false;
@@ -1270,9 +1374,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     evidenceViewerModal.style.display = "none";
 
     // restore scroll ONLY if report modal is not open
-    // (your reportDetailsModal already locks scroll)
-    const reportDetailsModal = document.getElementById("reportDetailsModal");
-    const reportOpen = reportDetailsModal && reportDetailsModal.style.display === "flex";
+    const rd = document.getElementById("reportDetailsModal");
+    const reportOpen = rd && rd.style.display === "flex";
     if (!reportOpen) document.body.style.overflow = "";
   }
 

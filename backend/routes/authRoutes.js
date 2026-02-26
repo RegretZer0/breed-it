@@ -18,10 +18,15 @@ const attachUser = require("../middleware/attachUser");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
+// ✅ NEW: Multer middleware for user profile photos
+const uploadUserProfilePhoto = require("../middleware/uploadUserProfilePhoto");
+
 const otpEmailTemplate = require("../emails/otpEmailTemplate");
 
 // Temporary in-memory storage for OTPs
 const otpStore = new Map();
+
+const DEFAULT_AVATAR = "/images/default-avatar.png";
 
 /* ======================
     HELPERS
@@ -63,6 +68,9 @@ function generateToken(user) {
       last_name: user.last_name || "",
       name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
       managerId: user.managerId || null,
+
+      // ✅ NEW (safe, optional; requires schema field)
+      profile_photo: user.profile_photo || DEFAULT_AVATAR,
     },
     JWT_SECRET,
     { expiresIn: "1d" }
@@ -77,7 +85,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
 
 /* ======================
     OTP SYSTEM
@@ -98,9 +105,7 @@ router.post("/send-otp", async (req, res) => {
     await validateEmailLegitimacy(email);
 
     // Check if email already exists
-    const existing =
-      (await User.findOne({ email })) ||
-      (await Farmer.findOne({ email }));
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
 
     if (existing) {
       return res.status(400).json({
@@ -132,7 +137,6 @@ router.post("/send-otp", async (req, res) => {
       success: true,
       message: "OTP sent successfully to your email.",
     });
-
   } catch (error) {
     console.error("OTP Error:", error);
     res.status(400).json({
@@ -204,16 +208,18 @@ router.post("/login", async (req, res) => {
 
       req.session.user = {
         id: user._id.toString(),
-        role: role || user.role, 
+        role: role || user.role,
         email: user.email,
         first_name: user.first_name || "",
         last_name: user.last_name || "",
         name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
         managerId: user.managerId || null,
+
+        // ✅ NEW: default avatar fallback
+        profile_photo: user.profile_photo || DEFAULT_AVATAR,
       };
 
       // ✅ FIX: Force the session to save to MongoDB BEFORE responding.
-      // This prevents the refresh bug where the client reloads before the DB write finishes.
       req.session.save(async (saveErr) => {
         if (saveErr) {
           return res.status(500).json({ success: false, message: "Session save failed" });
@@ -237,234 +243,203 @@ router.post("/login", async (req, res) => {
   }
 });
 
-  /* ======================
+/* ======================
    FORGOT PASSWORD OTP
-  ====================== */
-  router.post("/forgot-password", async (req, res) => {
-    const { email } = req.body;
+====================== */
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
 
-    try {
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: "Email is required.",
-        });
-      }
-
-      // Email MUST exist
-      const user =
-        (await User.findOne({ email })) ||
-        (await Farmer.findOne({ email }));
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "No account found with this email.",
-        });
-      }
-
-      // Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-
-      otpStore.set(email, {
-        otp: hashedOtp,
-        expires: Date.now() + 10 * 60 * 1000, // 10 min
-      });
-
-      await transporter.sendMail({
-        from: `"breedIT" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "breedIT Password Reset Code",
-        html: otpEmailTemplate({ otp }),
-      });
-
-      res.json({
-        success: true,
-        message: "Password reset OTP sent to your email.",
-      });
-
-    } catch (error) {
-      console.error("Forgot Password OTP Error:", error);
-      res.status(500).json({
+  try {
+    if (!email) {
+      return res.status(400).json({
         success: false,
-        message: "Server error while sending OTP.",
+        message: "Email is required.",
       });
     }
-  });
 
-  /* ======================
+    // Email MUST exist
+    const user = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found with this email.",
+      });
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    otpStore.set(email, {
+      otp: hashedOtp,
+      expires: Date.now() + 10 * 60 * 1000, // 10 min
+    });
+
+    await transporter.sendMail({
+      from: `"breedIT" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "breedIT Password Reset Code",
+      html: otpEmailTemplate({ otp }),
+    });
+
+    res.json({
+      success: true,
+      message: "Password reset OTP sent to your email.",
+    });
+  } catch (error) {
+    console.error("Forgot Password OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while sending OTP.",
+    });
+  }
+});
+
+/* ======================
    RESET PASSWORD
-  ====================== */
-  router.post("/reset-password", async (req, res) => {
-    const { email, otp, password } = req.body;
+====================== */
+router.post("/reset-password", async (req, res) => {
+  const { email, otp, password } = req.body;
 
-    try {
-      if (!email || !otp || !password) {
-        return res.status(400).json({
-          success: false,
-          message: "Email, OTP, and new password are required.",
-        });
-      }
-
-      if (password.length < 8) {
-        return res.status(400).json({
-          success: false,
-          message: "Password must be at least 8 characters long.",
-        });
-      }
-
-      // Verify OTP (shared logic)
-      await verifyOTPInternal(email, otp);
-
-      // Find user (User or Farmer)
-      const user =
-        (await User.findOne({ email })) ||
-        (await Farmer.findOne({ email }));
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found.",
-        });
-      }
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(password, 10);
-      user.password = hashedPassword;
-
-      await user.save();
-
-      res.json({
-        success: true,
-        message: "Password reset successful.",
-      });
-
-    } catch (error) {
-      console.error("Reset Password Error:", error);
-      res.status(400).json({
+  try {
+    if (!email || !otp || !password) {
+      return res.status(400).json({
         success: false,
-        message: error.message || "Password reset failed.",
+        message: "Email, OTP, and new password are required.",
       });
     }
-  });
 
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long.",
+      });
+    }
+
+    // Verify OTP (shared logic)
+    await verifyOTPInternal(email, otp);
+
+    // Find user (User or Farmer)
+    const user = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password reset successful.",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Password reset failed.",
+    });
+  }
+});
 
 /* ======================
     CHANGE PASSWORD - REQUEST OTP
 ====================== */
-router.post(
-  "/change-password/request",
-  requireSessionAndToken,
-  async (req, res) => {
-    try {
-      const email =
-        req.user?.email ||
-        req.session?.user?.email;
+router.post("/change-password/request", requireSessionAndToken, async (req, res) => {
+  try {
+    const email = req.user?.email || req.session?.user?.email;
 
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: "User email not found.",
-        });
-      }
-
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await bcrypt.hash(otp, 10);
-
-      otpStore.set(email, {
-        otp: hashedOtp,
-        expires: Date.now() + 10 * 60 * 1000,
-      });
-
-      await transporter.sendMail({
-        from: `"breedIT" <${process.env.EMAIL_USER}>`,
-        to: email,
-        subject: "breedIT Change Password Verification Code",
-        html: otpEmailTemplate({ otp }),
-      });
-
-      res.json({
-        success: true,
-        message: "OTP sent to your email.",
-      });
-
-    } catch (error) {
-      console.error("Change Password OTP Error:", error);
-      res.status(500).json({
+    if (!email) {
+      return res.status(400).json({
         success: false,
-        message: "Failed to send OTP.",
+        message: "User email not found.",
       });
     }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    otpStore.set(email, {
+      otp: hashedOtp,
+      expires: Date.now() + 10 * 60 * 1000,
+    });
+
+    await transporter.sendMail({
+      from: `"breedIT" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "breedIT Change Password Verification Code",
+      html: otpEmailTemplate({ otp }),
+    });
+
+    res.json({
+      success: true,
+      message: "OTP sent to your email.",
+    });
+  } catch (error) {
+    console.error("Change Password OTP Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send OTP.",
+    });
   }
-);
+});
 
 /* ======================
     CHANGE PASSWORD - CONFIRM
 ====================== */
-router.post(
-  "/change-password/confirm",
-  requireSessionAndToken,
-  async (req, res) => {
-    const { otp, newPassword } = req.body;
+router.post("/change-password/confirm", requireSessionAndToken, async (req, res) => {
+  const { otp, newPassword } = req.body;
 
-    try {
-      if (!otp || !newPassword) {
-        return res.status(400).json({
-          success: false,
-          message: "OTP and new password are required.",
-        });
-      }
-
-      validatePassword(newPassword);
-
-      const email =
-        req.user?.email ||
-        req.session?.user?.email;
-
-
-      // Verify OTP
-      await verifyOTPInternal(email, otp);
-
-      // Find user (User or Farmer)
-      const user =
-        (await User.findById(req.user.id)) ||
-        (await Farmer.findById(req.user.id));
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found.",
-        });
-      }
-
-      user.password = await bcrypt.hash(newPassword, 10);
-      await user.save();
-
-      // ✅ Audit log
-      await logAction(
-        user._id,
-        "CHANGE_PASSWORD",
-        "USER_AUTH",
-        "User changed password with OTP verification",
-        req
-      );
-
-      res.json({
-        success: true,
-        message: "Password changed successfully.",
-      });
-
-    } catch (error) {
-      console.error("Change Password Error:", error);
-      res.status(400).json({
+  try {
+    if (!otp || !newPassword) {
+      return res.status(400).json({
         success: false,
-        message: error.message || "Password change failed.",
+        message: "OTP and new password are required.",
       });
     }
-  }
-);
 
+    validatePassword(newPassword);
+
+    const email = req.user?.email || req.session?.user?.email;
+
+    // Verify OTP
+    await verifyOTPInternal(email, otp);
+
+    // Find user (User or Farmer)
+    const user = (await User.findById(req.user.id)) || (await Farmer.findById(req.user.id));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    // ✅ Audit log
+    await logAction(user._id, "CHANGE_PASSWORD", "USER_AUTH", "User changed password with OTP verification", req);
+
+    res.json({
+      success: true,
+      message: "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error("Change Password Error:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Password change failed.",
+    });
+  }
+});
 
 /* ======================
     LOGOUT
@@ -507,8 +482,6 @@ router.get("/me", (req, res) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // If we have a valid token but no session (e.g., first hit), 
-    // we could optionally reconstruct the session here.
     res.json({
       success: true,
       source: "jwt",
@@ -521,6 +494,97 @@ router.get("/me", (req, res) => {
     });
   }
 });
+
+/* ======================
+    UPDATE PROFILE (TEXT)
+    - farm_manager + encoder
+====================== */
+router.put(
+  "/update-profile",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found." });
+      }
+
+      const { first_name, last_name, address, contact_info } = req.body;
+
+      if (first_name !== undefined) user.first_name = String(first_name).trim();
+      if (last_name !== undefined) user.last_name = String(last_name).trim();
+      if (address !== undefined) user.address = String(address).trim();
+      if (contact_info !== undefined) user.contact_info = String(contact_info).trim();
+
+      await user.save();
+
+      // ✅ keep EJS session updated
+      if (req.session?.user) {
+        req.session.user.first_name = user.first_name || "";
+        req.session.user.last_name = user.last_name || "";
+        req.session.user.name = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User";
+        req.session.user.address = user.address || "";
+        req.session.user.contact_info = user.contact_info || "";
+        req.session.user.profile_photo = user.profile_photo || DEFAULT_AVATAR;
+
+        await new Promise((resolve) => req.session.save(() => resolve()));
+      }
+
+      await logAction(req.user.id, "UPDATE_PROFILE", "ACCOUNT_MANAGEMENT", "User updated profile information", req);
+
+      return res.json({ success: true, message: "Profile updated.", user });
+    } catch (err) {
+      console.error("Update profile error:", err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
+
+/* ======================
+    UPDATE PROFILE PHOTO (UPLOAD)
+    - multipart/form-data
+    - field name: profile_photo
+====================== */
+router.put(
+  "/update-profile-photo",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  uploadUserProfilePhoto.single("profile_photo"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded." });
+      }
+
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found." });
+      }
+
+      const publicPath = `/uploads/user_profiles/${req.file.filename}`;
+      user.profile_photo = publicPath;
+      await user.save();
+
+      // ✅ keep EJS session updated
+      if (req.session?.user) {
+        req.session.user.profile_photo = publicPath || DEFAULT_AVATAR;
+        await new Promise((resolve) => req.session.save(() => resolve()));
+      }
+
+      await logAction(req.user.id, "UPDATE_PROFILE_PHOTO", "ACCOUNT_MANAGEMENT", "User updated profile photo", req);
+
+      return res.json({
+        success: true,
+        message: "Profile photo updated.",
+        profile_photo: publicPath,
+      });
+    } catch (err) {
+      console.error("Update profile photo error:", err);
+      return res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+);
 
 /* ======================
     REGISTER FARM MANAGER
@@ -568,199 +632,166 @@ router.post("/register", async (req, res) => {
 /* ======================
     REGISTER FARMER (FIXED)
 ====================== */
-router.post(
-  "/register-farmer",
-  requireSessionAndToken,
-  allowRoles("farm_manager"),
-  async (req, res) => {
-    try {
-      const {
-        first_name,
-        last_name,
-        address,
-        contact_no,
-        email,
-        password,
-        managerId,
-        num_of_pens = 0,
-        pen_capacity = 0,
-        production_type,
-        membership_date,
-      } = req.body;
+router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
+  try {
+    const {
+      first_name,
+      last_name,
+      address,
+      contact_no,
+      email,
+      password,
+      managerId,
+      num_of_pens = 0,
+      pen_capacity = 0,
+      production_type,
+      membership_date,
+    } = req.body;
 
-      if (!email || !password || !managerId) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required fields"
-        });
-      }
-
-      validatePassword(password);
-      await validateEmailLegitimacy(email);
-
-      const existing =
-        (await User.findOne({ email })) ||
-        (await Farmer.findOne({ email }));
-
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "Email already in use"
-        });
-      }
-
-      // 1️⃣ CREATE USER ACCOUNT (CRITICAL)
-      const user = await User.create({
-        first_name,
-        last_name,
-        email,
-        password: await bcrypt.hash(password, 10),
-        role: "farmer",
-        managerId,
-      });
-
-      // Generate farmer_id
-      const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
-      const nextNum = lastFarmer
-        ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1
-        : 1;
-
-      const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
-
-      // 2️⃣ CREATE FARMER PROFILE LINKED TO USER
-      const farmer = await Farmer.create({
-        farmer_id: farmerId,
-        first_name,
-        last_name,
-        address,
-        contact_no,
-        email,
-        password: user.password,
-        managerId,
-        num_of_pens,
-        pen_capacity,
-        production_type,
-        membership_date,
-        user_id: user._id, // 🔑 THIS FIXES NOTIFICATIONS
-      });
-
-      // ✅ Audit Log: Register Farmer
-      await logAction(
-        req.user.id,
-        "REGISTER_FARMER",
-        "ACCOUNT_MANAGEMENT",
-        `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`,
-        req
-      );
-
-      res.status(201).json({
-        success: true,
-        message: "Farmer registered successfully",
-        farmer,
-      });
-
-    } catch (error) {
-      console.error("Register farmer error:", error);
-      res.status(400).json({
+    if (!email || !password || !managerId) {
+      return res.status(400).json({
         success: false,
-        message: error.message
+        message: "Missing required fields",
       });
     }
+
+    validatePassword(password);
+    await validateEmailLegitimacy(email);
+
+    const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
+
+    if (existing) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already in use",
+      });
+    }
+
+    // 1️⃣ CREATE USER ACCOUNT (CRITICAL)
+    const user = await User.create({
+      first_name,
+      last_name,
+      email,
+      password: await bcrypt.hash(password, 10),
+      role: "farmer",
+      managerId,
+    });
+
+    // Generate farmer_id
+    const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
+    const nextNum = lastFarmer ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1 : 1;
+
+    const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
+
+    // 2️⃣ CREATE FARMER PROFILE LINKED TO USER
+    const farmer = await Farmer.create({
+      farmer_id: farmerId,
+      first_name,
+      last_name,
+      address,
+      contact_no,
+      email,
+      password: user.password,
+      managerId,
+      num_of_pens,
+      pen_capacity,
+      production_type,
+      membership_date,
+      user_id: user._id, // 🔑 THIS FIXES NOTIFICATIONS
+    });
+
+    // ✅ Audit Log: Register Farmer
+    await logAction(
+      req.user.id,
+      "REGISTER_FARMER",
+      "ACCOUNT_MANAGEMENT",
+      `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`,
+      req
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Farmer registered successfully",
+      farmer,
+    });
+  } catch (error) {
+    console.error("Register farmer error:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
-);
+});
 
 /* ======================
     GET FARMERS
 ====================== */
-router.get(
-  "/farmers",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
-    try {
-      const user = req.user;
-      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-      const farmers = await Farmer.find({ managerId });
-      res.json({ success: true, farmers });
-    } catch (err) {
-      console.error("Fetch farmers error:", err);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
+router.get("/farmers", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+  try {
+    const user = req.user;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    const farmers = await Farmer.find({ managerId });
+    res.json({ success: true, farmers });
+  } catch (err) {
+    console.error("Fetch farmers error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-);
+});
 
 /* ======================
     GET FARMERS (LEGACY PARAM ROUTE)
 ====================== */
-router.get(
-  "/farmers/:managerId",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
-  async (req, res) => {
-    try {
-      const paramManagerId = req.params.managerId;
-      const user = req.user;
-      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+router.get("/farmers/:managerId", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
+  try {
+    const paramManagerId = req.params.managerId;
+    const user = req.user;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-      if (paramManagerId !== managerId) {
-        return res.status(403).json({ success: false, message: "Unauthorized manager access" });
-      }
-
-      const farmers = await Farmer.find({ managerId });
-      res.json({ success: true, farmers });
-    } catch (error) {
-      console.error("Fetch farmers error:", error);
-      res.status(500).json({ success: false, message: "Server error" });
+    if (paramManagerId !== managerId) {
+      return res.status(403).json({ success: false, message: "Unauthorized manager access" });
     }
+
+    const farmers = await Farmer.find({ managerId });
+    res.json({ success: true, farmers });
+  } catch (error) {
+    console.error("Fetch farmers error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-);
+});
 
 /* ======================
     UPDATE FARMER
 ====================== */
-router.put(
-  "/update-farmer/:farmerId",
-  requireSessionAndToken,
-  allowRoles("farm_manager"),
-  async (req, res) => {
-    try {
-      const farmer = await Farmer.findOne({
-        farmer_id: req.params.farmerId,
-        managerId: req.user.id,
-      });
+router.put("/update-farmer/:farmerId", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
+  try {
+    const farmer = await Farmer.findOne({
+      farmer_id: req.params.farmerId,
+      managerId: req.user.id,
+    });
 
-      if (!farmer) {
-        return res.status(404).json({ success: false, message: "Farmer not found" });
-      }
-
-      const fieldsToUpdate = [
-        "first_name",
-        "last_name",
-        "address",
-        "contact_no",
-        "num_of_pens",
-        "pen_capacity",
-        "status",
-      ];
-
-      fieldsToUpdate.forEach((field) => {
-        if (req.body[field] !== undefined) {
-          farmer[field] = req.body[field];
-        }
-      });
-
-      await farmer.save();
-
-      // ✅ Audit Log: Update Farmer
-      await logAction(req.user.id, "UPDATE_FARMER", "ACCOUNT_MANAGEMENT", `Updated details for Farmer: ${req.params.farmerId}`, req);
-
-      res.json({ success: true, farmer });
-    } catch (err) {
-      console.error("Update farmer error:", err);
-      res.status(500).json({ success: false, message: "Server error" });
+    if (!farmer) {
+      return res.status(404).json({ success: false, message: "Farmer not found" });
     }
+
+    const fieldsToUpdate = ["first_name", "last_name", "address", "contact_no", "num_of_pens", "pen_capacity", "status"];
+
+    fieldsToUpdate.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        farmer[field] = req.body[field];
+      }
+    });
+
+    await farmer.save();
+
+    // ✅ Audit Log: Update Farmer
+    await logAction(req.user.id, "UPDATE_FARMER", "ACCOUNT_MANAGEMENT", `Updated details for Farmer: ${req.params.farmerId}`, req);
+
+    res.json({ success: true, farmer });
+  } catch (err) {
+    console.error("Update farmer error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-);
+});
 
 /* ======================
     REGISTER ENCODER
@@ -815,24 +846,19 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
 /* ======================
     GET ENCODERS
 ====================== */
-router.get(
-  "/encoders",
-  requireSessionAndToken,
-  allowRoles("farm_manager"),
-  async (req, res) => {
-    try {
-      const encoders = await User.find({
-        role: "encoder",
-        managerId: req.user.id,
-      }).select("-password -__v");
+router.get("/encoders", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
+  try {
+    const encoders = await User.find({
+      role: "encoder",
+      managerId: req.user.id,
+    }).select("-password -__v");
 
-      res.json({ success: true, encoders });
-    } catch (error) {
-      console.error("Fetch encoders error:", error);
-      res.status(500).json({ success: false, message: "Server error" });
-    }
+    res.json({ success: true, encoders });
+  } catch (error) {
+    console.error("Fetch encoders error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-);
+});
 
 /* ======================
     UPDATE ENCODER
@@ -845,8 +871,8 @@ router.put("/update-encoder/:id", requireSessionAndToken, allowRoles("farm_manag
     }
 
     // Security: Only Manager who created the encoder can update them
-    if(encoder.managerId?.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, message: "Access Denied" });
+    if (encoder.managerId?.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Access Denied" });
     }
 
     Object.assign(encoder, req.body);
@@ -889,65 +915,59 @@ router.get("/encoders/single/:id", async (req, res) => {
 /* ======================
     AUDIT LOGS RETRIEVAL
 ====================== */
-router.get(
-  "/audit-logs",
-  requireSessionAndToken,
-  allowRoles("farm_manager", "farmer", "encoder"),
-  async (req, res) => {
-    try {
-      const { limit = 100, skip = 0 } = req.query;
-      const user = req.user;
+router.get("/audit-logs", requireSessionAndToken, allowRoles("farm_manager", "farmer", "encoder"), async (req, res) => {
+  try {
+    const { limit = 100, skip = 0 } = req.query;
+    const user = req.user;
 
-      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-      if (!managerId && user.role !== "farm_manager") {
-          return res.status(400).json({ success: false, message: "Manager context not found" });
-      }
+    if (!managerId && user.role !== "farm_manager") {
+      return res.status(400).json({ success: false, message: "Manager context not found" });
+    }
 
-      const teamEncoders = await User.find({ managerId }).select("_id");
-      const teamFarmers = await Farmer.find({ managerId }).select("_id");
+    const teamEncoders = await User.find({ managerId }).select("_id");
+    const teamFarmers = await Farmer.find({ managerId }).select("_id");
 
-      const teamIds = [
-          ...teamEncoders.map(e => e._id),
-          ...teamFarmers.map(f => f._id),
-          new mongoose.Types.ObjectId(managerId)
-      ];
+    const teamIds = [
+      ...teamEncoders.map((e) => e._id),
+      ...teamFarmers.map((f) => f._id),
+      new mongoose.Types.ObjectId(managerId),
+    ];
 
-      let logs = await AuditLog.find({ user_id: { $in: teamIds } })
-        .populate("user_id", "first_name last_name role email")
-        .sort({ timestamp: -1 })
-        .limit(parseInt(limit))
-        .skip(parseInt(skip))
-        .lean(); 
+    let logs = await AuditLog.find({ user_id: { $in: teamIds } })
+      .populate("user_id", "first_name last_name role email")
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(skip))
+      .lean();
 
-      // ✅ REFINED LOGIC: Re-check Farmer collection for any logs that didn't populate from 'User'
-      for (let log of logs) {
-        if (!log.user_id) {
-            // Fetch the raw user_id since populate failed
-            const rawLog = await AuditLog.findById(log._id).select("user_id").lean();
-            if (rawLog && rawLog.user_id) {
-                const farmer = await Farmer.findById(rawLog.user_id).select("first_name last_name email").lean();
-                if (farmer) {
-                    log.user_id = {
-                        _id: farmer._id,
-                        first_name: farmer.first_name,
-                        last_name: farmer.last_name,
-                        email: farmer.email,
-                        role: "farmer"
-                    };
-                }
-            }
+    // ✅ REFINED LOGIC: Re-check Farmer collection for any logs that didn't populate from 'User'
+    for (let log of logs) {
+      if (!log.user_id) {
+        const rawLog = await AuditLog.findById(log._id).select("user_id").lean();
+        if (rawLog && rawLog.user_id) {
+          const farmer = await Farmer.findById(rawLog.user_id).select("first_name last_name email").lean();
+          if (farmer) {
+            log.user_id = {
+              _id: farmer._id,
+              first_name: farmer.first_name,
+              last_name: farmer.last_name,
+              email: farmer.email,
+              role: "farmer",
+            };
+          }
         }
       }
-
-      const total = await AuditLog.countDocuments({ user_id: { $in: teamIds } });
-
-      res.json({ success: true, total, logs });
-    } catch (error) {
-      console.error("Fetch Audit Logs error:", error);
-      res.status(500).json({ success: false, message: "Server error" });
     }
+
+    const total = await AuditLog.countDocuments({ user_id: { $in: teamIds } });
+
+    res.json({ success: true, total, logs });
+  } catch (error) {
+    console.error("Fetch Audit Logs error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
-);
+});
 
 module.exports = router;
