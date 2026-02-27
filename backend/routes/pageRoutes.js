@@ -342,11 +342,11 @@ router.get(
 // Farmer Reproduction & Growth
 // ==========================
 router.get(
-  "/farmer/reproduction",
+  "/farmer/reproduction/",
   requireLogin,
   requireFarmer,
   (req, res) => {
-    res.render("pages/farmer/reproduction", {
+    res.render("pages/farmer/reproduction/index", {
       page_title: "Reproduction Growth",
       current_section: "reproduction",
       current_page: "reproduction",
