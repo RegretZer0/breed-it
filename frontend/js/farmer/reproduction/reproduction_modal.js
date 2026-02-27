@@ -14,29 +14,23 @@ export function initReproModal(helpers) {
     pick,
   } = helpers;
 
-  // =========================
-  // MODAL REFS (DETAILS)
-  // =========================
+  /* =========================
+     MODAL REFS (DETAILS)
+  ========================= */
   const pigDetailsModalEl = document.getElementById("pigDetailsModal");
   const pigDetailsTitle = document.getElementById("pigDetailsTitle");
   const pigDetailsSub = document.getElementById("pigDetailsSub");
   const pigDetailsStatusBadge = document.getElementById("pigDetailsStatusBadge");
 
-  // TOP tabs
+  // top tab
   const tabReproduction = document.getElementById("tabReproduction");
 
-  // Repro panels wrap (NEW)
-  const reproCyclesPanelsWrap = document.getElementById("reproCyclesPanelsWrap");
-  const reproCycleDetailsPanel = document.getElementById("reproCycleDetailsPanel");
-
-  // Close cycle button (NEW)
-  const reproCloseCycleBtn = document.getElementById("reproCloseCycleBtn");
-
-  // Repro inner reveal
+  // inner reveal
   const reproInnerTabsWrap = document.getElementById("reproInnerTabsWrap");
   const reproInnerPlaceholder = document.getElementById("reproInnerPlaceholder");
+  const reproCloseCyclePanelBtn = document.getElementById("reproCloseCyclePanelBtn");
 
-  // Profile tab
+  // profile
   const profilePhotoImg = document.getElementById("profilePhotoImg");
   const profilePhotoFallback = document.getElementById("profilePhotoFallback");
   const profileBadges = document.getElementById("profileBadges");
@@ -49,12 +43,13 @@ export function initReproModal(helpers) {
   const profileAge = document.getElementById("profileAge");
   const profileBirthDate = document.getElementById("profileBirthDate");
 
-  // AI (Cycles)
+  // cycles
   const aiCycleSelect = document.getElementById("aiCycleSelect");
   const aiRefreshBtn = document.getElementById("aiRefreshBtn");
   const aiCycleCards = document.getElementById("aiCycleCards");
   const aiEmpty = document.getElementById("aiEmpty");
 
+  // ai analysis
   const aiAnalysisStatusBadge = document.getElementById("aiAnalysisStatusBadge");
   const aiAnalysisPlaceholder = document.getElementById("aiAnalysisPlaceholder");
   const aiAnalysisContent = document.getElementById("aiAnalysisContent");
@@ -69,7 +64,7 @@ export function initReproModal(helpers) {
   const aiBoarBatch = document.getElementById("aiBoarBatch");
   const aiDate = document.getElementById("aiDate");
 
-  // Piglets Growth Records (defensive)
+  // piglets growth tab host (existing ID)
   const pigletsGrowthTableHost =
     document.getElementById("pigletsGrowthTableHost") ||
     document.getElementById("pigletsGrowthRecordsList") ||
@@ -86,51 +81,38 @@ export function initReproModal(helpers) {
     document.getElementById("pigletsGrowthRecordsRefreshBtn") ||
     null;
 
+  // health tab host (new safe IDs)
+  const pigletsHealthHost = document.getElementById("pigletsHealthHost") || null;
+  const pigletsHealthEmpty = document.getElementById("pigletsHealthEmpty") || null;
+  const pigletsHealthRefreshBtn = document.getElementById("pigletsHealthRefreshBtn") || null;
+
   const hasBootstrap = typeof window.bootstrap !== "undefined" && !!window.bootstrap?.Modal;
   const bsModal = pigDetailsModalEl && hasBootstrap ? window.bootstrap.Modal.getOrCreateInstance(pigDetailsModalEl) : null;
 
-  // =========================
-  // MODAL STATE
-  // =========================
+  /* =========================
+     MODAL STATE
+  ========================= */
   let currentSwine = null;
   let currentSwineId = null;
   let currentSwineTag = null;
 
-  // AI cache
+  // cycles cache
   let aiLoadedForSwineId = null;
   let aiRecordsRaw = [];
   let aiHistoryCache = null;
   let aiAllCache = null;
 
-  // Piglets growth cache
-  let pigletsGrowthLoadedForSwineId = null;
-  let pigletsGrowthCacheAll = null;
+  // selected cycle state
+  let currentCycleKey = null;     // "Cycle 1" or "1" etc
+  let currentCycleNumber = null;  // number when resolvable
 
-  // =========================
-  // VIEW MODE HELPERS (Panels vs Solo Cycle)
-  // =========================
-  function setSoloCycleMode(isSolo) {
-    if (!pigDetailsModalEl) return;
-    pigDetailsModalEl.classList.toggle("repro-solo-cycle", !!isSolo);
+  // piglets caches per cycle
+  let pigletsLoadedKey = null;
+  let pigletsCache = [];
 
-    // optional: keep scroll sane
-    try {
-      const body = pigDetailsModalEl.querySelector(".repro-modal-body");
-      if (body) body.scrollTop = 0;
-    } catch (_) {}
-  }
-
-  function showCyclesPanels() {
-    setSoloCycleMode(false);
-  }
-
-  function showCycleDetailsOnly() {
-    setSoloCycleMode(true);
-  }
-
-  // =========================
-  // SHOW/HIDE INNER DETAILS
-  // =========================
+  /* =========================
+     SHOW/HIDE INNER DETAILS
+  ========================= */
   function hideReproInner() {
     reproInnerTabsWrap?.classList.add("d-none");
     reproInnerPlaceholder?.classList.remove("d-none");
@@ -138,6 +120,15 @@ export function initReproModal(helpers) {
     aiAnalysisStatusBadge?.classList.add("d-none");
     aiAnalysisPlaceholder?.classList.remove("d-none");
     aiAnalysisContent?.classList.add("d-none");
+
+    // reset cycle selection state
+    currentCycleKey = null;
+    currentCycleNumber = null;
+    pigletsLoadedKey = null;
+    pigletsCache = [];
+
+    resetPigletsGrowthUI();
+    resetPigletsHealthUI();
   }
 
   function showReproInner() {
@@ -145,9 +136,9 @@ export function initReproModal(helpers) {
     reproInnerPlaceholder?.classList.add("d-none");
   }
 
-  // =========================
-  // MODAL FALLBACK
-  // =========================
+  /* =========================
+     FALLBACK MODAL (non-bootstrap)
+  ========================= */
   function showModalFallback() {
     if (!pigDetailsModalEl) return;
     pigDetailsModalEl.classList.add("show");
@@ -182,9 +173,9 @@ export function initReproModal(helpers) {
     if (closeBtn) hideModalFallback();
   });
 
-  // =========================
-  // PROFILE RENDER
-  // =========================
+  /* =========================
+     PROFILE RENDER
+  ========================= */
   function setBadge(text, cls) {
     return `<span class="badge rounded-pill ${cls}">${safeText(text)}</span>`;
   }
@@ -257,9 +248,9 @@ export function initReproModal(helpers) {
     }
   }
 
-  // =========================
-  // AI TAB (Cycles)
-  // =========================
+  /* =========================
+     AI CYCLES
+  ========================= */
   function resolveBoarFromAny(rec) {
     const boarObj = rec?.male_swine || rec?.boar || rec?.boar_info || rec?.boarInfo || null;
 
@@ -284,6 +275,15 @@ export function initReproModal(helpers) {
     return { boarTag, boarBreed, boarBatch };
   }
 
+  function parseCycleNumberFromLabel(cycleLabelOrKey) {
+    const raw = safeText(cycleLabelOrKey || "").trim();
+    // Accept: "Cycle 1", "1", "Cycle: 2", "cycle_3"
+    const m = raw.match(/(\d+)/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  }
+
   function normalizeAIRecord(rec) {
     const id = pick(rec, ["_id", "id", "record_id", "recordId"], null);
 
@@ -294,6 +294,7 @@ export function initReproModal(helpers) {
       "Cycle";
 
     const cycleLabel = typeof cycle === "number" ? `Cycle ${cycle}` : (cycle?.toString?.() || "Cycle");
+    const cycleNumber = typeof cycle === "number" ? cycle : parseCycleNumberFromLabel(cycleLabel);
 
     const dateStarted =
       pick(rec, ["date_started", "dateStarted", "cycle_start", "cycleStart", "start_date", "startDate"], null) ||
@@ -323,6 +324,7 @@ export function initReproModal(helpers) {
       id,
       cycleKey: safeText(cycle),
       cycleLabel,
+      cycleNumber,
       dateStarted,
       status,
       aiDate: aiDateVal,
@@ -403,8 +405,10 @@ export function initReproModal(helpers) {
   function buildStatusBadge(status) {
     const s = safeLower(status);
     if (s.includes("complete")) return { cls: "text-bg-secondary", text: "Completed" };
+    if (s.includes("success")) return { cls: "text-bg-success", text: "Success" };
+    if (s.includes("failed")) return { cls: "text-bg-danger", text: "Failed" };
     if (s.includes("ongoing") || s.includes("active")) return { cls: "text-bg-success", text: "Ongoing" };
-    return { cls: "text-bg-info", text: safeText(status || "Ongoing") };
+    return { cls: "text-bg-secondary", text: safeText(status || "Ongoing") };
   }
 
   function renderAICycleSelect(records) {
@@ -439,12 +443,11 @@ export function initReproModal(helpers) {
     aiCycleCards.innerHTML = list
       .map((r) => {
         const b = buildStatusBadge(r.status);
-
-        const subtitleParts = [
+        const subtitle = [
           `Started: <b>${fmtDate(r.dateStarted)}</b>`,
           r.aiDate ? `AI Date: <b>${fmtDate(r.aiDate)}</b>` : null,
           r.boar?.boarTag ? `Boar: <b>${safeText(r.boar.boarTag)}</b>` : null,
-        ].filter(Boolean);
+        ].filter(Boolean).join(" · ");
 
         return `
           <div class="card border-0 shadow-sm ai-cycle-card">
@@ -455,16 +458,13 @@ export function initReproModal(helpers) {
                     <i class="bi bi-layers"></i>
                     <span class="text-truncate">${safeText(r.cycleLabel)}</span>
                   </div>
-
-                  <div class="repro-cycle-subtitle">
-                    ${subtitleParts.map((x) => `<span>${x}</span>`).join("")}
-                  </div>
+                  <div class="small text-muted mt-1">${subtitle || "—"}</div>
                 </div>
 
                 <span class="badge rounded-pill ${b.cls}">${b.text}</span>
               </div>
 
-              <div class="repro-cycle-cta">
+              <div class="d-flex justify-content-end mt-3">
                 <button
                   class="btn btn-success btn-sm"
                   type="button"
@@ -472,7 +472,7 @@ export function initReproModal(helpers) {
                   data-id="${encodeURIComponent(r.id || "")}"
                   data-cycle="${encodeURIComponent(r.cycleKey)}"
                 >
-                  <i class="bi bi-graph-up me-1"></i>Open Cycle
+                  <i class="bi bi-eye me-1"></i>Open Cycle
                 </button>
               </div>
             </div>
@@ -531,7 +531,6 @@ export function initReproModal(helpers) {
 
     resetAIUI();
     hideReproInner();
-    showCyclesPanels(); // always start in panels view when loading
 
     const swTag = currentSwineTag || getSwineTag(currentSwine || {});
     const raw = await fetchAIRecords(currentSwineId, swTag);
@@ -550,229 +549,231 @@ export function initReproModal(helpers) {
     renderAICycleCards(aiRecordsRaw, aiCycleSelect?.value || "");
   }
 
-  // =========================
-  // PIGLETS GROWTH TAB (unchanged)
-  // =========================
-  function normalizeGrowthRow(r) {
-    const pigletTag =
-      pick(r, ["piglet_tag", "pigletTag", "piglet_id", "pigletId", "swine_id", "swineId", "tag"], null) ||
-      pick(r?.piglet, ["swine_id", "tag", "piglet_tag"], null) ||
-      "—";
-
-    const recordDate = pick(r, ["record_date", "recordDate", "date", "measured_at", "measuredAt", "createdAt"], null);
-    const ageDays = pick(r, ["age_days", "ageDays", "days_old", "daysOld"], null);
-    const weight = pick(r, ["weight", "weight_kg", "weightKg"], null);
-    const length = pick(r, ["length", "length_cm", "lengthCm"], null);
-    const girth = pick(r, ["girth", "girth_cm", "girthCm"], null);
-    const remarks = pick(r, ["remarks", "note", "notes", "comment"], "");
-
-    return {
-      pigletTag: safeText(pigletTag),
-      recordDate,
-      ageDays,
-      weight,
-      length,
-      girth,
-      remarks: safeText(remarks || "—"),
-      raw: r,
-    };
+  /* =========================
+     PIGLETS BY CYCLE
+     Uses new route: GET /api/piglets/by-cycle?damTag=...&cycleNumber=...
+  ========================= */
+  function resetPigletsGrowthUI() {
+    if (!pigletsGrowthTableHost) return;
+    pigletsGrowthEmpty?.classList.add("d-none");
+    pigletsGrowthTableHost.innerHTML = `<div class="text-muted small">Select a cycle to load piglets...</div>`;
   }
 
-  async function fetchPigletsGrowthAllMaybe() {
-    if (pigletsGrowthCacheAll) return pigletsGrowthCacheAll;
-
-    const candidatesAll = [
-      `/api/piglets-growth/all`,
-      `/api/piglets/growth/all`,
-      `/api/growth-records/all`,
-      `/api/piglet-growth/all`,
-    ];
-
-    for (const path of candidatesAll) {
-      const data = await apiGet(path);
-      if (!data) continue;
-
-      const arr =
-        (data.success && Array.isArray(data.records) && data.records) ||
-        (data.success && Array.isArray(data.data) && data.data) ||
-        (Array.isArray(data.records) && data.records) ||
-        (Array.isArray(data.data) && data.data) ||
-        (Array.isArray(data.items) && data.items) ||
-        (Array.isArray(data) && data) ||
-        null;
-
-      if (arr) {
-        pigletsGrowthCacheAll = arr;
-        return arr;
-      }
-    }
-
-    pigletsGrowthCacheAll = [];
-    return [];
+  function resetPigletsHealthUI() {
+    if (!pigletsHealthHost) return;
+    pigletsHealthEmpty?.classList.add("d-none");
+    pigletsHealthHost.innerHTML = `<div class="text-muted small">Select a cycle to load piglets...</div>`;
   }
 
-  async function fetchPigletsGrowthForSow(swMongoId, swTag) {
-    const candidates = [
-      `/api/piglets-growth/sow/${swMongoId}`,
-      `/api/piglets-growth/swine/${swMongoId}`,
-      `/api/piglets/growth/sow/${swMongoId}`,
-      `/api/piglets/growth/swine/${swMongoId}`,
-      `/api/growth-records/sow/${swMongoId}`,
-      `/api/growth-records/swine/${swMongoId}`,
-      `/api/piglet-growth/sow/${swMongoId}`,
-      `/api/piglet-growth/swine/${swMongoId}`,
-      `/api/piglets-growth?sow_tag=${encodeURIComponent(swTag || "")}`,
-      `/api/piglets/growth?sow_tag=${encodeURIComponent(swTag || "")}`,
-      `/api/growth-records?sow_tag=${encodeURIComponent(swTag || "")}`,
-    ];
-
-    for (const path of candidates) {
-      const data = await apiGet(path);
-      if (!data) continue;
-
-      const arr =
-        (data.success && Array.isArray(data.records) && data.records) ||
-        (data.success && Array.isArray(data.data) && data.data) ||
-        (Array.isArray(data.records) && data.records) ||
-        (Array.isArray(data.data) && data.data) ||
-        (Array.isArray(data.items) && data.items) ||
-        (Array.isArray(data) && data) ||
-        null;
-
-      if (arr) return arr;
-    }
-
-    const all = await fetchPigletsGrowthAllMaybe();
-    if (!all.length) return [];
-
-    const filtered = all.filter((r) => {
-      const sowTag =
-        pick(r, ["sow_tag", "sowTag"], null) ||
-        pick(r?.sow, ["swine_id", "tag"], null) ||
-        pick(r, ["mother_tag", "motherTag"], null) ||
-        null;
-
-      const sowId =
-        pick(r, ["sow_id", "sowId", "mother_id", "motherId"], null) ||
-        pick(r?.sow, ["_id", "id"], null) ||
-        null;
-
-      if (swMongoId && sowId && safeText(sowId) === safeText(swMongoId)) return true;
-      if (swTag && sowTag && safeLower(sowTag) === safeLower(swTag)) return true;
-      return false;
-    });
-
-    return filtered;
+  async function fetchPigletsForCycle(damTag, cycleNumber) {
+    if (!damTag || !cycleNumber) return [];
+    const url = `/api/piglets/by-cycle?damTag=${encodeURIComponent(damTag)}&cycleNumber=${encodeURIComponent(cycleNumber)}`;
+    const data = await apiGet(url);
+    if (!data || !data.success) return [];
+    return Array.isArray(data.piglets) ? data.piglets : [];
   }
 
-  function renderPigletsGrowth(records) {
+  function getLatestPerf(piglet) {
+    const arr = Array.isArray(piglet?.performance_records) ? piglet.performance_records : [];
+    if (!arr.length) return null;
+    return arr[arr.length - 1] || null;
+  }
+
+  function renderPigletsGrowthCards(piglets) {
     if (!pigletsGrowthTableHost) return;
 
-    const rows = (Array.isArray(records) ? records : []).map(normalizeGrowthRow);
-
-    if (!rows.length) {
+    const list = Array.isArray(piglets) ? piglets : [];
+    if (!list.length) {
       pigletsGrowthEmpty?.classList.remove("d-none");
-      pigletsGrowthTableHost.innerHTML = `
-        <div class="card border-0 shadow-sm">
-          <div class="card-body text-muted small">
-            No piglets growth records found for this sow.
-          </div>
-        </div>
-      `;
+      pigletsGrowthTableHost.innerHTML = "";
       return;
     }
 
     pigletsGrowthEmpty?.classList.add("d-none");
 
-    rows.sort((a, b) => {
-      const da = new Date(a.recordDate || 0).getTime();
-      const db = new Date(b.recordDate || 0).getTime();
-      return db - da;
-    });
-
     pigletsGrowthTableHost.innerHTML = `
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
-            <div class="fw-bold">
-              <i class="bi bi-bar-chart-line me-2"></i>Piglets Growth Records
+      <div class="row g-3">
+        ${list.map((p) => {
+          const tag = safeText(p.swine_id || "—");
+          const photo = buildPhotoUrlFromPath(p.profile_photo);
+          const perf = getLatestPerf(p);
+
+          const weight = perf?.weight != null ? `${perf.weight} kg` : "—";
+          const len = perf?.body_length != null ? `${perf.body_length} cm` : "—";
+          const girth = perf?.heart_girth != null ? `${perf.heart_girth} cm` : "—";
+          const recDate = perf?.record_date ? fmtDate(perf.record_date) : "—";
+
+          return `
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card piglet-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="piglet-avatar flex-shrink-0">
+                      ${
+                        photo
+                          ? `<img src="${photo}" alt="Piglet Photo" class="piglet-avatar-img">`
+                          : `<div class="piglet-avatar-fallback"><i class="bi bi-piggy-bank"></i></div>`
+                      }
+                    </div>
+
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="min-w-0">
+                          <div class="piglet-title text-truncate">${tag}</div>
+                          <div class="piglet-sub small text-muted text-truncate">
+                            Latest record: ${recDate}
+                          </div>
+                        </div>
+                        <span class="badge rounded-pill text-bg-light piglet-stage-pill">
+                          ${safeText(p.current_status || "—")}
+                        </span>
+                      </div>
+
+                      <div class="piglet-metrics mt-3">
+                        <div class="piglet-metric">
+                          <div class="k">Weight</div>
+                          <div class="v">${weight}</div>
+                        </div>
+                        <div class="piglet-metric">
+                          <div class="k">Length</div>
+                          <div class="v">${len}</div>
+                        </div>
+                        <div class="piglet-metric">
+                          <div class="k">Girth</div>
+                          <div class="v">${girth}</div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <button class="btn btn-outline-success btn-sm" type="button" id="pigletsGrowthRefreshBtnInline">
-              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-            </button>
-          </div>
-
-          <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Piglet Tag</th>
-                  <th>Record Date</th>
-                  <th class="text-nowrap">Age (days)</th>
-                  <th class="text-nowrap">Weight</th>
-                  <th class="text-nowrap">Length</th>
-                  <th class="text-nowrap">Girth</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows.map((r) => `
-                  <tr>
-                    <td class="fw-semibold">${safeText(r.pigletTag)}</td>
-                    <td>${fmtDate(r.recordDate)}</td>
-                    <td>${r.ageDays ?? "—"}</td>
-                    <td>${r.weight != null ? `${r.weight}` : "—"}</td>
-                    <td>${r.length != null ? `${r.length}` : "—"}</td>
-                    <td>${r.girth != null ? `${r.girth}` : "—"}</td>
-                    <td class="text-muted">${safeText(r.remarks)}</td>
-                  </tr>
-                `).join("")}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="small text-muted mt-3">
-            Showing <b>${rows.length}</b> record(s).
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.getElementById("pigletsGrowthRefreshBtnInline")?.addEventListener("click", () => {
-      pigletsGrowthCacheAll = null;
-      loadPigletsGrowthForCurrentSwine(true);
-    });
-  }
-
-  function resetPigletsGrowthUI() {
-    if (!pigletsGrowthTableHost) return;
-    pigletsGrowthEmpty?.classList.add("d-none");
-    pigletsGrowthTableHost.innerHTML = `
-      <div class="card border-0 shadow-sm">
-        <div class="card-body text-muted small">
-          Loading piglets growth records...
-        </div>
+          `;
+        }).join("")}
       </div>
     `;
   }
 
-  async function loadPigletsGrowthForCurrentSwine(force = false) {
-    if (!currentSwineId) return;
-    if (!pigletsGrowthTableHost) return;
-    if (!force && pigletsGrowthLoadedForSwineId === currentSwineId) return;
+  function renderPigletsHealthCards(piglets) {
+    if (!pigletsHealthHost) return;
 
+    const list = Array.isArray(piglets) ? piglets : [];
+    if (!list.length) {
+      pigletsHealthEmpty?.classList.remove("d-none");
+      pigletsHealthHost.innerHTML = "";
+      return;
+    }
+
+    pigletsHealthEmpty?.classList.add("d-none");
+
+    pigletsHealthHost.innerHTML = `
+      <div class="row g-3">
+        ${list.map((p) => {
+          const tag = safeText(p.swine_id || "—");
+          const photo = buildPhotoUrlFromPath(p.profile_photo);
+          const health = safeText(p.health_status || "—");
+          const healthNorm = normalizeHealth({ health_status: health });
+          const healthCls = healthNorm === "dead" ? "text-bg-danger" : (healthNorm === "alive" ? "text-bg-success" : "text-bg-secondary");
+
+          const perf = getLatestPerf(p);
+          const deformities = Array.isArray(perf?.deformities) ? perf.deformities.filter(Boolean) : [];
+          const defText = deformities.length ? deformities.join(", ") : "None";
+          const leg = perf?.leg_conformation ? safeText(perf.leg_conformation) : "—";
+          const teatCount = perf?.teat_count != null ? `${perf.teat_count}` : "—";
+          const teatAlign = perf?.teat_alignment ? safeText(perf.teat_alignment) : "—";
+
+          const hasDef = deformities.some((d) => safeLower(d) !== "none");
+          const defBadge = hasDef ? "text-bg-warning" : "text-bg-success";
+          const defLabel = hasDef ? "Has Defect" : "No Defect";
+
+          return `
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="card piglet-card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="d-flex align-items-start gap-3">
+                    <div class="piglet-avatar flex-shrink-0">
+                      ${
+                        photo
+                          ? `<img src="${photo}" alt="Piglet Photo" class="piglet-avatar-img">`
+                          : `<div class="piglet-avatar-fallback"><i class="bi bi-piggy-bank"></i></div>`
+                      }
+                    </div>
+
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="min-w-0">
+                          <div class="piglet-title text-truncate">${tag}</div>
+                          <div class="small text-muted text-truncate">
+                            Stage: ${safeText(p.current_status || "—")}
+                          </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 justify-content-end">
+                          <span class="badge rounded-pill ${healthCls}">${healthNorm === "dead" ? "Deceased" : safeText(health)}</span>
+                          <span class="badge rounded-pill ${defBadge}">${defLabel}</span>
+                        </div>
+                      </div>
+
+                      <div class="piglet-health mt-3">
+                        <div class="repro-kv repro-kv-compact">
+                          <div class="repro-kv-label">Deformities</div>
+                          <div class="repro-kv-value">${safeText(defText)}</div>
+                        </div>
+
+                        <div class="repro-kv-grid repro-kv-grid-compact mt-2">
+                          <div class="repro-kv repro-kv-compact">
+                            <div class="repro-kv-label">Leg</div>
+                            <div class="repro-kv-value">${leg}</div>
+                          </div>
+                          <div class="repro-kv repro-kv-compact">
+                            <div class="repro-kv-label">Teat Count</div>
+                            <div class="repro-kv-value">${teatCount}</div>
+                          </div>
+                          <div class="repro-kv repro-kv-compact">
+                            <div class="repro-kv-label">Teat Alignment</div>
+                            <div class="repro-kv-value">${teatAlign}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  async function loadPigletsForCurrentCycle(force = false) {
+    const damTag = currentSwineTag || getSwineTag(currentSwine || {});
+    if (!damTag) return;
+    if (!currentCycleNumber) return;
+
+    const key = `${damTag}::${currentCycleNumber}`;
+    if (!force && pigletsLoadedKey === key) {
+      renderPigletsGrowthCards(pigletsCache);
+      renderPigletsHealthCards(pigletsCache);
+      return;
+    }
+
+    pigletsLoadedKey = key;
     resetPigletsGrowthUI();
+    resetPigletsHealthUI();
 
-    const swTag = currentSwineTag || getSwineTag(currentSwine || {});
-    const raw = await fetchPigletsGrowthForSow(currentSwineId, swTag);
+    const piglets = await fetchPigletsForCycle(damTag, currentCycleNumber);
+    pigletsCache = piglets;
 
-    pigletsGrowthLoadedForSwineId = currentSwineId;
-    renderPigletsGrowth(raw || []);
+    renderPigletsGrowthCards(pigletsCache);
+    renderPigletsHealthCards(pigletsCache);
   }
 
-  // =========================
-  // OPEN DETAILS MODAL
-  // =========================
+  /* =========================
+     OPEN DETAILS MODAL
+  ========================= */
   function openDetailsModal(payloadStr) {
     let data = null;
     try {
@@ -787,10 +788,10 @@ export function initReproModal(helpers) {
     currentSwineTag = data?.tag || getSwineTag(currentSwine || {});
 
     aiLoadedForSwineId = null;
-    pigletsGrowthLoadedForSwineId = null;
 
     hideReproInner();
-    showCyclesPanels(); // start with panels visible
+    resetPigletsGrowthUI();
+    resetPigletsHealthUI();
 
     renderProfile(currentSwine || {}, data);
 
@@ -798,13 +799,12 @@ export function initReproModal(helpers) {
     else showModalFallback();
   }
 
-  // =========================
-  // EVENTS (Cycles + Inner reveal)
-  // =========================
+  /* =========================
+     EVENTS
+  ========================= */
   aiCycleSelect?.addEventListener("change", () => {
     renderAICycleCards(aiRecordsRaw, aiCycleSelect.value || "");
     hideReproInner();
-    showCyclesPanels();
   });
 
   aiRefreshBtn?.addEventListener("click", () => {
@@ -813,8 +813,8 @@ export function initReproModal(helpers) {
     loadAIForCurrentSwine(true);
   });
 
-  // Open cycle -> show only cycle details panel
-  aiCycleCards?.addEventListener("click", (e) => {
+  // Open a cycle: reveal inner tabs + set analysis + load piglets for that cycle
+  aiCycleCards?.addEventListener("click", async (e) => {
     const btn = e.target.closest('button[data-action="ai-analyze"]');
     if (!btn) return;
 
@@ -827,42 +827,41 @@ export function initReproModal(helpers) {
     if (!rec) rec = aiRecordsRaw[0] || null;
     if (!rec) return;
 
-    // SOLO VIEW
-    showCycleDetailsOnly();
+    currentCycleKey = rec.cycleKey || cycleKey || null;
+    currentCycleNumber = rec.cycleNumber || parseCycleNumberFromLabel(rec.cycleLabel) || parseCycleNumberFromLabel(rec.cycleKey) || null;
 
     showReproInner();
     setAIAnalysis(rec);
 
-    // activate inner AI tab
+    // load piglets for this cycle (cards)
+    await loadPigletsForCurrentCycle(true);
+
+    // activate AI tab by default
     document.getElementById("tabAI")?.click();
   });
 
-  // Close cycle details -> go back to panels
-  reproCloseCycleBtn?.addEventListener("click", () => {
+  // Close details panel
+  reproCloseCyclePanelBtn?.addEventListener("click", () => {
     hideReproInner();
-    showCyclesPanels();
+    // scroll modal body to top of details section for clarity
+    try {
+      document.getElementById("reproInnerPlaceholder")?.scrollIntoView({ block: "nearest" });
+    } catch (_) {}
   });
 
-  // Piglets refresh
-  pigletsGrowthRefreshBtn?.addEventListener("click", () => {
-    pigletsGrowthCacheAll = null;
-    loadPigletsGrowthForCurrentSwine(true);
-  });
+  // Piglets refresh (growth)
+  pigletsGrowthRefreshBtn?.addEventListener("click", () => loadPigletsForCurrentCycle(true));
 
-  // Load AI cycles when "Reproduction" top tab is opened
+  // Health refresh
+  pigletsHealthRefreshBtn?.addEventListener("click", () => loadPigletsForCurrentCycle(true));
+
+  // Load cycles when reproduction tab is opened
   tabReproduction?.addEventListener("shown.bs.tab", () => loadAIForCurrentSwine(false));
   tabReproduction?.addEventListener("click", () => setTimeout(() => loadAIForCurrentSwine(false), 120));
 
-  // Keep your existing tab hooks
-  document.getElementById("tabAI")?.addEventListener("shown.bs.tab", () => loadAIForCurrentSwine(false));
-  document.getElementById("tabAI")?.addEventListener("click", () => setTimeout(() => loadAIForCurrentSwine(false), 150));
-
-  const pigletsTabIds = ["tabPigletsGrowth", "tabPigletsGrowthRecords", "tabPiglets", "tabPigletsGrowthRec"];
-  pigletsTabIds.forEach((id) => {
-    const el = document.getElementById(id);
-    el?.addEventListener("shown.bs.tab", () => loadPigletsGrowthForCurrentSwine(false));
-    el?.addEventListener("click", () => setTimeout(() => loadPigletsGrowthForCurrentSwine(false), 150));
-  });
+  // If user switches to Piglets/Health tabs after opening a cycle
+  document.getElementById("tabPiglets")?.addEventListener("shown.bs.tab", () => loadPigletsForCurrentCycle(false));
+  document.getElementById("tabHealth")?.addEventListener("shown.bs.tab", () => loadPigletsForCurrentCycle(false));
 
   return {
     openDetailsModal,

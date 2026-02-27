@@ -153,82 +153,76 @@
 
           </div>
 
-          <!-- ================= REPRODUCTION (VERTICAL PLANNER) ================= -->
+          <!-- ================= REPRODUCTION ================= -->
           <div class="tab-pane fade" id="paneReproduction" role="tabpanel">
 
-            <!-- These two panels will be hidden when a cycle is opened -->
-            <div id="reproCyclesPanelsWrap">
+            <!-- Cycle Filter (top) -->
+            <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3">
+              <div class="card-body">
 
-              <!-- Cycle Filter (top) -->
-              <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3 repro-cycles-filter-card">
-                <div class="card-body">
-
-                  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-                    <div class="min-w-0">
-                      <div class="fw-bold d-flex align-items-center gap-2">
-                        <i class="bi bi-layers"></i>
-                        Cycles
-                      </div>
-                      <div class="small text-muted">
-                        Select a cycle to unlock cycle details below.
-                      </div>
-                    </div>
-
-                    <!-- filter controls -->
-                    <div class="repro-cycle-controls d-flex align-items-end gap-2 flex-wrap">
-                      <div class="min-w-0 repro-cycle-selectwrap">
-                        <label class="form-label small mb-1">Cycle Filter</label>
-                        <select class="form-select form-select-sm" id="aiCycleSelect">
-                          <option value="">All cycles</option>
-                        </select>
-                      </div>
-
-                      <button class="btn btn-outline-secondary btn-sm repro-cycle-refresh" type="button" id="aiRefreshBtn" title="Refresh cycles">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              <!-- Cycle Cards List (middle) -->
-              <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3 repro-cycles-list-card">
-                <div class="card-body">
-
-                  <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                  <div class="min-w-0">
                     <div class="fw-bold d-flex align-items-center gap-2">
-                      <i class="bi bi-collection"></i>
-                      Cycle List
+                      <i class="bi bi-layers"></i>
+                      Cycles
                     </div>
                     <div class="small text-muted">
-                      Tap <b>Open Cycle</b> to view details.
+                      Select a cycle to unlock cycle details below.
                     </div>
                   </div>
 
-                  <div id="aiEmpty" class="text-center text-muted py-4 d-none">
-                    <i class="bi bi-archive fs-2 d-block mb-2"></i>
-                    No cycles found for this sow.
-                  </div>
-
-                  <div class="repro-cycle-list d-flex flex-column gap-2" id="aiCycleCards">
-                    <div class="card border-0 shadow-sm repro-inner-card">
-                      <div class="card-body text-muted small">
-                        Loading cycles...
-                      </div>
+                  <div class="repro-cycle-controls d-flex align-items-end gap-2 flex-wrap">
+                    <div class="min-w-0">
+                      <label class="form-label small mb-1">Cycle Filter</label>
+                      <select class="form-select form-select-sm" id="aiCycleSelect">
+                        <option value="">All cycles</option>
+                      </select>
                     </div>
-                  </div>
 
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="aiRefreshBtn" title="Refresh cycles">
+                      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                    </button>
+                  </div>
                 </div>
-              </div>
 
+              </div>
+            </div>
+
+            <!-- Cycle Cards List (middle) -->
+            <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3">
+              <div class="card-body">
+
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                  <div class="fw-bold d-flex align-items-center gap-2">
+                    <i class="bi bi-collection"></i>
+                    Cycle List
+                  </div>
+                  <div class="small text-muted">
+                    Tap <b>Open Cycle</b> to view details.
+                  </div>
+                </div>
+
+                <div id="aiEmpty" class="text-center text-muted py-4 d-none">
+                  <i class="bi bi-archive fs-2 d-block mb-2"></i>
+                  No cycles found for this sow.
+                </div>
+
+                <div class="repro-cycle-list d-flex flex-column gap-2" id="aiCycleCards">
+                  <div class="card border-0 shadow-sm repro-inner-card">
+                    <div class="card-body text-muted small">
+                      Loading cycles...
+                    </div>
+                  </div>
+                </div>
+
+              </div>
             </div>
 
             <!-- Cycle Details (bottom) -->
-            <div class="card border-0 shadow-sm repro-inner-card repro-sheet" id="reproCycleDetailsPanel">
+            <div class="card border-0 shadow-sm repro-inner-card repro-sheet">
               <div class="card-body">
 
-                <!-- Placeholder (shown until cycle picked) -->
+                <!-- Placeholder -->
                 <div id="reproInnerPlaceholder" class="repro-placeholder text-muted small">
                   <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-hand-index-thumb"></i>
@@ -236,23 +230,22 @@
                   </div>
                 </div>
 
-                <!-- Inner tabs (hidden until cycle picked) -->
+                <!-- Inner tabs + content -->
                 <div class="d-none" id="reproInnerTabsWrap">
 
                   <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
-                    <div class="fw-bold d-flex align-items-center gap-2">
-                      <i class="bi bi-ui-checks"></i>
-                      Cycle Details
-                    </div>
-
                     <div class="d-flex align-items-center gap-2">
+                      <div class="fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-ui-checks"></i>
+                        Cycle Details
+                      </div>
                       <span class="badge rounded-pill text-bg-secondary d-none" id="aiAnalysisStatusBadge">—</span>
-
-                      <!-- NEW: close cycle details panel (does not replace any existing ID) -->
-                      <button type="button" class="btn btn-outline-secondary btn-sm" id="reproCloseCycleBtn">
-                        <i class="bi bi-x-lg me-1"></i>Close
-                      </button>
                     </div>
+
+                    <!-- New: close details panel -->
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="reproCloseCyclePanelBtn">
+                      <i class="bi bi-x-lg me-1"></i>Close Details
+                    </button>
                   </div>
 
                   <div class="repro-inner-tabsbar mb-3">
@@ -293,9 +286,9 @@
                     </ul>
                   </div>
 
-                  <!-- Inner panes (UNCHANGED IDs) -->
                   <div class="tab-content">
 
+                    <!-- AI -->
                     <div class="tab-pane fade show active" id="paneAI" role="tabpanel">
                       <div class="card border-0 repro-soft-panel">
                         <div class="card-body">
@@ -305,65 +298,61 @@
                           </div>
 
                           <div id="aiAnalysisContent" class="d-none">
-                            <div class="row g-2">
-                              <div class="col-12 col-md-6">
-                                <div class="profile-field">
-                                  <div class="label">Cycle</div>
-                                  <div class="value" id="aiCycleLabel">—</div>
-                                </div>
-                              </div>
-                              <div class="col-12 col-md-6">
-                                <div class="profile-field">
-                                  <div class="label">Date Started</div>
-                                  <div class="value" id="aiDateStarted">—</div>
-                                </div>
-                              </div>
+                            <div class="row g-3">
 
-                              <div class="col-12 col-md-6">
-                                <div class="profile-field">
-                                  <div class="label">Sow Metrics (during period)</div>
-                                  <div class="value" id="aiSowMetrics">—</div>
-                                </div>
-                              </div>
-                              <div class="col-12 col-md-6">
-                                <div class="profile-field">
-                                  <div class="label">Current Stage (period)</div>
-                                  <div class="value" id="aiPeriodStage">—</div>
+                              <div class="col-12">
+                                <div class="repro-kv-grid">
+                                  <div class="repro-kv">
+                                    <div class="repro-kv-label">Cycle</div>
+                                    <div class="repro-kv-value" id="aiCycleLabel">—</div>
+                                  </div>
+
+                                  <div class="repro-kv">
+                                    <div class="repro-kv-label">Date Started</div>
+                                    <div class="repro-kv-value" id="aiDateStarted">—</div>
+                                  </div>
+
+                                  <div class="repro-kv">
+                                    <div class="repro-kv-label">Sow Metrics (during period)</div>
+                                    <div class="repro-kv-value" id="aiSowMetrics">—</div>
+                                  </div>
+
+                                  <div class="repro-kv">
+                                    <div class="repro-kv-label">Current Stage (period)</div>
+                                    <div class="repro-kv-value" id="aiPeriodStage">—</div>
+                                  </div>
                                 </div>
                               </div>
 
                               <div class="col-12">
                                 <div class="card border-0 ai-subcard">
                                   <div class="card-body">
-                                    <div class="fw-semibold mb-2">
-                                      <i class="bi bi-gender-male me-1"></i> Boar Info
+                                    <div class="fw-semibold mb-3">
+                                      <i class="bi bi-gender-male me-1"></i>Boar Info
                                     </div>
-                                    <div class="row g-2">
-                                      <div class="col-12 col-md-6">
-                                        <div class="profile-field">
-                                          <div class="label">Boar Tag/ID</div>
-                                          <div class="value" id="aiBoarTag">—</div>
-                                        </div>
+
+                                    <div class="repro-kv-grid">
+                                      <div class="repro-kv">
+                                        <div class="repro-kv-label">Boar Tag/ID</div>
+                                        <div class="repro-kv-value" id="aiBoarTag">—</div>
                                       </div>
-                                      <div class="col-12 col-md-6">
-                                        <div class="profile-field">
-                                          <div class="label">Boar Breed</div>
-                                          <div class="value" id="aiBoarBreed">—</div>
-                                        </div>
+
+                                      <div class="repro-kv">
+                                        <div class="repro-kv-label">Boar Breed</div>
+                                        <div class="repro-kv-value" id="aiBoarBreed">—</div>
                                       </div>
-                                      <div class="col-12 col-md-6">
-                                        <div class="profile-field">
-                                          <div class="label">Semen Batch/Source</div>
-                                          <div class="value" id="aiBoarBatch">—</div>
-                                        </div>
+
+                                      <div class="repro-kv">
+                                        <div class="repro-kv-label">Semen Batch/Source</div>
+                                        <div class="repro-kv-value" id="aiBoarBatch">—</div>
                                       </div>
-                                      <div class="col-12 col-md-6">
-                                        <div class="profile-field">
-                                          <div class="label">AI Date</div>
-                                          <div class="value" id="aiDate">—</div>
-                                        </div>
+
+                                      <div class="repro-kv">
+                                        <div class="repro-kv-label">AI Date</div>
+                                        <div class="repro-kv-value" id="aiDate">—</div>
                                       </div>
                                     </div>
+
                                   </div>
                                 </div>
                               </div>
@@ -375,16 +364,18 @@
                       </div>
                     </div>
 
+                    <!-- Piglets Growth Records (cards) -->
                     <div class="tab-pane fade" id="panePiglets" role="tabpanel">
-                      <div id="pigletsGrowthWrap" class="card border-0 shadow-sm repro-inner-card repro-sheet">
+                      <div class="card border-0 shadow-sm repro-inner-card repro-sheet">
                         <div class="card-body">
+
                           <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
                             <div>
                               <div class="fw-bold d-flex align-items-center gap-2">
                                 <i class="bi bi-bar-chart-line"></i>
                                 Piglets Growth Records
                               </div>
-                              <div class="small text-muted">Growth measurements per litter.</div>
+                              <div class="small text-muted">Piglets under this cycle, with latest growth metrics.</div>
                             </div>
 
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="pigletsGrowthRefreshBtn">
@@ -392,30 +383,59 @@
                             </button>
                           </div>
 
+                          <!-- Keep existing host ID used by JS -->
                           <div id="pigletsGrowthTableHost">
-                            <div class="text-muted small">Loading piglets growth records...</div>
+                            <div class="text-muted small">Select a cycle to load piglets...</div>
                           </div>
 
                           <div id="pigletsGrowthEmpty" class="text-center text-muted py-3 d-none">
                             <i class="bi bi-inboxes fs-3 d-block mb-2"></i>
-                            No piglets growth records found for this sow.
+                            No piglets found for this cycle.
                           </div>
+
                         </div>
                       </div>
                     </div>
 
+                    <!-- Health & Defects (cards) -->
                     <div class="tab-pane fade" id="paneHealth" role="tabpanel">
                       <div class="card border-0 shadow-sm repro-inner-card repro-sheet">
-                        <div class="card-body text-muted small">
-                          Next: Health &amp; Defects (cycle-based).
+                        <div class="card-body">
+
+                          <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                            <div>
+                              <div class="fw-bold d-flex align-items-center gap-2">
+                                <i class="bi bi-shield-check"></i>
+                                Health &amp; Defects
+                              </div>
+                              <div class="small text-muted">Health status and defect flags per piglet.</div>
+                            </div>
+
+                            <!-- New safe button -->
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="pigletsHealthRefreshBtn">
+                              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </button>
+                          </div>
+
+                          <!-- New safe host -->
+                          <div id="pigletsHealthHost">
+                            <div class="text-muted small">Select a cycle to load piglets...</div>
+                          </div>
+
+                          <div id="pigletsHealthEmpty" class="text-center text-muted py-3 d-none">
+                            <i class="bi bi-inboxes fs-3 d-block mb-2"></i>
+                            No piglets health records found for this cycle.
+                          </div>
+
                         </div>
                       </div>
                     </div>
 
+                    <!-- Selection (later) -->
                     <div class="tab-pane fade" id="paneSelection" role="tabpanel">
                       <div class="card border-0 shadow-sm repro-inner-card repro-sheet">
                         <div class="card-body text-muted small">
-                          Next: Selection Status (cycle-based).
+                          Selection Status will be implemented later.
                         </div>
                       </div>
                     </div>

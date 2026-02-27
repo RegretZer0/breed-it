@@ -1,75 +1,63 @@
 /* =========================================================
-   REPRODUCTION MONITORING — BOOTSTRAP-FIRST THEME (THEME-ALIGNED)
-   - Responsive: desktop / tablet / mobile
-   - Keeps existing IDs safe
-   - Accent: uses Bootstrap success family (no blue)
-   - Modal content: structured fields (no jumbled layout)
+   MODULE: REPRODUCTION MONITORING + PIG ANALYSIS MODAL THEME
+   Design goals:
+   - Neutral, non-tinted background (no green wash)
+   - Clean cards, soft depth, clearer spacing
+   - Remove blue accents, use green success accent only
+   - Cycle List -> Cycle Details replaces the content area (panel swap)
+   - No ID changes required (only adds OPTIONAL utility classes)
 ========================================================= */
 
-/* =========================================================
-   0) THEME TOKENS (GLOBAL)
-   Design Module: Theme Variables / Color System
-========================================================= */
 :root{
   /* Base */
-  --repro-bg: #f4f6fb;
-  --repro-page: #f4f6fb;
+  --repro-bg: #f6f7fb;
   --repro-surface: rgba(255,255,255,.96);
-  --repro-surface-2: #ffffff;
-
   --repro-text: #0f172a;
   --repro-muted: #64748b;
 
-  /* Accent (Bootstrap success-aligned, no blue) */
-  --repro-accent: #198754;                 /* Bootstrap success */
-  --repro-accent-2: #0f5132;               /* Bootstrap success dark */
-  --repro-accent-soft: rgba(25,135,84,.14);
-  --repro-accent-soft-2: rgba(25,135,84,.08);
+  /* Accent */
+  --repro-accent: #198754;
+  --repro-accent-2: #146c43;
 
-  /* Borders + shadows */
-  --repro-bd-soft: rgba(15,23,42,.07);
-  --repro-bd-strong: rgba(15,23,42,.10);
+  /* Borders / shadows */
+  --repro-bd: rgba(15,23,42,.10);
+  --repro-bd-2: rgba(15,23,42,.06);
 
   --r-xl: 22px;
   --r-lg: 18px;
   --r-md: 14px;
+  --r-sm: 12px;
 
   --sh-xs: 0 2px 10px rgba(15,23,42,.04);
   --sh-sm: 0 10px 24px rgba(15,23,42,.06);
-  --sh-md: 0 18px 46px rgba(15,23,42,.12);
+  --sh-md: 0 18px 46px rgba(15,23,42,.10);
 
-  /* Focus ring */
-  --ring-accent: 0 0 0 .18rem rgba(25,135,84,.18);
+  --ring: 0 0 0 .18rem rgba(25,135,84,.16);
 }
 
 /* =========================================================
-   1) APP BG + CONTAINER
-   Design Module: Page Background / Shell
+   MODULE: APP BG + CONTAINER
 ========================================================= */
 .app-root{
   min-height: 100vh;
   background:
-    radial-gradient(900px 260px at 18% -10%, rgba(25,135,84,.08), transparent 62%),
-    radial-gradient(900px 260px at 92% -20%, rgba(15,23,42,.06), transparent 55%),
-    radial-gradient(800px 240px at 65% 18%, rgba(255,255,255,.85), transparent 55%),
+    radial-gradient(900px 260px at 18% -10%, rgba(255,255,255,.85), transparent 62%),
+    radial-gradient(900px 260px at 92% -20%, rgba(255,255,255,.75), transparent 55%),
     var(--repro-bg);
 }
-
 .repro-main.container-fluid{ max-width: 1100px; }
 
-/* spacer for your farmer_nav */
 .repro-main .repro-nav-spacer{ height: 92px; }
 @media (max-width: 576px){
   .repro-main .repro-nav-spacer{ height: 78px; }
 }
 
 /* =========================================================
-   2) BASE CARD WRAPPER
-   Design Module: Shared Card Style
+   MODULE: BASE CARD (shared)
 ========================================================= */
 .repro-card{
   border-radius: var(--r-xl) !important;
-  border: 1px solid var(--repro-bd-soft) !important;
+  border: 1px solid var(--repro-bd-2) !important;
   background: var(--repro-surface) !important;
   box-shadow: var(--sh-sm) !important;
 }
@@ -78,62 +66,102 @@
   .repro-card .card-body{ padding: 14px 14px !important; }
 }
 
-/* section icon tile */
 .repro-section-icon{
   width: 44px;
   height: 44px;
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(25,135,84,.10);
-  border: 1px solid rgba(25,135,84,.18);
+  background: rgba(25,135,84,.08);
+  border: 1px solid rgba(25,135,84,.16);
   color: var(--repro-accent-2);
   box-shadow: var(--sh-xs);
 }
 
 /* =========================================================
-   3) HERO HEADER
-   Design Module: Hero Banner + Search Bar
+   MODULE: PIG ANALYSIS MODAL (Header + main tabs)
+   Fix: remove blue active state, use success/green chip style
+   Targets: Bootstrap .nav-pills/.nav-tabs without relying on IDs
+========================================================= */
+.repro-modal .nav.nav-pills,
+.repro-modal .nav.nav-tabs{
+  gap: 10px;
+}
+
+.repro-modal .nav.nav-pills .nav-link,
+.repro-modal .nav.nav-tabs .nav-link{
+  border-radius: 999px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: var(--sh-xs);
+  font-weight: 900;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--repro-text) !important;
+}
+
+.repro-modal .nav.nav-pills .nav-link.active,
+.repro-modal .nav.nav-tabs .nav-link.active{
+  background: rgba(25,135,84,.10) !important;
+  border-color: rgba(25,135,84,.22) !important;
+  color: var(--repro-accent-2) !important;
+}
+
+.repro-modal .nav.nav-pills .nav-link:focus,
+.repro-modal .nav.nav-tabs .nav-link:focus{
+  box-shadow: var(--sh-xs), var(--ring) !important;
+}
+
+.repro-modal .badge.bg-success,
+.repro-modal .badge.text-bg-success{
+  border-radius: 999px !important;
+  font-weight: 900;
+  padding: 7px 12px;
+}
+
+/* =========================================================
+   MODULE: HERO (neutral)
 ========================================================= */
 .repro-hero{
   border-radius: var(--r-xl) !important;
-  border: 0 !important;
+  border: 1px solid var(--repro-bd-2) !important;
   box-shadow: var(--sh-md) !important;
   overflow: hidden;
-  color: #fff;
   background:
-    radial-gradient(1000px 320px at 12% -30%, rgba(255,255,255,.18), transparent 60%),
-    radial-gradient(900px 260px at 96% -40%, rgba(255,255,255,.12), transparent 55%),
-    linear-gradient(90deg, #198754, #2fb56f) !important;
+    radial-gradient(1000px 320px at 12% -30%, rgba(25,135,84,.12), transparent 60%),
+    radial-gradient(900px 260px at 96% -40%, rgba(15,23,42,.06), transparent 55%),
+    #ffffff !important;
+  color: var(--repro-text);
 }
 .repro-hero .card-body{ padding: 22px 22px !important; }
 @media (max-width: 576px){
   .repro-hero .card-body{ padding: 18px 16px !important; }
 }
+
 .repro-hero-icon{
   width: 52px;
   height: 52px;
   border-radius: 16px;
   display: grid;
   place-items: center;
-  background: rgba(255,255,255,.18);
-  border: 1px solid rgba(255,255,255,.22);
-  color: #fff;
+  background: rgba(25,135,84,.10);
+  border: 1px solid rgba(25,135,84,.16);
+  color: var(--repro-accent-2);
   font-size: 20px;
 }
 .repro-title{ font-weight: 950; letter-spacing: .2px; margin: 0; }
-.repro-sub{ color: rgba(255,255,255,.92) !important; font-weight: 600; }
+.repro-sub{ color: rgba(100,116,139,.95) !important; font-weight: 600; }
 
-/* hero search */
+/* Hero search */
 .repro-search .input-group{
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(255,255,255,.96);
-  border: 1px solid rgba(255,255,255,.26);
+  background: rgba(255,255,255,.98);
+  border: 1px solid var(--repro-bd-2);
   box-shadow: var(--sh-xs);
 }
-.repro-search .input-group:focus-within{ box-shadow: var(--sh-xs), var(--ring-accent); }
-.repro-search .input-group-text{ border: 0 !important; background: transparent !important; }
+.repro-search .input-group:focus-within{ box-shadow: var(--sh-xs), var(--ring); }
+.repro-search .input-group-text{ border: 0 !important; background: transparent !important; color: rgba(15,23,42,.55); }
 .repro-search input{ border: 0 !important; box-shadow: none !important; }
 #reproSearchClearBtn{
   border: 0 !important;
@@ -146,37 +174,38 @@
 }
 
 /* =========================================================
-   4) FILTERS
-   Design Module: Filters Surface + Quick Tabs
+   MODULE: FILTERS (more depth)
 ========================================================= */
 .repro-filter-surface{
   border-radius: var(--r-lg);
-  border: 1px solid var(--repro-bd-soft);
-  background:
-    radial-gradient(900px 180px at 15% 0%, rgba(25,135,84,.08), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,.92), #fff);
+  border: 1px solid var(--repro-bd-2);
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.92));
   padding: 16px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--sh-xs);
 }
 @media (max-width: 576px){
   .repro-filter-surface{ padding: 14px; }
 }
+
 #reproFilterForm .form-label{
   font-weight: 900;
   color: rgba(15,23,42,.92);
 }
 #reproFilterForm .form-select{
   border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
+  border: 1px solid rgba(15,23,42,.12) !important;
+  background: #fff !important;
+  box-shadow: 0 6px 14px rgba(15,23,42,.04);
 }
 #reproFilterForm .form-select:focus{
-  border-color: rgba(25,135,84,.30) !important;
-  box-shadow: var(--ring-accent) !important;
+  border-color: rgba(25,135,84,.35) !important;
+  box-shadow: var(--ring) !important;
 }
 #reproFilterForm .btn{
   border-radius: 14px !important;
-  font-weight: 950;
-  padding: 10px 16px;
+  font-weight: 900;
+  padding: 8px 12px;
+  box-shadow: 0 6px 14px rgba(15,23,42,.06);
 }
 
 /* quick tabs */
@@ -186,23 +215,23 @@
   gap: 10px;
 }
 .repro-tabs .nav-link{
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.08) !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
   background: rgba(255,255,255,.98) !important;
   color: var(--repro-text) !important;
-  font-weight: 950;
-  padding: 10px 14px;
+  font-weight: 900;
+  padding: 7px 12px;
   box-shadow: var(--sh-xs);
+  font-size: 13px;
 }
 .repro-tabs .nav-link.active{
-  background: var(--repro-accent-soft) !important;
-  border-color: rgba(25,135,84,.30) !important;
+  background: rgba(25,135,84,.10) !important;
+  border-color: rgba(25,135,84,.22) !important;
   color: var(--repro-accent-2) !important;
 }
 
 /* =========================================================
-   5) LIST GRID
-   Design Module: List Layout Rules
+   MODULE: LIST (1 pig per row)
 ========================================================= */
 #pigCardsGrid{ row-gap: 14px !important; }
 #pigCardsGrid > [class*="col-"]{
@@ -210,22 +239,17 @@
   max-width: 100% !important;
 }
 
-/* =========================================================
-   6) PIG CARD
-   Design Module: Pig Row Card (List Item)
-========================================================= */
+/* Pig card */
 .pig-card{
   border-radius: 18px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
-  background:
-    radial-gradient(900px 180px at 8% 0%, rgba(25,135,84,.06), transparent 55%),
-    rgba(255,255,255,.98) !important;
+  border: 1px solid var(--repro-bd-2) !important;
+  background: rgba(255,255,255,.98) !important;
   box-shadow: var(--sh-sm) !important;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
 .pig-card:hover{
   transform: translateY(-1px);
-  border-color: rgba(25,135,84,.20) !important;
+  border-color: rgba(25,135,84,.18) !important;
   box-shadow: var(--sh-md) !important;
 }
 .pig-card .card-body{ padding: 16px 16px !important; }
@@ -237,7 +261,7 @@
   width: 64px !important;
   height: 64px !important;
   border-radius: 16px !important;
-  border: 1px solid rgba(15,23,42,.08);
+  border: 1px solid rgba(15,23,42,.10);
   background: #f3f6fb;
   box-shadow: var(--sh-xs);
   overflow: hidden;
@@ -250,42 +274,26 @@
   }
 }
 .pig-avatar-img{ width: 100%; height: 100%; object-fit: cover; display: block; }
-.pig-avatar-fallback{
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  color: rgba(15,23,42,.55);
-}
-.pig-title{
-  font-size: 16px;
-  font-weight: 950;
-  letter-spacing: .2px;
-  color: var(--repro-text);
-}
-.pig-meta{
-  font-size: 12px;
-  color: rgba(100,116,139,.95);
-}
+.pig-avatar-fallback{ width: 100%; height: 100%; display: grid; place-items: center; font-size: 24px; color: rgba(15,23,42,.55); }
+
+.pig-title{ font-size: 16px; font-weight: 950; letter-spacing: .2px; color: var(--repro-text); }
+.pig-meta{ font-size: 12px; color: rgba(100,116,139,.95); }
+
 .pig-card .badge{
-  border-radius: 12px !important;
-  font-weight: 950;
-  padding: 7px 10px;
+  border-radius: 999px !important;
+  font-weight: 900;
+  padding: 6px 10px;
   font-size: 11px;
-  border: 1px solid rgba(15,23,42,.06);
 }
 .pig-card .btn.btn-success{
   border-radius: 14px !important;
-  font-weight: 950;
-  padding: 11px 14px !important;
-  box-shadow: 0 10px 18px rgba(15,23,42,.10);
+  font-weight: 900;
+  padding: 10px 12px !important;
+  box-shadow: 0 10px 18px rgba(25,135,84,.14);
 }
-.pig-card .mt-3.d-grid{ margin-top: 12px !important; }
 
 /* =========================================================
-   7) MODAL SHELL
-   Design Module: Modal Layout (Responsive) + Depth
+   MODULE: MODAL (neutral)
 ========================================================= */
 .repro-modal-dialog .modal-dialog{ margin: 0.75rem auto; }
 @media (max-width: 576px){
@@ -296,232 +304,138 @@
 
 .repro-modal{
   border-radius: 22px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
+  border: 1px solid var(--repro-bd-2) !important;
   overflow: hidden;
-  background: var(--repro-surface-2);
-  box-shadow:
-    0 18px 46px rgba(15,23,42,.12),
-    0 2px 10px rgba(15,23,42,.05) !important;
+  box-shadow: var(--sh-md) !important;
+  background: #fff;
 }
 
-/* Sticky header (neutral; no blue) */
 .repro-modal-head{
   position: sticky;
   top: 0;
   z-index: 5;
-  border-bottom: 1px solid var(--repro-bd-soft) !important;
-  padding: 14px 16px;
-  background:
-    radial-gradient(900px 240px at 18% -35%, rgba(255,255,255,.95), transparent 60%),
-    linear-gradient(180deg, #ffffff, #fbfcff);
+  border-bottom: 1px solid var(--repro-bd-2) !important;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.94));
 }
 @media (max-width: 576px){
-  .repro-modal-head{ padding: 12px 12px; }
+  .repro-modal-head{ padding: 14px 14px; }
 }
 
 .repro-appbar-icon{
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 14px;
   display: grid;
   place-items: center;
   background: rgba(25,135,84,.10);
   border: 1px solid rgba(25,135,84,.18);
   color: var(--repro-accent-2);
-  box-shadow: 0 2px 10px rgba(15,23,42,.06);
+  box-shadow: var(--sh-xs);
   flex-shrink: 0;
 }
+
 .repro-appbar-sub{
   color: rgba(15,23,42,.62);
   font-weight: 700;
   max-width: 56ch;
 }
 
-/* Status badge in header: add depth */
-#pigDetailsStatusBadge{
-  border: 1px solid rgba(15,23,42,.07);
-  box-shadow: 0 2px 10px rgba(15,23,42,.06);
-}
-
-/* Close button */
 .repro-close-btn{
-  border-radius: 12px !important;
-  border: 1px solid rgba(15,23,42,.08) !important;
-  box-shadow: 0 2px 10px rgba(15,23,42,.06);
-  padding: 8px 10px;
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  box-shadow: var(--sh-xs);
+  padding: 9px 11px;
 }
 .repro-close-btn:hover{
   background: rgba(15,23,42,.04) !important;
-  border-color: var(--repro-bd-strong) !important;
+  border-color: rgba(15,23,42,.14) !important;
 }
 
-/* Tabsbar: smaller, calmer */
+/* Tabsbar (inner) */
 .repro-tabsbar{
   border-radius: 16px;
   padding: 8px;
-  background: rgba(15,23,42,.02);
-  border: 1px solid var(--repro-bd-soft);
+  background: rgba(255,255,255,.92);
+  border: 1px solid var(--repro-bd-2);
+  box-shadow: var(--sh-xs);
 }
-
-/* Top tabs + inner tabs: smaller chips (no blue) */
 .repro-detail-tabs{
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
 }
 .repro-detail-tabs .nav-link{
-  border-radius: 12px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
-  background: rgba(255,255,255,.92) !important;
-  box-shadow: 0 2px 10px rgba(15,23,42,.05);
+  border-radius: 999px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: var(--sh-xs);
   font-weight: 900;
-  padding: 8px 10px;
-  font-size: 12px;
-  color: rgba(15,23,42,.88) !important;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--repro-text) !important;
   white-space: nowrap;
 }
-.repro-detail-tabs .nav-link i{ font-size: 13px; }
 .repro-detail-tabs .nav-link.active{
-  background: var(--repro-accent-soft) !important;
-  border-color: rgba(25,135,84,.30) !important;
+  background: rgba(25,135,84,.10) !important;
+  border-color: rgba(25,135,84,.22) !important;
   color: var(--repro-accent-2) !important;
 }
 
-/* Modal body + footer */
+/* Body */
 .repro-modal-body{
-  background: var(--repro-page);
-  padding: 14px 16px 16px;
+  background: #fbfcfe;
+  padding: 16px 18px 18px;
 }
 @media (max-width: 576px){
-  .repro-modal-body{ padding: 12px 12px 14px; }
+  .repro-modal-body{ padding: 14px 14px 16px; }
 }
+
+/* Footer */
 .repro-modal-foot{
   position: sticky;
   bottom: 0;
   z-index: 4;
-  border-top: 1px solid var(--repro-bd-soft) !important;
-  background: rgba(255,255,255,.92);
-  backdrop-filter: blur(8px);
-  padding: 10px 16px;
+  border-top: 1px solid var(--repro-bd-2) !important;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(6px);
+  padding: 12px 18px;
 }
 @media (max-width: 576px){
-  .repro-modal-foot{ padding: 10px 12px; }
+  .repro-modal-foot{ padding: 12px 14px; }
 }
 .repro-modal-foot .btn{
-  border-radius: 12px !important;
+  border-radius: 14px !important;
   font-weight: 900;
+  padding: 8px 12px;
 }
 
-/* =========================================================
-   8) MODAL INNER SHEETS
-   Design Module: Modal Content Cards
-========================================================= */
+/* Inner sheets */
 .repro-sheet{
   border-radius: 18px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow:
-    0 10px 22px rgba(15,23,42,.06),
-    0 2px 8px rgba(15,23,42,.04) !important;
+  border: 1px solid var(--repro-bd-2) !important;
+  box-shadow: var(--sh-sm) !important;
+  background: #fff !important;
 }
 .repro-sheet .card-body{ padding: 16px !important; }
 @media (min-width: 992px){
   .repro-sheet .card-body{ padding: 18px !important; }
 }
 
-/* =========================================================
-   9) CONTENT STRUCTURE (FIXES THE "JUMBLED" LOOK)
-   Design Module: Field Blocks, Labels, Values, Subcards
-========================================================= */
-
-/* Generic field block used in AI analysis */
-.profile-field{
-  border-radius: 14px;
-  border: 1px solid rgba(15,23,42,.06);
-  background: rgba(255,255,255,.92);
-  box-shadow: 0 2px 10px rgba(15,23,42,.04);
-  padding: 12px 12px;
-  min-height: 64px;
-}
-
-/* Label + value hierarchy */
-.profile-field .label{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(15,23,42,.62);
-  letter-spacing: .2px;
-  margin-bottom: 6px;
-}
-.profile-field .value{
-  font-size: 14px;
-  font-weight: 800;
-  color: rgba(15,23,42,.92);
-  line-height: 1.25;
-  word-break: break-word;
-}
-
-/* Make the AI analysis area breathe */
-#aiAnalysisContent .row.g-2{ --bs-gutter-y: .75rem; }
-@media (max-width: 576px){
-  #aiAnalysisContent .row.g-2{ --bs-gutter-y: .6rem; }
-}
-
-/* Boar Info subcard */
-.ai-subcard{
-  border-radius: 16px !important;
-  border: 1px solid rgba(15,23,42,.06) !important;
-  background:
-    radial-gradient(900px 180px at 12% 0%, rgba(25,135,84,.06), transparent 55%),
-    rgba(255,255,255,.98) !important;
-  box-shadow: 0 10px 22px rgba(15,23,42,.06) !important;
-}
-.ai-subcard .card-body{ padding: 14px !important; }
-@media (min-width: 992px){
-  .ai-subcard .card-body{ padding: 16px !important; }
-}
-.ai-subcard .fw-semibold{
-  color: rgba(15,23,42,.92);
-}
-
-/* Cycle details header row: reduce "flat" look */
-#reproInnerTabsWrap .badge{
-  border: 1px solid rgba(15,23,42,.06);
-  box-shadow: 0 2px 10px rgba(15,23,42,.05);
-}
-
-/* =========================================================
-   10) PROFILE AVATAR + METRICS
-   Design Module: Profile Header + Metric Tiles
-========================================================= */
+/* Profile avatar */
 .repro-profile-avatar{
   width: 52px !important;
   height: 52px !important;
   border-radius: 14px !important;
+  overflow: hidden;
+  border: 1px solid rgba(15,23,42,.10);
+  background: #f3f6fb;
 }
 @media (max-width: 576px){
-  .repro-profile-avatar{
-    width: 46px !important;
-    height: 46px !important;
-    border-radius: 12px !important;
-  }
+  .repro-profile-avatar{ width: 46px !important; height: 46px !important; border-radius: 12px !important; }
 }
-.repro-profile-avatar-img{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.repro-profile-avatar-fallback{
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  color: rgba(15,23,42,.55);
-  background: rgba(15,23,42,.03);
-  border-radius: inherit;
-}
+.repro-profile-avatar-img{ width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .repro-profile-name{
   font-size: 16px;
@@ -530,238 +444,213 @@
   color: var(--repro-text);
 }
 
-/* Health pill (neutral background to avoid strong tint) */
 #profileHealth{
   font-weight: 900;
-  padding: 8px 11px;
+  padding: 7px 10px;
   border-radius: 999px !important;
-  border: 1px solid rgba(15,23,42,.08);
-  box-shadow: 0 2px 10px rgba(15,23,42,.06);
-  background: rgba(15,23,42,.03);
-  color: rgba(15,23,42,.82);
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: var(--sh-xs);
+  background: rgba(25,135,84,.10);
+  color: var(--repro-accent-2);
 }
 
+/* Metric tiles */
 .repro-metric-tile{
   border-radius: 16px;
-  border: 1px solid var(--repro-bd-soft);
+  border: 1px solid var(--repro-bd-2);
   background: rgba(255,255,255,.98);
-  box-shadow: 0 6px 14px rgba(15,23,42,.05);
+  box-shadow: var(--sh-xs);
   padding: 12px;
   min-height: 74px;
 }
-
-/* image safety */
-#paneProfile img{ max-width: 100%; height: auto; }
-#paneProfile .repro-sheet img:not(#profilePhotoImg){
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 16px;
+.repro-metric-top{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color: rgba(15,23,42,.70);
+  font-weight: 800;
+  font-size: 12px;
 }
-@media (max-width: 576px){
-  #paneProfile .repro-sheet img:not(#profilePhotoImg){
-    max-height: 160px;
-    border-radius: 14px;
-  }
+.repro-metric-value{ margin-top: 6px; font-weight: 950; color: var(--repro-text); }
+
+/* Placeholder */
+.repro-placeholder{
+  border-radius: 16px;
+  border: 1px dashed rgba(15,23,42,.22);
+  background: rgba(255,255,255,.90);
+  padding: 14px 14px;
+}
+
+/* Soft panel */
+.repro-soft-panel{
+  border-radius: 16px !important;
+  border: 1px solid rgba(15,23,42,.08) !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
 }
 
 /* =========================================================
-   11) REPRODUCTION TAB CONTROLS + CYCLE CARDS
-   Design Module: Cycle Filter / Cycle List
+   MODULE: CYCLE FILTER CONTROLS (depth)
 ========================================================= */
 .repro-cycle-controls .form-select{
   min-width: 260px;
   border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
-  box-shadow: var(--sh-xs);
+  border: 1px solid rgba(15,23,42,.12) !important;
+  background: #fff !important;
+  box-shadow: 0 10px 18px rgba(15,23,42,.06);
 }
 @media (max-width: 576px){
-  .repro-cycle-controls{
-    width: 100%;
-    justify-content: flex-start;
-  }
+  .repro-cycle-controls{ width: 100%; justify-content: flex-start; }
   .repro-cycle-controls .form-select{ min-width: 100%; }
 }
-.repro-cycle-list{ width: 100%; }
 
-/* Cycle cards */
+/* =========================================================
+   MODULE: CYCLE CARDS (smaller + spacing)
+========================================================= */
 .ai-cycle-card{
   border-radius: 16px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
-  background:
-    radial-gradient(900px 180px at 10% 0%, rgba(25,135,84,.06), transparent 55%),
-    rgba(255,255,255,.98) !important;
+  border: 1px solid var(--repro-bd-2) !important;
+  background: rgba(255,255,255,.98) !important;
   box-shadow: var(--sh-sm) !important;
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
 .ai-cycle-card:hover{
   transform: translateY(-1px);
-  border-color: rgba(25,135,84,.20) !important;
+  border-color: rgba(25,135,84,.18) !important;
   box-shadow: var(--sh-md) !important;
 }
-.ai-cycle-card .card-body{ padding: 14px 14px !important; }
-@media (min-width: 992px){
-  .ai-cycle-card .card-body{ padding: 16px 16px !important; }
-}
-.ai-cycle-card .btn.btn-success{
-  border-radius: 14px !important;
-  font-weight: 950;
-  padding: 10px 12px !important;
-  box-shadow: 0 10px 18px rgba(15,23,42,.10);
-}
-
-/* =========================================================
-   12) PLACEHOLDERS + SOFT PANELS
-   Design Module: Empty/Hint States + Inner Panels
-========================================================= */
-.repro-placeholder{
-  border-radius: 16px;
-  border: 1px dashed rgba(15,23,42,.22);
-  background: rgba(255,255,255,.75);
-  padding: 14px;
-}
-
-.repro-inner-tabsbar{
-  border-radius: 16px;
-  padding: 8px;
-  background: rgba(15,23,42,.02);
-  border: 1px solid var(--repro-bd-soft);
-}
-
-/* Inner panel used inside AI analysis */
-.repro-soft-panel{
-  border-radius: 16px !important;
-  border: 1px solid var(--repro-bd-soft) !important;
-  background: rgba(255,255,255,.92) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
-}
-
-/* =========================================================
-   13) UTILITIES + FOCUS
-   Design Module: Utility Helpers / Focus Behavior
-========================================================= */
-.min-w-0{ min-width: 0; }
-
-.btn:focus,
-.form-select:focus,
-.form-control:focus{
-  outline: none !important;
-  box-shadow: var(--ring-accent) !important;
-}
-
-.modal-content{ border: 0; }
-
-#aiEmpty i{ opacity: .7; }
-
-/* =========================================================
-   REPRODUCTION MONITORING — CYCLE FILTER + CYCLE LIST REFINEMENTS
-   Design Module: Reproduction Modal - Cycle Filter / Cycle Card / Cycle Details Solo View
-========================================================= */
-
-/* Cycle filter control wrapper: add depth so it does not blend into background */
-.repro-cycle-selectwrap .form-label{
-  font-weight: 900;
-  color: rgba(15,23,42,.72);
-}
-
-.repro-cycle-selectwrap .form-select{
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.12) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow:
-    0 10px 22px rgba(15,23,42,.06),
-    0 2px 8px rgba(15,23,42,.04) !important;
-  padding-right: 34px; /* keep caret spacing */
-}
-
-.repro-cycle-selectwrap .form-select:focus{
-  border-color: rgba(25,135,84,.30) !important;
-  box-shadow: 0 10px 22px rgba(15,23,42,.06), var(--ring-accent) !important;
-}
-
-/* Refresh button: match elevated control */
-.repro-cycle-refresh{
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.12) !important;
-  background: rgba(255,255,255,.96) !important;
-  box-shadow:
-    0 10px 22px rgba(15,23,42,.06),
-    0 2px 8px rgba(15,23,42,.04) !important;
-  font-weight: 900;
-}
-
-/* Make the cycle card smaller and cleaner */
-.ai-cycle-card{
-  border-radius: 16px !important;
-  border: 1px solid rgba(15,23,42,.08) !important;
-  background:
-    radial-gradient(900px 180px at 10% 0%, rgba(25,135,84,.06), transparent 55%),
-    rgba(255,255,255,.98) !important;
-  box-shadow: 0 10px 22px rgba(15,23,42,.06) !important;
-}
-
-/* Smaller padding */
-.ai-cycle-card .card-body{
-  padding: 12px 12px !important;
-}
+.ai-cycle-card .card-body{ padding: 12px 12px !important; }
 @media (min-width: 992px){
   .ai-cycle-card .card-body{ padding: 14px 14px !important; }
 }
-
-/* Cycle title row spacing */
-.ai-cycle-card .fw-bold{
-  letter-spacing: .1px;
-}
-
-/* Subtitle: proper spacing and readability */
-.repro-cycle-subtitle{
-  margin-top: 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  color: rgba(15,23,42,.62);
-  font-size: 12px;
-  line-height: 1.25;
-}
-.repro-cycle-subtitle b{
-  color: rgba(15,23,42,.86);
-  font-weight: 900;
-}
-
-/* Right badge: keep compact */
-.ai-cycle-card .badge{
-  border: 1px solid rgba(15,23,42,.06);
-  box-shadow: 0 2px 10px rgba(15,23,42,.05);
-  font-weight: 900;
-  padding: 6px 10px;
-}
-
-/* CTA bar: tighter and aligned */
-.repro-cycle-cta{
-  margin-top: 10px;
-  display: flex;
-  justify-content: flex-end;
-}
 .ai-cycle-card .btn.btn-success{
   border-radius: 14px !important;
+  font-weight: 900;
+  padding: 8px 12px !important;
+  box-shadow: 0 10px 18px rgba(25,135,84,.14);
+}
+
+/* Better internal spacing for cycle summary row */
+.repro-cycle-summary{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.repro-cycle-summary .meta{
+  color: rgba(100,116,139,.95);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.repro-cycle-actions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+/* =========================================================
+   MODULE: PANEL SWAP (Cycle List -> Cycle Details)
+   Add these OPTIONAL classes to your wrappers:
+   - .repro-swap-wrap
+   - .repro-swap-panel
+   - .is-hidden
+========================================================= */
+.repro-swap-wrap{ display: block; }
+.repro-swap-panel{ display: block; }
+.repro-swap-panel.is-hidden{ display: none !important; }
+
+/* =========================================================
+   MODULE: CYCLE DETAILS CONTENT (fix jumbled layout)
+========================================================= */
+.repro-kv-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 576px){
+  .repro-kv-grid{ grid-template-columns: 1fr; }
+}
+.repro-kv{
+  border: 1px solid var(--repro-bd-2);
+  border-radius: 14px;
+  background: rgba(255,255,255,.98);
+  box-shadow: var(--sh-xs);
+  padding: 12px;
+}
+.repro-kv-label{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(15,23,42,.62);
+}
+.repro-kv-value{
+  margin-top: 6px;
   font-weight: 950;
-  padding: 9px 12px !important;
-  box-shadow: 0 10px 18px rgba(15,23,42,.10);
+  color: var(--repro-text);
 }
 
-/* Solo-view mode: when a cycle is opened, hide the top panels */
-.repro-solo-cycle #reproCyclesPanelsWrap{
-  display: none !important;
+/* =========================================================
+   MODULE: PIGLET CARDS (Growth + Health)
+========================================================= */
+.piglet-card{
+  border-radius: 18px !important;
+  border: 1px solid var(--repro-bd-2) !important;
+  background: rgba(255,255,255,.98) !important;
+  box-shadow: var(--sh-sm) !important;
 }
+.piglet-card .card-body{ padding: 14px !important; }
 
-/* In solo mode, make details panel feel like primary content */
-.repro-solo-cycle #reproCycleDetailsPanel{
-  box-shadow:
-    0 18px 46px rgba(15,23,42,.10),
-    0 2px 10px rgba(15,23,42,.05) !important;
+.piglet-avatar{
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(15,23,42,.10);
+  background: #f3f6fb;
+  box-shadow: var(--sh-xs);
 }
+.piglet-avatar-img{ width: 100%; height: 100%; object-fit: cover; display:block; }
+.piglet-avatar-fallback{ width: 100%; height: 100%; display:grid; place-items:center; color: rgba(15,23,42,.55); font-size: 22px; }
 
-/* Close button in cycle details */
-#reproCloseCycleBtn{
-  border-radius: 12px !important;
+.piglet-title{ font-weight: 950; color: var(--repro-text); letter-spacing: .2px; }
+.piglet-sub{ color: rgba(100,116,139,.95); }
+
+.piglet-stage-pill{
+  border: 1px solid rgba(15,23,42,.08) !important;
+  color: rgba(15,23,42,.70) !important;
+  background: rgba(255,255,255,.92) !important;
   font-weight: 900;
 }
+
+.piglet-metrics{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 576px){
+  .piglet-metrics{ grid-template-columns: 1fr; }
+}
+.piglet-metric{
+  border: 1px solid var(--repro-bd-2);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+  box-shadow: var(--sh-xs);
+}
+.piglet-metric .k{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(15,23,42,.62);
+}
+.piglet-metric .v{
+  margin-top: 6px;
+  font-weight: 950;
+  color: var(--repro-text);
+}
+
+/* =========================================================
+   MODULE: QUALITY OF LIFE
+========================================================= */
+.min-w-0{ min-width: 0; }
+.btn:focus,
+.form-select:focus,
+.form-control:focus{ outline: none !important; }
+.modal-content{ border: 0; }
