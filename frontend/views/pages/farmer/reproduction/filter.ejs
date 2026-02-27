@@ -1,0 +1,104 @@
+<!-- =========================
+     FILTERS CARD 
+========================== -->
+<section class="card repro-card border-0 shadow-sm">
+  <div class="card-body">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+      <div class="d-flex align-items-center gap-2">
+        <div class="repro-section-icon">
+          <i class="bi bi-sliders"></i>
+        </div>
+        <div>
+          <div class="fw-bold">Filters</div>
+          <div class="small text-muted">Refine using dropdown filters, then use stage tabs for quick filtering.</div>
+        </div>
+      </div>
+
+      <div class="small text-muted d-none d-md-block">
+        <i class="bi bi-info-circle me-1"></i>
+        Apply to refresh the list.
+      </div>
+    </div>
+
+    <!-- Dropdown Filters (NOW FIRST) -->
+    <div class="repro-filter-surface mb-3">
+      <form id="reproFilterForm" class="row g-3 align-items-end" autocomplete="off">
+
+        <!-- Health -->
+        <div class="col-12 col-md-3">
+          <label class="form-label small mb-1">Health Status</label>
+          <select id="filterHealthStatus" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="alive">Alive</option>
+            <option value="dead">Dead</option>
+          </select>
+        </div>
+
+        <!-- Stage -->
+        <div class="col-12 col-md-4">
+          <label class="form-label small mb-1">Current Stage</label>
+          <select id="filterCurrentStage" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="in-heat">In-Heat</option>
+            <option value="under observation">Under Observation</option>
+            <option value="pregnant">Pregnant</option>
+            <option value="farrowing">Farrowing</option>
+            <option value="farrowing ready">Farrowing Ready</option>
+            <option value="lactating">Lactating</option>
+            <option value="weaning">Weaning</option>
+            <option value="day 1-30">Day 1–30</option>
+            <option value="open">Open</option>
+          </select>
+        </div>
+
+        <!-- Sex -->
+        <div class="col-12 col-md-3">
+          <label class="form-label small mb-1">Sex</label>
+          <select id="filterSex" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+          </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="col-12 col-md-2 d-flex gap-2 justify-content-md-end">
+          <button type="button" class="btn btn-success btn-sm w-100 w-md-auto" id="applyFiltersBtn">
+            <i class="bi bi-funnel me-1"></i>Apply
+          </button>
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100 w-md-auto" id="resetFiltersBtn">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Quick Tabs (NOW BELOW FILTERS) -->
+    <div class="repro-tabs-wrap">
+      <div class="repro-tabs nav nav-pills flex-wrap gap-2" id="reproQuickTabs" role="tablist" aria-label="Quick filters">
+        <button class="nav-link active" type="button" data-stage="" id="tabAll">
+          <i class="bi bi-grid-1x2 me-1"></i>All
+        </button>
+        <button class="nav-link" type="button" data-stage="in-heat" id="tabInHeat">
+          <i class="bi bi-heart-pulse me-1"></i>In-Heat
+        </button>
+        <button class="nav-link" type="button" data-stage="under observation" id="tabObservation">
+          <i class="bi bi-eye me-1"></i>Observation
+        </button>
+        <button class="nav-link" type="button" data-stage="pregnant" id="tabPregnant">
+          <i class="bi bi-droplet-half me-1"></i>Pregnant
+        </button>
+        <button class="nav-link" type="button" data-stage="farrowing" id="tabFarrowing">
+          <i class="bi bi-house-heart me-1"></i>Farrowing
+        </button>
+        <button class="nav-link" type="button" data-stage="lactating" id="tabLactating">
+          <i class="bi bi-activity me-1"></i>Lactating
+        </button>
+      </div>
+    </div>
+
+  </div>
+</section>

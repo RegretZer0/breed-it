@@ -1,272 +1,632 @@
-/* =========================
-   FARMER PAGE OFFSET (FIX NAV OVERLAP)
-========================= */
+/* =========================================================
+   REPRODUCTION MONITORING — CLEAN (Bootstrap-first)
+   - Minimal overrides (Bootstrap handles layout/grid)
+   - Theme: soft green planner
+   - Keeps existing IDs safe
+========================================================= */
 
-.app-root {
-  padding-top: 50px; 
+:root{
+  --repro-bg: #eef7f3;
+  --repro-text: #0f172a;
+  --repro-muted: #64748b;
+
+  --repro-green: #22b574;
+  --repro-green-2: #0f7a34;
+
+  --repro-bd: rgba(15,23,42,.08);
+  --repro-soft: rgba(34,181,116,.12);
+
+  --r-xl: 22px;
+  --r-lg: 18px;
+  --r-md: 14px;
+
+  --sh-xs: 0 2px 10px rgba(15,23,42,.04);
+  --sh-sm: 0 10px 24px rgba(15,23,42,.06);
+  --sh-md: 0 18px 46px rgba(15,23,42,.10);
+
+  --ring: 0 0 0 .18rem rgba(34,181,116,.18);
 }
 
-/* =========================
-   VISIBILITY HELPERS
-========================= */
-.hidden {
-  display: none;
+/* =========================================================
+   APP BG + CONTAINER
+========================================================= */
+.app-root{
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 260px at 18% -10%, rgba(34,181,116,.18), transparent 62%),
+    radial-gradient(900px 260px at 92% -20%, rgba(34,181,116,.12), transparent 55%),
+    radial-gradient(800px 240px at 65% 18%, rgba(255,255,255,.85), transparent 55%),
+    var(--repro-bg);
 }
 
-/* =========================
-   PAGE TITLE
-========================= */
+.repro-main.container-fluid{ max-width: 1100px; }
 
-.page-title {
-  text-align: center;
-  margin: 28px 0 8px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+/* spacer for your farmer_nav */
+.repro-main .repro-nav-spacer{ height: 92px; }
+@media (max-width: 576px){
+  .repro-main .repro-nav-spacer{ height: 78px; }
 }
 
-.page-subtitle {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 24px;
+/* =========================================================
+   BASE CARD (your reusable wrapper)
+========================================================= */
+.repro-card{
+  border-radius: var(--r-xl) !important;
+  border: 1px solid rgba(15,23,42,.06) !important;
+  background: rgba(255,255,255,.96) !important;
+  box-shadow: var(--sh-sm) !important;
 }
 
-/* =========================
-   CONTAINER
-========================= */
-
-.reproduction-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: auto;
+.repro-card .card-body{ padding: 18px 20px !important; }
+@media (max-width: 576px){
+  .repro-card .card-body{ padding: 14px 14px !important; }
 }
 
-/* =========================
-   SEARCH
-========================= */
-
-.search-container {
-  margin-bottom: 22px;
+/* small icon tile */
+.repro-section-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(34,181,116,.10);
+  border: 1px solid rgba(34,181,116,.20);
+  color: var(--repro-green-2);
+  box-shadow: var(--sh-xs);
 }
 
-.search-input {
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
+/* =========================================================
+   HERO (green banner)
+========================================================= */
+.repro-hero{
+  border-radius: var(--r-xl) !important;
+  border: 0 !important;
+  box-shadow: var(--sh-md) !important;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(1000px 320px at 12% -30%, rgba(255,255,255,.18), transparent 60%),
+    radial-gradient(900px 260px at 96% -40%, rgba(255,255,255,.12), transparent 55%),
+    linear-gradient(90deg, var(--repro-green), #32c084) !important;
 }
 
-.search-input:focus {
-  border-color: #4caf50;
+.repro-hero .card-body{ padding: 22px 22px !important; }
+@media (max-width: 576px){
+  .repro-hero .card-body{ padding: 18px 16px !important; }
 }
 
-/* =========================
-   SECTION CARDS
-========================= */
+.repro-hero-icon{
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+  font-size: 20px;
+}
 
-.section-card {
-  background: #ffffff;
-  border-radius: 18px;
+.repro-title{ font-weight: 950; letter-spacing: .2px; margin: 0; }
+.repro-sub{ color: rgba(255,255,255,.92) !important; font-weight: 600; }
+
+/* hero search pill */
+.repro-search .input-group{
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(255,255,255,.26);
+  box-shadow: var(--sh-xs);
+}
+.repro-search .input-group:focus-within{ box-shadow: var(--sh-xs), var(--ring); }
+.repro-search .input-group-text{ border: 0 !important; background: transparent !important; }
+.repro-search input{ border: 0 !important; box-shadow: none !important; }
+#reproSearchClearBtn{
+  border: 0 !important;
+  border-left: 1px solid rgba(15,23,42,.08) !important;
+  border-radius: 0 !important;
+}
+#reproSearchClearBtn:hover{
+  background: rgba(34,181,116,.10) !important;
+  color: var(--repro-green-2) !important;
+}
+
+/* =========================================================
+   FILTERS — NO HORIZONTAL SCROLL
+   - dropdown row stays 1 line on md+; stacks on small
+   - tabs WRAP (no scroll)
+========================================================= */
+.repro-filter-surface{
+  border-radius: var(--r-lg);
+  border: 1px solid rgba(15,23,42,.06);
+  background:
+    radial-gradient(900px 180px at 15% 0%, rgba(34,181,116,.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.92), #fff);
   padding: 16px;
-  margin-bottom: 22px;
-  border-top: 4px solid transparent;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+}
+@media (max-width: 576px){
+  .repro-filter-surface{ padding: 14px; }
 }
 
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 14px;
+#reproFilterForm .form-label{
+  font-weight: 900;
+  color: rgba(15,23,42,.92);
+}
+#reproFilterForm .form-select{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+}
+#reproFilterForm .form-select:focus{
+  border-color: rgba(34,181,116,.35) !important;
+  box-shadow: var(--ring) !important;
+}
+
+/* slightly less round buttons (you asked) */
+#reproFilterForm .btn{
+  border-radius: 14px !important;
+  font-weight: 950;
+  padding: 10px 16px;
+}
+
+/* quick tabs wrap (no scroll) */
+.repro-tabs{
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 10px;
+}
+.repro-tabs .nav-link{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.08) !important;
+  background: rgba(255,255,255,.98) !important;
+  color: var(--repro-text) !important;
+  font-weight: 950;
+  padding: 10px 14px;
+  box-shadow: var(--sh-xs);
+}
+.repro-tabs .nav-link.active{
+  background: rgba(34,181,116,.16) !important;
+  border-color: rgba(34,181,116,.30) !important;
+  color: var(--repro-green-2) !important;
 }
 
-/* Badge inside title */
-.section-title .badge {
+/* =========================================================
+   LIST — 1 PIG CARD PER ROW ALWAYS
+========================================================= */
+#pigCardsGrid{ row-gap: 14px !important; }
+#pigCardsGrid > [class*="col-"]{
+  flex: 0 0 100% !important;
+  max-width: 100% !important;
+}
+
+/* =========================================================
+   PIG CARD — MODERN LIST ITEM (theme aligned)
+========================================================= */
+.pig-card{
+  border-radius: 18px !important;
+  border: 1px solid rgba(15,23,42,.06) !important;
+  background:
+    radial-gradient(900px 180px at 8% 0%, rgba(34,181,116,.08), transparent 55%),
+    rgba(255,255,255,.98) !important;
+  box-shadow: var(--sh-sm) !important;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.pig-card:hover{
+  transform: translateY(-1px);
+  border-color: rgba(34,181,116,.24) !important;
+  box-shadow: var(--sh-md) !important;
+}
+
+.pig-card .card-body{ padding: 16px 16px !important; }
+@media (min-width: 992px){
+  .pig-card .card-body{ padding: 18px 18px !important; }
+}
+
+.pig-avatar{
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(15,23,42,.08);
+  background: #f3f6fb;
+  box-shadow: var(--sh-xs);
+  overflow: hidden;
+}
+@media (max-width: 576px){
+  .pig-avatar{
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 14px !important;
+  }
+}
+
+/* (optional safety) */
+.pig-avatar-img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pig-avatar-fallback{
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  color: rgba(15,23,42,.55);
+}
+
+.pig-title{
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--repro-text);
+}
+
+.pig-meta{
+  font-size: 12px;
+  color: rgba(100,116,139,.95);
+}
+
+.pig-card .badge{
+  border-radius: 12px !important;
+  font-weight: 950;
+  padding: 7px 10px;
   font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
-/* =========================
-   TABLES
-========================= */
+/* CTA (not overly pill) */
+.pig-card .btn.btn-success{
+  border-radius: 14px !important;
+  font-weight: 950;
+  padding: 11px 14px !important;
+  box-shadow: 0 10px 18px rgba(34,181,116,.14);
+}
+.pig-card .mt-3.d-grid{ margin-top: 12px !important; }
 
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
+/* =========================================================
+   MODAL
+========================================================= */
+
+/* dialog: mobile full screen feel, desktop sheet */
+.repro-modal-dialog .modal-dialog{
+  margin: 0.75rem auto;
+}
+@media (max-width: 576px){
+  .repro-modal-dialog{
+    margin: 0;
+  }
+  .repro-modal-dialog .modal-dialog{
+    margin: 0;
+    height: 100%;
+  }
+  .repro-modal-dialog .modal-content{
+    min-height: 100vh;
+    border-radius: 0 !important;
+  }
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 640px;
+.repro-modal{
+  border-radius: 22px !important;
+  border: 1px solid rgba(15,23,42,.06) !important;
+  overflow: hidden;
+  box-shadow: var(--sh-md) !important;
+  background: #fff;
 }
 
-thead th {
-  background: #f4f6f8;
-  font-size: 13px;
+/* Sticky header */
+.repro-modal-head{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  border-bottom: 1px solid rgba(15,23,42,.06) !important;
+  padding: 16px 18px;
+  background:
+    radial-gradient(900px 220px at 12% -40%, rgba(34,181,116,.26), transparent 60%),
+    radial-gradient(820px 240px at 92% -40%, rgba(255,255,255,.35), transparent 55%),
+    linear-gradient(180deg, rgba(34,181,116,.10), rgba(255,255,255,1));
+}
+
+@media (max-width: 576px){
+  .repro-modal-head{ padding: 14px 14px; }
+}
+
+/* Appbar */
+.repro-appbar-icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.65);
+  border: 1px solid rgba(34,181,116,.22);
+  color: var(--repro-green-2);
+  box-shadow: var(--sh-xs);
+  flex-shrink: 0;
+}
+.repro-appbar-sub{
+  color: rgba(15,23,42,.62);
   font-weight: 700;
+  max-width: 56ch;
+}
+
+/* Close button (theme aligned) */
+.repro-close-btn{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.08) !important;
+  box-shadow: var(--sh-xs);
+  padding: 10px 12px;
+}
+.repro-close-btn:hover{
+  background: rgba(34,181,116,.10) !important;
+  border-color: rgba(34,181,116,.22) !important;
+  color: var(--repro-green-2) !important;
+}
+
+/* Tabsbar under header */
+.repro-tabsbar{
+  border-radius: 16px;
   padding: 10px;
-  text-align: left;
+  background:
+    radial-gradient(900px 180px at 15% 0%, rgba(34,181,116,.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.92), #fff);
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
 }
 
-tbody td {
-  padding: 10px;
-  font-size: 13px;
-  border-top: 1px solid #eee;
-  vertical-align: middle;
-}
-
-th,
-td {
-  white-space: nowrap;
-}
-
-/* =========================
-   MONITORING SPECIFIC (NEW)
-========================= */
-
-.btn-group {
+/* tabs: wrap (no horizontal scroll), chip-like */
+.repro-detail-tabs{
   display: flex;
-  gap: 6px;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+}
+.repro-detail-tabs .nav-link{
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  background: rgba(255,255,255,.96) !important;
+  box-shadow: var(--sh-xs);
+  font-weight: 950;
+  padding: 10px 14px;
+  color: var(--repro-text) !important;
+  white-space: nowrap;
+}
+.repro-detail-tabs .nav-link.active{
+  background: rgba(34,181,116,.16) !important;
+  border-color: rgba(34,181,116,.30) !important;
+  color: var(--repro-green-2) !important;
 }
 
-.badge-success { background-color: #2ecc71; color: #fff; }
-.badge-warning { background-color: #f1c40f; color: #333; }
-.badge-info { background-color: #3498db; color: #fff; }
-.badge-secondary { background-color: #95a5a6; color: #fff; }
-
-#pigletMonitoringBody b {
-  color: #2c3e50;
-  font-weight: 700;
+/* Body */
+.repro-modal-body{
+  background: #fbfcfe;
+  padding: 16px 18px 18px;
+}
+@media (max-width: 576px){
+  .repro-modal-body{ padding: 14px 14px 16px; }
 }
 
-/* =========================
-   DEFORMITY LIST
-========================= */
+/* Footer: sticky action bar feel */
+.repro-modal-foot{
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  border-top: 1px solid rgba(15,23,42,.06) !important;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(6px);
+  padding: 12px 18px;
+}
+@media (max-width: 576px){
+  .repro-modal-foot{ padding: 12px 14px; }
+}
+.repro-modal-foot .btn{
+  border-radius: 14px !important;
+  font-weight: 950;
+}
 
-#deformityList {
+/* Inner sheets (planner cards) */
+.repro-sheet{
+  border-radius: 18px !important;
+  border: 1px solid rgba(15,23,42,.06) !important;
+  box-shadow: var(--sh-sm) !important;
+  background:
+    radial-gradient(900px 180px at 10% 0%, rgba(34,181,116,.07), transparent 55%),
+    #fff !important;
+}
+.repro-sheet .card-body{ padding: 16px !important; }
+@media (min-width: 992px){
+  .repro-sheet .card-body{ padding: 18px !important; }
+}
+
+/* =========================================================
+   PROFILE PICTURE (MODAL) — MAKE SMALLER ✅
+   (matches your screenshot: shrink the big photo area)
+========================================================= */
+
+/* If your profile section uses the avatar block: shrink it a bit */
+.repro-profile-avatar{
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 14px !important;
+}
+@media (max-width: 576px){
+  .repro-profile-avatar{
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* Force image inside to fit nicely */
+.repro-profile-avatar-img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* If you have a big “hero image” inside profile tab (like in screenshot),
+   this keeps any image inside the profile sheet from growing too tall */
+#paneProfile img{
+  max-width: 100%;
+  height: auto;
+}
+#paneProfile .repro-sheet img:not(#profilePhotoImg){
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 16px;
+}
+@media (max-width: 576px){
+  #paneProfile .repro-sheet img:not(#profilePhotoImg){
+    max-height: 160px;
+    border-radius: 14px;
+  }
+}
+
+/* Profile name styling (app-like) */
+.repro-profile-name{
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--repro-text);
+}
+
+/* Health pill in header area */
+#profileHealth{
+  font-weight: 950;
+  padding: 9px 12px;
+  border-radius: 999px !important;
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: var(--sh-xs);
+  background: rgba(34,181,116,.10);
+  color: var(--repro-green-2);
+}
+
+/* Metric tiles – more “mobile app” */
+.repro-metric-tile{
+  border-radius: 16px;
+  border: 1px solid rgba(15,23,42,.06);
+  background: rgba(255,255,255,.98);
+  box-shadow: var(--sh-xs);
+  padding: 12px;
+  min-height: 74px;
+}
+
+/* AI column stack spacing */
+.repro-sheet-stack{
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.deformity-item {
-  background: #fff5f5;
-  border-left: 5px solid #d32f2f;
-  padding: 12px 14px;
-  border-radius: 8px;
-  font-size: 13px;
+/* soft panel used inside AI analysis */
+.repro-soft-panel{
+  border-radius: 16px !important;
+  border: 1px solid rgba(34,181,116,.18) !important;
+  background: rgba(34,181,116,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
 }
 
-/* =========================
-   ACTION BUTTONS
-========================= */
+/* =========================================================
+   SAFE QUALITY OF LIFE
+========================================================= */
+.min-w-0{ min-width: 0; }
 
-.action-btn, .btn-sm {
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
+/* consistent focus */
+.btn:focus,
+.form-select:focus,
+.form-control:focus{ outline: none !important; }
+
+/* remove modal default border */
+.modal-content{ border: 0; }
+
+/* =========================================================
+   REPRODUCTION TAB — VERTICAL PLANNER LOOK
+========================================================= */
+
+/* Make filter controls feel like the reference app */
+.repro-cycle-controls .form-select{
+  min-width: 260px;
+  border-radius: 14px !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  box-shadow: var(--sh-xs);
 }
-
-.action-btn:active, .btn-sm:active {
-  transform: scale(0.96);
-}
-
-.btn-success {
-  background: #2e7d32;
-  color: #fff;
-}
-
-.btn-outline-danger {
-  background: transparent;
-  border: 1px solid #d32f2f;
-  color: #d32f2f;
-}
-
-.btn-outline-danger:hover {
-  background: #d32f2f;
-  color: #fff;
-}
-
-/* =========================
-   MOBILE (TABLETS)
-========================= */
-
-@media (max-width: 768px) {
-  .reproduction-container {
-    padding: 16px;
+@media (max-width: 576px){
+  .repro-cycle-controls{
+    width: 100%;
+    justify-content: flex-start;
   }
-
-  .section-card {
-    padding: 14px;
-  }
-
-  .section-title {
-    font-size: 14px;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  thead th,
-  tbody td {
-    font-size: 12px;
-  }
-
-  table {
-    min-width: 600px;
-  }
-
-  .search-input {
-    font-size: 13px;
+  .repro-cycle-controls .form-select{
+    min-width: 100%;
   }
 }
 
-/* =========================
-   EXTRA SMALL DEVICES
-========================= */
+/* Cycle list container */
+.repro-cycle-list{
+  width: 100%;
+}
 
-@media (max-width: 480px) {
-  .page-title {
-    font-size: 18px;
-  }
+/* Cycle cards: more “mobile app list item” */
+.ai-cycle-card{
+  border-radius: 16px !important;
+  border: 1px solid rgba(15,23,42,.06) !important;
+  background:
+    radial-gradient(900px 180px at 10% 0%, rgba(34,181,116,.08), transparent 55%),
+    rgba(255,255,255,.98) !important;
+  box-shadow: var(--sh-sm) !important;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.ai-cycle-card:hover{
+  transform: translateY(-1px);
+  border-color: rgba(34,181,116,.24) !important;
+  box-shadow: var(--sh-md) !important;
+}
+.ai-cycle-card .card-body{
+  padding: 14px 14px !important;
+}
+@media (min-width: 992px){
+  .ai-cycle-card .card-body{ padding: 16px 16px !important; }
+}
 
-  .page-subtitle {
-    font-size: 13px;
-  }
+/* Make the open button consistent with theme */
+.ai-cycle-card .btn.btn-success{
+  border-radius: 14px !important;
+  font-weight: 950;
+  padding: 10px 12px !important;
+  box-shadow: 0 10px 18px rgba(34,181,116,.14);
+}
 
-  .section-title {
-    font-size: 13px;
-  }
+/* Placeholder box looks like a calm hint */
+.repro-placeholder{
+  border-radius: 16px;
+  border: 1px dashed rgba(15,23,42,.18);
+  background: rgba(255,255,255,.85);
+  padding: 14px 14px;
+}
 
-  .section-card {
-    padding: 12px;
-    margin-bottom: 16px;
-  }
+/* Inner tabs bar (already suggested, now finalized) */
+.repro-inner-tabsbar{
+  border-radius: 16px;
+  padding: 10px;
+  background:
+    radial-gradient(900px 180px at 15% 0%, rgba(34,181,116,.10), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.92), #fff);
+  border: 1px solid rgba(15,23,42,.06);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.6);
+}
 
-  table {
-    min-width: 520px;
-  }
+/* Reduce top-tab “big empty strip” feel */
+.repro-tabsbar{
+  padding: 8px !important;
+}
 
-  .search-input {
-    padding: 10px 12px;
-  }
+/* Make modal body feel less “blank wide” */
+.repro-modal-body{
+  background:
+    radial-gradient(900px 260px at 18% -10%, rgba(34,181,116,.10), transparent 62%),
+    #fbfcfe;
+}
 
-  .btn-group {
-    flex-direction: column;
-  }
+/* If your empty state icon looks too big */
+#aiEmpty i{
+  opacity: .7;
 }
