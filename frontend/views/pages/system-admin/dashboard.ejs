@@ -229,6 +229,24 @@
       font-size: 15px;
     }
 
+    /* Support Ticket Specific Styles */
+    .priority-high, .priority-urgent { color: #ef4444; font-weight: bold; }
+    .priority-normal { color: #f59e0b; }
+    .priority-low { color: #10b981; }
+    
+    .status-open { color: #ef4444; font-weight: bold; text-transform: uppercase; }
+    .status-resolved { color: #10b981; }
+    .status-in_progress { color: #3b82f6; }
+    .status-closed { color: #6b7280; }
+
+    .ticket-pill {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #475569;
+    }
+
     footer {
       margin-top: 40px;
       padding: 20px;
@@ -256,6 +274,7 @@
     <a href="#">📊 System Health</a>
     <a href="#maintenance">🚧 Scheduling</a>
     <a href="#user-control">👤 User Control</a>
+    <a href="#support-tickets">🎫 Support Tickets</a>
     <a href="#infrastructure">📁 Infrastructure</a>
   </nav>
 
@@ -329,6 +348,30 @@
           </tr>
         </thead>
         <tbody></tbody>
+      </table>
+    </section>
+
+    <section id="support-tickets">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h2>Support Tickets Oversight</h2>
+        <span id="ticketCountBadge" style="background: #ef4444; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">
+          0 Open Tickets
+        </span>
+      </div>
+      <table id="adminTicketsTable">
+        <thead>
+          <tr>
+            <th>Ticket ID</th>
+            <th>User Info</th>
+            <th>Category</th>
+            <th>Subject</th>
+            <th>Priority</th>
+            <th>Status</th>
+            <th>Resolution</th>
+          </tr>
+        </thead>
+        <tbody id="adminTicketsBody">
+          </tbody>
       </table>
     </section>
 

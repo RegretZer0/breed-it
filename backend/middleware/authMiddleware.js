@@ -135,5 +135,6 @@ function isAuthenticated(req, res, next) {
 
 module.exports = {
   requireSessionAndToken,
+  protect: requireSessionAndToken,
   isAuthenticated,
 };

@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial Load
   refreshDashboard();
   loadUsers();
+  loadAdminTickets(); // Initial load for tickets
 
   // Feature: Auto-refresh system metrics every 3 seconds
   const autoRefreshInterval = setInterval(refreshDashboard, 3000);
@@ -18,7 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Optional: Listener for a manual refresh button
   const manualBtn = document.getElementById("manualRefreshBtn");
   if (manualBtn) {
-    manualBtn.addEventListener("click", refreshDashboard);
+    manualBtn.addEventListener("click", () => {
+        refreshDashboard();
+        loadAdminTickets();
+    });
   }
 });
 
@@ -28,6 +32,8 @@ document.addEventListener("DOMContentLoaded", () => {
 function refreshDashboard() {
   loadAdminStats();
   loadDataOversight();
+  // We don't necessarily need to refresh the whole ticket table every 3 seconds 
+  // to save bandwidth, but you can add loadAdminTickets() here if desired.
 }
 
 /**
@@ -46,8 +52,8 @@ function getDisplayName(user) {
 function broadcastMaintenance() {
   const title = document.getElementById("maintTitle").value.trim();
   const message = document.getElementById("maintMessage").value.trim();
-  const scheduled_for = document.getElementById("maintStart").value; // Matches new EJS ID
-  const ends_at = document.getElementById("maintEnd").value;        // Matches new EJS ID
+  const scheduled_for = document.getElementById("maintStart").value; 
+  const ends_at = document.getElementById("maintEnd").value;        
   const btn = document.getElementById("sendMaintBtn");
 
   if (!title || !message || !scheduled_for || !ends_at) {
@@ -55,11 +61,9 @@ function broadcastMaintenance() {
     return;
   }
 
-  // Visual feedback
   btn.disabled = true;
   btn.textContent = "Broadcasting...";
 
-  // Payload matches the updated Mongoose Schema and Routes
   const payload = {
     title,
     message,
@@ -78,7 +82,6 @@ function broadcastMaintenance() {
     .then(data => {
       if (data.success) {
         alert("Maintenance notification successfully broadcasted to all users.");
-        // Clear form
         document.getElementById("maintTitle").value = "";
         document.getElementById("maintMessage").value = "";
         document.getElementById("maintStart").value = "";
@@ -290,4 +293,84 @@ function renderFarmersTable(rows = []) {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// ==========================================
+// NEW: SUPPORT TICKET OVERSIGHT
+// ==========================================
+
+function loadAdminTickets() {
+  fetch("http://localhost:5000/api/support/admin/all", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (!data.success) return;
+      renderAdminTickets(data.tickets);
+    })
+    .catch(err => console.error("Ticket Load Error:", err));
+}
+
+function renderAdminTickets(tickets = []) {
+  const tbody = document.getElementById("adminTicketsBody");
+  const badge = document.getElementById("ticketCountBadge");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+  let openCount = 0;
+
+  tickets.forEach(t => {
+    if (t.status === 'open') openCount++;
+    
+    // User data is populated from the user_id reference in the route
+    const userName = getDisplayName(t.user_id);
+    const userRole = t.user_id?.role?.replace('_', ' ') || 'unknown';
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>#${t.ticket_id}</strong></td>
+      <td>
+        <div style="font-weight:bold">${userName}</div>
+        <div style="font-size:11px; color:#6b7280">${t.user_id?.email || ''} (${userRole})</div>
+      </td>
+      <td><span class="ticket-pill">${t.category}</span></td>
+      <td>${t.subject}</td>
+      <td><span class="priority-${t.priority}">${t.priority}</span></td>
+      <td><span class="status-${t.status}">${t.status.replace('_', ' ')}</span></td>
+      <td>
+        <select onchange="updateTicketStatus('${t._id}', this.value)" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+          <option value="open" ${t.status === 'open' ? 'selected' : ''}>Open</option>
+          <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+          <option value="resolved" ${t.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+          <option value="closed" ${t.status === 'closed' ? 'selected' : ''}>Closed</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  if (badge) badge.textContent = `${openCount} Open Tickets`;
+}
+
+/**
+ * Updates the status of a specific ticket via the admin endpoint
+ */
+function updateTicketStatus(mongoId, newStatus) {
+  fetch(`http://localhost:5000/api/support/admin/ticket/${mongoId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ status: newStatus })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        console.log(`Ticket ${mongoId} updated to ${newStatus}`);
+        loadAdminTickets(); // Refresh list to update UI and badges
+      } else {
+        alert("Failed to update ticket status.");
+      }
+    })
+    .catch(err => {
+      console.error("Status Update Error:", err);
+      alert("Error connecting to support service.");
+    });
 }

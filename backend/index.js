@@ -14,6 +14,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const reproductionRoute = require("./routes/reproductionRoute");
 const analyticsRoutes = require("./routes/analyticsRoute");
+const supportRoutes = require("./routes/supportRoutes");
 
 // ENV VALIDATION (FAIL FAST)
 if (!process.env.MONGO_URI) {
@@ -178,6 +179,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/reproduction", reproductionRoute);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
+app.use("/api/support", supportRoutes);
 
 /* =========================
     HEALTH CHECK
