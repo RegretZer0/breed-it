@@ -23,7 +23,14 @@ export function initReproModal(helpers) {
   const pigDetailsStatusBadge = document.getElementById("pigDetailsStatusBadge");
 
   // TOP tabs
-  const tabReproduction = document.getElementById("tabReproduction"); // NEW (safe)
+  const tabReproduction = document.getElementById("tabReproduction");
+
+  // Repro panels wrap (NEW)
+  const reproCyclesPanelsWrap = document.getElementById("reproCyclesPanelsWrap");
+  const reproCycleDetailsPanel = document.getElementById("reproCycleDetailsPanel");
+
+  // Close cycle button (NEW)
+  const reproCloseCycleBtn = document.getElementById("reproCloseCycleBtn");
 
   // Repro inner reveal
   const reproInnerTabsWrap = document.getElementById("reproInnerTabsWrap");
@@ -42,7 +49,7 @@ export function initReproModal(helpers) {
   const profileAge = document.getElementById("profileAge");
   const profileBirthDate = document.getElementById("profileBirthDate");
 
-  // AI (now used as "Cycles" inside Reproduction tab)
+  // AI (Cycles)
   const aiCycleSelect = document.getElementById("aiCycleSelect");
   const aiRefreshBtn = document.getElementById("aiRefreshBtn");
   const aiCycleCards = document.getElementById("aiCycleCards");
@@ -100,13 +107,34 @@ export function initReproModal(helpers) {
   let pigletsGrowthCacheAll = null;
 
   // =========================
-  // SHOW/HIDE INNER DETAILS (tabs appear only after cycle click)
+  // VIEW MODE HELPERS (Panels vs Solo Cycle)
+  // =========================
+  function setSoloCycleMode(isSolo) {
+    if (!pigDetailsModalEl) return;
+    pigDetailsModalEl.classList.toggle("repro-solo-cycle", !!isSolo);
+
+    // optional: keep scroll sane
+    try {
+      const body = pigDetailsModalEl.querySelector(".repro-modal-body");
+      if (body) body.scrollTop = 0;
+    } catch (_) {}
+  }
+
+  function showCyclesPanels() {
+    setSoloCycleMode(false);
+  }
+
+  function showCycleDetailsOnly() {
+    setSoloCycleMode(true);
+  }
+
+  // =========================
+  // SHOW/HIDE INNER DETAILS
   // =========================
   function hideReproInner() {
     reproInnerTabsWrap?.classList.add("d-none");
     reproInnerPlaceholder?.classList.remove("d-none");
 
-    // reset analysis area to placeholder
     aiAnalysisStatusBadge?.classList.add("d-none");
     aiAnalysisPlaceholder?.classList.remove("d-none");
     aiAnalysisContent?.classList.add("d-none");
@@ -411,11 +439,12 @@ export function initReproModal(helpers) {
     aiCycleCards.innerHTML = list
       .map((r) => {
         const b = buildStatusBadge(r.status);
-        const subtitle = [
+
+        const subtitleParts = [
           `Started: <b>${fmtDate(r.dateStarted)}</b>`,
           r.aiDate ? `AI Date: <b>${fmtDate(r.aiDate)}</b>` : null,
           r.boar?.boarTag ? `Boar: <b>${safeText(r.boar.boarTag)}</b>` : null,
-        ].filter(Boolean).join(" · ");
+        ].filter(Boolean);
 
         return `
           <div class="card border-0 shadow-sm ai-cycle-card">
@@ -426,13 +455,16 @@ export function initReproModal(helpers) {
                     <i class="bi bi-layers"></i>
                     <span class="text-truncate">${safeText(r.cycleLabel)}</span>
                   </div>
-                  <div class="small text-muted mt-1">${subtitle || "—"}</div>
+
+                  <div class="repro-cycle-subtitle">
+                    ${subtitleParts.map((x) => `<span>${x}</span>`).join("")}
+                  </div>
                 </div>
 
                 <span class="badge rounded-pill ${b.cls}">${b.text}</span>
               </div>
 
-              <div class="d-flex justify-content-end mt-3">
+              <div class="repro-cycle-cta">
                 <button
                   class="btn btn-success btn-sm"
                   type="button"
@@ -482,8 +514,10 @@ export function initReproModal(helpers) {
   function resetAIUI() {
     aiRecordsRaw = [];
     if (aiCycleSelect) aiCycleSelect.innerHTML = `<option value="">All cycles</option>`;
-    if (aiCycleCards) aiCycleCards.innerHTML =
-      `<div class="card border-0 shadow-sm"><div class="card-body text-muted small">Loading cycles...</div></div>`;
+    if (aiCycleCards) {
+      aiCycleCards.innerHTML =
+        `<div class="card border-0 shadow-sm"><div class="card-body text-muted small">Loading cycles...</div></div>`;
+    }
     aiEmpty?.classList.add("d-none");
 
     aiAnalysisStatusBadge?.classList.add("d-none");
@@ -496,7 +530,8 @@ export function initReproModal(helpers) {
     if (!force && aiLoadedForSwineId === currentSwineId) return;
 
     resetAIUI();
-    hideReproInner(); // important: keep inner tabs hidden until a cycle is opened
+    hideReproInner();
+    showCyclesPanels(); // always start in panels view when loading
 
     const swTag = currentSwineTag || getSwineTag(currentSwine || {});
     const raw = await fetchAIRecords(currentSwineId, swTag);
@@ -513,8 +548,6 @@ export function initReproModal(helpers) {
 
     renderAICycleSelect(aiRecordsRaw);
     renderAICycleCards(aiRecordsRaw, aiCycleSelect?.value || "");
-
-    // DO NOT auto-open first cycle (user wants click to reveal)
   }
 
   // =========================
@@ -753,12 +786,11 @@ export function initReproModal(helpers) {
     currentSwineId = data?.mongoId || currentSwine?._id || null;
     currentSwineTag = data?.tag || getSwineTag(currentSwine || {});
 
-    // reset per-sow markers
     aiLoadedForSwineId = null;
     pigletsGrowthLoadedForSwineId = null;
 
-    // always hide inner details on open
     hideReproInner();
+    showCyclesPanels(); // start with panels visible
 
     renderProfile(currentSwine || {}, data);
 
@@ -771,8 +803,8 @@ export function initReproModal(helpers) {
   // =========================
   aiCycleSelect?.addEventListener("change", () => {
     renderAICycleCards(aiRecordsRaw, aiCycleSelect.value || "");
-    // do not reveal details until a cycle is opened
     hideReproInner();
+    showCyclesPanels();
   });
 
   aiRefreshBtn?.addEventListener("click", () => {
@@ -781,7 +813,7 @@ export function initReproModal(helpers) {
     loadAIForCurrentSwine(true);
   });
 
-  // When user clicks a cycle card -> reveal inner tabs + show analysis + activate AI tab
+  // Open cycle -> show only cycle details panel
   aiCycleCards?.addEventListener("click", (e) => {
     const btn = e.target.closest('button[data-action="ai-analyze"]');
     if (!btn) return;
@@ -793,14 +825,22 @@ export function initReproModal(helpers) {
     if (id) rec = aiRecordsRaw.find((r) => safeText(r.id) === id) || null;
     if (!rec && cycleKey) rec = aiRecordsRaw.find((r) => r.cycleKey === cycleKey) || null;
     if (!rec) rec = aiRecordsRaw[0] || null;
-
     if (!rec) return;
+
+    // SOLO VIEW
+    showCycleDetailsOnly();
 
     showReproInner();
     setAIAnalysis(rec);
 
-    // activate inner AI tab (Bootstrap)
+    // activate inner AI tab
     document.getElementById("tabAI")?.click();
+  });
+
+  // Close cycle details -> go back to panels
+  reproCloseCycleBtn?.addEventListener("click", () => {
+    hideReproInner();
+    showCyclesPanels();
   });
 
   // Piglets refresh
@@ -813,7 +853,7 @@ export function initReproModal(helpers) {
   tabReproduction?.addEventListener("shown.bs.tab", () => loadAIForCurrentSwine(false));
   tabReproduction?.addEventListener("click", () => setTimeout(() => loadAIForCurrentSwine(false), 120));
 
-  // Keep your existing tab hooks (now inner tabs)
+  // Keep your existing tab hooks
   document.getElementById("tabAI")?.addEventListener("shown.bs.tab", () => loadAIForCurrentSwine(false));
   document.getElementById("tabAI")?.addEventListener("click", () => setTimeout(() => loadAIForCurrentSwine(false), 150));
 
@@ -826,6 +866,6 @@ export function initReproModal(helpers) {
 
   return {
     openDetailsModal,
-    onModalStateChanged: () => {}, // placeholder hook (safe)
+    onModalStateChanged: () => {},
   };
 }

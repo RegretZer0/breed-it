@@ -43,7 +43,6 @@
                 </button>
               </li>
 
-              <!-- NEW: Reproduction -->
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tabReproduction"
                         data-bs-toggle="pill" data-bs-target="#paneReproduction"
@@ -157,72 +156,76 @@
           <!-- ================= REPRODUCTION (VERTICAL PLANNER) ================= -->
           <div class="tab-pane fade" id="paneReproduction" role="tabpanel">
 
-            <!-- Cycle Filter (top) -->
-            <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3">
-              <div class="card-body">
+            <!-- These two panels will be hidden when a cycle is opened -->
+            <div id="reproCyclesPanelsWrap">
 
-                <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-                  <div class="min-w-0">
+              <!-- Cycle Filter (top) -->
+              <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3 repro-cycles-filter-card">
+                <div class="card-body">
+
+                  <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                    <div class="min-w-0">
+                      <div class="fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-layers"></i>
+                        Cycles
+                      </div>
+                      <div class="small text-muted">
+                        Select a cycle to unlock cycle details below.
+                      </div>
+                    </div>
+
+                    <!-- filter controls -->
+                    <div class="repro-cycle-controls d-flex align-items-end gap-2 flex-wrap">
+                      <div class="min-w-0 repro-cycle-selectwrap">
+                        <label class="form-label small mb-1">Cycle Filter</label>
+                        <select class="form-select form-select-sm" id="aiCycleSelect">
+                          <option value="">All cycles</option>
+                        </select>
+                      </div>
+
+                      <button class="btn btn-outline-secondary btn-sm repro-cycle-refresh" type="button" id="aiRefreshBtn" title="Refresh cycles">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Cycle Cards List (middle) -->
+              <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3 repro-cycles-list-card">
+                <div class="card-body">
+
+                  <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
                     <div class="fw-bold d-flex align-items-center gap-2">
-                      <i class="bi bi-layers"></i>
-                      Cycles
+                      <i class="bi bi-collection"></i>
+                      Cycle List
                     </div>
                     <div class="small text-muted">
-                      Select a cycle to unlock cycle details below.
+                      Tap <b>Open Cycle</b> to view details.
                     </div>
                   </div>
 
-                  <!-- filter controls (stack on mobile) -->
-                  <div class="repro-cycle-controls d-flex align-items-end gap-2 flex-wrap">
-                    <div class="min-w-0">
-                      <label class="form-label small mb-1">Cycle Filter</label>
-                      <select class="form-select form-select-sm" id="aiCycleSelect">
-                        <option value="">All cycles</option>
-                      </select>
-                    </div>
-
-                    <button class="btn btn-outline-secondary btn-sm" type="button" id="aiRefreshBtn" title="Refresh cycles">
-                      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                    </button>
+                  <div id="aiEmpty" class="text-center text-muted py-4 d-none">
+                    <i class="bi bi-archive fs-2 d-block mb-2"></i>
+                    No cycles found for this sow.
                   </div>
+
+                  <div class="repro-cycle-list d-flex flex-column gap-2" id="aiCycleCards">
+                    <div class="card border-0 shadow-sm repro-inner-card">
+                      <div class="card-body text-muted small">
+                        Loading cycles...
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-
               </div>
-            </div>
 
-            <!-- Cycle Cards List (middle) -->
-            <div class="card border-0 shadow-sm repro-inner-card repro-sheet mb-3">
-              <div class="card-body">
-
-                <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
-                  <div class="fw-bold d-flex align-items-center gap-2">
-                    <i class="bi bi-collection"></i>
-                    Cycle List
-                  </div>
-                  <div class="small text-muted">
-                    Tap <b>Open Cycle</b> to view details.
-                  </div>
-                </div>
-
-                <div id="aiEmpty" class="text-center text-muted py-4 d-none">
-                  <i class="bi bi-archive fs-2 d-block mb-2"></i>
-                  No cycles found for this sow.
-                </div>
-
-                <!-- REUSE EXISTING ID -->
-                <div class="repro-cycle-list d-flex flex-column gap-2" id="aiCycleCards">
-                  <div class="card border-0 shadow-sm repro-inner-card">
-                    <div class="card-body text-muted small">
-                      Loading cycles...
-                    </div>
-                  </div>
-                </div>
-
-              </div>
             </div>
 
             <!-- Cycle Details (bottom) -->
-            <div class="card border-0 shadow-sm repro-inner-card repro-sheet">
+            <div class="card border-0 shadow-sm repro-inner-card repro-sheet" id="reproCycleDetailsPanel">
               <div class="card-body">
 
                 <!-- Placeholder (shown until cycle picked) -->
@@ -241,7 +244,15 @@
                       <i class="bi bi-ui-checks"></i>
                       Cycle Details
                     </div>
-                    <span class="badge rounded-pill text-bg-secondary d-none" id="aiAnalysisStatusBadge">—</span>
+
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge rounded-pill text-bg-secondary d-none" id="aiAnalysisStatusBadge">—</span>
+
+                      <!-- NEW: close cycle details panel (does not replace any existing ID) -->
+                      <button type="button" class="btn btn-outline-secondary btn-sm" id="reproCloseCycleBtn">
+                        <i class="bi bi-x-lg me-1"></i>Close
+                      </button>
+                    </div>
                   </div>
 
                   <div class="repro-inner-tabsbar mb-3">
