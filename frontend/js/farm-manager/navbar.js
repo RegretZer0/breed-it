@@ -506,7 +506,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const msg = document.getElementById("helpMessage");
 
       if (cat) cat.value = "";
-      if (pri) pri.value = "normal";
+      if (pri) pri.value = "normal"; 
+      applyAutoPriorityFromCategory();
       if (sub) sub.value = "";
       if (msg) msg.value = "";
     };
@@ -518,7 +519,10 @@ document.addEventListener("DOMContentLoaded", () => {
         name: (document.getElementById("helpName")?.value || "").trim(),
         email: (document.getElementById("helpEmail")?.value || "").trim(),
         category: document.getElementById("helpCategory")?.value || "",
-        priority: document.getElementById("helpPriority")?.value || "normal",
+        priority: (() => {
+          const cat = (document.getElementById("helpCategory")?.value || "").toLowerCase().trim();
+          return CATEGORY_TO_PRIORITY[cat] || "normal";
+        })(),
         subject: (document.getElementById("helpSubject")?.value || "").trim(),
         message: (document.getElementById("helpMessage")?.value || "").trim(),
         page: window.location.pathname,
@@ -572,6 +576,40 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // =========================
+  // Auto Priority by Category
+  // =========================
+  const helpCategoryEl = document.getElementById("helpCategory");
+  const helpPriorityEl = document.getElementById("helpPriority");
+
+  // Decide your mapping here (edit if you want different rules)
+  const CATEGORY_TO_PRIORITY = {
+    bug: "high",
+    account: "high",
+    data: "normal",
+    feature: "low",
+    other: "normal",
+  };
+
+  function applyAutoPriorityFromCategory() {
+    if (!helpCategoryEl || !helpPriorityEl) return;
+
+    const cat = (helpCategoryEl.value || "").toLowerCase().trim();
+    const autoPriority = CATEGORY_TO_PRIORITY[cat] || "normal";
+
+    helpPriorityEl.value = autoPriority;
+
+    // Make it predetermined: user cannot edit
+    helpPriorityEl.disabled = true;
+  }
+
+  helpCategoryEl?.addEventListener("change", applyAutoPriorityFromCategory);
+
+  // Apply once on modal open (so it’s consistent)
+  helpModalEl?.addEventListener("shown.bs.modal", () => {
+    applyAutoPriorityFromCategory();
+  });
 
   // =========================
   // Ticket History Modal (your IDs already match)
