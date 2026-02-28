@@ -243,6 +243,55 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
+     VIEW HELPERS (HIDE/SHOW UNRELATED FILTERS + PANELS)
+  ========================================================= */
+
+  // Hide/show the SOW filter row (Search Sow Tag / Health Status / Apply / Reset)
+  // We DO NOT require an explicit #reproSowFilterCard; we find it safely even if
+  // the EJS didn't wrap it with that ID.
+  function toggleSowFilter(shouldShow) {
+    const explicit = document.getElementById("reproSowFilterCard");
+
+    // fallback: find the card that contains #reproSowFilterForm
+    const form = document.getElementById("reproSowFilterForm");
+    const fallbackCard = form?.closest(".card") || form?.closest(".page-card") || null;
+
+    const el = explicit || fallbackCard;
+    if (!el) return;
+
+    el.classList.toggle("d-none", !shouldShow);
+  }
+
+  // In growth/selection piglet "detail", replace content by hiding list/pagination/search controls
+  function toggleGrowthDetailMode(isDetail) {
+    document.getElementById("growthDetailPanel")?.classList.toggle("d-none", !isDetail);
+    document.getElementById("growthList")?.classList.toggle("d-none", isDetail);
+    document.getElementById("growthPagination")?.classList.toggle("d-none", isDetail);
+    document.getElementById("growthSearchInput")?.classList.toggle("d-none", isDetail);
+
+    // header controls: sex filter buttons live inside cycleGrowthTab; hide them when in detail mode
+    const tab = document.getElementById("cycleGrowthTab");
+    tab?.querySelectorAll("[data-growth-sex]")?.forEach((b) => b.classList.toggle("d-none", isDetail));
+    tab?.querySelector(".btn-group[aria-label='Growth sex filter']")?.classList.toggle("d-none", isDetail);
+  }
+
+  function toggleSelectionDetailMode(isDetail) {
+    document.getElementById("selectionDetailPanel")?.classList.toggle("d-none", !isDetail);
+    document.getElementById("selectionList")?.classList.toggle("d-none", isDetail);
+    document.getElementById("selectionPagination")?.classList.toggle("d-none", isDetail);
+    document.getElementById("selectionSearchInput")?.classList.toggle("d-none", isDetail);
+
+    // KPIs are useful on list view only
+    const tab = document.getElementById("cycleSelectionTab");
+    tab?.querySelectorAll("#selTotalInSelection, #selRetainForBreeding, #selMarkForSale")?.forEach((_) => {});
+    tab?.querySelectorAll(".row.g-3.mb-3")?.forEach((row) => row.classList.toggle("d-none", isDetail));
+
+    // sex filter buttons hide in detail
+    tab?.querySelectorAll("[data-selection-sex]")?.forEach((b) => b.classList.toggle("d-none", isDetail));
+    tab?.querySelector(".btn-group[aria-label='Selection sex filter']")?.classList.toggle("d-none", isDetail);
+  }
+
+  /* =========================================================
      VIEW STATE FOR REPRO AREA
   ========================================================= */
   function setReproView(mode) {
@@ -260,20 +309,24 @@ export function initBreedingModule(ctx) {
     const backBtn = document.getElementById("breedingBackBtn");
     const rightInfo = document.getElementById("breedingContextRight");
 
-    const sowFilterCard = document.getElementById("reproSowFilterCard");
+    const cycleFilterCard = document.getElementById("cycleFilterCard");
+
+    // ✅ SOW FILTER visibility:
+    // Show only on SOWS view, hide on CYCLES and DETAIL
+    toggleSowFilter(mode === "SOWS");
 
     if (mode === "SOWS") {
       sowList?.classList.remove("d-none");
       kpi?.classList.remove("d-none");
       panel?.classList.add("d-none");
-      if (sowFilterCard) sowFilterCard.classList.remove("d-none");
+
+      if (cycleFilterCard) cycleFilterCard.classList.add("d-none");
       return;
     }
 
     sowList?.classList.add("d-none");
     kpi?.classList.add("d-none");
     panel?.classList.remove("d-none");
-    if (sowFilterCard) sowFilterCard.classList.add("d-none");
 
     if (bar && backBtn) {
       if (mode === "CYCLES") {
@@ -293,10 +346,12 @@ export function initBreedingModule(ctx) {
       cards?.classList.remove("d-none");
       pag?.classList.remove("d-none");
       detail?.classList.add("d-none");
+      if (cycleFilterCard) cycleFilterCard.classList.remove("d-none");
     } else if (mode === "DETAIL") {
       cards?.classList.add("d-none");
       pag?.classList.add("d-none");
       detail?.classList.remove("d-none");
+      if (cycleFilterCard) cycleFilterCard.classList.add("d-none");
     }
   }
 
@@ -675,6 +730,7 @@ export function initBreedingModule(ctx) {
     if (!sow) return;
 
     state.activeSowForBreeding = sow;
+    state.activeCycleForBreeding = null;
     state.breedingCyclePage = 1;
     state.CYCLES_PER_PAGE = Number(state.CYCLES_PER_PAGE || 5);
 
@@ -684,26 +740,26 @@ export function initBreedingModule(ctx) {
     panel.classList.remove("d-none");
 
     panel.innerHTML = `
-      <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" id="breedingContextBar">
-        <button type="button" class="btn btn-sm btn-outline-secondary" id="breedingBackBtn">
-          <i class="bi bi-arrow-left me-1"></i> Back
-        </button>
+      <div class="card shadow-sm border-0 mb-3" id="breedingContextBar">
+        <div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="breedingBackBtn">
+              <i class="bi bi-arrow-left me-1"></i> Back
+            </button>
+          </div>
 
-        <div class="small text-muted" id="breedingContextRight">
-          Sow: <span class="fw-semibold" id="breedingActiveSowTag">${sow.swine_id || sow.swine_tag || "—"}</span>
-        </div>
-      </div>
+          <div class="fw-semibold min-w-0 text-truncate">
+            <i class="bi bi-folder2-open me-2"></i>
+            Breeding Cycles — Sow: ${sow.swine_id || sow.swine_tag || "—"}
+          </div>
 
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body p-3">
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-            <div class="min-w-0">
-              <div class="fw-semibold mb-0">Breeding Cycles</div>
-              <div class="small text-muted">Select a cycle to open details</div>
-            </div>
-            <div class="small text-muted">
-              Sow: <span class="fw-semibold">${sow.swine_id || sow.swine_tag || "—"}</span>
-            </div>
+          <div class="d-none d-md-flex align-items-center gap-2" id="breedingContextRight">
+            <span class="badge bg-light text-dark border">
+              ${sow.breed || "Native"}
+            </span>
+            <span class="badge bg-light text-dark border">
+              ${sow.age_stage || sow.current_stage || "—"}
+            </span>
           </div>
         </div>
       </div>
@@ -738,10 +794,12 @@ export function initBreedingModule(ctx) {
       <div id="cycleDetailPanel" class="mt-3 d-none"></div>
     `;
 
+    // ✅ Ensure unrelated SOW filter is hidden as soon as cycles view opens
+    setReproView("CYCLES");
+
     document.getElementById("breedingBackBtn")?.addEventListener("click", () => {
       const mode = document.getElementById("breedingBackBtn")?.dataset.mode;
-      if (mode === "toSows") closeSowDetailView();
-      else if (mode === "toCycles") setReproView("CYCLES");
+      if (mode === "toCycles") setReproView("CYCLES");
       else closeSowDetailView();
     });
 
@@ -759,8 +817,6 @@ export function initBreedingModule(ctx) {
       state.breedingCyclePage = 1;
       renderCycleCards(sow);
     });
-
-    setReproView("CYCLES");
   }
 
   function populateCycleFilterOptions(sow) {
@@ -782,6 +838,9 @@ export function initBreedingModule(ctx) {
     const wrap = document.getElementById("cycleCardsContainer");
     const pagWrap = document.getElementById("cyclePaginationWrap");
     if (!wrap || !pagWrap) return;
+
+    // ✅ Always hide sow filter in cycles view
+    setReproView("CYCLES");
 
     const selectedCycle = (document.getElementById("cycleFilterSelect")?.value || "").trim();
 
@@ -872,8 +931,6 @@ export function initBreedingModule(ctx) {
         renderCycleCards(sow);
       }
     });
-
-    setReproView("CYCLES");
   }
 
   /* =========================================================
@@ -909,26 +966,25 @@ export function initBreedingModule(ctx) {
       const cacheB = Array.isArray(state.currentFarmerPigs) ? state.currentFarmerPigs : [];
       const combined = cacheA.length ? cacheA : cacheB;
 
-      const sowId = normStr(sow?._id);
+      const sowId2 = normStr(sow?._id);
       const sowTag2 = normStr(sow?.swine_id);
 
       // 1) strict: dam match + cycle match (try multiple keys)
       let fromCache = combined.filter((p) => {
         const dam = normStr(p?.dam_id || p?.mother_id);
         const cyc = normStr(p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? p?.batch_no);
-        const damMatch = dam && (dam === sowTag2 || dam === sowId);
-        const cycleMatch = cyc && (cyc === cycleKey);
+        const damMatch = dam && (dam === sowTag2 || dam === sowId2);
+        const cycleMatch = cyc && cyc === cycleKey;
         return damMatch && cycleMatch;
       });
 
-      // 2) relaxed: dam match only (this is the key fix)
+      // 2) relaxed: dam match only
       if (!fromCache.length) {
         fromCache = combined.filter((p) => {
           const dam = normStr(p?.dam_id || p?.mother_id);
-          return dam && (dam === sowTag2 || dam === sowId);
+          return dam && (dam === sowTag2 || dam === sowId2);
         });
 
-        // OPTIONAL: if you want, mark unknown cycle for display/debug
         fromCache = fromCache.map((p) => ({
           ...p,
           birth_cycle_number: p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? "Unknown"
@@ -969,7 +1025,8 @@ export function initBreedingModule(ctx) {
       ${titleBlock}
 
       <div class="tabs-scroll mb-3">
-        <ul class="nav nav-pills flex-nowrap" id="cycleDetailTabs">
+        <!-- ✅ one-row tabs: flex-nowrap + horizontal scroll if needed -->
+        <ul class="nav nav-pills nav-sm flex-nowrap gap-2" id="cycleDetailTabs" role="tablist" aria-label="Cycle detail tabs">
           <li class="nav-item"><button type="button" class="nav-link active" data-target="cycleOverviewTab">
             <i class="bi bi-info-circle me-1"></i> Overview
           </button></li>
@@ -999,6 +1056,9 @@ export function initBreedingModule(ctx) {
       <div id="cycleSelectionTab" class="cycle-tab d-none">${buildSelectionTabHtml({ piglets })}</div>
     `;
 
+    // ✅ Hide unrelated sow filter in detail view
+    setReproView("DETAIL");
+
     document.getElementById("cycleDetailTabs")?.addEventListener("click", (e) => {
       const btn = e.target.closest(".nav-link");
       if (!btn) return;
@@ -1010,7 +1070,10 @@ export function initBreedingModule(ctx) {
       const target = btn.dataset.target;
       document.getElementById(target)?.classList.remove("d-none");
 
-      // lazy ensure analytics when switching into Growth/Selection (keeps module resilient)
+      // reset detail modes when switching tabs
+      if (target !== "cycleGrowthTab") toggleGrowthDetailMode(false);
+      if (target !== "cycleSelectionTab") toggleSelectionDetailMode(false);
+
       if (target === "cycleGrowthTab" || target === "cycleSelectionTab") {
         ensurePerformanceAnalyticsLoaded();
       }
@@ -1019,8 +1082,6 @@ export function initBreedingModule(ctx) {
     bindPerformanceUI(piglets);
     bindGrowthUI(piglets);
     bindSelectionUI(piglets);
-
-    setReproView("DETAIL");
   }
 
   /* =========================================================
@@ -1201,6 +1262,7 @@ export function initBreedingModule(ctx) {
       const btn = e.target.closest(".btn-view-perf-piglet");
       if (!btn) return;
 
+      // ✅ switch tab then open growth detail
       document.querySelector('#cycleDetailTabs [data-target="cycleGrowthTab"]')?.click();
 
       const pid = btn.dataset.pigletId;
@@ -1208,7 +1270,7 @@ export function initBreedingModule(ctx) {
         state.__openGrowthPigletId = pid;
         setTimeout(() => {
           document.querySelector(`#growthList .btn-growth-open[data-piglet-id="${CSS.escape(pid)}"]`)?.click();
-        }, 50);
+        }, 60);
       }
     };
 
@@ -1256,6 +1318,10 @@ export function initBreedingModule(ctx) {
     const panel = document.getElementById("growthDetailPanel");
     if (!panel) return;
 
+    // ✅ hide unrelated sow filter + replace view (hide list/search/pagination)
+    toggleSowFilter(false);
+    toggleGrowthDetailMode(true);
+
     const tag = piglet?.swine_id || "—";
     const sex = piglet?.sex || "—";
     const stage = piglet?.age_stage || piglet?.current_status || "—";
@@ -1265,7 +1331,6 @@ export function initBreedingModule(ctx) {
 
     const latest = records.length ? records[records.length - 1] : null;
 
-    panel.classList.remove("d-none");
     panel.innerHTML = `
       <div class="card border-0 shadow-sm">
         <div class="card-body">
@@ -1276,7 +1341,7 @@ export function initBreedingModule(ctx) {
             </div>
             <div class="d-flex gap-2">
               <button type="button" class="btn btn-outline-secondary btn-sm" id="closeGrowthDetailBtn">
-                <i class="bi bi-x-lg me-1"></i> Close
+                <i class="bi bi-arrow-left me-1"></i> Back
               </button>
             </div>
           </div>
@@ -1333,8 +1398,11 @@ export function initBreedingModule(ctx) {
     `;
 
     document.getElementById("closeGrowthDetailBtn")?.addEventListener("click", () => {
-      panel.classList.add("d-none");
       destroyChartIfExists(`growth:${tag}`);
+      toggleGrowthDetailMode(false);
+
+      // return to current repro view’s sow filter rule
+      toggleSowFilter(state.__reproView === "SOWS");
     });
 
     const canvas = document.getElementById("growthTrendCanvas");
@@ -1380,6 +1448,9 @@ export function initBreedingModule(ctx) {
     }
 
     function render() {
+      // ✅ ensure list mode visible when rendering list
+      toggleGrowthDetailMode(false);
+
       const filtered = applyFilters(list);
       const { page, pages, items } = paginateList(filtered, uiState.page, pageSize);
       uiState.page = page;
@@ -1563,12 +1634,15 @@ export function initBreedingModule(ctx) {
     const panel = document.getElementById("selectionDetailPanel");
     if (!panel) return;
 
+    // ✅ hide unrelated sow filter + replace view (hide list/search/pagination/kpis)
+    toggleSowFilter(false);
+    toggleSelectionDetailMode(true);
+
     const tag = piglet?.swine_id || "—";
     const sex = piglet?.sex || "—";
     const stage = piglet?.age_stage || piglet?.current_status || "—";
     const selection = normalizeSelection(piglet?.selection_status);
 
-    panel.classList.remove("d-none");
     panel.innerHTML = `
       <div class="card border-0 shadow-sm">
         <div class="card-body">
@@ -1580,7 +1654,7 @@ export function initBreedingModule(ctx) {
 
             <div class="d-flex gap-2">
               <button type="button" class="btn btn-outline-secondary btn-sm" id="closeSelectionDetailBtn">
-                <i class="bi bi-x-lg me-1"></i> Close
+                <i class="bi bi-arrow-left me-1"></i> Back
               </button>
             </div>
           </div>
@@ -1619,7 +1693,8 @@ export function initBreedingModule(ctx) {
     `;
 
     document.getElementById("closeSelectionDetailBtn")?.addEventListener("click", () => {
-      panel.classList.add("d-none");
+      toggleSelectionDetailMode(false);
+      toggleSowFilter(state.__reproView === "SOWS");
     });
 
     panel.querySelectorAll("[data-action]")?.forEach((btn) => {
@@ -1636,7 +1711,6 @@ export function initBreedingModule(ctx) {
           piglet.selection_status = nextStatus;
           if (hint) hint.textContent = `Updated: ${nextStatus}`;
 
-          // FIX: refresh list + KPIs reliably
           if (typeof state.__selectionRender === "function") state.__selectionRender(true);
         } catch (e) {
           console.warn("updateSelectionStatus failed:", e?.message || e);
@@ -1691,6 +1765,9 @@ export function initBreedingModule(ctx) {
     }
 
     function render(forceKeepPage = false) {
+      // ✅ ensure list mode visible when rendering list
+      toggleSelectionDetailMode(false);
+
       const filtered = applyFilters(list);
       updateKpis(filtered);
 
@@ -1739,7 +1816,7 @@ export function initBreedingModule(ctx) {
       });
     }
 
-    // expose render so selection actions can refresh reliably (fix broken refresh)
+    // expose render so selection actions can refresh reliably
     state.__selectionRender = (keepPage) => render(!!keepPage);
 
     document.querySelectorAll("[data-selection-sex]").forEach((btn) => {
