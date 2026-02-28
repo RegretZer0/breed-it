@@ -91,10 +91,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (el) el.textContent = value || "—";
   }
 
-  // Only count TRUE deaths
+  // ✅ FIXED: count TRUE deaths robustly (matches old module behavior better)
+  // Handles: "Dead", "Deceased", "Died", "Deceased (Before Weaning)", etc.
   function isDeadStatus(status) {
     const s = (status || "").toString().trim().toLowerCase();
-    return s === "dead" || s === "deceased" || s === "died" || s.includes("dead");
+    if (!s) return false;
+
+    // strict-ish keywords
+    if (s === "dead" || s === "deceased" || s === "died") return true;
+
+    // common variants
+    if (s.includes("deceased")) return true;
+    if (s.includes("dead")) return true;
+
+    return false;
   }
 
   function isAliveStatus(status) {
@@ -162,31 +172,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   const farmers = initFarmersModule(ctx, pigs);
 
   /* ================= OPTIONAL: GLOBAL CLOSE HANDLERS FOR FLOATING PANEL ================= */
-  // (Safe: panel can be closed even if you didn't add overlay close yet)
   function closeFarmerPanel() {
     dom.farmerPanel?.classList.add("d-none");
 
-    // also clean subviews when closing, if module exposes them later
-    // (no-op if not defined)
+    // ✅ FIXED: only call functions that actually exist in breeding module
     breeding?.closeSowDetailView?.();
-    breeding?.closeCycleDetailView?.();
+    // NOTE: your current breeding module does not expose closeCycleDetailView()
+    // If you later add it, you can safely call:
+    // breeding?.closeCycleDetailView?.();
   }
 
-  // Close button (if present)
   dom.farmerPanelCloseBtn?.addEventListener("click", closeFarmerPanel);
 
-  // ESC closes the floating panel
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && dom.farmerPanel && !dom.farmerPanel.classList.contains("d-none")) {
       closeFarmerPanel();
     }
   });
 
-  // Click outside the panel content closes it (requires CSS/markup: panel wrapper acts as overlay)
-  // If your #farmerPanel is the card itself, this will NOT trigger.
-  // If your #farmerPanel is the overlay wrapper, this works.
   dom.farmerPanel?.addEventListener("click", (e) => {
-    // If #farmerPanel is overlay: close when clicking overlay background
     if (e.target === dom.farmerPanel && dom.farmerPanel.classList.contains("panel-overlay")) {
       closeFarmerPanel();
     }

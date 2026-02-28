@@ -3,18 +3,18 @@ export function initBreedingModule(ctx) {
   const { state } = ctx;
 
   /* =========================================================
-     API HELPERS (frontend -> backend)
-     - Uses ctx.BACKEND_URL if provided, else ""
-     - Uses ctx.token if provided, else localStorage token
+     API HELPERS
   ========================================================= */
   const API_BASE = (ctx.BACKEND_URL || "").replace(/\/$/, "");
   const getToken = () => ctx.token || localStorage.getItem("token") || "";
 
   async function apiJson(path, opts = {}) {
     const url = path.startsWith("http") ? path : `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+
+    // IMPORTANT: don't force JSON content-type on GET without body
     const headers = {
       ...(opts.headers || {}),
-      "Content-Type": "application/json",
+      ...(opts.body ? { "Content-Type": "application/json" } : {}),
       Authorization: `Bearer ${getToken()}`
     };
 
@@ -23,7 +23,7 @@ export function initBreedingModule(ctx) {
     try {
       data = await res.json();
     } catch (_) {
-      // ignore
+      // ignore non-json
     }
     if (!res.ok) {
       const msg = data?.message || data?.error || `Request failed (${res.status})`;
@@ -32,6 +32,60 @@ export function initBreedingModule(ctx) {
     return data;
   }
 
+  /* =========================================================
+     COMPAT / FALLBACK HELPERS (fix "dead/broken" funcs)
+  ========================================================= */
+  function isDeadStatusFallback(hs) {
+    const s = (hs ?? "").toString().trim().toLowerCase();
+    // Match your old working logic
+    return s === "deceased" || s === "deceased (before weaning)" || s.includes("deceased") || s.includes("dead");
+  }
+
+  // Use ctx.isDeadStatus if available; otherwise fallback
+  const isDeadStatus = (hs) =>
+    typeof ctx.isDeadStatus === "function" ? !!ctx.isDeadStatus(hs) : isDeadStatusFallback(hs);
+
+  // Ensure state.allSwineData exists (your new module relies on this for cycle counts + fallbacks)
+  async function ensureAllSwineDataLoaded() {
+    if (Array.isArray(state.allSwineData) && state.allSwineData.length) return true;
+
+    // Try the same endpoint used in the old working module
+    try {
+      const resp = await apiJson(`/api/swine/all`, { method: "GET" });
+      const list = resp?.swine || resp?.data || [];
+      if (Array.isArray(list)) state.allSwineData = list;
+      return Array.isArray(state.allSwineData) && state.allSwineData.length > 0;
+    } catch (e) {
+      console.warn("ensureAllSwineDataLoaded failed:", e?.message || e);
+      return false;
+    }
+  }
+
+  // Ensure performance analytics data exists for charts/deformities
+  async function ensurePerformanceAnalyticsLoaded() {
+    const hasMorph = Array.isArray(state.rawPerformanceData?.morphology) && state.rawPerformanceData.morphology.length;
+    const hasDefs = Array.isArray(state.rawPerformanceData?.deformities) && state.rawPerformanceData.deformities.length;
+    if (hasMorph || hasDefs) return true;
+
+    try {
+      const resp = await apiJson(`/api/reproduction/performance-analytics`, { method: "GET" });
+      // old: { success, morphology, deformities } — but be flexible
+      const morphology = resp?.morphology || resp?.data?.morphology || [];
+      const deformities = resp?.deformities || resp?.data?.deformities || [];
+      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
+      if (Array.isArray(morphology)) state.rawPerformanceData.morphology = morphology;
+      if (Array.isArray(deformities)) state.rawPerformanceData.deformities = deformities;
+      return true;
+    } catch (e) {
+      console.warn("ensurePerformanceAnalyticsLoaded failed:", e?.message || e);
+      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
+      return false;
+    }
+  }
+
+  /* =========================================================
+     SMALL HELPERS
+  ========================================================= */
   function safeDate(d) {
     if (!d) return "—";
     const dt = new Date(d);
@@ -42,34 +96,19 @@ export function initBreedingModule(ctx) {
   function normStr(v) {
     return (v ?? "").toString().trim();
   }
-
   function normLower(v) {
     return normStr(v).toLowerCase();
   }
 
   function isFemaleAdult(p) {
-    const sex = normLower(p?.sex);
-    const stage = normLower(p?.age_stage);
+    const sex = normLower(p?.sex || p?.swine_sex);
+    const stage = normLower(p?.age_stage || p?.current_stage);
     return sex === "female" && stage.includes("adult");
   }
 
-  // Fallback grouping (used only if farrowing_results is missing)
-  function groupPigletsByCycleFromCache(sow) {
-    const sowTag = normStr(sow?.swine_id);
-
-    const piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter(
-      (p) => normStr(p?.dam_id) === sowTag
-    );
-
-    const grouped = {};
-    piglets.forEach((p) => {
-      const cycle = p.birth_cycle_number ?? "Unknown";
-      const key = normStr(cycle) || "Unknown";
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(p);
-    });
-
-    return grouped;
+  function getCycleByNumber(sow, cycleNumber) {
+    const cycles = Array.isArray(sow?.breeding_cycles) ? sow.breeding_cycles : [];
+    return cycles.find((c) => normStr(c?.cycle_number) === normStr(cycleNumber)) || null;
   }
 
   function deriveCycleStatus(cycle) {
@@ -89,13 +128,25 @@ export function initBreedingModule(ctx) {
     return { status, statusClass };
   }
 
-  function getCycleByNumber(sow, cycleNumber) {
-    const cycles = Array.isArray(sow?.breeding_cycles) ? sow.breeding_cycles : [];
-    return cycles.find((c) => normStr(c?.cycle_number) === normStr(cycleNumber)) || null;
+  // Fallback grouping (used only if farrowing_results is missing)
+  function groupPigletsByCycleFromCache(sow) {
+    const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
+    const piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter(
+      (p) => normStr(p?.dam_id || p?.mother_id) === sowTag
+    );
+
+    const grouped = {};
+    piglets.forEach((p) => {
+      const cycle = p.birth_cycle_number ?? p?.cycle_number ?? "Unknown";
+      const key = normStr(cycle) || "Unknown";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(p);
+    });
+
+    return grouped;
   }
 
   function computeCycleCounts(sow, cycle) {
-    // Prefer farrowing_results in the cycle
     const fr = cycle?.farrowing_results || null;
     const total = Number(fr?.total_piglets ?? NaN);
     const dead = Number(fr?.mortality_count ?? NaN);
@@ -106,54 +157,93 @@ export function initBreedingModule(ctx) {
       return { born: total, dead: d, mortality };
     }
 
-    // Fallback: count from cached piglets list
-    const sowTag = normStr(sow?.swine_id);
+    // Fallback: count from cached swine list (requires state.allSwineData)
+    const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
     const cycleNumber = cycle?.cycle_number ?? "—";
 
-    const piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter(
-      (p) => normStr(p?.dam_id) === sowTag && normStr(p?.birth_cycle_number) === normStr(cycleNumber)
-    );
+    const piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter((p) => {
+      const dam = normStr(p?.dam_id || p?.mother_id);
+      const cyc = normStr(p?.birth_cycle_number ?? p?.cycle_number);
+      return dam === sowTag && cyc === normStr(cycleNumber);
+    });
 
     const born2 = piglets.length;
-    const dead2 = piglets.filter((p) => ctx.isDeadStatus(p.health_status)).length;
+    const dead2 = piglets.filter((p) => isDeadStatus(p.health_status)).length;
     const mortality2 = born2 > 0 ? ((dead2 / born2) * 100).toFixed(1) : "0.0";
     return { born: born2, dead: dead2, mortality: mortality2 };
   }
 
+  /* =========================================================
+     PIGLETS FETCH (ROBUST + BACKEND COMPAT)
+  ========================================================= */
+  function normalizePigletFromApi(p) {
+    const id = p?._id || p?.id || p?.piglet_id || null;
+    const tag = p?.swine_tag || p?.swine_id || p?.tag || p?.pig_id || "—";
+
+    return {
+      _id: id || tag,
+      swine_id: tag,
+      sex: p?.sex || p?.swine_sex,
+      breed: p?.breed,
+      profile_photo: p?.profile_photo,
+      birth_date: p?.birth_date,
+      dam_id: p?.dam_id || p?.mother_id,
+      sire_id: p?.sire_id || p?.father_id,
+      birth_cycle_number: p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? null,
+      health_status: p?.health_status,
+      current_status: p?.current_status || p?.current_stage,
+      age_stage: p?.age_stage || p?.current_stage,
+      deformities: p?.deformities || [],
+      last_medical: p?.last_medical || null,
+      latest_growth: p?.latest_growth || null,
+      selection_status: p?.selection_status || "Pending"
+    };
+  }
+
   async function fetchPigletsByCycle({ damTag, cycleNumber }) {
-    // Uses your backend: GET /api/reproduction/piglets/by-cycle?dam_id=SOWTAG&cycle_number=1
-    try {
-      const q = `dam_id=${encodeURIComponent(damTag)}&cycle_number=${encodeURIComponent(cycleNumber)}`;
-      const resp = await apiJson(`/api/reproduction/piglets/by-cycle?${q}`, { method: "GET" });
-      const list = Array.isArray(resp?.data) ? resp.data : [];
-      // Normalize to match existing UI usage (swine_id/sex/etc)
-      return list.map((p) => ({
-        _id: p.id,
-        swine_id: p.swine_tag,
-        sex: p.sex,
-        breed: p.breed,
-        profile_photo: p.profile_photo,
-        birth_date: p.birth_date,
-        dam_id: p.dam_id,
-        sire_id: p.sire_id,
-        birth_cycle_number: p.birth_cycle_number,
-        health_status: p.health_status,
-        current_status: p.current_status,
-        deformities: p.deformities || [],
-        last_medical: p.last_medical || null,
-        latest_growth: p.latest_growth || null
-      }));
-    } catch (e) {
-      console.warn("fetchPigletsByCycle failed:", e?.message || e);
-      return null; // return null to allow fallback
+    const dam = normStr(damTag);
+    const cyc = normStr(cycleNumber);
+
+    async function tryFetch(path) {
+      const resp = await apiJson(path, { method: "GET" });
+      const raw =
+        (Array.isArray(resp?.data) && resp.data) ||
+        (Array.isArray(resp?.piglets) && resp.piglets) ||
+        (Array.isArray(resp?.swine) && resp.swine) ||
+        (Array.isArray(resp) && resp) ||
+        [];
+      return raw.map(normalizePigletFromApi);
     }
+
+    // 1) Try your new endpoint first
+    try {
+      const q = `dam_id=${encodeURIComponent(dam)}&cycle_number=${encodeURIComponent(cyc)}`;
+      let list = await tryFetch(`/api/reproduction/piglets/by-cycle?${q}`);
+
+      // 2) lenient variant
+      if (Array.isArray(list) && list.length === 0) {
+        list = await tryFetch(`/api/reproduction/piglets/by-cycle?${q}&include_all=1`);
+      }
+
+      if (Array.isArray(list) && list.length) return list;
+    } catch (e) {
+      console.warn("fetchPigletsByCycle (by-cycle) failed:", e?.message || e);
+    }
+
+    // 3) Old-working style fallback: load all swine then filter client-side
+    await ensureAllSwineDataLoaded();
+    const all = Array.isArray(state.allSwineData) ? state.allSwineData : [];
+    const filtered = all.filter((p) => {
+      const damId = normStr(p?.dam_id || p?.mother_id);
+      const cno = normStr(p?.birth_cycle_number ?? p?.cycle_number);
+      return damId === dam && cno === cyc;
+    });
+
+    return filtered.map(normalizePigletFromApi);
   }
 
   /* =========================================================
-     VIEW STATE
-     - "SOWS"   sow list visible
-     - "CYCLES" cycles list visible (back -> sows)
-     - "DETAIL" cycle detail visible (back -> cycles)
+     VIEW STATE FOR REPRO AREA
   ========================================================= */
   function setReproView(mode) {
     state.__reproView = mode;
@@ -170,7 +260,6 @@ export function initBreedingModule(ctx) {
     const backBtn = document.getElementById("breedingBackBtn");
     const rightInfo = document.getElementById("breedingContextRight");
 
-    // Sow filter card (in table.ejs) must only show when viewing sow list
     const sowFilterCard = document.getElementById("reproSowFilterCard");
 
     if (mode === "SOWS") {
@@ -181,13 +270,11 @@ export function initBreedingModule(ctx) {
       return;
     }
 
-    // CYCLES or DETAIL
     sowList?.classList.add("d-none");
     kpi?.classList.add("d-none");
     panel?.classList.remove("d-none");
     if (sowFilterCard) sowFilterCard.classList.add("d-none");
 
-    // Update bar/back button labeling
     if (bar && backBtn) {
       if (mode === "CYCLES") {
         backBtn.classList.remove("d-none");
@@ -202,8 +289,6 @@ export function initBreedingModule(ctx) {
       }
     }
 
-    // Inside panel toggle:
-    // In DETAIL, hide the whole cycles list section to avoid confusion
     if (mode === "CYCLES") {
       cards?.classList.remove("d-none");
       pag?.classList.remove("d-none");
@@ -215,13 +300,194 @@ export function initBreedingModule(ctx) {
     }
   }
 
-  /* ================= SOW LIST (Reproduction tab) ================= */
-  function renderBreedingPerformance() {
+  /* =========================================================
+     SHARED: piglet list rendering (1 row = 1 card)
+  ========================================================= */
+  function buildPigletCardRow(p, opts = {}) {
+    const tag = p?.swine_id || "—";
+    const sex = p?.sex || "—";
+    const stage = p?.age_stage || p?.current_status || "—";
+    const hs = p?.health_status || "—";
+
+    const aliveBadge = isDeadStatus(hs)
+      ? `<span class="badge bg-danger-subtle text-danger">Deceased</span>`
+      : `<span class="badge bg-success-subtle text-success">Alive</span>`;
+
+    const btnHtml = opts.button
+      ? `<button type="button" class="btn btn-success btn-sm ${opts.button.className || ""}" data-piglet-id="${normStr(
+          p?._id || tag
+        )}">
+          <i class="bi ${opts.button.icon || "bi-eye"} me-1"></i>${opts.button.label || "Open"}
+        </button>`
+      : "";
+
+    return `
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div class="min-w-0">
+            <div class="fw-semibold text-truncate"><i class="bi bi-tag me-2"></i>${tag}</div>
+            <div class="text-muted small text-truncate">${sex} · ${stage}</div>
+            <div class="mt-2 d-flex flex-wrap gap-2">
+              ${aliveBadge}
+              <span class="badge bg-light text-dark border">Status: ${hs}</span>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            ${btnHtml}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function paginateList(items, page, pageSize) {
+    const total = items.length;
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, page), pages);
+    const start = (safePage - 1) * pageSize;
+    return { page: safePage, pages, total, items: items.slice(start, start + pageSize) };
+  }
+
+  /* =========================================================
+     GROWTH DATA + CHART
+  ========================================================= */
+  function getGrowthRecordsForPiglet(piglet) {
+    const tag = normStr(piglet?.swine_id);
+
+    const records = Array.isArray(state.rawPerformanceData?.morphology) ? state.rawPerformanceData.morphology : [];
+
+    const filtered = records.filter((r) => {
+      // old backend uses swine_tag inside morphology payloads sometimes
+      const rTag = normStr(r?.swine_id || r?.swine_tag || r?.tag || r?.pig_id);
+      // some payloads nest morphology
+      const nestedTag = normStr(r?.swine_tag || r?.morphology?.swine_tag || r?.morphology?.swine_id);
+      return (rTag && rTag === tag) || (nestedTag && nestedTag === tag);
+    });
+
+    const normalized = filtered
+      .map((r) => {
+        const m = r?.morphology || r;
+        return {
+          date: m?.date || r?.date || r?.createdAt || r?.recorded_at || r?.record_date || null,
+          weight: Number(m?.weight ?? r?.weight ?? r?.weight_kg ?? r?.body_weight ?? NaN),
+          length: Number(m?.body_length ?? r?.body_length ?? r?.length ?? NaN),
+          girth: Number(m?.heart_girth ?? r?.heart_girth ?? r?.girth ?? NaN)
+        };
+      })
+      .filter((x) => x.date && (!Number.isNaN(x.weight) || !Number.isNaN(x.length) || !Number.isNaN(x.girth)))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (!normalized.length && piglet?.latest_growth) {
+      const g = piglet.latest_growth;
+      const d = g?.date || g?.createdAt || g?.recorded_at || new Date().toISOString();
+      normalized.push({
+        date: d,
+        weight: Number(g?.weight ?? g?.weight_kg ?? NaN),
+        length: Number(g?.body_length ?? g?.length ?? NaN),
+        girth: Number(g?.heart_girth ?? g?.girth ?? NaN)
+      });
+    }
+
+    return normalized;
+  }
+
+  function getDeformitiesForPiglet(piglet) {
+    const fromPig = Array.isArray(piglet?.deformities) ? piglet.deformities : [];
+    const defs = Array.isArray(state.rawPerformanceData?.deformities) ? state.rawPerformanceData.deformities : [];
+    const tag = normStr(piglet?.swine_id);
+
+    const fromAnalytics = defs
+      .filter((d) => normStr(d?.swine_id || d?.swine_tag || d?.tag || d?.pig_id) === tag)
+      .map((d) => d?.deformity || d?.name || d?.type || d?.deformity_types || d)
+      .flatMap((x) => (typeof x === "string" ? x.split(",") : [x]))
+      .map((x) => normStr(x))
+      .filter(Boolean);
+
+    const merged = [...fromPig, ...fromAnalytics].map((x) => normStr(x)).filter(Boolean);
+    return Array.from(new Set(merged));
+  }
+
+  function destroyChartIfExists(key) {
+    const inst = state.__charts?.[key];
+    if (inst && typeof inst.destroy === "function") inst.destroy();
+    if (state.__charts) delete state.__charts[key];
+  }
+
+  function renderGrowthChart(canvasEl, records, chartKey) {
+    if (!window.Chart || !canvasEl) return false;
+
+    destroyChartIfExists(chartKey);
+    state.__charts = state.__charts || {};
+
+    const labels = records.map((r) => safeDate(r.date));
+    const weight = records.map((r) => (Number.isFinite(r.weight) ? r.weight : null));
+    const length = records.map((r) => (Number.isFinite(r.length) ? r.length : null));
+    const girth = records.map((r) => (Number.isFinite(r.girth) ? r.girth : null));
+
+    const ctx2d = canvasEl.getContext("2d");
+    state.__charts[chartKey] = new window.Chart(ctx2d, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          { label: "Weight (kg)", data: weight, tension: 0.35 },
+          { label: "Length (cm)", data: length, tension: 0.35 },
+          { label: "Girth (cm)", data: girth, tension: 0.35 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    return true;
+  }
+
+  /* =========================================================
+     SELECTION UPDATE (FIXED: supports OLD endpoint too)
+  ========================================================= */
+  async function updateSelectionStatus({ swine_id, selection_status }) {
+    // 1) Try new endpoint (your redesigned module)
+    try {
+      return await apiJson(`/api/reproduction/selection-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ swine_id, selection_status })
+      });
+    } catch (e1) {
+      // 2) Backward compatible with old working core:
+      // PUT /api/reproduction/process-selection  { swineId, isApproved }
+      try {
+        const s = normLower(selection_status);
+        const isApproved = s.includes("retain") || s.includes("breeding");
+        return await apiJson(`/api/reproduction/process-selection`, {
+          method: "PUT",
+          body: JSON.stringify({ swineId: swine_id, isApproved })
+        });
+      } catch (e2) {
+        // 3) Last-resort guess (some APIs use /api/swine/selection-status)
+        return apiJson(`/api/swine/selection-status`, {
+          method: "PATCH",
+          body: JSON.stringify({ swine_id, selection_status })
+        });
+      }
+    }
+  }
+
+  /* =========================================================
+     SOW LIST (main reproduction tab list)
+  ========================================================= */
+  async function renderBreedingPerformance() {
     const wrap = document.getElementById("breedingSowList");
     const kpiWrap = document.getElementById("breedingKpiSection");
     if (!wrap || !kpiWrap) return;
 
-    // Ensure defaults so module doesn't break if not set
+    // Ensure fallback cache is available for counts/piglets if backend lacks farrowing_results
+    await ensureAllSwineDataLoaded();
+
     state.BREEDING_SOWS_PER_PAGE = Number(state.BREEDING_SOWS_PER_PAGE || 6);
     state.breedingSowPage = Number(state.breedingSowPage || 1);
 
@@ -232,7 +498,7 @@ export function initBreedingModule(ctx) {
     const term = (document.getElementById("reproSowSearch")?.value || "").trim().toLowerCase();
     const health = (document.getElementById("reproSowHealth")?.value || "").trim();
 
-    if (term) sows = sows.filter((s) => (s.swine_id || "").toString().toLowerCase().includes(term));
+    if (term) sows = sows.filter((s) => (s.swine_id || s.swine_tag || "").toString().toLowerCase().includes(term));
     if (health) sows = sows.filter((s) => (s.health_status || "") === health);
 
     state.breedingSowsCache = sows;
@@ -256,8 +522,6 @@ export function initBreedingModule(ctx) {
 
     pageItems.forEach((sow) => {
       const cyclesArr = Array.isArray(sow?.breeding_cycles) ? sow.breeding_cycles : [];
-
-      // If no breeding_cycles, fallback to cache grouping
       const cycleKeys =
         cyclesArr.length > 0
           ? cyclesArr.map((c) => normStr(c?.cycle_number)).filter(Boolean)
@@ -279,7 +543,7 @@ export function initBreedingModule(ctx) {
         Object.keys(grouped).forEach((k) => {
           const piglets = grouped[k] || [];
           const born = piglets.length;
-          const dead = piglets.filter((p) => ctx.isDeadStatus(p.health_status)).length;
+          const dead = piglets.filter((p) => isDeadStatus(p.health_status)).length;
           sowBorn += born;
           sowDead += dead;
         });
@@ -301,15 +565,14 @@ export function initBreedingModule(ctx) {
         `
         <div class="card shadow-sm border-0">
           <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-
             <div class="min-w-0">
               <div class="d-flex flex-wrap align-items-center gap-2">
-                <div class="fw-semibold">${sow.swine_id || "—"}</div>
+                <div class="fw-semibold">${sow.swine_id || sow.swine_tag || "—"}</div>
                 <span class="badge ${hsBadge}">${hs || "—"}</span>
               </div>
 
               <div class="small text-muted">
-                Breed: ${sow.breed || "Native"} · Stage: ${sow.age_stage || "—"}
+                Breed: ${sow.breed || "Native"} · Stage: ${sow.age_stage || sow.current_stage || "—"}
               </div>
 
               <div class="small text-muted">
@@ -323,7 +586,6 @@ export function initBreedingModule(ctx) {
                 View Cycles
               </button>
             </div>
-
           </div>
         </div>
       `
@@ -360,7 +622,6 @@ export function initBreedingModule(ctx) {
       }
     });
 
-    // ✅ IMPORTANT: bind Sow -> Cycles button (delegated)
     wrap.onclick = (e) => {
       const btn = e.target.closest(".view-sow-cycles-btn");
       if (!btn) return;
@@ -404,7 +665,9 @@ export function initBreedingModule(ctx) {
     setReproView("SOWS");
   }
 
-  /* ================= SOW -> CYCLES VIEW ================= */
+  /* =========================================================
+     SOW -> CYCLES VIEW
+  ========================================================= */
   function openSowCycles(sowId) {
     const sow = (Array.isArray(state.currentFarmerPigs) ? state.currentFarmerPigs : []).find(
       (p) => (p._id || "").toString() === (sowId || "").toString()
@@ -427,7 +690,7 @@ export function initBreedingModule(ctx) {
         </button>
 
         <div class="small text-muted" id="breedingContextRight">
-          Sow: <span class="fw-semibold" id="breedingActiveSowTag">${sow.swine_id || "—"}</span>
+          Sow: <span class="fw-semibold" id="breedingActiveSowTag">${sow.swine_id || sow.swine_tag || "—"}</span>
         </div>
       </div>
 
@@ -439,7 +702,7 @@ export function initBreedingModule(ctx) {
               <div class="small text-muted">Select a cycle to open details</div>
             </div>
             <div class="small text-muted">
-              Sow: <span class="fw-semibold">${sow.swine_id || "—"}</span>
+              Sow: <span class="fw-semibold">${sow.swine_id || sow.swine_tag || "—"}</span>
             </div>
           </div>
         </div>
@@ -477,13 +740,9 @@ export function initBreedingModule(ctx) {
 
     document.getElementById("breedingBackBtn")?.addEventListener("click", () => {
       const mode = document.getElementById("breedingBackBtn")?.dataset.mode;
-      if (mode === "toSows") {
-        closeSowDetailView();
-      } else if (mode === "toCycles") {
-        setReproView("CYCLES");
-      } else {
-        closeSowDetailView();
-      }
+      if (mode === "toSows") closeSowDetailView();
+      else if (mode === "toCycles") setReproView("CYCLES");
+      else closeSowDetailView();
     });
 
     populateCycleFilterOptions(sow);
@@ -514,13 +773,11 @@ export function initBreedingModule(ctx) {
       .filter(Boolean);
 
     const unique = Array.from(new Set(cycles));
-
     sel.innerHTML =
       `<option value="">All Cycles</option>` +
       unique.map((c) => `<option value="${c}">Cycle / Batch ${c}</option>`).join("");
   }
 
-  /* ================= CYCLE CARDS ================= */
   function renderCycleCards(sow) {
     const wrap = document.getElementById("cycleCardsContainer");
     const pagWrap = document.getElementById("cyclePaginationWrap");
@@ -551,13 +808,11 @@ export function initBreedingModule(ctx) {
       .map((cycle) => {
         const cycleNumber = cycle?.cycle_number ?? "—";
         const { status, statusClass } = deriveCycleStatus(cycle);
-
         const { born, dead, mortality } = computeCycleCounts(sow, cycle);
 
         return `
           <div class="card shadow-sm border-0 mb-3">
             <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-
               <div class="min-w-0">
                 <div class="d-flex flex-wrap align-items-center gap-2">
                   <div class="fw-semibold">Cycle / Batch ${cycleNumber}</div>
@@ -577,14 +832,12 @@ export function initBreedingModule(ctx) {
                   <i class="bi bi-eye me-1"></i> View
                 </button>
               </div>
-
             </div>
           </div>
         `;
       })
       .join("");
 
-    // ✅ IMPORTANT: bind Cycle -> Detail click (delegated)
     wrap.onclick = (e) => {
       const btn = e.target.closest(".view-cycle-btn");
       if (!btn) return;
@@ -623,7 +876,9 @@ export function initBreedingModule(ctx) {
     setReproView("CYCLES");
   }
 
-  /* ================= CYCLE DETAIL ================= */
+  /* =========================================================
+     CYCLE DETAIL (tabs: overview, AI, performance, growth, selection)
+  ========================================================= */
   async function openCycleDetail(cycleId, sowId) {
     const sow =
       (Array.isArray(state.currentFarmerPigs) ? state.currentFarmerPigs : []).find(
@@ -638,19 +893,53 @@ export function initBreedingModule(ctx) {
     const detail = document.getElementById("cycleDetailPanel");
     if (!detail) return;
 
-    const sowTag = normStr(sow?.swine_id);
+    const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
     const cycleKey = normStr(cycleId);
 
-    // Fetch piglets from backend (preferred). If fails, fallback to cached allSwineData filter.
+    // Make sure caches exist for robust fallbacks
+    await ensureAllSwineDataLoaded();
+    await ensurePerformanceAnalyticsLoaded();
+
+    // --- Fetch piglets (API first; then robust fallback) ---
     let piglets = await fetchPigletsByCycle({ damTag: sowTag, cycleNumber: cycleKey });
-    if (!Array.isArray(piglets)) {
-      piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter(
-        (p) => normStr(p?.dam_id) === sowTag && normStr(p?.birth_cycle_number) === cycleKey
-      );
+
+    // If API failed, or returns empty, fallback to cache lists
+    if (!Array.isArray(piglets) || piglets.length === 0) {
+      const cacheA = Array.isArray(state.allSwineData) ? state.allSwineData : [];
+      const cacheB = Array.isArray(state.currentFarmerPigs) ? state.currentFarmerPigs : [];
+      const combined = cacheA.length ? cacheA : cacheB;
+
+      const sowId = normStr(sow?._id);
+      const sowTag2 = normStr(sow?.swine_id);
+
+      // 1) strict: dam match + cycle match (try multiple keys)
+      let fromCache = combined.filter((p) => {
+        const dam = normStr(p?.dam_id || p?.mother_id);
+        const cyc = normStr(p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? p?.batch_no);
+        const damMatch = dam && (dam === sowTag2 || dam === sowId);
+        const cycleMatch = cyc && (cyc === cycleKey);
+        return damMatch && cycleMatch;
+      });
+
+      // 2) relaxed: dam match only (this is the key fix)
+      if (!fromCache.length) {
+        fromCache = combined.filter((p) => {
+          const dam = normStr(p?.dam_id || p?.mother_id);
+          return dam && (dam === sowTag2 || dam === sowId);
+        });
+
+        // OPTIONAL: if you want, mark unknown cycle for display/debug
+        fromCache = fromCache.map((p) => ({
+          ...p,
+          birth_cycle_number: p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? "Unknown"
+        }));
+      }
+
+      piglets = fromCache.map(normalizePigletFromApi);
     }
 
     const born = piglets.length;
-    const dead = piglets.filter((p) => ctx.isDeadStatus(p?.health_status)).length;
+    const dead = piglets.filter((p) => isDeadStatus(p?.health_status)).length;
     const mortality = born > 0 ? ((dead / born) * 100).toFixed(1) : "0.0";
 
     const titleBlock = `
@@ -664,7 +953,8 @@ export function initBreedingModule(ctx) {
 
             <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
               <span class="badge bg-light text-dark border">
-                <i class="bi bi-folder2-open me-1"></i> Sow: <span class="fw-semibold">${sow.swine_id || "—"}</span>
+                <i class="bi bi-folder2-open me-1"></i> Sow:
+                <span class="fw-semibold">${sow.swine_id || sow.swine_tag || "—"}</span>
               </span>
               <span class="badge bg-success-subtle text-success border">Born: ${born}</span>
               <span class="badge bg-danger-subtle text-danger border">Dead: ${dead}</span>
@@ -709,7 +999,6 @@ export function initBreedingModule(ctx) {
       <div id="cycleSelectionTab" class="cycle-tab d-none">${buildSelectionTabHtml({ piglets })}</div>
     `;
 
-    // Tab switching
     document.getElementById("cycleDetailTabs")?.addEventListener("click", (e) => {
       const btn = e.target.closest(".nav-link");
       if (!btn) return;
@@ -720,16 +1009,23 @@ export function initBreedingModule(ctx) {
       document.querySelectorAll(".cycle-tab").forEach((t) => t.classList.add("d-none"));
       const target = btn.dataset.target;
       document.getElementById(target)?.classList.remove("d-none");
+
+      // lazy ensure analytics when switching into Growth/Selection (keeps module resilient)
+      if (target === "cycleGrowthTab" || target === "cycleSelectionTab") {
+        ensurePerformanceAnalyticsLoaded();
+      }
     });
 
-    // Bind Growth + Selection interactions
+    bindPerformanceUI(piglets);
     bindGrowthUI(piglets);
     bindSelectionUI(piglets);
 
     setReproView("DETAIL");
   }
 
-  /* ================= DETAIL TAB BUILDERS ================= */
+  /* =========================================================
+     DETAIL TAB BUILDERS
+  ========================================================= */
   function buildOverviewTabHtml({ sow, cycleId }) {
     const cycle = getCycleByNumber(sow, cycleId);
     const { status } = deriveCycleStatus(cycle);
@@ -745,7 +1041,7 @@ export function initBreedingModule(ctx) {
           <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
               <div class="fw-semibold mb-2"><i class="bi bi-info-circle me-2"></i>Sow Summary</div>
-              <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Sow</span><span class="fw-semibold">${sow.swine_id || "—"}</span></div>
+              <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Sow</span><span class="fw-semibold">${sow.swine_id || sow.swine_tag || "—"}</span></div>
               <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Cycle</span><span class="fw-semibold">${cycleId || "—"}</span></div>
               <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Breed</span><span class="fw-semibold">${sow.breed || "Native"}</span></div>
               <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted">Cycle Status</span><span class="fw-semibold">${status}</span></div>
@@ -781,7 +1077,7 @@ export function initBreedingModule(ctx) {
     const cycle = getCycleByNumber(sow, cycleId);
     const { status, statusClass } = deriveCycleStatus(cycle);
 
-    const boar = normStr(cycle?.cycle_sire_id) || "—";
+    const boar = normStr(cycle?.cycle_sire_id || cycle?.sire_id) || "—";
     const aiDate = safeDate(cycle?.ai_service_date);
     const aiRecordId = normStr(cycle?.ai_record_id) || "—";
     const preg = cycle?.is_pregnant ? "Yes" : "No";
@@ -794,7 +1090,7 @@ export function initBreedingModule(ctx) {
               <div class="fw-semibold mb-3"><i class="bi bi-journal-text me-2"></i>Artificial Insemination Record</div>
 
               <div class="mb-2 text-muted small">Sow</div>
-              <div class="fw-semibold mb-3">${sow?.swine_id || "—"}</div>
+              <div class="fw-semibold mb-3">${sow?.swine_id || sow?.swine_tag || "—"}</div>
 
               <div class="mb-2 text-muted small">AI Service Date</div>
               <div class="fw-semibold mb-3">${aiDate}</div>
@@ -823,11 +1119,6 @@ export function initBreedingModule(ctx) {
 
               <div class="mb-2 text-muted small">Expected Farrowing</div>
               <div class="fw-semibold mb-3">${safeDate(cycle?.expected_farrowing_date)}</div>
-
-              <div class="text-muted small">
-                Note: This tab uses the sow's <code>breeding_cycles</code> data (cycle_sire_id, ai_service_date, ai_record_id).
-                If you want richer boar info (breed/sex), we can add a backend endpoint to fetch AI record by id and hydrate it.
-              </div>
             </div>
           </div>
         </div>
@@ -835,96 +1126,105 @@ export function initBreedingModule(ctx) {
     `;
   }
 
-  function buildPerformanceTabHtml({ piglets }) {
-    const list = Array.isArray(piglets) ? piglets : [];
-
-    const alive = list.filter((p) => !ctx.isDeadStatus(p?.health_status));
-    const aliveMale = alive.filter((p) => normLower(p?.sex) === "male").length;
-    const aliveFemale = alive.filter((p) => normLower(p?.sex) === "female").length;
-    const deceased = list.filter((p) => ctx.isDeadStatus(p?.health_status)).length;
-
-    const itemsHtml =
-      list.length === 0
-        ? `<div class="text-muted">No piglets found in this cycle.</div>`
-        : `
-          <div class="card border-0 shadow-sm">
-            <div class="card-body">
-              <div class="fw-semibold mb-2"><i class="bi bi-list me-2"></i>Piglets</div>
-              <div class="d-flex flex-column gap-2">
-                ${list
-                  .slice(0, 8)
-                  .map((p) => {
-                    const tag = p?.swine_id || "—";
-                    const sex = p?.sex || "—";
-                    const stage = p?.age_stage || p?.current_status || "—";
-                    const aliveBadge = ctx.isDeadStatus(p?.health_status)
-                      ? `<span class="badge bg-danger-subtle text-danger">Deceased</span>`
-                      : `<span class="badge bg-success-subtle text-success">Alive</span>`;
-
-                    return `
-                      <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <div class="min-w-0">
-                          <div class="fw-semibold">${tag}</div>
-                          <div class="text-muted small">${sex} · ${stage}</div>
-                        </div>
-                        <div class="flex-shrink-0">${aliveBadge}</div>
-                      </div>
-                    `;
-                  })
-                  .join("")}
-              </div>
-
-              ${
-                list.length > 8
-                  ? `<div class="text-muted small mt-2">Showing 8 items. Full list is available in Growth Monitoring and Selection Process.</div>`
-                  : ""
-              }
-            </div>
-          </div>
-        `;
-
-    return `
-      <div class="row g-3 mb-3">
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="text-muted small">Alive Male</div>
-              <div class="fs-4 fw-bold">${aliveMale}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="text-muted small">Alive Female</div>
-              <div class="fs-4 fw-bold">${aliveFemale}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12 col-md-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-              <div class="text-muted small">Deceased</div>
-              <div class="fs-4 fw-bold">${deceased}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${itemsHtml}
-    `;
-  }
-
-  function buildGrowthTabHtml({ piglets }) {
+  /* ================= PERFORMANCE TAB (list + pagination) ================= */
+  function buildPerformanceTabHtml() {
     return `
       <div class="card border-0 shadow-sm">
         <div class="card-body">
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
+            <div class="min-w-0">
+              <div class="fw-semibold"><i class="bi bi-bar-chart-line me-2"></i>Breeding Performance</div>
+              <div class="text-muted small">Piglets born in this cycle.</div>
+            </div>
+          </div>
+
+          <div id="perfPigletList"></div>
+          <div id="perfPigletPagination" class="mt-3"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindPerformanceUI(piglets) {
+    const list = Array.isArray(piglets) ? piglets : [];
+    const listEl = document.getElementById("perfPigletList");
+    const pagEl = document.getElementById("perfPigletPagination");
+    if (!listEl || !pagEl) return;
+
+    const uiState = (state.__perfUI = state.__perfUI || { page: 1 });
+    const pageSize = 6;
+
+    function render() {
+      const { page, pages, items } = paginateList(list, uiState.page, pageSize);
+      uiState.page = page;
+
+      if (!items.length) {
+        listEl.innerHTML = `<div class="text-muted">No piglets found in this cycle.</div>`;
+      } else {
+        listEl.innerHTML = items
+          .map((p) =>
+            buildPigletCardRow(p, {
+              button: { className: "btn-view-perf-piglet", icon: "bi-eye", label: "View" }
+            })
+          )
+          .join("");
+      }
+
+      pagEl.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="perfPrevBtn">Prev</button>
+          <span class="small text-muted">Page ${uiState.page} of ${pages}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="perfNextBtn">Next</button>
+        </div>
+      `;
+
+      const prev = document.getElementById("perfPrevBtn");
+      const next = document.getElementById("perfNextBtn");
+      if (prev) prev.disabled = uiState.page <= 1;
+      if (next) next.disabled = uiState.page >= pages;
+
+      prev?.addEventListener("click", () => {
+        if (uiState.page > 1) {
+          uiState.page--;
+          render();
+        }
+      });
+      next?.addEventListener("click", () => {
+        if (uiState.page < pages) {
+          uiState.page++;
+          render();
+        }
+      });
+    }
+
+    listEl.onclick = (e) => {
+      const btn = e.target.closest(".btn-view-perf-piglet");
+      if (!btn) return;
+
+      document.querySelector('#cycleDetailTabs [data-target="cycleGrowthTab"]')?.click();
+
+      const pid = btn.dataset.pigletId;
+      if (pid) {
+        state.__openGrowthPigletId = pid;
+        setTimeout(() => {
+          document.querySelector(`#growthList .btn-growth-open[data-piglet-id="${CSS.escape(pid)}"]`)?.click();
+        }, 50);
+      }
+    };
+
+    render();
+  }
+
+  /* ================= GROWTH TAB (list + details + chart) ================= */
+  function buildGrowthTabHtml() {
+    return `
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
           <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-3">
             <div class="min-w-0">
               <div class="fw-semibold"><i class="bi bi-graph-up me-2"></i>Growth Monitoring</div>
-              <div class="text-muted small">Filter piglets.</div>
+              <div class="text-muted small">Select a piglet to view growth records and deformities.</div>
             </div>
 
             <div class="text-lg-end">
@@ -943,6 +1243,8 @@ export function initBreedingModule(ctx) {
             placeholder="Filter piglets by tag or stage..."
           >
 
+          <div id="growthDetailPanel" class="d-none mb-3"></div>
+
           <div id="growthList"></div>
           <div id="growthPagination" class="mt-3"></div>
         </div>
@@ -950,14 +1252,242 @@ export function initBreedingModule(ctx) {
     `;
   }
 
-  function buildSelectionTabHtml({ piglets }) {
+  function renderGrowthDetail(piglet) {
+    const panel = document.getElementById("growthDetailPanel");
+    if (!panel) return;
+
+    const tag = piglet?.swine_id || "—";
+    const sex = piglet?.sex || "—";
+    const stage = piglet?.age_stage || piglet?.current_status || "—";
+
+    const records = getGrowthRecordsForPiglet(piglet);
+    const defs = getDeformitiesForPiglet(piglet);
+
+    const latest = records.length ? records[records.length - 1] : null;
+
+    panel.classList.remove("d-none");
+    panel.innerHTML = `
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+            <div class="min-w-0">
+              <div class="fw-semibold"><i class="bi bi-activity me-2"></i>${tag}</div>
+              <div class="text-muted small">${sex} · ${stage}</div>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="closeGrowthDetailBtn">
+                <i class="bi bi-x-lg me-1"></i> Close
+              </button>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="row g-3 mb-2">
+            <div class="col-12 col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="text-muted small">Weight (kg)</div>
+                  <div class="fs-5 fw-bold">${latest && Number.isFinite(latest.weight) ? latest.weight : "—"}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="text-muted small">Length (cm)</div>
+                  <div class="fs-5 fw-bold">${latest && Number.isFinite(latest.length) ? latest.length : "—"}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="text-muted small">Girth (cm)</div>
+                  <div class="fs-5 fw-bold">${latest && Number.isFinite(latest.girth) ? latest.girth : "—"}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <div class="fw-semibold mb-2"><i class="bi bi-graph-up-arrow me-2"></i>Trend</div>
+            <div class="border rounded-4 p-2" style="height:260px;">
+              <canvas id="growthTrendCanvas"></canvas>
+            </div>
+            <div class="text-muted small mt-2" id="growthChartHint"></div>
+          </div>
+
+          <div class="mt-3 pt-3 border-top">
+            <div class="fw-semibold mb-2"><i class="bi bi-exclamation-diamond me-2"></i>Deformities</div>
+            ${
+              defs.length
+                ? `<div class="d-flex flex-wrap gap-2">${defs
+                    .map((d) => `<span class="badge bg-warning-subtle text-warning border">${d}</span>`)
+                    .join("")}</div>`
+                : `<div class="text-muted small">No deformities recorded.</div>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("closeGrowthDetailBtn")?.addEventListener("click", () => {
+      panel.classList.add("d-none");
+      destroyChartIfExists(`growth:${tag}`);
+    });
+
+    const canvas = document.getElementById("growthTrendCanvas");
+    const hint = document.getElementById("growthChartHint");
+
+    if (!records.length) {
+      if (hint) hint.textContent = "No growth records found for this piglet yet.";
+      return;
+    }
+
+    const ok = renderGrowthChart(canvas, records, `growth:${tag}`);
+    if (!ok && hint) {
+      hint.innerHTML = `Chart library not detected. If you want graphs, make sure <b>Chart.js</b> is loaded globally.`;
+    } else if (hint) {
+      hint.textContent = "Weight, length, and girth over time.";
+    }
+  }
+
+  function bindGrowthUI(piglets) {
+    const list = Array.isArray(piglets) ? piglets : [];
+    const listEl = document.getElementById("growthList");
+    const pagEl = document.getElementById("growthPagination");
+    const searchEl = document.getElementById("growthSearchInput");
+    if (!listEl || !pagEl) return;
+
+    const pageSize = 5;
+    const uiState = (state.__growthUI = state.__growthUI || { sex: "all", q: "", page: 1 });
+
+    function applyFilters(items) {
+      let out = items.slice();
+
+      if (uiState.sex !== "all") out = out.filter((p) => normLower(p?.sex) === uiState.sex);
+
+      const q = (uiState.q || "").trim().toLowerCase();
+      if (q) {
+        out = out.filter((p) => {
+          const tag = normLower(p?.swine_id);
+          const stage = normLower(p?.age_stage || p?.current_status);
+          return tag.includes(q) || stage.includes(q);
+        });
+      }
+      return out;
+    }
+
+    function render() {
+      const filtered = applyFilters(list);
+      const { page, pages, items } = paginateList(filtered, uiState.page, pageSize);
+      uiState.page = page;
+
+      if (!items.length) {
+        listEl.innerHTML = `<div class="text-muted">No piglets match your filters.</div>`;
+      } else {
+        listEl.innerHTML = items
+          .map((p) =>
+            buildPigletCardRow(p, {
+              button: { className: "btn-growth-open", icon: "bi-graph-up", label: "View Growth" }
+            })
+          )
+          .join("");
+      }
+
+      pagEl.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="growthPrevBtn">Prev</button>
+          <span class="small text-muted">Page ${uiState.page} of ${pages}</span>
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="growthNextBtn">Next</button>
+        </div>
+      `;
+
+      const prev = document.getElementById("growthPrevBtn");
+      const next = document.getElementById("growthNextBtn");
+      if (prev) prev.disabled = uiState.page <= 1;
+      if (next) next.disabled = uiState.page >= pages;
+
+      prev?.addEventListener("click", () => {
+        if (uiState.page > 1) {
+          uiState.page--;
+          render();
+        }
+      });
+      next?.addEventListener("click", () => {
+        if (uiState.page < pages) {
+          uiState.page++;
+          render();
+        }
+      });
+    }
+
+    document.querySelectorAll("[data-growth-sex]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        uiState.sex = btn.getAttribute("data-growth-sex") || "all";
+        uiState.page = 1;
+
+        document.querySelectorAll("[data-growth-sex]").forEach((b) => {
+          b.classList.remove("btn-success");
+          b.classList.add("btn-outline-success");
+        });
+        btn.classList.remove("btn-outline-success");
+        btn.classList.add("btn-success");
+
+        render();
+      });
+    });
+
+    searchEl?.addEventListener("input", (e) => {
+      uiState.q = e.target.value || "";
+      uiState.page = 1;
+      render();
+    });
+
+    listEl.onclick = (e) => {
+      const btn = e.target.closest(".btn-growth-open");
+      if (!btn) return;
+      const pid = btn.dataset.pigletId;
+
+      const piglet = list.find((p) => normStr(p?._id || p?.swine_id) === normStr(pid)) || null;
+      if (piglet) renderGrowthDetail(piglet);
+
+      document.getElementById("growthDetailPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
+    const defaultBtn = document.querySelector('[data-growth-sex="all"]');
+    if (defaultBtn) {
+      document.querySelectorAll("[data-growth-sex]").forEach((b) => {
+        b.classList.remove("btn-success");
+        b.classList.add("btn-outline-success");
+      });
+      defaultBtn.classList.remove("btn-outline-success");
+      defaultBtn.classList.add("btn-success");
+    }
+
+    render();
+
+    if (state.__openGrowthPigletId) {
+      const pid = state.__openGrowthPigletId;
+      state.__openGrowthPigletId = null;
+      const piglet = list.find((p) => normStr(p?._id || p?.swine_id) === normStr(pid)) || null;
+      if (piglet) {
+        renderGrowthDetail(piglet);
+        document.getElementById("growthDetailPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  }
+
+  /* ================= SELECTION TAB (list + details + actions) ================= */
+  function buildSelectionTabHtml() {
     return `
       <div class="card border-0 shadow-sm">
         <div class="card-body">
           <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3 mb-3">
             <div class="min-w-0">
               <div class="fw-semibold"><i class="bi bi-check2-circle me-2"></i>Selection Process</div>
-              <div class="text-muted small">Filter piglets.</div>
+              <div class="text-muted small">Open a piglet to view info and actions.</div>
             </div>
 
             <div class="text-lg-end">
@@ -1005,6 +1535,8 @@ export function initBreedingModule(ctx) {
             placeholder="Filter piglets by tag or stage..."
           >
 
+          <div id="selectionDetailPanel" class="d-none mb-3"></div>
+
           <div id="selectionList"></div>
           <div id="selectionPagination" class="mt-3"></div>
         </div>
@@ -1012,183 +1544,122 @@ export function initBreedingModule(ctx) {
     `;
   }
 
-  /* ================= GROWTH LIST + PAGINATION ================= */
-  function bindGrowthUI(piglets) {
-    const list = Array.isArray(piglets) ? piglets : [];
-    const listEl = document.getElementById("growthList");
-    const pagEl = document.getElementById("growthPagination");
-    const searchEl = document.getElementById("growthSearchInput");
-
-    if (!listEl || !pagEl) return;
-
-    const pageSize = 5;
-    const uiState = (state.__growthUI = state.__growthUI || { sex: "all", q: "", page: 1 });
-
-    function applyFilters(items) {
-      let out = items.slice();
-
-      if (uiState.sex !== "all") {
-        out = out.filter((p) => normLower(p?.sex) === uiState.sex);
-      }
-
-      const q = (uiState.q || "").trim().toLowerCase();
-      if (q) {
-        out = out.filter((p) => {
-          const tag = normLower(p?.swine_id);
-          const stage = normLower(p?.age_stage || p?.current_status);
-          return tag.includes(q) || stage.includes(q);
-        });
-      }
-
-      return out;
-    }
-
-    function render() {
-      const filtered = applyFilters(list);
-      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-      if (uiState.page > totalPages) uiState.page = totalPages;
-
-      const start = (uiState.page - 1) * pageSize;
-      const pageItems = filtered.slice(start, start + pageSize);
-
-      if (!pageItems.length) {
-        listEl.innerHTML = `<div class="text-muted">No piglets match your filters.</div>`;
-      } else {
-        listEl.innerHTML = pageItems
-          .map((p) => {
-            const tag = p?.swine_id || "—";
-            const sex = p?.sex || "—";
-            const stage = p?.age_stage || p?.current_status || "—";
-
-            const aliveBadge = ctx.isDeadStatus(p?.health_status)
-              ? `<span class="badge bg-danger-subtle text-danger">Deceased</span>`
-              : `<span class="badge bg-success-subtle text-success">Alive</span>`;
-
-            const selection = normStr(p?.selection_status) || "Pending";
-
-            return `
-              <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                  <div class="min-w-0">
-                    <div class="fw-semibold"><i class="bi bi-tag me-2"></i>${tag}</div>
-                    <div class="text-muted small">${sex} · ${stage}</div>
-                    <div class="mt-2">${aliveBadge}</div>
-                  </div>
-
-                  <div class="text-md-end">
-                    <div class="text-muted small mb-1">Selection</div>
-                    <span class="badge bg-light text-dark border">${selection}</span>
-
-                    <div class="mt-3">
-                      <button type="button" class="btn btn-success btn-sm" disabled>
-                        Open <i class="bi bi-chevron-right ms-1"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          })
-          .join("");
-      }
-
-      pagEl.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="growthPrevBtn">Prev</button>
-          <span class="small text-muted">Page ${uiState.page} of ${totalPages}</span>
-          <button type="button" class="btn btn-sm btn-outline-secondary" id="growthNextBtn">Next</button>
-        </div>
-      `;
-
-      const prev = document.getElementById("growthPrevBtn");
-      const next = document.getElementById("growthNextBtn");
-      if (prev) prev.disabled = uiState.page <= 1;
-      if (next) next.disabled = uiState.page >= totalPages;
-
-      prev?.addEventListener("click", () => {
-        if (uiState.page > 1) {
-          uiState.page--;
-          render();
-        }
-      });
-
-      next?.addEventListener("click", () => {
-        if (uiState.page < totalPages) {
-          uiState.page++;
-          render();
-        }
-      });
-    }
-
-    document.querySelectorAll("[data-growth-sex]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        uiState.sex = btn.getAttribute("data-growth-sex") || "all";
-        uiState.page = 1;
-
-        document.querySelectorAll("[data-growth-sex]").forEach((b) => {
-          b.classList.remove("btn-success");
-          b.classList.add("btn-outline-success");
-        });
-        btn.classList.remove("btn-outline-success");
-        btn.classList.add("btn-success");
-
-        render();
-      });
-    });
-
-    searchEl?.addEventListener("input", (e) => {
-      uiState.q = e.target.value || "";
-      uiState.page = 1;
-      render();
-    });
-
-    // default active
-    const defaultBtn = document.querySelector('[data-growth-sex="all"]');
-    if (defaultBtn) {
-      document.querySelectorAll("[data-growth-sex]").forEach((b) => {
-        b.classList.remove("btn-success");
-        b.classList.add("btn-outline-success");
-      });
-      defaultBtn.classList.remove("btn-outline-success");
-      defaultBtn.classList.add("btn-success");
-    }
-
-    render();
+  function normalizeSelection(v) {
+    const s = normLower(v);
+    if (!s) return "Pending";
+    return normStr(v);
   }
 
-  /* ================= SELECTION LIST + PAGINATION ================= */
+  function classifySelection(v) {
+    const s = normLower(v);
+    if (!s || s === "pending") return "in";
+    if (s.includes("retain") || s.includes("breeding")) return "retain";
+    if (s.includes("sale") || s.includes("cull")) return "sale";
+    if (s.includes("selection")) return "in";
+    return "in";
+  }
+
+  function renderSelectionDetail(piglet) {
+    const panel = document.getElementById("selectionDetailPanel");
+    if (!panel) return;
+
+    const tag = piglet?.swine_id || "—";
+    const sex = piglet?.sex || "—";
+    const stage = piglet?.age_stage || piglet?.current_status || "—";
+    const selection = normalizeSelection(piglet?.selection_status);
+
+    panel.classList.remove("d-none");
+    panel.innerHTML = `
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+            <div class="min-w-0">
+              <div class="fw-semibold"><i class="bi bi-tag me-2"></i>${tag}</div>
+              <div class="text-muted small">${sex} · ${stage}</div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="closeSelectionDetailBtn">
+                <i class="bi bi-x-lg me-1"></i> Close
+              </button>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-light text-dark border">
+              Current: <span class="fw-semibold">${selection}</span>
+            </span>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-12 col-md-4">
+              <button type="button" class="btn btn-success w-100" data-action="retain">
+                <i class="bi bi-check-circle me-1"></i> Retain for Breeding
+              </button>
+            </div>
+            <div class="col-12 col-md-4">
+              <button type="button" class="btn btn-outline-success w-100" data-action="pending">
+                <i class="bi bi-hourglass-split me-1"></i> Set Pending
+              </button>
+            </div>
+            <div class="col-12 col-md-4">
+              <button type="button" class="btn btn-outline-danger w-100" data-action="sale">
+                <i class="bi bi-tag-fill me-1"></i> Mark for Sale
+              </button>
+            </div>
+          </div>
+
+          <div class="text-muted small mt-3" id="selectionActionHint">
+            Actions update selection status for this piglet.
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("closeSelectionDetailBtn")?.addEventListener("click", () => {
+      panel.classList.add("d-none");
+    });
+
+    panel.querySelectorAll("[data-action]")?.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const hint = document.getElementById("selectionActionHint");
+        const action = btn.getAttribute("data-action");
+
+        const nextStatus =
+          action === "retain" ? "Retain for Breeding" : action === "sale" ? "Mark for Sale" : "Pending";
+
+        try {
+          if (hint) hint.textContent = "Saving selection status...";
+          await updateSelectionStatus({ swine_id: tag, selection_status: nextStatus });
+          piglet.selection_status = nextStatus;
+          if (hint) hint.textContent = `Updated: ${nextStatus}`;
+
+          // FIX: refresh list + KPIs reliably
+          if (typeof state.__selectionRender === "function") state.__selectionRender(true);
+        } catch (e) {
+          console.warn("updateSelectionStatus failed:", e?.message || e);
+          if (hint) hint.textContent = `Failed to update (check your route).`;
+        }
+      });
+    });
+  }
+
   function bindSelectionUI(piglets) {
     const list = Array.isArray(piglets) ? piglets : [];
     const listEl = document.getElementById("selectionList");
     const pagEl = document.getElementById("selectionPagination");
     const searchEl = document.getElementById("selectionSearchInput");
-
     if (!listEl || !pagEl) return;
 
     const pageSize = 5;
     const uiState = (state.__selectionUI = state.__selectionUI || { sex: "all", q: "", page: 1 });
 
-    function normalizeSelection(v) {
-      const s = normLower(v);
-      if (!s) return "Pending";
-      return normStr(v);
-    }
-
-    function classifySelection(v) {
-      const s = normLower(v);
-      if (!s || s === "pending") return "in";
-      if (s.includes("retain") || s.includes("breeding")) return "retain";
-      if (s.includes("sale")) return "sale";
-      if (s.includes("selection")) return "in";
-      return "in";
-    }
-
     function applyFilters(items) {
       let out = items.slice();
 
-      if (uiState.sex !== "all") {
-        out = out.filter((p) => normLower(p?.sex) === uiState.sex);
-      }
+      if (uiState.sex !== "all") out = out.filter((p) => normLower(p?.sex) === uiState.sex);
 
       const q = (uiState.q || "").trim().toLowerCase();
       if (q) {
@@ -1219,61 +1690,31 @@ export function initBreedingModule(ctx) {
       document.getElementById("selMarkForSale")?.replaceChildren(document.createTextNode(String(sale)));
     }
 
-    function render() {
+    function render(forceKeepPage = false) {
       const filtered = applyFilters(list);
       updateKpis(filtered);
 
-      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-      if (uiState.page > totalPages) uiState.page = totalPages;
+      if (!forceKeepPage) uiState.page = Number(uiState.page || 1);
 
-      const start = (uiState.page - 1) * pageSize;
-      const pageItems = filtered.slice(start, start + pageSize);
+      const { page, pages, items } = paginateList(filtered, uiState.page, pageSize);
+      uiState.page = page;
 
-      if (!pageItems.length) {
+      if (!items.length) {
         listEl.innerHTML = `<div class="text-muted">No piglets match your filters.</div>`;
       } else {
-        listEl.innerHTML = pageItems
-          .map((p) => {
-            const tag = p?.swine_id || "—";
-            const sex = p?.sex || "—";
-            const stage = p?.age_stage || p?.current_status || "—";
-
-            const aliveBadge = ctx.isDeadStatus(p?.health_status)
-              ? `<span class="badge bg-danger-subtle text-danger">Deceased</span>`
-              : `<span class="badge bg-success-subtle text-success">Alive</span>`;
-
-            const selection = normalizeSelection(p?.selection_status);
-
-            return `
-              <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                  <div class="min-w-0">
-                    <div class="fw-semibold"><i class="bi bi-tag me-2"></i>${tag}</div>
-                    <div class="text-muted small">${sex} · ${stage}</div>
-                    <div class="mt-2">${aliveBadge}</div>
-                  </div>
-
-                  <div class="text-md-end">
-                    <div class="text-muted small mb-1">Selection</div>
-                    <span class="badge bg-light text-dark border">${selection}</span>
-
-                    <div class="mt-3">
-                      <button type="button" class="btn btn-success btn-sm" disabled>
-                        Open <i class="bi bi-chevron-right ms-1"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          })
+        listEl.innerHTML = items
+          .map((p) =>
+            buildPigletCardRow(p, {
+              button: { className: "btn-selection-open", icon: "bi-chevron-right", label: "Open" }
+            })
+          )
           .join("");
       }
 
       pagEl.innerHTML = `
         <div class="d-flex justify-content-between align-items-center">
           <button type="button" class="btn btn-sm btn-outline-secondary" id="selectionPrevBtn">Prev</button>
-          <span class="small text-muted">Page ${uiState.page} of ${totalPages}</span>
+          <span class="small text-muted">Page ${uiState.page} of ${pages}</span>
           <button type="button" class="btn btn-sm btn-outline-secondary" id="selectionNextBtn">Next</button>
         </div>
       `;
@@ -1281,22 +1722,25 @@ export function initBreedingModule(ctx) {
       const prev = document.getElementById("selectionPrevBtn");
       const next = document.getElementById("selectionNextBtn");
       if (prev) prev.disabled = uiState.page <= 1;
-      if (next) next.disabled = uiState.page >= totalPages;
+      if (next) next.disabled = uiState.page >= pages;
 
       prev?.addEventListener("click", () => {
         if (uiState.page > 1) {
           uiState.page--;
-          render();
+          render(true);
         }
       });
 
       next?.addEventListener("click", () => {
-        if (uiState.page < totalPages) {
+        if (uiState.page < pages) {
           uiState.page++;
-          render();
+          render(true);
         }
       });
     }
+
+    // expose render so selection actions can refresh reliably (fix broken refresh)
+    state.__selectionRender = (keepPage) => render(!!keepPage);
 
     document.querySelectorAll("[data-selection-sex]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1320,7 +1764,17 @@ export function initBreedingModule(ctx) {
       render();
     });
 
-    // default active
+    listEl.onclick = (e) => {
+      const btn = e.target.closest(".btn-selection-open");
+      if (!btn) return;
+      const pid = btn.dataset.pigletId;
+
+      const piglet = list.find((p) => normStr(p?._id || p?.swine_id) === normStr(pid)) || null;
+      if (piglet) renderSelectionDetail(piglet);
+
+      document.getElementById("selectionDetailPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
     const defaultBtn = document.querySelector('[data-selection-sex="all"]');
     if (defaultBtn) {
       document.querySelectorAll("[data-selection-sex]").forEach((b) => {

@@ -1,38 +1,44 @@
 // overview.pigs.js
 export function initPigsModule(ctx, breedingModule) {
-  const { BACKEND_URL, token, state, dom } = ctx;
+  const { BACKEND_URL, state, dom } = ctx;
   const { setText, setImage, showGlobalLoader, hideGlobalLoader } = ctx;
+
+  // ✅ Always resolve token fresh (prevents stale token issues)
+  const getToken = () => ctx.token || localStorage.getItem("token") || "";
 
   /* ================= LOAD RESEARCH DATA ================= */
   async function loadResearchData() {
     try {
+      const headers = { Authorization: `Bearer ${getToken()}` };
+
       const [perfRes, aiRes, selRes, swineRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/reproduction/performance-analytics`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${BACKEND_URL}/api/reproduction/ai-history`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${BACKEND_URL}/api/reproduction/selection-candidates`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${BACKEND_URL}/api/swine/all`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        fetch(`${BACKEND_URL}/api/reproduction/performance-analytics`, { headers }),
+        fetch(`${BACKEND_URL}/api/reproduction/ai-history`, { headers }),
+        fetch(`${BACKEND_URL}/api/reproduction/selection-candidates`, { headers }),
+        fetch(`${BACKEND_URL}/api/swine/all`, { headers })
       ]);
 
-      const perf = await perfRes.json();
-      const ai = await aiRes.json();
-      const sel = await selRes.json();
-      const swine = await swineRes.json();
+      const perf = await perfRes.json().catch(() => ({}));
+      const ai = await aiRes.json().catch(() => ({}));
+      const sel = await selRes.json().catch(() => ({}));
+      const swine = await swineRes.json().catch(() => ({}));
 
-      if (perf.success) {
+      if (perf?.success) {
         state.rawPerformanceData.morphology = perf.morphology || [];
         state.rawPerformanceData.deformities = perf.deformities || [];
+      } else {
+        state.rawPerformanceData.morphology = state.rawPerformanceData.morphology || [];
+        state.rawPerformanceData.deformities = state.rawPerformanceData.deformities || [];
       }
-      if (ai.success) state.rawAiData = ai.data || [];
-      if (sel.success) state.rawSelectionData = sel.data || [];
-      if (swine.success) state.allSwineData = swine.swine || swine.data || [];
+
+      if (ai?.success) state.rawAiData = ai.data || [];
+      else state.rawAiData = state.rawAiData || [];
+
+      if (sel?.success) state.rawSelectionData = sel.data || [];
+      else state.rawSelectionData = state.rawSelectionData || [];
+
+      if (swine?.success) state.allSwineData = swine.swine || swine.data || [];
+      else state.allSwineData = state.allSwineData || [];
     } catch (err) {
       console.error("Research data load error:", err);
     }
@@ -56,11 +62,9 @@ export function initPigsModule(ctx, breedingModule) {
   }
 
   /* ================= PANEL SHOW/HIDE (legacy safe) ================= */
-  // Keep these for compatibility with your current code flow
   function showFarmerPanel() {
-    // if you had empty state blocks earlier, keep it safe
     dom.farmerPanelEmpty?.classList.add("d-none");
-    dom.farmerPanel?.classList.remove("d-none"); // may be undefined; overlay handles actual show
+    dom.farmerPanel?.classList.remove("d-none");
     openFarmerPanelOverlay(); // ✅ ensures overlay + panel are visible
   }
 
@@ -79,7 +83,6 @@ export function initPigsModule(ctx, breedingModule) {
 
     showGlobalLoader("Opening farmer panel...");
 
-    // ✅ Open overlay + panel
     showFarmerPanel();
     activateFarmerPanelTab("farmerPanelOverviewTab");
 
@@ -105,7 +108,7 @@ export function initPigsModule(ctx, breedingModule) {
     setText("profilePenCountOverview", penCount);
     setText("profilePenCapacityOverview", penCapacity);
 
-    // ✅ ALSO update your "card" fields (these exist in table.ejs)
+    // card fields
     setText("profileFarmerIdCard", farmer.farmer_id || farmer._id);
     setText("profilePenCountCard", penCount);
     setText("profilePenCapacityCard", penCapacity);
@@ -123,15 +126,12 @@ export function initPigsModule(ctx, breedingModule) {
       }`;
     }
 
-    // load pigs then compute stats + render sow list (repro)
     await loadLinkedPigs(id);
 
-    // after data loads, ensure sow filters are wired
     wireReproSowFilters();
 
     hideGlobalLoader();
 
-    // optional: scroll within overlay to top on mobile
     document.querySelector("#farmerPanelOverlay .panel-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -139,7 +139,6 @@ export function initPigsModule(ctx, breedingModule) {
   async function loadLinkedPigs(farmerId) {
     state.filteredPigList = [];
 
-    // reset breeding pagination/state per farmer
     state.breedingSowPage = 1;
     state.breedingCyclePage = 1;
     state.activeSowForBreeding = null;
@@ -155,7 +154,7 @@ export function initPigsModule(ctx, breedingModule) {
       }
 
       const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
 
       if (!res.ok) throw new Error("Failed request");
@@ -165,7 +164,6 @@ export function initPigsModule(ctx, breedingModule) {
 
       updateReproSnapshotStats();
 
-      // Render sow list in reproduction view (still uses existing IDs)
       breedingModule?.renderBreedingPerformance?.();
     } catch (err) {
       console.error("Load pigs error:", err);
@@ -211,17 +209,20 @@ export function initPigsModule(ctx, breedingModule) {
       });
     });
 
+    // ✅ FIXED: born piglets should be counted by dam_id matching sows (robust swine_id/swine_tag)
     const sowTags = adultSows
-      .map((s) => (s.swine_id || "").toString().trim())
+      .map((s) => (s.swine_id || s.swine_tag || "").toString().trim())
       .filter(Boolean);
 
     const bornPiglets = sowTags.length
-      ? swineAll.filter((x) => sowTags.includes((x.dam_id || "").toString().trim()))
+      ? swineAll.filter((x) => {
+          const dam = (x.dam_id || x.mother_id || "").toString().trim();
+          return dam && sowTags.includes(dam);
+        })
       : [];
 
     const totalBorn = bornPiglets.length;
     const totalDead = bornPiglets.filter((x) => ctx.isDeadStatus(x.health_status)).length;
-
     const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
 
     setText("statTotalPigs", totalPigs);
@@ -239,7 +240,6 @@ export function initPigsModule(ctx, breedingModule) {
 
   /* ================= REPRO SOW FILTERS (MVP) ================= */
   function wireReproSowFilters() {
-    // prevent duplicate listeners
     const form = document.getElementById("reproSowFilterForm");
     if (!form || form.dataset.bound === "1") return;
     form.dataset.bound = "1";
@@ -264,30 +264,29 @@ export function initPigsModule(ctx, breedingModule) {
      OVERLAY CLOSE WIRING (once)
      - Close button
      - Click outside
-     - ESC
+     - ESC (guarded to avoid duplicate behavior)
   ======================================================= */
   (function wireOverlayCloseOnce() {
     const overlay = document.getElementById("farmerPanelOverlay");
-    if (overlay && overlay.dataset.bound !== "1") {
-      overlay.dataset.bound = "1";
+    if (!overlay || overlay.dataset.bound === "1") return;
+    overlay.dataset.bound = "1";
 
-      // click outside panel (overlay background)
-      overlay.addEventListener("click", (e) => {
-        if (e.target && e.target.id === "farmerPanelOverlay") {
-          closeFarmerPanelOverlay();
-        }
-      });
-
-      // Close button
-      document.getElementById("closeFarmerPanelBtn")?.addEventListener("click", () => {
+    overlay.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "farmerPanelOverlay") {
         closeFarmerPanelOverlay();
-      });
+      }
+    });
 
-      // ESC
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeFarmerPanelOverlay();
-      });
-    }
+    document.getElementById("closeFarmerPanelBtn")?.addEventListener("click", () => {
+      closeFarmerPanelOverlay();
+    });
+
+    // ✅ Only close if overlay is open (prevents annoying ESC close calls)
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const ov = document.getElementById("farmerPanelOverlay");
+      if (ov && !ov.classList.contains("d-none")) closeFarmerPanelOverlay();
+    });
   })();
 
   /* ================= EVENT WIRING ================= */
@@ -317,7 +316,6 @@ export function initPigsModule(ctx, breedingModule) {
     }
   });
 
-  // middle panel tab switch
   document.getElementById("farmerPanelTabs")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".nav-link");
     if (!btn) return;
@@ -339,7 +337,6 @@ export function initPigsModule(ctx, breedingModule) {
     loadLinkedPigs,
     updateReproSnapshotStats,
 
-    // optional exports if you want to call from elsewhere
     openFarmerPanelOverlay,
     closeFarmerPanelOverlay
   };
