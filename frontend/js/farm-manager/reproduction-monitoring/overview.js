@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const role = user.role;
   const BACKEND_URL = "http://localhost:5000";
 
-  /* ================= GLOBAL LOADER HELPERS (define early for catch blocks) ================= */
-  function showGlobalLoader(text = "Opening farmer profile...") {
+  /* ================= GLOBAL LOADER HELPERS ================= */
+  function showGlobalLoader(text = "Opening farmer panel...") {
     const loader = document.getElementById("globalLoader");
     if (!loader) return;
 
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     farmerPage: 1,
     selectedFarmerId: "",
 
-    activePigCategory: "all",
+    // pigs under opened farmer (panel)
     currentFarmerPigs: [],
     filteredPigList: [],
 
@@ -55,15 +55,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     rawSelectionData: [],
     allSwineData: [],
 
-    litterPage: 1,
-    LITTER_ROWS_PER_PAGE: 5,
-    currentLitterPiglets: [],
-
     aiPage: 1,
     AI_ROWS_PER_PAGE: 3,
-    currentAiRecords: [],
 
-    // ===== BREEDING PERFORMANCE STATE =====
+    // breeding performance state
     breedingChartInstance: null,
     activeSowForBreeding: null,
 
@@ -73,14 +68,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     breedingSowsCache: [],
     activeCycleForBreeding: null,
 
+    // farmers pagination
     FARMER_ROWS_PER_PAGE: 5,
 
-    // ===== BREEDING DETAIL STATE =====
+    // cycles pagination (cards list)
     breedingCyclePage: 1,
-    CYCLES_PER_PAGE: 2,
-
-    breedingPigletPage: 1,
-    PIGLETS_PER_PAGE: 5
+    CYCLES_PER_PAGE: 5
   };
 
   /* ================= RESOLVE MANAGER ================= */
@@ -88,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.managerId = role === "farm_manager" ? user.id : user.managerId;
   } catch (err) {
     console.error("Manager resolution failed", err);
-    hideGlobalLoader(); // ✅ now always defined
+    hideGlobalLoader();
     return;
   }
 
@@ -98,16 +91,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (el) el.textContent = value || "—";
   }
 
-  // Only count TRUE deaths (prevents "Sick" being counted as dead)
+  // Only count TRUE deaths
   function isDeadStatus(status) {
     const s = (status || "").toString().trim().toLowerCase();
-    // adjust if your schema uses different labels
     return s === "dead" || s === "deceased" || s === "died" || s.includes("dead");
   }
 
   function isAliveStatus(status) {
-    // Keep your original "Healthy" semantics for alive in UI,
-    // but death counting uses isDeadStatus.
     return !isDeadStatus(status);
   }
 
@@ -140,15 +130,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterStatus: document.getElementById("filterStatus"),
     searchFarmer: document.getElementById("searchFarmer"),
 
-    farmerModalEl: document.getElementById("farmerModal"),
-    farmerModal: null
+    // ✅ Floating panel (hidden by default)
+    farmerPanel: document.getElementById("farmerPanel"),
+
+    // ✅ Optional overlay close button (if you add one in ejs)
+    farmerPanelCloseBtn: document.getElementById("closeFarmerPanelBtn")
   };
 
-  dom.farmerModal = dom.farmerModalEl && window.bootstrap
-    ? bootstrap.Modal.getOrCreateInstance(dom.farmerModalEl)
-    : null;
-
-  /* ================= MODULE INIT ================= */
+  /* ================= CTX ================= */
   const ctx = {
     user,
     token,
@@ -167,14 +156,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     isAliveStatus
   };
 
-  // breeding module first (others will call its functions)
+  /* ================= MODULE INIT ================= */
   const breeding = initBreedingModule(ctx);
   const pigs = initPigsModule(ctx, breeding);
   const farmers = initFarmersModule(ctx, pigs);
 
+  /* ================= OPTIONAL: GLOBAL CLOSE HANDLERS FOR FLOATING PANEL ================= */
+  // (Safe: panel can be closed even if you didn't add overlay close yet)
+  function closeFarmerPanel() {
+    dom.farmerPanel?.classList.add("d-none");
+
+    // also clean subviews when closing, if module exposes them later
+    // (no-op if not defined)
+    breeding?.closeSowDetailView?.();
+    breeding?.closeCycleDetailView?.();
+  }
+
+  // Close button (if present)
+  dom.farmerPanelCloseBtn?.addEventListener("click", closeFarmerPanel);
+
+  // ESC closes the floating panel
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dom.farmerPanel && !dom.farmerPanel.classList.contains("d-none")) {
+      closeFarmerPanel();
+    }
+  });
+
+  // Click outside the panel content closes it (requires CSS/markup: panel wrapper acts as overlay)
+  // If your #farmerPanel is the card itself, this will NOT trigger.
+  // If your #farmerPanel is the overlay wrapper, this works.
+  dom.farmerPanel?.addEventListener("click", (e) => {
+    // If #farmerPanel is overlay: close when clicking overlay background
+    if (e.target === dom.farmerPanel && dom.farmerPanel.classList.contains("panel-overlay")) {
+      closeFarmerPanel();
+    }
+  });
+
   /* ================= INIT LOAD ================= */
-  await Promise.all([
-    farmers.loadFarmers(),
-    pigs.loadResearchData()
-  ]);
+  await Promise.all([farmers.loadFarmers(), pigs.loadResearchData()]);
 });

@@ -1,29 +1,54 @@
 /* =========================================================
-   REPRODUCTION MONITORING — CLEAN MODULE CSS
+   REPRODUCTION MONITORING
 ========================================================= */
 
 /* =========================================================
-   0) Helpers
+   0) Theme tokens
 ========================================================= */
-.hidden-section{ display:none !important; }
+:root{
+  --shell-bg: #f6f7fb;
+  --card-bg: #ffffff;
 
-/* =========================================================
-   1) REDUCE OUTER GAPS (NAVBAR ↔ MODULE ↔ SIDEPANEL)
-========================================================= */
+  --border: #e9edf3;
+  --border-2: #e6e6e6;
 
-/* If this CSS is only loaded on this page, it's safe to target directly */
-.main-content{
-  padding-top: 10px !important;   
-  padding-bottom: 10px !important;
+  --text: #1f2937;
+  --muted: #6b7280;
+
+  --green: #198754;
+  --green-2: #0f7a34;
+
+  --radius-lg: 18px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+
+  --shadow-sm: 0 6px 18px rgba(0,0,0,0.06);
+  --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
+
+  --panel-overlay: rgba(31,41,55,.30);
+  --panel-sticky-bg: rgba(255,255,255,.95);
 }
 
+/* =========================================================
+   1) Helpers
+========================================================= */
+.hidden-section{ display:none !important; }
+.min-w-0{ min-width:0 !important; }
+.fw-black{ font-weight: 900 !important; }
+
+/* =========================================================
+   2) Reduce outer gaps
+========================================================= */
+.main-content{
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
 .main-content .container-fluid{
   padding-top: 10px !important;
   padding-bottom: 10px !important;
   padding-left: 14px !important;
   padding-right: 14px !important;
 }
-
 @media (min-width: 992px){
   .main-content{
     padding-top: 12px !important;
@@ -38,12 +63,12 @@
 }
 
 /* =========================================================
-   2) Module shell
+   3) Module shell background
 ========================================================= */
 .repro-wrapper,
 .repro-page{
-  background: var(--shell-bg, #f6f7fb);
-  border-radius: var(--radius-lg, 18px);
+  background: var(--shell-bg);
+  border-radius: var(--radius-lg);
   padding: 10px;
 }
 @media (min-width: 768px){
@@ -52,41 +77,46 @@
 }
 
 /* =========================================================
-   3) Main page card (Reproduction Monitoring list container)
+   4) Generic cards
 ========================================================= */
-.page-card{
-  border-radius: var(--radius-lg, 18px);
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e9edf3);
-  box-shadow: var(--shadow-sm, 0 6px 18px rgba(0,0,0,0.06));
+.page-card,
+.card.page-card{
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
+.page-card .card-body{ padding: 16px; }
+@media (min-width: 768px){ .page-card .card-body{ padding: 18px; } }
+@media (min-width: 1200px){ .page-card .card-body{ padding: 20px; } }
 
-.page-card .card-body{
-  padding: 16px;
-}
-@media (min-width: 768px){
-  .page-card .card-body{ padding: 18px; }
-}
-@media (min-width: 1200px){
-  .page-card .card-body{ padding: 20px; }
-}
-
-.page-card h5{ font-weight: 900; }
 .page-card hr{
   margin: 14px 0 !important;
   opacity: .12;
 }
 
 /* =========================================================
-   4) Top Filter Toolbar (filtersForm)
+   5) Page header card
+========================================================= */
+.page-head{
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.page-head h4,
+.page-head h5{ letter-spacing: .2px; }
+.page-head .bi{ transform: translateY(-1px); }
+
+/* =========================================================
+   6) Filter form styling
 ========================================================= */
 .heat-toolbar{ width:100%; }
 
-/* control-bar look */
 #filtersForm{
   width: 100%;
   border-radius: 16px;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   background: rgba(255,255,255,.92);
   padding: 12px;
   box-shadow: 0 6px 16px rgba(0,0,0,0.04);
@@ -94,42 +124,35 @@
 
 .location-select .dropdown-menu{
   border-radius: 14px;
-  border: 1px solid var(--border, #e9edf3);
-  box-shadow: var(--shadow-md, 0 10px 30px rgba(0,0,0,0.08));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
 }
 
 #filtersForm .form-label{
   font-weight: 800;
   letter-spacing: .2px;
 }
-
 #filtersForm .form-control,
 #filtersForm .form-select{
   min-height: 38px;
   border-radius: 14px !important;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
-
 #filtersForm .form-control:focus,
 #filtersForm .form-select:focus{
   border-color: rgba(25,135,84,.45);
   box-shadow: 0 0 0 .18rem rgba(25,135,84,.10) !important;
   outline: none !important;
 }
-
 #filtersForm .btn{
   min-height: 38px;
   border-radius: 12px;
   font-weight: 900;
 }
-
-#filtersForm .btn-success{
-  box-shadow: 0 8px 18px rgba(0,0,0,0.05);
-}
+#filtersForm .btn-success{ box-shadow: 0 8px 18px rgba(0,0,0,0.05); }
 #filtersForm .btn-outline-secondary{ border-width: 1px; }
 
-/* Desktop distribute width nicely */
 @media (min-width: 992px){
   #filtersForm .col-lg-auto:first-child{ flex: 0 0 220px; }
   #filtersForm .col-lg-4{ flex: 1 1 auto; }
@@ -137,8 +160,6 @@
   #filtersForm .col-lg-auto:last-child{ margin-left:auto; }
   #filtersForm .col-lg-auto:last-child .d-grid.d-sm-flex{ justify-content:flex-end; }
 }
-
-/* Mobile/tablet: Apply + Reset side-by-side */
 @media (max-width: 991.98px){
   #filtersForm .d-grid.d-sm-flex{
     display: grid !important;
@@ -153,14 +174,14 @@
 }
 
 /* =========================================================
-   5) Farmer list cards
+   7) Farmer list cards
 ========================================================= */
 #farmerCardList{ gap: 14px; }
 
 .farmer-card-modern{
-  background: var(--card-bg, #fff);
-  border-radius: var(--radius-lg, 18px);
-  border: 1px solid var(--border, #e9edf3);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
   padding: 16px;
   box-shadow: 0 6px 16px rgba(0,0,0,0.05);
   transition: transform .15s ease, box-shadow .15s ease;
@@ -192,7 +213,7 @@
   border-radius: 16px;
   overflow:hidden;
   background: rgba(25,135,84,.10);
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   flex-shrink:0;
 }
 .farmer-card-avatar img{
@@ -205,11 +226,11 @@
 .farmer-name{
   font-weight: 900;
   font-size: 16px;
-  color: var(--text, #1f2937);
+  color: var(--text);
 }
 .farmer-meta{
   font-size: 13px;
-  color: var(--muted, #6b7280);
+  color: var(--muted);
 }
 
 .farmer-status{
@@ -217,18 +238,18 @@
   font-weight: 900;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   display:inline-flex;
   align-items:center;
   white-space:nowrap;
 }
 .status-active{
   background: rgba(25,135,84,.12);
-  color: var(--green, #198754);
+  color: var(--green);
 }
 .status-inactive{
   background: rgba(107,114,128,.12);
-  color: var(--muted, #6b7280);
+  color: var(--muted);
 }
 
 .farmer-attn-pill{
@@ -257,10 +278,10 @@
 }
 
 /* =========================================================
-   6) Farmer card snapshot metrics
+   8) Farmer reproduction snapshot (inside farmer card)
 ========================================================= */
 .farmer-repro-snapshot{
-  border-top: 1px solid var(--border, #e9edf3);
+  border-top: 1px solid var(--border);
   padding-top: 12px;
   margin-top: 12px;
 }
@@ -285,26 +306,43 @@
   padding: 10px 12px;
   min-height: 54px;
   background: rgba(25,135,84,.06);
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
+  min-width: 0;
 }
-
 .repro-icon{
   width:34px;
   height:34px;
   border-radius:10px;
   background:#fff;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   display:flex;
   align-items:center;
   justify-content:center;
   flex-shrink:0;
 }
-.repro-icon i{ font-size:16px; color: var(--green, #198754); }
-.repro-value{ font-weight: 900; font-size:14px; line-height:1.1; }
-.repro-label{ font-size:11px; color: var(--muted, #6b7280); }
+.repro-icon i{ font-size:16px; color: var(--green); }
+
+.repro-text{ min-width: 0; flex: 1 1 auto; }
+.repro-value{
+  font-weight: 900;
+  font-size:14px;
+  line-height:1.1;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.repro-label{
+  font-size:11px;
+  color: var(--muted);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* =========================================================
-   7) Pagination (farmerPrevBtn / farmerNextBtn / indicator)
+   9) Pagination
 ========================================================= */
 #farmerPrevBtn,
 #farmerNextBtn{
@@ -312,10 +350,9 @@
   font-weight: 900;
   padding: 10px 16px;
   min-width: 140px;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   box-shadow: 0 6px 14px rgba(0,0,0,0.04);
 }
-
 #farmerPrevBtn:disabled,
 #farmerNextBtn:disabled{
   opacity: .55;
@@ -328,7 +365,7 @@
   justify-content: center;
   padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   background: rgba(31,41,55,0.04);
   font-weight: 900 !important;
   min-width: 140px;
@@ -340,49 +377,26 @@
   border-top: 1px solid rgba(233,237,243,.85);
 }
 
-/* =========================================================
-   FIX CONFLICT — Pagination stays 1 row on mobile
-   (Overrides the old width:100% rule)
-========================================================= */
-
 @media (max-width: 576px){
-
-  /* Target your actual pagination wrapper */
   .page-card .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-2.mt-4{
     flex-direction: row !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     align-items: center !important;
     flex-wrap: nowrap !important;
     gap: 8px !important;
     width: 100%;
   }
-
-  /* IMPORTANT: undo the earlier width:100% conflict */
-  #farmerPrevBtn,
-  #farmerNextBtn,
-  #farmerPageIndicator{
-    width: auto !important;
-  }
-
-  /* Compact buttons */
   #farmerPrevBtn,
   #farmerNextBtn{
-    flex: 0 0 auto !important;
     min-width: 64px !important;
     padding: 6px 10px !important;
     font-size: 12px !important;
-    border-radius: 999px !important;
   }
-
-  /* Compact centered indicator */
   #farmerPageIndicator{
-    flex: 1 1 auto !important;     /* let it take the middle space */
-    min-width: 0 !important;
+    min-width: 70px !important;
     max-width: 110px !important;
     padding: 6px 10px !important;
     font-size: 12px !important;
-    text-align: center;
-    justify-content: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -390,144 +404,173 @@
 }
 
 /* =========================================================
-   8) Farmer Modal — tabs scroll + avatar fix + UI polish
+   10) Floating panel overlay and scroll fix
 ========================================================= */
-#farmerModal .modal-content{
-  border-radius: 22px;
+body.panel-open{
   overflow: hidden;
 }
-#farmerModal .modal-header{ padding: 16px 18px 0; }
-#farmerModal .modal-title{ font-weight: 900; letter-spacing: .2px; }
-#farmerModal .modal-body{ padding: 16px 18px 18px; }
-@media (min-width: 768px){
-  #farmerModal .modal-header{ padding: 18px 22px 0; }
-  #farmerModal .modal-body{ padding: 18px 22px 22px; }
-}
-@media (max-width: 576px){
-  #farmerModal .modal-body{ padding: 16px !important; }
-}
 
-/* header card depth */
-#farmerModal .profile-header-modern{
+.panel-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 72px 14px 14px;
+  background: var(--panel-overlay);
+  backdrop-filter: blur(6px);
+}
+.panel-overlay.d-none{ display:none !important; }
+
+.panel-float{
+  box-sizing: border-box;
+  width: min(1040px, 100%);
   border-radius: 20px;
-  overflow:hidden;
-  border: 1px solid var(--border, #e9edf3);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+  overflow: hidden;
+  max-height: calc(100vh - 86px);
+  display: flex;
+  flex-direction: column;
 }
 
-/* avatar constrain (fix blow-up) */
-#farmerModal .profile-avatar-lg{
-  width: 86px;
-  height: 86px;
-  border-radius: 50%;
-  overflow:hidden;
-  background:#e9ecef;
-  flex: 0 0 86px;
-  max-width: 86px;
-  max-height: 86px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.10);
+/* Farmer panel becomes the main flex host */
+.panel-host{
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
-#farmerModal .profile-avatar-lg img{
-  width:100% !important;
-  height:100% !important;
-  display:block;
-  object-fit:cover;
-}
-#farmerModal img{ height:auto; }
-#farmerModal .profile-avatar-lg img{ height:100% !important; }
 
-/* tabs wrapper */
-.profile-tabs,
-#pigAnalysisTabs,
-#farmerPigCategoryTabs,
-#farmerProfileTabs{
+/* Sticky stays on top, scroll area fills remaining height */
+.panel-sticky{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--panel-sticky-bg);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(233,237,243,.95);
+}
+
+.panel-scroll{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+@media (max-width: 576px){
+  .panel-overlay{
+    padding: 58px 10px 10px;
+  }
+  .panel-float{
+    border-radius: 18px;
+    max-height: calc(100vh - 68px);
+  }
+  .panel-scroll{
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference){
+  .panel-float{ animation: panelPop .14s ease-out; }
+  @keyframes panelPop{
+    from{ transform: translateY(-6px); opacity: 0; }
+    to{ transform: translateY(0); opacity: 1; }
+  }
+}
+
+/* =========================================================
+   11) Tabs styling
+========================================================= */
+.tabs-scroll{
   overflow-x:auto;
   -webkit-overflow-scrolling:touch;
-  white-space:nowrap;
-  padding-bottom:6px;
+  padding: 0 16px 12px;
 }
-.profile-tabs::-webkit-scrollbar,
-#pigAnalysisTabs::-webkit-scrollbar,
-#farmerPigCategoryTabs::-webkit-scrollbar,
-#farmerProfileTabs::-webkit-scrollbar{ height:6px; }
-.profile-tabs::-webkit-scrollbar-thumb,
-#pigAnalysisTabs::-webkit-scrollbar-thumb,
-#farmerPigCategoryTabs::-webkit-scrollbar-thumb,
-#farmerProfileTabs::-webkit-scrollbar-thumb{
+.tabs-scroll::-webkit-scrollbar{ height:6px; }
+.tabs-scroll::-webkit-scrollbar-thumb{
   background: rgba(0,0,0,0.12);
   border-radius: 999px;
 }
 
-/* Tab strips look like real pill bars */
-#farmerModal .tabs-scroll{ padding: 6px 2px; }
-
-#farmerProfileTabs,
-#farmerPigCategoryTabs,
-#pigAnalysisTabs{
+#farmerPanelTabs{
   gap: 10px !important;
-  padding: 6px;
-  border-radius: 16px;
+  padding: 10px;
+  border-radius: 18px;
   background: rgba(31, 41, 55, 0.04);
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  overflow-x:auto;
+  white-space:nowrap;
 }
 
-#farmerProfileTabs .nav-link,
-#farmerPigCategoryTabs .nav-link,
-#pigAnalysisTabs .nav-link{
+#farmerPanelTabs .nav-link{
   border-radius: 999px !important;
-  padding: 8px 14px !important;
+  padding: 10px 16px !important;
   font-weight: 900;
-  font-size: 13px;
-  color: var(--text, #1f2937);
+  font-size: 14px;
+  color: var(--text);
   border: 1px solid transparent;
   background: transparent;
-  text-shadow: none !important;
   outline: none !important;
   box-shadow: none !important;
   transition: transform .12s ease, background .12s ease, border-color .12s ease;
 }
-#farmerProfileTabs .nav-link:hover,
-#farmerPigCategoryTabs .nav-link:hover,
-#pigAnalysisTabs .nav-link:hover{
+#farmerPanelTabs .nav-link:hover{
   background: rgba(25,135,84,.10);
   border-color: rgba(25,135,84,.18);
   transform: translateY(-1px);
 }
-#farmerProfileTabs .nav-link.active,
-#farmerPigCategoryTabs .nav-link.active,
-#pigAnalysisTabs .nav-link.active{
+#farmerPanelTabs .nav-link.active{
   background: linear-gradient(135deg, rgba(25,135,84,.18), rgba(25,135,84,.08));
   border-color: rgba(25,135,84,.35);
-  color: var(--green-2, #0f7a34);
+  color: var(--green-2);
   box-shadow: 0 4px 12px rgba(25,135,84,.12) !important;
 }
 
-/* remove harsh focus rings in modal; keep soft */
-#farmerModal .btn:focus,
-#farmerModal .btn:active,
-#farmerModal .form-control:focus,
-#farmerModal .form-select:focus{
-  outline: none !important;
-  box-shadow: 0 0 0 .18rem rgba(25,135,84,.10) !important;
-}
-#farmerModal .btn:active{ transform: translateY(0) !important; }
-
 @media (max-width: 576px){
-  #farmerProfileTabs,
-  #farmerPigCategoryTabs,
-  #pigAnalysisTabs{ gap: 8px !important; }
-  #farmerProfileTabs .nav-link,
-  #farmerPigCategoryTabs .nav-link,
-  #pigAnalysisTabs .nav-link{
-    padding: 8px 12px !important;
-    font-size: 12px;
+  .tabs-scroll{ padding: 0 14px 10px; }
+  #farmerPanelTabs{ gap: 8px !important; padding: 8px; }
+  #farmerPanelTabs .nav-link{
+    padding: 9px 14px !important;
+    font-size: 13px;
   }
 }
 
-/* Stat tiles inside modal header */
-#farmerModal .stat-tile{
-  border: 1px solid var(--border, #e9edf3);
+/* =========================================================
+   12) Panel header visuals
+========================================================= */
+.panel-float-head{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(233,237,243,.85);
+}
+
+.panel-avatar{
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: rgba(25,135,84,.08);
+  flex: 0 0 64px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.08);
+}
+.panel-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+/* =========================================================
+   13) Stat tiles
+========================================================= */
+.stat-tile{
+  border: 1px solid var(--border);
   border-radius: 16px;
   background: #fff;
   padding: 12px;
@@ -538,34 +581,38 @@
   justify-content:center;
   gap: 4px;
 }
-#farmerModal .stat-number{
+.stat-number{
   font-size: 18px;
   font-weight: 900;
   line-height: 1.05;
-  color: var(--text, #1f2937);
+  color: var(--text);
 }
-#farmerModal .stat-label{
+.stat-label{
   font-size: 12px;
   font-weight: 800;
-  color: var(--muted, #6b7280);
+  color: var(--muted);
   display:flex;
   align-items:center;
   gap: 8px;
 }
-#farmerModal .stat-label i{ color: var(--green, #198754); font-size: 14px; }
+.stat-label i{ color: var(--green); font-size: 14px; }
 
-/* Modal cards (overview info boxes) */
-.analysis-card,
+/* =========================================================
+   14) Info cards
+========================================================= */
 .profile-card{
   background:#fff;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 18px 20px;
   box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-  margin-bottom: 16px;
 }
-
-.analysis-row,
+.profile-card-title{
+  font-weight: 900;
+  margin-bottom: 10px;
+  display:flex;
+  align-items:center;
+}
 .profile-row{
   display:flex;
   justify-content:space-between;
@@ -574,355 +621,118 @@
   font-size: 14px;
   border-bottom: 1px solid rgba(233,237,243,.85);
 }
-.analysis-row:last-child,
 .profile-row:last-child{ border-bottom:none; }
 
 /* =========================================================
-   9) Pig filters + pig list inside modal (farmerPigFilters + linkedPigList)
+   15) Reproduction tab sow filter
 ========================================================= */
-#farmerModal #pigFilterSection{
-  width: 100%;
-  border-radius: 18px;
-  border: 1px solid var(--border, #e9edf3);
-  background: rgba(255,255,255,.9);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-  padding: 14px;
-  margin-bottom: 14px;
+#reproSowFilterForm .form-label{
+  font-weight: 800;
+  letter-spacing: .2px;
 }
-@media (min-width: 768px){
-  #farmerModal #pigFilterSection{ padding: 16px; }
-}
-
-#farmerPigFilters .form-control,
-#farmerPigFilters .form-select{
+#reproSowFilterForm .form-control,
+#reproSowFilterForm .form-select{
   min-height: 38px;
   border-radius: 14px !important;
-  border: 1px solid var(--border, #e9edf3);
+  border: 1px solid var(--border);
   box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
-#farmerPigFilters .form-control:focus,
-#farmerPigFilters .form-select:focus{
+#reproSowFilterForm .form-control:focus,
+#reproSowFilterForm .form-select:focus{
   border-color: rgba(25,135,84,.45);
   box-shadow: 0 0 0 .2rem rgba(25,135,84,.12) !important;
   outline: none !important;
 }
-#farmerPigFilters .btn{
+#reproSowFilterForm .btn{
   min-height: 38px;
   border-radius: 12px;
   font-weight: 900;
 }
 
-/* Desktop: make filter row fill width */
-@media (min-width: 992px){
-  #farmerModal #farmerPigFilters .col-lg-5{ flex: 1 1 auto; width:auto !important; }
-  #farmerModal #farmerPigFilters .col-lg-3{ flex: 0 0 280px; width:auto !important; }
-  #farmerModal #farmerPigFilters .col-lg-4{ flex: 0 0 auto; width:auto !important; margin-left:auto; }
-  #farmerModal #farmerPigFilters .col-lg-4 .d-grid.d-sm-flex{ justify-content:flex-end; }
-}
-
-/* Mobile/tablet: Apply + Reset side-by-side */
-@media (max-width: 991.98px){
-  #farmerModal #farmerPigFilters .d-grid.d-sm-flex{
-    display:grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    width: 100%;
-  }
-  #farmerModal #farmerPigFilters .d-grid.d-sm-flex .btn{
-    width: 100% !important;
-    margin: 0 !important;
-  }
-}
-
-#linkedPigList{
-  display:flex;
-  flex-direction:column;
-  gap: 12px;
-}
-
-#linkedPigList .linked-pig-item{
-  background:#fff;
-  border: 1px solid var(--border, #e9edf3);
-  border-radius: 18px;
-  padding: 14px 16px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.05);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-#linkedPigList .linked-pig-item:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0,0,0,0.08);
-}
-#linkedPigList .pig-name{ font-weight: 900; font-size: 16px; }
-#linkedPigList .pig-meta{ font-size: 12px; color: var(--muted, #6b7280); }
-#linkedPigList .badge{
-  font-weight: 900;
-  border-radius: 999px;
-  padding: 6px 10px;
-  border: 1px solid rgba(233,237,243,.95);
-}
-
-/* Mobile pig card layout — remove “weird gaps” */
-@media (max-width: 576px){
-  #linkedPigList .linked-pig-item{
-    display:grid !important;
-    grid-template-columns: 1fr;
-    gap: 10px;
-    padding: 14px;
-  }
-
-  /* action row: badge left, buttons right */
-  #linkedPigList .linked-pig-item > div:last-child{
-    width: 100%;
-    display:flex !important;
-    justify-content:space-between !important;
-    align-items:center !important;
-    gap: 10px;
-  }
-
-  /* keep buttons consistent size */
-  #linkedPigList .linked-pig-item .btn{
-    flex: 0 0 auto !important;
-    min-width: 78px;
-    padding: 8px 12px;
-    border-radius: 12px;
-  }
-}
-
 /* =========================================================
-   10) Breeding Performance — cards and panels
+   16) Breeding cards
 ========================================================= */
 #breedingKpiSection .card,
 #breedingSowList .card,
 #breedingCyclePanel .card,
 #sowAnalyticsContainer .card{
   border-radius: 18px;
-  border: 1px solid var(--border, #e9edf3) !important;
+  border: 1px solid var(--border) !important;
   box-shadow: 0 6px 16px rgba(0,0,0,0.05) !important;
 }
 
+#breedingKpiSection .card{ padding: 14px 12px !important; }
 #breedingKpiSection .card .small{
   font-weight: 900;
   letter-spacing: .2px;
 }
 #breedingKpiSection .card .fs-4{ font-weight: 900; }
 
-#backToSowList,
-#backToPigList{
-  border-radius: 12px;
+/* =========================================================
+   17) Cycle detail (inner tabs) theme aligned
+========================================================= */
+#cycleDetailTabs{
+  gap: 10px !important;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(31, 41, 55, 0.04);
+  border: 1px solid var(--border);
+  overflow-x:auto;
+  white-space:nowrap;
+}
+#cycleDetailTabs .nav-link{
+  border-radius: 999px !important;
+  padding: 10px 14px !important;
   font-weight: 900;
+  font-size: 14px;
+  color: var(--text);
+  border: 1px solid transparent;
+  background: transparent;
+}
+#cycleDetailTabs .nav-link:hover{
+  background: rgba(25,135,84,.10);
+  border-color: rgba(25,135,84,.18);
+}
+#cycleDetailTabs .nav-link.active{
+  background: linear-gradient(135deg, rgba(25,135,84,.18), rgba(25,135,84,.08));
+  border-color: rgba(25,135,84,.35);
+  color: var(--green-2);
+  box-shadow: 0 4px 12px rgba(25,135,84,.12) !important;
 }
 
 /* =========================================================
-   11) Modal tab spacing (general)
+   18) Accessibility focus
 ========================================================= */
-.farmer-tab{ padding-top: 16px; }
-.farmer-tab .card{ border-radius: 14px; }
-.farmer-tab .card-body{ padding: 16px; }
-
-/* =========================================================
-   PATCH ONLY — MOBILE FIXES (UPDATED + CLEANED)
-   1) Repro snapshot tiles: prevent overflow + nicer wrap
-   2) Status pill: top-right on small screens (no overlap)
-   3) Pagination: 1-row, centered, no spill/overflow
-========================================================= */
-
-/* ---------- 1) Prevent stats overflow inside snapshot tiles ---------- */
-.repro-grid{ min-width: 0; }
-.repro-metric{ min-width: 0; }
-.repro-icon{ flex: 0 0 auto; }
-
-.repro-text{
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.repro-value,
-.repro-label{
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* make tiles slightly more compact on smaller screens */
-@media (max-width: 576px){
-  .repro-grid{ gap: 10px; }
-
-  .repro-metric{
-    padding: 10px 10px;
-    min-height: 52px;
-  }
-}
-
-/* tiny phones: smaller typography so nothing spills */
-@media (max-width: 360px){
-  .repro-value{ font-size: 13px; }
-  .repro-label{ font-size: 10.5px; }
-  .repro-icon{ width: 32px; height: 32px; }
-}
-
-/* ---------- 2) Move farmer status pill to top-right on small screens ---------- */
-@media (max-width: 576px){
-  .farmer-card-modern{
-    position: relative;
-    padding: 14px !important;
-    padding-top: 54px !important; /* reserve space for the pill */
-  }
-
-  /* keep header content from being squeezed weirdly */
-  .farmer-card-top{
-    gap: 10px;
-    align-items: flex-start;
-  }
-
-  /* status container (your card uses .farmer-card-top .text-end) */
-  .farmer-card-top .text-end{
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-end;
-    text-align: right;
-    max-width: calc(100% - 28px);
-    z-index: 2;
-  }
-
-  /* ensure pills don’t expand too wide */
-  .farmer-card-top .text-end .farmer-status,
-  .farmer-card-top .text-end .farmer-attn-pill{
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* keep avatar row from bumping into reserved pill space */
-  .farmer-card-left{
-    align-items: flex-start !important;
-  }
-}
-
-/* ---------- 3) Pagination: force 1 row on small screens ---------- */
-/* Target the exact pagination wrapper you have */
-.page-card .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-2.mt-4{
-  width: 100%;
-  margin-top: 14px !important;
-  padding-top: 12px;
-  border-top: 1px solid rgba(233,237,243,.85);
-}
-
-@media (max-width: 576px){
-  .page-card .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-2.mt-4{
-    flex-direction: row !important;
-    justify-content: center !important;
-    align-items: center !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-  }
-
-  #farmerPrevBtn,
-  #farmerNextBtn{
-    flex: 0 0 auto !important;
-    min-width: 86px;
-    padding: 10px 12px;
-  }
-
-  #farmerPageIndicator{
-    flex: 0 1 auto !important;
-    min-width: 0 !important;
-    max-width: 140px;
-    padding: 10px 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-    justify-content: center;
-  }
-}
-
-/* ultra small phones: compact pagination even more */
-@media (max-width: 360px){
-  #farmerPrevBtn,
-  #farmerNextBtn{
-    min-width: 74px;
-    padding: 9px 10px;
-    font-size: 13px;
-  }
-
-  #farmerPageIndicator{
-    max-width: 120px;
-    font-size: 13px;
-  }
+.btn:focus,
+.btn:active,
+.form-control:focus,
+.form-select:focus{
+  outline: none !important;
+  box-shadow: 0 0 0 .18rem rgba(25,135,84,.10) !important;
 }
 
 /* =========================================================
-   MOBILE PAGINATION — COMPACT + NO OVERFLOW
+   19) Global loader
 ========================================================= */
-
-@media (max-width: 576px){
-
-  /* Force 1-row layout */
-  .page-card 
-  .d-flex.flex-column.flex-sm-row.justify-content-between.align-items-center.gap-2.mt-4{
-    flex-direction: row !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 8px !important;
-    flex-wrap: nowrap !important;
-  }
-
-  /* Make buttons small + compact */
-  #farmerPrevBtn,
-  #farmerNextBtn{
-    flex: 0 0 auto !important;
-    min-width: 64px !important;
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-    border-radius: 999px !important;
-  }
-
-  /* Compact page indicator */
-  #farmerPageIndicator{
-    flex: 0 0 auto !important;
-    min-width: 70px !important;
-    max-width: 90px !important;
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-    white-space: nowrap;
-    text-align: center;
-  }
+.global-loader{
+  position: fixed;
+  inset: 0;
+  background: rgba(246,247,251,.70);
+  backdrop-filter: blur(6px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 2000;
 }
-
-/* =========================================================
-   Breeding Performance Stats — 2 Columns on Mobile
-========================================================= */
-
-/* Target the KPI cards container */
-#breedingKpiSection .row{
-  --bs-gutter-x: 12px; /* tighter horizontal spacing */
-  --bs-gutter-y: 12px;
+.global-loader .loader-content{
+  background:#fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 22px;
+  box-shadow: var(--shadow-md);
+  text-align:center;
 }
-
-@media (max-width: 576px){
-
-  /* Force 2 columns */
-  #breedingKpiSection .col-12{
-    flex: 0 0 50%;
-    max-width: 50%;
-  }
-
-  /* Make cards slightly more compact */
-  #breedingKpiSection .card{
-    padding: 16px 12px !important;
-  }
-
-  #breedingKpiSection .card .fs-4{
-    font-size: 18px !important;
-  }
-
-  #breedingKpiSection .card .small{
-    font-size: 13px;
-  }
+.global-loader .loader-text{
+  font-weight: 900;
+  color: var(--text);
 }

@@ -5,10 +5,12 @@
 <main class="main-content">
   <div class="container-fluid py-3 py-lg-4">
 
-    <!-- Page shell (soft dashboard look like the reference image) -->
+    <!-- Page shell -->
     <div class="repro-page">
 
       <%- include("./table") %>
+
+      <!-- Keep old modals included for compatibility (not used in new flow) -->
       <%- include("./modal") %>
       <%- include("./edit-modal") %>
 
@@ -21,7 +23,7 @@
 <div id="globalLoader" class="global-loader d-none">
   <div class="loader-content">
     <div class="spinner-border text-success" role="status"></div>
-    <div class="loader-text mt-3">Opening pig profile...</div>
+    <div class="loader-text mt-3">Opening farmer profile...</div>
   </div>
 </div>
 

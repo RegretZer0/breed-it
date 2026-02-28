@@ -1,22 +1,19 @@
 // overview.farmers.js
 export function initFarmersModule(ctx, pigsModule) {
   const { BACKEND_URL, token, state, dom } = ctx;
-  const { resolveImageUrl } = ctx;
+  const { resolveImageUrl, isDeadStatus } = ctx;
 
   /* ================= LOAD FARMERS ================= */
   async function loadFarmers() {
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/auth/farmers/${state.managerId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await fetch(`${BACKEND_URL}/api/auth/farmers/${state.managerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
       const data = await res.json();
       state.allFarmers = data.farmers || [];
 
-      state.allFarmers.sort((a, b) =>
-        (a.first_name || "").localeCompare(b.first_name || "")
-      );
+      state.allFarmers.sort((a, b) => (a.first_name || "").localeCompare(b.first_name || ""));
 
       state.filteredFarmers = [...state.allFarmers];
       state.farmerPage = 1;
@@ -28,6 +25,7 @@ export function initFarmersModule(ctx, pigsModule) {
     }
   }
 
+  /* ================= DROPDOWN POPULATION ================= */
   function populateFarmerDropdown() {
     const optionsWrap = document.getElementById("locationOptions");
     if (!optionsWrap) return;
@@ -63,10 +61,7 @@ export function initFarmersModule(ctx, pigsModule) {
         ? state.filteredFarmers
         : state.allFarmers;
 
-    const totalPages = Math.max(
-      1,
-      Math.ceil(list.length / state.FARMER_ROWS_PER_PAGE)
-    );
+    const totalPages = Math.max(1, Math.ceil(list.length / state.FARMER_ROWS_PER_PAGE));
     if (state.farmerPage > totalPages) state.farmerPage = totalPages;
 
     const start = (state.farmerPage - 1) * state.FARMER_ROWS_PER_PAGE;
@@ -88,7 +83,6 @@ export function initFarmersModule(ctx, pigsModule) {
       const status = f.status || "Active";
       const isActive = status === "Active";
 
-      // ✅ always resolve relative uploads + default
       const avatarSrc = resolveImageUrl(f.profile_picture);
 
       html += `
@@ -100,15 +94,15 @@ export function initFarmersModule(ctx, pigsModule) {
                 <img src="${avatarSrc}" alt="Avatar" loading="lazy">
               </div>
 
-              <div class="farmer-card-info">
-                <div class="farmer-name">${fullName}</div>
+              <div class="farmer-card-info min-w-0">
+                <div class="farmer-name text-truncate">${fullName}</div>
 
                 <div class="farmer-meta">
                   <span class="me-2">Farmer ID:</span>
                   <span class="fw-semibold">${f.farmer_id || f._id}</span>
                 </div>
 
-                <div class="farmer-meta">
+                <div class="farmer-meta text-truncate">
                   ${f.address || "No address provided"}
                 </div>
 
@@ -119,7 +113,6 @@ export function initFarmersModule(ctx, pigsModule) {
             </div>
 
             <div class="text-end">
-              <!-- ✅ keep ID; pill is properly shown/hidden by JS -->
               <span id="attn-${f._id}" class="badge rounded-pill farmer-attn-pill d-none"></span>
 
               <span class="farmer-status ${isActive ? "status-active" : "status-inactive"}">
@@ -128,7 +121,7 @@ export function initFarmersModule(ctx, pigsModule) {
             </div>
           </div>
 
-          <!-- Reproduction Snapshot (hydrated later) -->
+          <!-- Reproduction Snapshot -->
           <div class="farmer-repro-snapshot mt-3" id="repro-${f._id}">
             <div class="repro-grid">
               ${renderReproMetricSkeleton("bi-gender-female", "Active Sows")}
@@ -143,8 +136,10 @@ export function initFarmersModule(ctx, pigsModule) {
           </div>
 
           <div class="farmer-card-bottom">
+            <!-- ✅ Keep class name used by global click handler -->
             <button class="btn btn-outline-primary btn-sm view-farmer-btn" data-id="${f._id}">
-              View Profile
+              <i class="bi bi-layout-text-window-reverse me-1"></i>
+              Open Panel
             </button>
           </div>
         </div>
@@ -153,6 +148,8 @@ export function initFarmersModule(ctx, pigsModule) {
 
     dom.farmerCardList.innerHTML = html;
     updatePagination(totalPages);
+
+    // Hydrate summaries after render
     hydrateFarmerReproSummaries(pageItems);
   }
 
@@ -194,7 +191,7 @@ export function initFarmersModule(ctx, pigsModule) {
     }
   }
 
-  // ✅ Keep only ONE version (removed duplicate)
+  // NOTE: uses state.allSwineData if available; otherwise only sow-cycle based KPIs
   async function getFarmerReproSummary(farmerId) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
@@ -206,10 +203,11 @@ export function initFarmersModule(ctx, pigsModule) {
       const data = await res.json();
       const pigs = Array.isArray(data.pigs) ? data.pigs : [];
 
-      // adult sows under this farmer
-      const sows = pigs.filter((p) =>
-        (p.sex || "").toString().toLowerCase() === "female" &&
-        (p.age_stage || "").toString().toLowerCase().includes("adult")
+      // adult sows
+      const sows = pigs.filter(
+        (p) =>
+          (p.sex || "").toString().toLowerCase() === "female" &&
+          (p.age_stage || "").toString().toLowerCase().includes("adult")
       );
 
       const sowTags = sows
@@ -229,7 +227,7 @@ export function initFarmersModule(ctx, pigsModule) {
         });
       });
 
-      // Born/Dead from allSwineData: piglets whose dam_id is ANY sowTag (across ALL cycles)
+      // Born/Dead from allSwineData if we have it
       let totalBorn = 0;
       let totalDead = 0;
 
@@ -237,16 +235,13 @@ export function initFarmersModule(ctx, pigsModule) {
         const piglets = state.allSwineData.filter((p) =>
           sowTags.includes((p.dam_id || "").toString().trim())
         );
-
         totalBorn = piglets.length;
-        totalDead = piglets.filter((p) => ctx.isDeadStatus(p.health_status)).length;
+        totalDead = piglets.filter((p) => isDeadStatus(p.health_status)).length;
       }
 
-      const mortalityPct =
-        totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
+      const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
 
-      const needsAttention =
-        observationCount > 0 || Number(mortalityPct) >= 10;
+      const needsAttention = observationCount > 0 || Number(mortalityPct) >= 10;
 
       return {
         activeSows: sows.length,
@@ -281,15 +276,14 @@ export function initFarmersModule(ctx, pigsModule) {
 
     if (attn) {
       if (s?.error) {
-        attn.classList.remove("d-none"); // ✅ ensure visible
+        attn.classList.remove("d-none");
         attn.textContent = "Repro stats unavailable";
         attn.className = "badge rounded-pill bg-secondary-subtle text-secondary farmer-attn-pill";
       } else if (s.needsAttention) {
-        attn.classList.remove("d-none"); // ✅ ensure visible
+        attn.classList.remove("d-none");
         attn.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Needs attention`;
         attn.className = "badge rounded-pill bg-warning-subtle text-warning farmer-attn-pill";
       } else {
-        // ✅ hide cleanly
         attn.classList.add("d-none");
         attn.textContent = "";
       }
@@ -308,8 +302,8 @@ export function initFarmersModule(ctx, pigsModule) {
 
     if (hint) {
       hint.textContent = s?.error
-        ? "Open profile to view detailed breeding performance."
-        : "Snapshot shows sow status and overall litter outcomes.";
+        ? "Open panel to view detailed reproduction."
+        : "Snapshot shows sow status and overall outcomes.";
     }
   }
 
@@ -324,29 +318,27 @@ export function initFarmersModule(ctx, pigsModule) {
     if (nextBtn) nextBtn.disabled = state.farmerPage >= totalPages;
   }
 
-  document.getElementById("farmerPrevBtn")
-    ?.addEventListener("click", () => {
-      if (state.farmerPage > 1) {
-        state.farmerPage--;
-        renderFarmerCards();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
+  // NOTE: These are attached once (file loaded once) and just rerender list
+  document.getElementById("farmerPrevBtn")?.addEventListener("click", () => {
+    if (state.farmerPage > 1) {
+      state.farmerPage--;
+      renderFarmerCards();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
 
-  document.getElementById("farmerNextBtn")
-    ?.addEventListener("click", () => {
-      const activeList = state.filteredFarmers && state.filteredFarmers.length
-        ? state.filteredFarmers
-        : state.allFarmers;
+  document.getElementById("farmerNextBtn")?.addEventListener("click", () => {
+    const activeList =
+      state.filteredFarmers && state.filteredFarmers.length ? state.filteredFarmers : state.allFarmers;
 
-      const totalPages = Math.ceil(activeList.length / state.FARMER_ROWS_PER_PAGE);
+    const totalPages = Math.ceil(activeList.length / state.FARMER_ROWS_PER_PAGE);
 
-      if (state.farmerPage < totalPages) {
-        state.farmerPage++;
-        renderFarmerCards();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
+    if (state.farmerPage < totalPages) {
+      state.farmerPage++;
+      renderFarmerCards();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
 
   /* ================= FARMER DROPDOWN SELECT ================= */
   document.addEventListener("click", (e) => {
@@ -360,15 +352,13 @@ export function initFarmersModule(ctx, pigsModule) {
   });
 
   /* ================= FARMER DROPDOWN SEARCH ================= */
-  document.getElementById("locationSearch")
-    ?.addEventListener("input", (e) => {
-      const term = e.target.value.toLowerCase();
-
-      document.querySelectorAll(".farmer-option").forEach((opt) => {
-        const name = (opt.dataset.name || "").toLowerCase();
-        opt.style.display = name.includes(term) ? "block" : "none";
-      });
+  document.getElementById("locationSearch")?.addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    document.querySelectorAll(".farmer-option").forEach((opt) => {
+      const name = (opt.dataset.name || "").toLowerCase();
+      opt.style.display = name.includes(term) ? "block" : "none";
     });
+  });
 
   /* ================= FILTER FARMERS ================= */
   dom.filtersForm?.addEventListener("submit", (e) => {
@@ -386,9 +376,7 @@ export function initFarmersModule(ctx, pigsModule) {
     if (status) filtered = filtered.filter((f) => f.status === status);
 
     if (term) {
-      filtered = filtered.filter((f) =>
-        `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
-      );
+      filtered = filtered.filter((f) => `${f.first_name} ${f.last_name}`.toLowerCase().includes(term));
     }
 
     state.filteredFarmers = filtered;
@@ -396,18 +384,17 @@ export function initFarmersModule(ctx, pigsModule) {
     renderFarmerCards();
   });
 
-  document.getElementById("resetFilters")
-    ?.addEventListener("click", () => {
-      dom.filtersForm?.reset();
+  document.getElementById("resetFilters")?.addEventListener("click", () => {
+    dom.filtersForm?.reset();
 
-      state.selectedFarmerId = "";
-      const dropdownBtn = document.getElementById("locationDropdownBtn");
-      if (dropdownBtn) dropdownBtn.textContent = "Farmer";
+    state.selectedFarmerId = "";
+    const dropdownBtn = document.getElementById("locationDropdownBtn");
+    if (dropdownBtn) dropdownBtn.textContent = "Farmer";
 
-      state.filteredFarmers = [...state.allFarmers];
-      state.farmerPage = 1;
-      renderFarmerCards();
-    });
+    state.filteredFarmers = [...state.allFarmers];
+    state.farmerPage = 1;
+    renderFarmerCards();
+  });
 
   return {
     loadFarmers,

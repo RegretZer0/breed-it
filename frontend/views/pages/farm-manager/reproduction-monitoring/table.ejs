@@ -1,39 +1,277 @@
-<div class="card page-card border-0 shadow-sm">
+<!-- =========================
+     PAGE TITLE (TOP)
+========================= -->
+<div class="card border-0 shadow-sm page-head mb-3">
   <div class="card-body p-3 p-md-4">
-
-    <!-- TITLE / SUBTITLE -->
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2 mb-3">
-      <div>
-        <h5 class="mb-1">Reproduction Monitoring</h5>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+      <div class="min-w-0">
+        <h4 class="mb-1 fw-black">
+          <i class="bi bi-speedometer2 me-2 text-success"></i>
+          Reproduction Monitoring
+        </h4>
         <div class="text-muted small">
-          Select a farmer to monitor breeding status and sow performance
+          Manage farmers, view summaries, and track reproduction cycles.
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- TOOLBAR -->
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-3">
-      <div class="flex-grow-1"></div>
+<!-- =========================
+     FILTER CARD (UNDER TITLE)
+========================= -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body p-3 p-md-4">
+    <%- include("./filter") %>
+  </div>
+</div>
 
-      <div class="w-100">
-        <%- include("./filter") %>
-      </div>
+<!-- =========================
+     FARMER LIST CARD (UNDER FILTER)
+========================= -->
+<div class="card page-card border-0 shadow-sm mb-3">
+  <div class="card-body p-3 p-md-4">
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="fw-bold">Farmers</div>
+      <div class="small text-muted">Select a farmer to open the panel</div>
     </div>
 
-    <hr class="my-3" />
-
-    <!-- CARD LIST -->
+    <!-- Farmer Cards -->
     <div id="farmerCardList" class="d-flex flex-column gap-3">
       <div class="text-center text-muted py-4">
         Loading farmer records...
       </div>
     </div>
 
-    <!-- PAGINATION -->
+    <!-- Pagination (must be under farmer cards) -->
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-4">
       <button id="farmerPrevBtn" class="btn btn-sm btn-outline-secondary w-100 w-sm-auto">Prev</button>
       <span id="farmerPageIndicator" class="small fw-semibold text-muted"></span>
       <button id="farmerNextBtn" class="btn btn-sm btn-outline-secondary w-100 w-sm-auto">Next</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- =========================================================
+     FLOATING OVERLAY HOST
+========================================================= -->
+<div id="farmerPanelOverlay" class="panel-overlay d-none" aria-hidden="true">
+  <div class="panel-float" role="dialog" aria-modal="true" aria-label="Farmer Panel">
+
+    <!-- IMPORTANT:
+      #farmerPanel must wrap BOTH sticky + scroll areas
+      so flex + overflow works correctly.
+    -->
+    <div id="farmerPanel" class="panel-host">
+
+      <!-- STICKY HEADER -->
+      <div class="panel-sticky">
+
+        <div class="panel-float-head d-flex align-items-center justify-content-between">
+          <div class="small text-muted fw-semibold d-flex align-items-center gap-2">
+            <i class="bi bi-window"></i>
+            <span>Farmer Panel</span>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary rounded-pill fw-black"
+            id="closeFarmerPanelBtn">
+            <i class="bi bi-x-lg me-1"></i> Close
+          </button>
+        </div>
+
+        <!-- PANEL HEADER -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 px-3 px-md-4 pt-3 pt-md-4 pb-2">
+          <div class="d-flex align-items-center gap-3 min-w-0">
+            <div class="panel-avatar">
+              <img id="profileAvatar"
+                   src="/images/default-avatar.png"
+                   alt="Profile"
+                   loading="lazy"
+                   referrerpolicy="no-referrer">
+            </div>
+
+            <div class="min-w-0">
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <h5 id="profileFarmerName" class="mb-0 text-truncate">—</h5>
+                <span id="profileFarmerStatus"
+                      class="badge rounded-pill px-3 py-1 bg-secondary-subtle text-secondary">—</span>
+              </div>
+              <div class="text-muted small text-truncate" id="profileFarmerContact">—</div>
+            </div>
+          </div>
+
+          <div class="text-md-end">
+            <div class="small text-muted">Farmer ID</div>
+            <div class="fw-bold" id="profileFarmerIdOverview">—</div>
+          </div>
+        </div>
+
+        <!-- PANEL TABS -->
+        <div class="tabs-scroll px-3 px-md-4 pb-3">
+          <ul class="nav nav-pills flex-nowrap" id="farmerPanelTabs" role="tablist" aria-label="Farmer panel tabs">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" data-target="farmerPanelOverviewTab" type="button">
+                <i class="bi bi-person-lines-fill me-1"></i> Overview
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-target="farmerPanelReproTab" type="button">
+                <i class="bi bi-heart-pulse me-1"></i> Reproduction
+              </button>
+            </li>
+          </ul>
+        </div>
+
+      </div><!-- /.panel-sticky -->
+
+      <!-- SCROLLABLE BODY -->
+      <div class="panel-scroll">
+
+        <!-- ================= OVERVIEW TAB ================= -->
+        <div id="farmerPanelOverviewTab" class="farmer-panel-tab px-3 px-md-4 pb-4">
+
+          <div class="row g-2 g-md-3 mb-3">
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statTotalPigs">0</div>
+                <div class="stat-label"><i class="bi bi-grid-3x3-gap"></i> Total</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statPiglets">0</div>
+                <div class="stat-label"><i class="bi bi-egg-fried"></i> Piglets</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statAdultSows">0</div>
+                <div class="stat-label"><i class="bi bi-gender-female"></i> Sows</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statAdultBoars">0</div>
+                <div class="stat-label"><i class="bi bi-gender-male"></i> Boars</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statPregnant">0</div>
+                <div class="stat-label"><i class="bi bi-patch-check"></i> Pregnant</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-xl-2">
+              <div class="stat-tile">
+                <div class="stat-number" id="statMortality">0.0%</div>
+                <div class="stat-label"><i class="bi bi-activity"></i> Mortality</div>
+              </div>
+            </div>
+
+            <div class="d-none">
+              <span id="statObservation">0</span>
+              <span id="statActiveCycles">0</span>
+              <span id="statTotalBorn">0</span>
+              <span id="profileFarmerId">—</span>
+              <span id="profilePhone">—</span>
+              <span id="profileEmail">—</span>
+              <span id="profileAddress">—</span>
+              <span id="profilePenCountOverview">—</span>
+              <span id="profilePenCapacityOverview">—</span>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-lg-6">
+              <div class="profile-card">
+                <h6 class="profile-card-title"><i class="bi bi-info-circle me-2"></i>Farmer Information</h6>
+                <div class="profile-row">
+                  <span>Farmer ID</span>
+                  <span class="fw-semibold" id="profileFarmerIdCard">—</span>
+                </div>
+                <div class="profile-row">
+                  <span>Pen Count</span>
+                  <span class="fw-semibold" id="profilePenCountCard">—</span>
+                </div>
+                <div class="profile-row">
+                  <span>Pen Capacity</span>
+                  <span class="fw-semibold" id="profilePenCapacityCard">—</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+              <div class="profile-card">
+                <h6 class="profile-card-title"><i class="bi bi-telephone me-2"></i>Contact Details</h6>
+                <div class="profile-row">
+                  <span>Phone</span>
+                  <span class="fw-semibold" id="profilePhoneCard">—</span>
+                </div>
+                <div class="profile-row">
+                  <span>Email</span>
+                  <span class="fw-semibold" id="profileEmailCard">—</span>
+                </div>
+                <div class="profile-row">
+                  <span>Address</span>
+                  <span class="fw-semibold" id="profileAddressCard">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= REPRO TAB ================= -->
+        <div id="farmerPanelReproTab" class="farmer-panel-tab d-none px-3 px-md-4 pb-4">
+
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-3">
+              <form id="reproSowFilterForm" class="row g-2 align-items-end" autocomplete="off">
+                <div class="col-12 col-md-6 col-lg-5">
+                  <label class="form-label small text-muted mb-1">Search Sow Tag</label>
+                  <input id="reproSowSearch" class="form-control form-control-sm" placeholder="e.g. 2342-A-0001">
+                </div>
+
+                <div class="col-12 col-md-6 col-lg-3">
+                  <label class="form-label small text-muted mb-1">Health Status</label>
+                  <select id="reproSowHealth" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="Healthy">Healthy</option>
+                    <option value="Sick">Sick</option>
+                    <option value="Deceased">Deceased</option>
+                  </select>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                  <div class="d-grid d-sm-flex gap-2 justify-content-lg-end">
+                    <button class="btn btn-success btn-sm" type="submit">
+                      <i class="bi bi-funnel me-1"></i> Apply
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="reproSowReset">
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div id="breedingKpiSection" class="row g-2 g-md-3 mb-3"></div>
+          <div id="breedingSowList" class="d-flex flex-column gap-3"></div>
+          <div id="breedingCyclePanel" class="mt-3 d-none"></div>
+        </div>
+
+      </div>
+
     </div>
 
   </div>
