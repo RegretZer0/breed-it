@@ -1,15 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
 
 /* =========================================================
-   MANAGE ACCOUNT — Theme aligned with Create Account
-   ✅ REWORKED WITHOUT REMOVING UNRELATED STYLES
-   - Keeps ALL your existing selectors
-   - Fixes conflicts by:
-     1) removing duplicate definitions (kept one canonical block)
-     2) scoping ONLY the risky “global” overrides to .manage-account-page
-     3) removing undefined CSS variables usage at the bottom that can break radius
-   - Ensures Overview + Filter card share the same radius
-   - Ensures Filter is 1 row on desktop, stacked on mobile (NO SCROLL)
+   MANAGE ACCOUNT
 ========================================================= */
 
 :root{
@@ -34,7 +26,37 @@
   --amber: #ffb238;
   --danger: #ff6b6b;
   --blue: #3b82f6;
+
+  --gutter: 18px;
 }
+
+
+html, body{
+  height: 100%;
+  margin: 0;
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--shell-bg);
+  color: var(--text);
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+/* =========================================================
+   MAIN CONTENT SAFETY
+========================================================= */
+.main-content{ min-width: 0; }
+
+/* =========================================================
+   PAGE CARD BASE (matches dashboard style)
+========================================================= */
+.page-card{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.page-card .card-body{ padding: 18px; }
 
 /* Page spacing */
 .manage-account-page .container-fluid{

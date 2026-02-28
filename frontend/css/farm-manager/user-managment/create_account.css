@@ -25,7 +25,36 @@
   --shadow-md: 0 10px 26px rgba(0,0,0,0.08);
 
   --focus: rgba(25, 135, 84, 0.22);
+  --gutter: 18px;
 }
+
+
+html, body{
+  height: 100%;
+  margin: 0;
+  font-family: "Roboto", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--shell-bg);
+  color: var(--text);
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+/* =========================================================
+   MAIN CONTENT SAFETY
+========================================================= */
+.main-content{ min-width: 0; }
+
+/* =========================================================
+   PAGE CARD BASE (matches dashboard style)
+========================================================= */
+.page-card{
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.page-card .card-body{ padding: 18px; }
 
 /* Page spacing */
 .create-account-page .container-fluid{
