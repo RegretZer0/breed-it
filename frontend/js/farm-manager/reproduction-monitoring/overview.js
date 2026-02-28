@@ -1,3 +1,4 @@
+// overview.js
 import { authGuard } from "/js/authGuard.js";
 
 import { initFarmersModule } from "./overview.farmers.js";
@@ -5,7 +6,6 @@ import { initPigsModule } from "./overview.pigs.js";
 import { initBreedingModule } from "./overview.breeding.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
-
   /* ================= AUTH ================= */
   const user = await authGuard(["farm_manager", "encoder"]);
   if (!user) return;
@@ -18,6 +18,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const role = user.role;
   const BACKEND_URL = "http://localhost:5000";
+
+  /* ================= GLOBAL LOADER HELPERS (define early for catch blocks) ================= */
+  function showGlobalLoader(text = "Opening farmer profile...") {
+    const loader = document.getElementById("globalLoader");
+    if (!loader) return;
+
+    const label = loader.querySelector(".loader-text");
+    if (label) label.textContent = text;
+
+    loader.classList.remove("d-none");
+  }
+
+  function hideGlobalLoader() {
+    document.getElementById("globalLoader")?.classList.add("d-none");
+  }
 
   /* ================= STATE ================= */
   const state = {
@@ -73,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.managerId = role === "farm_manager" ? user.id : user.managerId;
   } catch (err) {
     console.error("Manager resolution failed", err);
-    hideGlobalLoader();
+    hideGlobalLoader(); // ✅ now always defined
     return;
   }
 
@@ -118,21 +133,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
   }
 
-  /* ================= GLOBAL LOADER ================= */
-  function showGlobalLoader(text = "Opening farmer profile...") {
-    const loader = document.getElementById("globalLoader");
-    if (!loader) return;
-
-    const label = loader.querySelector(".loader-text");
-    if (label) label.textContent = text;
-
-    loader.classList.remove("d-none");
-  }
-
-  function hideGlobalLoader() {
-    document.getElementById("globalLoader")?.classList.add("d-none");
-  }
-
   /* ================= DOM ================= */
   const dom = {
     farmerCardList: document.getElementById("farmerCardList"),
@@ -144,8 +144,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     farmerModal: null
   };
 
-  dom.farmerModal = dom.farmerModalEl
-    ? new bootstrap.Modal(dom.farmerModalEl)
+  dom.farmerModal = dom.farmerModalEl && window.bootstrap
+    ? bootstrap.Modal.getOrCreateInstance(dom.farmerModalEl)
     : null;
 
   /* ================= MODULE INIT ================= */

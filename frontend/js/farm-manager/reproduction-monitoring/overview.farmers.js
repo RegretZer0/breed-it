@@ -1,6 +1,7 @@
+// overview.farmers.js
 export function initFarmersModule(ctx, pigsModule) {
   const { BACKEND_URL, token, state, dom } = ctx;
-  const { setText } = ctx;
+  const { resolveImageUrl } = ctx;
 
   /* ================= LOAD FARMERS ================= */
   async function loadFarmers() {
@@ -40,7 +41,7 @@ export function initFarmersModule(ctx, pigsModule) {
     }
 
     let html = "";
-    state.allFarmers.forEach(f => {
+    state.allFarmers.forEach((f) => {
       html += `
         <div class="dropdown-item farmer-option"
           data-id="${f._id}"
@@ -62,7 +63,10 @@ export function initFarmersModule(ctx, pigsModule) {
         ? state.filteredFarmers
         : state.allFarmers;
 
-    const totalPages = Math.max(1, Math.ceil(list.length / state.FARMER_ROWS_PER_PAGE));
+    const totalPages = Math.max(
+      1,
+      Math.ceil(list.length / state.FARMER_ROWS_PER_PAGE)
+    );
     if (state.farmerPage > totalPages) state.farmerPage = totalPages;
 
     const start = (state.farmerPage - 1) * state.FARMER_ROWS_PER_PAGE;
@@ -79,10 +83,13 @@ export function initFarmersModule(ctx, pigsModule) {
 
     let html = "";
 
-    pageItems.forEach(f => {
+    pageItems.forEach((f) => {
       const fullName = `${f.first_name || ""} ${f.last_name || ""}`.trim();
       const status = f.status || "Active";
       const isActive = status === "Active";
+
+      // ✅ always resolve relative uploads + default
+      const avatarSrc = resolveImageUrl(f.profile_picture);
 
       html += `
         <div class="farmer-card-modern" data-farmer-card="${f._id}">
@@ -90,7 +97,7 @@ export function initFarmersModule(ctx, pigsModule) {
 
             <div class="farmer-card-left">
               <div class="farmer-card-avatar">
-                <img src="${f.profile_picture || "/images/default-avatar.png"}" alt="Avatar">
+                <img src="${avatarSrc}" alt="Avatar" loading="lazy">
               </div>
 
               <div class="farmer-card-info">
@@ -112,7 +119,7 @@ export function initFarmersModule(ctx, pigsModule) {
             </div>
 
             <div class="text-end">
-              <!-- ✅ FIX: create attention pill element so JS can update it -->
+              <!-- ✅ keep ID; pill is properly shown/hidden by JS -->
               <span id="attn-${f._id}" class="badge rounded-pill farmer-attn-pill d-none"></span>
 
               <span class="farmer-status ${isActive ? "status-active" : "status-inactive"}">
@@ -187,83 +194,7 @@ export function initFarmersModule(ctx, pigsModule) {
     }
   }
 
-  async function getFarmerReproSummary(farmerId) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!res.ok) throw new Error("Failed to load farmer pigs");
-
-      const data = await res.json();
-      const pigs = data.pigs || [];
-
-      // Adult sows under this farmer
-      const sows = pigs.filter(p =>
-        (p.sex || "").toLowerCase() === "female" &&
-        (p.age_stage || "").toLowerCase().includes("adult")
-      );
-
-      const sowTags = sows
-        .map(s => (s.swine_id || "").toString().trim())
-        .filter(Boolean);
-
-      let pregnantCount = 0;
-      let observationCount = 0;
-
-      // Count cycles (pregnant/observation)
-      sows.forEach(sow => {
-        const cycles = Array.isArray(sow.breeding_cycles) ? sow.breeding_cycles : [];
-        cycles.forEach(c => {
-          if (!c) return;
-          if (c.is_pregnant && !c.farrowed) pregnantCount++;
-          if (c.ai_service_date && !c.is_pregnant && !c.farrowed) observationCount++;
-        });
-      });
-
-      // Born/Dead across ALL cycles (lifetime), from allSwineData
-      let totalBorn = 0;
-      let totalDead = 0;
-
-      if (Array.isArray(state.allSwineData) && state.allSwineData.length && sowTags.length) {
-        const piglets = state.allSwineData.filter(p =>
-          sowTags.includes((p.dam_id || "").toString().trim())
-        );
-
-        totalBorn = piglets.length;
-        totalDead = piglets.filter(p => ctx.isDeadStatus(p.health_status)).length;
-      }
-
-      const mortalityPct =
-        totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
-
-      const needsAttention =
-        observationCount > 0 || Number(mortalityPct) >= 10;
-
-      return {
-        activeSows: sows.length,
-        pregnant: pregnantCount,
-        observation: observationCount,
-        totalBorn,
-        totalDead,
-        mortalityPct,
-        needsAttention
-      };
-    } catch (err) {
-      console.error("getFarmerReproSummary error:", err);
-      return {
-        activeSows: 0,
-        pregnant: 0,
-        observation: 0,
-        totalBorn: 0,
-        totalDead: 0,
-        mortalityPct: "0.0",
-        needsAttention: false,
-        error: true
-      };
-    }
-  }
-
+  // ✅ Keep only ONE version (removed duplicate)
   async function getFarmerReproSummary(farmerId) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
@@ -276,22 +207,22 @@ export function initFarmersModule(ctx, pigsModule) {
       const pigs = Array.isArray(data.pigs) ? data.pigs : [];
 
       // adult sows under this farmer
-      const sows = pigs.filter(p =>
+      const sows = pigs.filter((p) =>
         (p.sex || "").toString().toLowerCase() === "female" &&
         (p.age_stage || "").toString().toLowerCase().includes("adult")
       );
 
       const sowTags = sows
-        .map(s => (s.swine_id || "").toString().trim())
+        .map((s) => (s.swine_id || "").toString().trim())
         .filter(Boolean);
 
       // Pregnancy / observation counts from sow breeding cycles
       let pregnantCount = 0;
       let observationCount = 0;
 
-      sows.forEach(sow => {
+      sows.forEach((sow) => {
         const cycles = Array.isArray(sow.breeding_cycles) ? sow.breeding_cycles : [];
-        cycles.forEach(c => {
+        cycles.forEach((c) => {
           if (!c) return;
           if (c.is_pregnant && !c.farrowed) pregnantCount++;
           if (c.ai_service_date && !c.is_pregnant && !c.farrowed) observationCount++;
@@ -303,12 +234,12 @@ export function initFarmersModule(ctx, pigsModule) {
       let totalDead = 0;
 
       if (Array.isArray(state.allSwineData) && state.allSwineData.length && sowTags.length) {
-        const piglets = state.allSwineData.filter(p =>
+        const piglets = state.allSwineData.filter((p) =>
           sowTags.includes((p.dam_id || "").toString().trim())
         );
 
         totalBorn = piglets.length;
-        totalDead = piglets.filter(p => ctx.isDeadStatus(p.health_status)).length;
+        totalDead = piglets.filter((p) => ctx.isDeadStatus(p.health_status)).length;
       }
 
       const mortalityPct =
@@ -350,23 +281,30 @@ export function initFarmersModule(ctx, pigsModule) {
 
     if (attn) {
       if (s?.error) {
+        attn.classList.remove("d-none"); // ✅ ensure visible
         attn.textContent = "Repro stats unavailable";
         attn.className = "badge rounded-pill bg-secondary-subtle text-secondary farmer-attn-pill";
       } else if (s.needsAttention) {
+        attn.classList.remove("d-none"); // ✅ ensure visible
         attn.innerHTML = `<i class="bi bi-exclamation-triangle me-1"></i> Needs attention`;
         attn.className = "badge rounded-pill bg-warning-subtle text-warning farmer-attn-pill";
       } else {
+        // ✅ hide cleanly
         attn.classList.add("d-none");
+        attn.textContent = "";
       }
     }
 
-    wrap.querySelector(".repro-grid").innerHTML = `
-      ${renderReproMetric("bi-gender-female", s.activeSows, "Active Sows")}
-      ${renderReproMetric("bi-patch-check", s.pregnant, "Pregnant")}
-      ${renderReproMetric("bi-hourglass-split", s.observation, "Observation")}
-      ${renderReproMetric("bi-collection", s.totalBorn, "Total Born")}
-      ${renderReproMetric("bi-activity", `${s.mortalityPct}%`, "Mortality")}
-    `;
+    const grid = wrap.querySelector(".repro-grid");
+    if (grid) {
+      grid.innerHTML = `
+        ${renderReproMetric("bi-gender-female", s.activeSows, "Active Sows")}
+        ${renderReproMetric("bi-patch-check", s.pregnant, "Pregnant")}
+        ${renderReproMetric("bi-hourglass-split", s.observation, "Observation")}
+        ${renderReproMetric("bi-collection", s.totalBorn, "Total Born")}
+        ${renderReproMetric("bi-activity", `${s.mortalityPct}%`, "Mortality")}
+      `;
+    }
 
     if (hint) {
       hint.textContent = s?.error
@@ -426,8 +364,8 @@ export function initFarmersModule(ctx, pigsModule) {
     ?.addEventListener("input", (e) => {
       const term = e.target.value.toLowerCase();
 
-      document.querySelectorAll(".farmer-option").forEach(opt => {
-        const name = opt.dataset.name.toLowerCase();
+      document.querySelectorAll(".farmer-option").forEach((opt) => {
+        const name = (opt.dataset.name || "").toLowerCase();
         opt.style.display = name.includes(term) ? "block" : "none";
       });
     });
@@ -439,16 +377,16 @@ export function initFarmersModule(ctx, pigsModule) {
     let filtered = [...state.allFarmers];
 
     if (state.selectedFarmerId) {
-      filtered = filtered.filter(f => f._id === state.selectedFarmerId);
+      filtered = filtered.filter((f) => f._id === state.selectedFarmerId);
     }
 
     const status = dom.filterStatus?.value || "";
     const term = dom.searchFarmer?.value.trim().toLowerCase() || "";
 
-    if (status) filtered = filtered.filter(f => f.status === status);
+    if (status) filtered = filtered.filter((f) => f.status === status);
 
     if (term) {
-      filtered = filtered.filter(f =>
+      filtered = filtered.filter((f) =>
         `${f.first_name} ${f.last_name}`.toLowerCase().includes(term)
       );
     }

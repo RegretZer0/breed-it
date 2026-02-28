@@ -1,656 +1,419 @@
 /* =========================================================
-   MODULE: REPRODUCTION MONITORING + PIG ANALYSIS MODAL THEME
-   Design goals:
-   - Neutral, non-tinted background (no green wash)
-   - Clean cards, soft depth, clearer spacing
-   - Remove blue accents, use green success accent only
-   - Cycle List -> Cycle Details replaces the content area (panel swap)
-   - No ID changes required (only adds OPTIONAL utility classes)
+   REPRODUCTION & MONITORING (Modal-centered panel)
 ========================================================= */
 
 :root{
-  /* Base */
   --repro-bg: #f6f7fb;
-  --repro-surface: rgba(255,255,255,.96);
-  --repro-text: #0f172a;
-  --repro-muted: #64748b;
+  --repro-card: #ffffff;
+  --repro-border: #e9edf3;
 
-  /* Accent */
-  --repro-accent: #198754;
-  --repro-accent-2: #146c43;
+  --repro-text: #1f2937;
+  --repro-muted: #6b7280;
 
-  /* Borders / shadows */
-  --repro-bd: rgba(15,23,42,.10);
-  --repro-bd-2: rgba(15,23,42,.06);
+  --repro-green: #1fb87a;
+  --repro-green-2: #0f7a34;
 
-  --r-xl: 22px;
-  --r-lg: 18px;
-  --r-md: 14px;
-  --r-sm: 12px;
+  --repro-radius-lg: 20px;
+  --repro-radius-md: 16px;
+  --repro-radius-sm: 14px;
 
-  --sh-xs: 0 2px 10px rgba(15,23,42,.04);
-  --sh-sm: 0 10px 24px rgba(15,23,42,.06);
-  --sh-md: 0 18px 46px rgba(15,23,42,.10);
+  --repro-shadow-sm: 0 6px 18px rgba(0,0,0,.06);
+  --repro-shadow-md: 0 12px 30px rgba(0,0,0,.08);
 
-  --ring: 0 0 0 .18rem rgba(25,135,84,.16);
+  --repro-focus: 0 0 0 .2rem rgba(31,184,122,.20);
 }
 
 /* =========================================================
-   MODULE: APP BG + CONTAINER
+   0) PAGE / SHELL
 ========================================================= */
+
 .app-root{
+  padding-top: 54px;
+  background: var(--repro-bg);
   min-height: 100vh;
-  background:
-    radial-gradient(900px 260px at 18% -10%, rgba(255,255,255,.85), transparent 62%),
-    radial-gradient(900px 260px at 92% -20%, rgba(255,255,255,.75), transparent 55%),
-    var(--repro-bg);
-}
-.repro-main.container-fluid{ max-width: 1100px; }
-
-.repro-main .repro-nav-spacer{ height: 92px; }
-@media (max-width: 576px){
-  .repro-main .repro-nav-spacer{ height: 78px; }
 }
 
-/* =========================================================
-   MODULE: BASE CARD (shared)
-========================================================= */
-.repro-card{
-  border-radius: var(--r-xl) !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  background: var(--repro-surface) !important;
-  box-shadow: var(--sh-sm) !important;
-}
-.repro-card .card-body{ padding: 18px 20px !important; }
-@media (max-width: 576px){
-  .repro-card .card-body{ padding: 14px 14px !important; }
-}
+.app-root *{ box-sizing: border-box; }
 
-.repro-section-icon{
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: rgba(25,135,84,.08);
-  border: 1px solid rgba(25,135,84,.16);
-  color: var(--repro-accent-2);
-  box-shadow: var(--sh-xs);
-}
-
-/* =========================================================
-   MODULE: PIG ANALYSIS MODAL (Header + main tabs)
-   Fix: remove blue active state, use success/green chip style
-   Targets: Bootstrap .nav-pills/.nav-tabs without relying on IDs
-========================================================= */
-.repro-modal .nav.nav-pills,
-.repro-modal .nav.nav-tabs{
-  gap: 10px;
-}
-
-.repro-modal .nav.nav-pills .nav-link,
-.repro-modal .nav.nav-tabs .nav-link{
-  border-radius: 999px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: var(--sh-xs);
-  font-weight: 900;
-  padding: 7px 12px;
-  font-size: 13px;
-  color: var(--repro-text) !important;
-}
-
-.repro-modal .nav.nav-pills .nav-link.active,
-.repro-modal .nav.nav-tabs .nav-link.active{
-  background: rgba(25,135,84,.10) !important;
-  border-color: rgba(25,135,84,.22) !important;
-  color: var(--repro-accent-2) !important;
-}
-
-.repro-modal .nav.nav-pills .nav-link:focus,
-.repro-modal .nav.nav-tabs .nav-link:focus{
-  box-shadow: var(--sh-xs), var(--ring) !important;
-}
-
-.repro-modal .badge.bg-success,
-.repro-modal .badge.text-bg-success{
-  border-radius: 999px !important;
-  font-weight: 900;
-  padding: 7px 12px;
-}
-
-/* =========================================================
-   MODULE: HERO (neutral)
-========================================================= */
-.repro-hero{
-  border-radius: var(--r-xl) !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  box-shadow: var(--sh-md) !important;
-  overflow: hidden;
-  background:
-    radial-gradient(1000px 320px at 12% -30%, rgba(25,135,84,.12), transparent 60%),
-    radial-gradient(900px 260px at 96% -40%, rgba(15,23,42,.06), transparent 55%),
-    #ffffff !important;
-  color: var(--repro-text);
-}
-.repro-hero .card-body{ padding: 22px 22px !important; }
-@media (max-width: 576px){
-  .repro-hero .card-body{ padding: 18px 16px !important; }
-}
-
-.repro-hero-icon{
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  background: rgba(25,135,84,.10);
-  border: 1px solid rgba(25,135,84,.16);
-  color: var(--repro-accent-2);
-  font-size: 20px;
-}
-.repro-title{ font-weight: 950; letter-spacing: .2px; margin: 0; }
-.repro-sub{ color: rgba(100,116,139,.95) !important; font-weight: 600; }
-
-/* Hero search */
-.repro-search .input-group{
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255,255,255,.98);
-  border: 1px solid var(--repro-bd-2);
-  box-shadow: var(--sh-xs);
-}
-.repro-search .input-group:focus-within{ box-shadow: var(--sh-xs), var(--ring); }
-.repro-search .input-group-text{ border: 0 !important; background: transparent !important; color: rgba(15,23,42,.55); }
-.repro-search input{ border: 0 !important; box-shadow: none !important; }
-#reproSearchClearBtn{
-  border: 0 !important;
-  border-left: 1px solid rgba(15,23,42,.08) !important;
-  border-radius: 0 !important;
-}
-#reproSearchClearBtn:hover{
-  background: rgba(25,135,84,.10) !important;
-  color: var(--repro-accent-2) !important;
-}
-
-/* =========================================================
-   MODULE: FILTERS (more depth)
-========================================================= */
-.repro-filter-surface{
-  border-radius: var(--r-lg);
-  border: 1px solid var(--repro-bd-2);
-  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.92));
-  padding: 16px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), var(--sh-xs);
-}
-@media (max-width: 576px){
-  .repro-filter-surface{ padding: 14px; }
-}
-
-#reproFilterForm .form-label{
-  font-weight: 900;
-  color: rgba(15,23,42,.92);
-}
-#reproFilterForm .form-select{
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.12) !important;
-  background: #fff !important;
-  box-shadow: 0 6px 14px rgba(15,23,42,.04);
-}
-#reproFilterForm .form-select:focus{
-  border-color: rgba(25,135,84,.35) !important;
-  box-shadow: var(--ring) !important;
-}
-#reproFilterForm .btn{
-  border-radius: 14px !important;
-  font-weight: 900;
-  padding: 8px 12px;
-  box-shadow: 0 6px 14px rgba(15,23,42,.06);
-}
-
-/* quick tabs */
-.repro-tabs{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.repro-tabs .nav-link{
-  border-radius: 999px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
-  background: rgba(255,255,255,.98) !important;
-  color: var(--repro-text) !important;
-  font-weight: 900;
-  padding: 7px 12px;
-  box-shadow: var(--sh-xs);
-  font-size: 13px;
-}
-.repro-tabs .nav-link.active{
-  background: rgba(25,135,84,.10) !important;
-  border-color: rgba(25,135,84,.22) !important;
-  color: var(--repro-accent-2) !important;
-}
-
-/* =========================================================
-   MODULE: LIST (1 pig per row)
-========================================================= */
-#pigCardsGrid{ row-gap: 14px !important; }
-#pigCardsGrid > [class*="col-"]{
-  flex: 0 0 100% !important;
-  max-width: 100% !important;
-}
-
-/* Pig card */
-.pig-card{
-  border-radius: 18px !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: var(--sh-sm) !important;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-}
-.pig-card:hover{
-  transform: translateY(-1px);
-  border-color: rgba(25,135,84,.18) !important;
-  box-shadow: var(--sh-md) !important;
-}
-.pig-card .card-body{ padding: 16px 16px !important; }
-@media (min-width: 992px){
-  .pig-card .card-body{ padding: 18px 18px !important; }
-}
-
-.pig-avatar{
-  width: 64px !important;
-  height: 64px !important;
-  border-radius: 16px !important;
-  border: 1px solid rgba(15,23,42,.10);
-  background: #f3f6fb;
-  box-shadow: var(--sh-xs);
-  overflow: hidden;
-}
-@media (max-width: 576px){
-  .pig-avatar{
-    width: 56px !important;
-    height: 56px !important;
-    border-radius: 14px !important;
+/* Slightly constrain wide screens so layout feels app-like */
+@media (min-width: 1200px){
+  .app-root main.container-fluid{
+    max-width: 1240px;
   }
 }
-.pig-avatar-img{ width: 100%; height: 100%; object-fit: cover; display: block; }
-.pig-avatar-fallback{ width: 100%; height: 100%; display: grid; place-items: center; font-size: 24px; color: rgba(15,23,42,.55); }
 
-.pig-title{ font-size: 16px; font-weight: 950; letter-spacing: .2px; color: var(--repro-text); }
-.pig-meta{ font-size: 12px; color: rgba(100,116,139,.95); }
+/* =========================================================
+   1) HERO (HEADER CARD)
+========================================================= */
 
-.pig-card .badge{
-  border-radius: 999px !important;
-  font-weight: 900;
-  padding: 6px 10px;
-  font-size: 11px;
+.repro-hero{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-lg);
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  box-shadow: var(--repro-shadow-sm);
 }
-.pig-card .btn.btn-success{
-  border-radius: 14px !important;
+
+.repro-title{
   font-weight: 900;
-  padding: 10px 12px !important;
-  box-shadow: 0 10px 18px rgba(25,135,84,.14);
+  letter-spacing: .02em;
+  color: var(--repro-text);
+}
+
+.repro-search{
+  width: 100%;
+  max-width: 520px;
+}
+
+.repro-hero .input-group-text{
+  border-color: var(--repro-border);
+  border-right: 0;
+  border-radius: 999px 0 0 999px;
+}
+
+.repro-hero .form-control{
+  border-color: var(--repro-border);
+  border-left: 0;
+  border-radius: 0 999px 999px 0;
+  padding: 10px 12px;
+}
+
+.repro-hero .form-control:focus{
+  border-color: rgba(31,184,122,.55);
+  box-shadow: var(--repro-focus);
+}
+
+.repro-center-wrap{
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
 }
 
 /* =========================================================
-   MODULE: MODAL (neutral)
+   2) PANELS (LIST CARD)
 ========================================================= */
-.repro-modal-dialog .modal-dialog{ margin: 0.75rem auto; }
-@media (max-width: 576px){
-  .repro-modal-dialog{ margin: 0; }
-  .repro-modal-dialog .modal-dialog{ margin: 0; height: 100%; }
-  .repro-modal-dialog .modal-content{ min-height: 100vh; border-radius: 0 !important; }
+
+.repro-panel-card{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-lg);
+  background: var(--repro-card);
+  box-shadow: var(--repro-shadow-sm);
 }
 
-.repro-modal{
-  border-radius: 22px !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  overflow: hidden;
-  box-shadow: var(--sh-md) !important;
+.repro-panel-card .card-body{ padding: 16px; }
+
+@media (min-width: 992px){
+  .repro-panel-card .card-body{ padding: 18px; }
+}
+
+/* Ensure list wrapper stacks cards vertically */
+#sowCardsWrap .repro-card{ width: 100%; }
+
+/* =========================================================
+   3) SOW CARDS
+========================================================= */
+
+.repro-card{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-md);
+  background: var(--repro-card);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.repro-card:hover{
+  transform: translateY(-2px);
+  box-shadow: var(--repro-shadow-md);
+}
+
+.repro-card-active{
+  border-color: rgba(31,184,122,.45) !important;
+  box-shadow: 0 14px 32px rgba(31,184,122,.14);
+}
+
+.repro-card .btn{ border-radius: 12px; }
+
+/* =========================================================
+   4) ICON PILLS
+========================================================= */
+
+.repro-pill{
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(31,184,122,.12);
+  color: var(--repro-green-2);
+  flex: 0 0 auto;
+}
+
+.repro-pill.lg{
+  width: 42px;
+  height: 42px;
+}
+
+/* =========================================================
+   5) SUBCARDS / TABS (INSIDE MODAL CONTENT)
+========================================================= */
+
+.repro-subcard{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-md);
+  background: var(--repro-card);
+  box-shadow: none;
+}
+
+.repro-tabs.nav-tabs{
+  border-bottom-color: var(--repro-border);
+}
+
+.repro-tabs.nav-tabs .nav-link{
+  border-radius: 14px 14px 0 0;
+  border-color: transparent;
+  color: var(--repro-muted);
+}
+
+.repro-tabs.nav-tabs .nav-link.active{
+  color: var(--repro-text);
+  border-color: var(--repro-border) var(--repro-border) transparent;
   background: #fff;
 }
 
-.repro-modal-head{
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  border-bottom: 1px solid var(--repro-bd-2) !important;
-  padding: 16px 18px;
-  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(255,255,255,.94));
-}
-@media (max-width: 576px){
-  .repro-modal-head{ padding: 14px 14px; }
-}
-
-.repro-appbar-icon{
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: rgba(25,135,84,.10);
-  border: 1px solid rgba(25,135,84,.18);
-  color: var(--repro-accent-2);
-  box-shadow: var(--sh-xs);
-  flex-shrink: 0;
-}
-
-.repro-appbar-sub{
-  color: rgba(15,23,42,.62);
-  font-weight: 700;
-  max-width: 56ch;
-}
-
-.repro-close-btn{
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
-  box-shadow: var(--sh-xs);
-  padding: 9px 11px;
-}
-.repro-close-btn:hover{
-  background: rgba(15,23,42,.04) !important;
-  border-color: rgba(15,23,42,.14) !important;
-}
-
-/* Tabsbar (inner) */
-.repro-tabsbar{
-  border-radius: 16px;
-  padding: 8px;
-  background: rgba(255,255,255,.92);
-  border: 1px solid var(--repro-bd-2);
-  box-shadow: var(--sh-xs);
-}
-.repro-detail-tabs{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-}
-.repro-detail-tabs .nav-link{
+.repro-pills .nav-link{
   border-radius: 999px !important;
-  border: 1px solid rgba(15,23,42,.10) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: var(--sh-xs);
+  padding: .45rem .90rem;
+  color: var(--repro-green-2);
+}
+
+.repro-pills .nav-link:hover{
+  background: rgba(31,184,122,.10);
+}
+
+.repro-pills .nav-link.active{
+  background: var(--repro-green) !important;
+  color: #fff !important;
+}
+
+/* =========================================================
+   6) STATS / LISTS / ALERTS
+========================================================= */
+
+.repro-stat,
+.repro-stat-danger{
+  border-radius: var(--repro-radius-md);
+  background: #fff;
+}
+
+.repro-stat{ border: 1px solid var(--repro-border); }
+.repro-stat-danger{ border: 1px solid rgba(220,53,69,.25); }
+
+.repro-list .list-group-item{ border-color: var(--repro-border); }
+
+.repro-alert-item{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(220,53,69,.18);
+  background: rgba(220,53,69,.06);
+  margin-bottom: 10px;
+}
+
+/* =========================================================
+   7) BUTTONS (THEME OVERRIDES)
+========================================================= */
+
+.btn-success{
+  background: var(--repro-green);
+  border-color: var(--repro-green);
+}
+
+.btn-success:hover{
+  background: var(--repro-green-2);
+  border-color: var(--repro-green-2);
+}
+
+.btn-outline-success{
+  border-color: rgba(31,184,122,.55);
+  color: var(--repro-green-2);
+}
+
+.btn-outline-success:hover{
+  background: rgba(31,184,122,.10);
+  border-color: rgba(31,184,122,.65);
+  color: var(--repro-green-2);
+}
+
+.btn-sm{
+  border-radius: 12px;
+  padding: .42rem .75rem;
+}
+
+/* =========================================================
+   8) MODAL THEME (CENTER PANEL)
+   JS creates: #reproSowModal + #reproSowModalMount
+========================================================= */
+
+/* Slight blur + darker backdrop (modern app feel) */
+.modal-backdrop.show{
+  opacity: .55;
+}
+
+/* Optional blur (works on modern browsers) */
+@supports ((-webkit-backdrop-filter: blur(6px)) or (backdrop-filter: blur(6px))){
+  .modal-backdrop.show{
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+/* Round the modal + match theme */
+#reproSowModal .modal-content{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-lg);
+  box-shadow: var(--repro-shadow-md);
+}
+
+#reproSowModal .modal-header{
+  background: #fff;
+}
+
+#reproSowModal .modal-body{
+  background: var(--repro-bg);
+}
+
+/* Make modal width feel like a centered “panel” */
+@media (min-width: 992px){
+  #reproSowModal .modal-dialog{
+    max-width: 1100px;
+  }
+}
+
+/* On small screens, make it near-full width */
+@media (max-width: 575.98px){
+  #reproSowModal .modal-dialog{
+    margin: .75rem;
+  }
+}
+
+/* =========================================================
+   9) SMALL SCREEN POLISH
+========================================================= */
+
+@media (max-width: 575.98px){
+  .repro-title{ font-size: 20px; }
+  .repro-search{ max-width: 100%; }
+  .repro-panel-card .card-body{ padding: 14px; }
+  .repro-hero{ border-radius: 18px; }
+}
+
+/* =========================================================
+   10) ACCESSIBILITY / FOCUS
+========================================================= */
+
+button:focus,
+.btn:focus,
+.form-control:focus,
+.form-select:focus{
+  box-shadow: var(--repro-focus);
+}
+
+/* =========================================================
+   CYCLE DETAIL TABS — STRONG ACTIVE STATE
+========================================================= */
+
+.repro-tabs.nav-tabs{
+  gap: 8px;
+  border-bottom: 1px solid var(--repro-border);
+}
+
+.repro-tabs.nav-tabs .nav-link{
+  border: 1px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-radius: 14px 14px 0 0;
+  padding: .55rem .9rem;
+  color: var(--repro-muted);
+  font-weight: 600;
+  background: transparent;
+  transition: all .15s ease;
+}
+
+.repro-tabs.nav-tabs .nav-link:hover{
+  background: rgba(31,184,122,.08);
+  color: var(--repro-text);
+}
+
+.repro-tabs.nav-tabs .nav-link.active{
+  color: var(--repro-green-2);
   font-weight: 900;
-  padding: 7px 12px;
-  font-size: 13px;
-  color: var(--repro-text) !important;
+  background: #fff;
+  border-color: var(--repro-border);
+  border-bottom-color: var(--repro-green);
+  box-shadow: 0 10px 22px rgba(31,184,122,.10);
+}
+
+/* =========================================================
+   CYCLE FILTER — MOBILE FRIENDLY
+========================================================= */
+
+.repro-cycle-filter{
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.repro-cycle-filter .btn{
   white-space: nowrap;
 }
-.repro-detail-tabs .nav-link.active{
-  background: rgba(25,135,84,.10) !important;
-  border-color: rgba(25,135,84,.22) !important;
-  color: var(--repro-accent-2) !important;
-}
 
-/* Body */
-.repro-modal-body{
-  background: #fbfcfe;
-  padding: 16px 18px 18px;
-}
-@media (max-width: 576px){
-  .repro-modal-body{ padding: 14px 14px 16px; }
-}
+/* =========================================================
+   MOBILE: make the modal usable (full-height + better spacing)
+========================================================= */
+@media (max-width: 575.98px){
+  #reproSowModal .modal-dialog{
+    margin: 0 !important;
+    height: 100vh;
+    max-width: 100%;
+  }
 
-/* Footer */
-.repro-modal-foot{
-  position: sticky;
-  bottom: 0;
-  z-index: 4;
-  border-top: 1px solid var(--repro-bd-2) !important;
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(6px);
-  padding: 12px 18px;
-}
-@media (max-width: 576px){
-  .repro-modal-foot{ padding: 12px 14px; }
-}
-.repro-modal-foot .btn{
-  border-radius: 14px !important;
-  font-weight: 900;
-  padding: 8px 12px;
-}
+  #reproSowModal .modal-content{
+    height: 100vh;
+    border-radius: 0 !important;
+  }
 
-/* Inner sheets */
-.repro-sheet{
-  border-radius: 18px !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  box-shadow: var(--sh-sm) !important;
-  background: #fff !important;
-}
-.repro-sheet .card-body{ padding: 16px !important; }
-@media (min-width: 992px){
-  .repro-sheet .card-body{ padding: 18px !important; }
-}
+  #reproSowModal .modal-header{
+    padding: 12px 14px;
+    gap: 10px;
+  }
 
-/* Profile avatar */
-.repro-profile-avatar{
-  width: 52px !important;
-  height: 52px !important;
-  border-radius: 14px !important;
-  overflow: hidden;
-  border: 1px solid rgba(15,23,42,.10);
-  background: #f3f6fb;
-}
-@media (max-width: 576px){
-  .repro-profile-avatar{ width: 46px !important; height: 46px !important; border-radius: 12px !important; }
-}
-.repro-profile-avatar-img{ width: 100%; height: 100%; object-fit: cover; display: block; }
+  #reproSowModal .modal-body{
+    padding: 12px 12px 16px;
+  }
 
-.repro-profile-name{
-  font-size: 16px;
-  font-weight: 950;
-  letter-spacing: .2px;
-  color: var(--repro-text);
-}
-
-#profileHealth{
-  font-weight: 900;
-  padding: 7px 10px;
-  border-radius: 999px !important;
-  border: 1px solid rgba(15,23,42,.10);
-  box-shadow: var(--sh-xs);
-  background: rgba(25,135,84,.10);
-  color: var(--repro-accent-2);
-}
-
-/* Metric tiles */
-.repro-metric-tile{
-  border-radius: 16px;
-  border: 1px solid var(--repro-bd-2);
-  background: rgba(255,255,255,.98);
-  box-shadow: var(--sh-xs);
-  padding: 12px;
-  min-height: 74px;
-}
-.repro-metric-top{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  color: rgba(15,23,42,.70);
-  font-weight: 800;
-  font-size: 12px;
-}
-.repro-metric-value{ margin-top: 6px; font-weight: 950; color: var(--repro-text); }
-
-/* Placeholder */
-.repro-placeholder{
-  border-radius: 16px;
-  border: 1px dashed rgba(15,23,42,.22);
-  background: rgba(255,255,255,.90);
-  padding: 14px 14px;
-}
-
-/* Soft panel */
-.repro-soft-panel{
-  border-radius: 16px !important;
-  border: 1px solid rgba(15,23,42,.08) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+  /* Reduce inner card padding on small screens */
+  .repro-subcard .card-body{
+    padding: 12px !important;
+  }
 }
 
 /* =========================================================
-   MODULE: CYCLE FILTER CONTROLS (depth)
+   Cycle tabs: horizontal scroll instead of wrapping ugly
 ========================================================= */
-.repro-cycle-controls .form-select{
-  min-width: 260px;
-  border-radius: 14px !important;
-  border: 1px solid rgba(15,23,42,.12) !important;
-  background: #fff !important;
-  box-shadow: 0 10px 18px rgba(15,23,42,.06);
+.repro-tabs.nav-tabs{
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
-@media (max-width: 576px){
-  .repro-cycle-controls{ width: 100%; justify-content: flex-start; }
-  .repro-cycle-controls .form-select{ min-width: 100%; }
+
+.repro-tabs.nav-tabs .nav-link{
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 /* =========================================================
-   MODULE: CYCLE CARDS (smaller + spacing)
+   Mini stat blocks used in Overview measurements
 ========================================================= */
-.ai-cycle-card{
-  border-radius: 16px !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: var(--sh-sm) !important;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-}
-.ai-cycle-card:hover{
-  transform: translateY(-1px);
-  border-color: rgba(25,135,84,.18) !important;
-  box-shadow: var(--sh-md) !important;
-}
-.ai-cycle-card .card-body{ padding: 12px 12px !important; }
-@media (min-width: 992px){
-  .ai-cycle-card .card-body{ padding: 14px 14px !important; }
-}
-.ai-cycle-card .btn.btn-success{
-  border-radius: 14px !important;
-  font-weight: 900;
-  padding: 8px 12px !important;
-  box-shadow: 0 10px 18px rgba(25,135,84,.14);
-}
-
-/* Better internal spacing for cycle summary row */
-.repro-cycle-summary{
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.repro-cycle-summary .meta{
-  color: rgba(100,116,139,.95);
-  font-size: 13px;
-  line-height: 1.35;
-}
-.repro-cycle-actions{
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 10px;
-}
-
-/* =========================================================
-   MODULE: PANEL SWAP (Cycle List -> Cycle Details)
-   Add these OPTIONAL classes to your wrappers:
-   - .repro-swap-wrap
-   - .repro-swap-panel
-   - .is-hidden
-========================================================= */
-.repro-swap-wrap{ display: block; }
-.repro-swap-panel{ display: block; }
-.repro-swap-panel.is-hidden{ display: none !important; }
-
-/* =========================================================
-   MODULE: CYCLE DETAILS CONTENT (fix jumbled layout)
-========================================================= */
-.repro-kv-grid{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-@media (max-width: 576px){
-  .repro-kv-grid{ grid-template-columns: 1fr; }
-}
-.repro-kv{
-  border: 1px solid var(--repro-bd-2);
+.repro-mini-stat{
+  border: 1px solid var(--repro-border);
   border-radius: 14px;
-  background: rgba(255,255,255,.98);
-  box-shadow: var(--sh-xs);
-  padding: 12px;
-}
-.repro-kv-label{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(15,23,42,.62);
-}
-.repro-kv-value{
-  margin-top: 6px;
-  font-weight: 950;
-  color: var(--repro-text);
-}
-
-/* =========================================================
-   MODULE: PIGLET CARDS (Growth + Health)
-========================================================= */
-.piglet-card{
-  border-radius: 18px !important;
-  border: 1px solid var(--repro-bd-2) !important;
-  background: rgba(255,255,255,.98) !important;
-  box-shadow: var(--sh-sm) !important;
-}
-.piglet-card .card-body{ padding: 14px !important; }
-
-.piglet-avatar{
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(15,23,42,.10);
-  background: #f3f6fb;
-  box-shadow: var(--sh-xs);
-}
-.piglet-avatar-img{ width: 100%; height: 100%; object-fit: cover; display:block; }
-.piglet-avatar-fallback{ width: 100%; height: 100%; display:grid; place-items:center; color: rgba(15,23,42,.55); font-size: 22px; }
-
-.piglet-title{ font-weight: 950; color: var(--repro-text); letter-spacing: .2px; }
-.piglet-sub{ color: rgba(100,116,139,.95); }
-
-.piglet-stage-pill{
-  border: 1px solid rgba(15,23,42,.08) !important;
-  color: rgba(15,23,42,.70) !important;
-  background: rgba(255,255,255,.92) !important;
-  font-weight: 900;
-}
-
-.piglet-metrics{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-@media (max-width: 576px){
-  .piglet-metrics{ grid-template-columns: 1fr; }
-}
-.piglet-metric{
-  border: 1px solid var(--repro-bd-2);
-  border-radius: 14px;
-  padding: 10px;
   background: #fff;
-  box-shadow: var(--sh-xs);
+  padding: 10px 12px;
 }
-.piglet-metric .k{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(15,23,42,.62);
-}
-.piglet-metric .v{
-  margin-top: 6px;
-  font-weight: 950;
-  color: var(--repro-text);
-}
-
-/* =========================================================
-   MODULE: QUALITY OF LIFE
-========================================================= */
-.min-w-0{ min-width: 0; }
-.btn:focus,
-.form-select:focus,
-.form-control:focus{ outline: none !important; }
-.modal-content{ border: 0; }

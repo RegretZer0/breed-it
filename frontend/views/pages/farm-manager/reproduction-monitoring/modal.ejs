@@ -1,11 +1,11 @@
-<div class="modal fade" id="farmerModal" tabindex="-1">
+<div class="modal fade" id="farmerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content profile-modal border-0">
 
       <!-- HEADER -->
       <div class="modal-header border-0 pb-0">
         <h5 class="modal-title fw-semibold">Farmer Profile</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <!-- BODY -->
@@ -20,15 +20,18 @@
               <!-- Left: Avatar + name -->
               <div class="d-flex align-items-center gap-3">
                 <div class="profile-avatar-lg">
-                  <img id="profileAvatar"
-                       src="/images/default-avatar.png"
-                       alt="Profile"
-                       loading="lazy">
+                  <img
+                    id="profileAvatar"
+                    src="/images/default-avatar.png"
+                    alt="Profile"
+                    loading="lazy"
+                    referrerpolicy="no-referrer"
+                  >
                 </div>
 
-                <div>
-                  <h4 id="profileFarmerName" class="mb-1">—</h4>
-                  <div class="text-muted small" id="profileFarmerContact">—</div>
+                <div class="min-w-0">
+                  <h4 id="profileFarmerName" class="mb-1 text-truncate">—</h4>
+                  <div class="text-muted small text-truncate" id="profileFarmerContact">—</div>
                 </div>
               </div>
 
@@ -91,23 +94,29 @@
 
         <!-- TOP TABS (Scrollable on mobile) -->
         <div class="tabs-scroll mb-3">
-          <ul class="nav nav-pills profile-tabs flex-nowrap" id="farmerProfileTabs">
-            <li class="nav-item">
-              <button class="nav-link active" data-target="farmerOverviewTab" type="button">Overview</button>
+          <ul class="nav nav-pills profile-tabs flex-nowrap" id="farmerProfileTabs" role="tablist" aria-label="Farmer profile tabs">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" data-target="farmerOverviewTab" type="button" role="tab" aria-controls="farmerOverviewTab" aria-selected="true">
+                Overview
+              </button>
             </li>
 
-            <li class="nav-item">
-              <button class="nav-link" data-target="farmerPigsTab" type="button">Pigs</button>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-target="farmerPigsTab" type="button" role="tab" aria-controls="farmerPigsTab" aria-selected="false">
+                Pigs
+              </button>
             </li>
 
-            <li class="nav-item">
-              <button class="nav-link" data-target="breedingPerformanceTab" type="button">Breeding Performance</button>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" data-target="breedingPerformanceTab" type="button" role="tab" aria-controls="breedingPerformanceTab" aria-selected="false">
+                Breeding Performance
+              </button>
             </li>
           </ul>
         </div>
 
         <!-- ================= OVERVIEW TAB ================= -->
-        <div id="farmerOverviewTab" class="farmer-tab">
+        <div id="farmerOverviewTab" class="farmer-tab" role="tabpanel">
 
           <div class="row g-3">
             <div class="col-12 col-lg-6">
@@ -156,28 +165,28 @@
         </div>
 
         <!-- ================= PIGS TAB ================= -->
-        <div id="farmerPigsTab" class="farmer-tab d-none">
+        <div id="farmerPigsTab" class="farmer-tab d-none" role="tabpanel">
 
           <!-- Category tabs (scrollable on mobile) -->
           <div class="tabs-scroll mb-3">
-            <ul class="nav nav-pills flex-nowrap" id="farmerPigCategoryTabs">
-              <li class="nav-item"><button class="nav-link active" data-type="all" type="button">All</button></li>
-              <li class="nav-item"><button class="nav-link" data-type="piglet" type="button">Piglets</button></li>
-              <li class="nav-item"><button class="nav-link" data-type="sow" type="button">Sows</button></li>
-              <li class="nav-item"><button class="nav-link" data-type="boar" type="button">Boars</button></li>
+            <ul class="nav nav-pills flex-nowrap" id="farmerPigCategoryTabs" role="tablist" aria-label="Pig category tabs">
+              <li class="nav-item" role="presentation"><button class="nav-link active" data-type="all" type="button">All</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-type="piglet" type="button">Piglets</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-type="sow" type="button">Sows</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-type="boar" type="button">Boars</button></li>
             </ul>
           </div>
 
           <!-- Filters: responsive -->
           <div id="pigFilterSection">
-            <form id="farmerPigFilters" class="row g-2 align-items-end mb-3">
+            <form id="farmerPigFilters" class="row g-2 align-items-end mb-3" autocomplete="off">
               <div class="col-12 col-md-6 col-lg-5">
-                <label class="form-label small text-muted mb-1">Search Tag</label>
+                <label class="form-label small text-muted mb-1" for="pigSearchTag">Search Tag</label>
                 <input type="text" id="pigSearchTag" class="form-control form-control-sm" placeholder="Search tag">
               </div>
 
               <div class="col-12 col-md-6 col-lg-3">
-                <label class="form-label small text-muted mb-1">Status</label>
+                <label class="form-label small text-muted mb-1" for="pigStatusFilter">Status</label>
                 <select id="pigStatusFilter" class="form-select form-select-sm">
                   <option value="">Status</option>
                   <option value="Healthy">Healthy</option>
@@ -205,7 +214,9 @@
           <!-- Pig analysis panel (unchanged IDs) -->
           <div id="pigAnalysisPanel" class="d-none">
 
-            <button class="btn btn-sm btn-outline-secondary mb-3 d-inline-flex align-items-center gap-2"
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary mb-3 d-inline-flex align-items-center gap-2"
               id="backToPigList">
               <i class="bi bi-arrow-left"></i>
               <span>Back to Pig List</span>
@@ -219,11 +230,11 @@
             </div>
 
             <div class="tabs-scroll mb-3">
-              <ul class="nav nav-pills flex-nowrap" id="pigAnalysisTabs">
+              <ul class="nav nav-pills flex-nowrap" id="pigAnalysisTabs" role="tablist" aria-label="Pig analysis tabs">
                 <li class="nav-item"><button class="nav-link active" data-target="pigProfileTab" type="button">Profile</button></li>
                 <li class="nav-item"><button class="nav-link" data-target="pigBreedingTab" type="button">Artificial Insemination Record</button></li>
                 <li class="nav-item"><button class="nav-link" data-target="pigPerformanceTab" type="button">Piglets Growth Records</button></li>
-                <li class="nav-item"><button class="nav-link" data-target="pigHealthTab" type="button">Health & Defects</button></li>
+                <li class="nav-item"><button class="nav-link" data-target="pigHealthTab" type="button">Health &amp; Defects</button></li>
                 <li class="nav-item"><button class="nav-link" data-target="pigSelectionTab" type="button">Selection Status</button></li>
               </ul>
             </div>
@@ -239,22 +250,16 @@
         </div>
 
         <!-- ================= BREEDING PERFORMANCE TAB ================= -->
-        <div id="breedingPerformanceTab" class="farmer-tab d-none">
+        <div id="breedingPerformanceTab" class="farmer-tab d-none" role="tabpanel">
 
           <div id="breedingKpiSection" class="row g-2 g-md-3 mb-3"></div>
 
+          <!-- LIST (SOWS) -->
           <div id="breedingSowList" class="d-flex flex-column gap-3"></div>
 
-          <div id="breedingCyclePanel" class="mt-3 d-none">
-            <div class="card shadow-sm border-0 mb-3">
-              <div class="card-body">
-                <h6 class="mb-3">Mortality Rate per Cycle</h6>
-                <canvas id="breedingMortalityChart" height="100"></canvas>
-              </div>
-            </div>
-
-            <div id="breedingCycleCards" class="d-flex flex-column gap-3"></div>
-          </div>
+          <!-- DETAIL PANEL (SOW -> CYCLES + CYCLE DETAIL injected here by JS) -->
+          <!-- ✅ UPDATED: keep this as the single host panel (JS uses #breedingCyclePanel) -->
+          <div id="breedingCyclePanel" class="mt-3 d-none"></div>
 
         </div>
 

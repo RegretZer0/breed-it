@@ -188,35 +188,51 @@ export function initPigsModule(ctx, breedingModule) {
     let html = "";
 
     pageItems.forEach(p => {
-      const statusClass =
-        p.health_status === "Healthy"
-          ? "bg-success-subtle text-success"
-          : "bg-secondary-subtle text-secondary";
+      const health = (p.health_status || "").toString().trim();
+
+      // Better badge colors (still compatible w/ your existing filter values)
+      let statusClass = "bg-secondary-subtle text-secondary";
+      if (/healthy/i.test(health)) statusClass = "bg-success-subtle text-success";
+      else if (/sick/i.test(health)) statusClass = "bg-warning-subtle text-warning";
+      else if (/deceased|dead|died/i.test(health)) statusClass = "bg-danger-subtle text-danger";
+
+      const tag = p.swine_id || "—";
+      const breed = p.breed || "Native";
+      const sex = p.sex || "—";
+      const stage = p.age_stage || "";
 
       html += `
-        <div class="linked-pig-item d-flex justify-content-between align-items-center">
-          <div>
-            <div class="pig-name">${p.swine_id}</div>
-            <div class="pig-meta">
-              ${p.breed || "Native"} · ${p.sex || "—"}
-            </div>
-          </div>
+        <div class="linked-pig-item">
 
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge ${statusClass}">
-              ${p.health_status || "Active"}
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div class="min-w-0">
+              <div class="pig-name text-truncate">${tag}</div>
+              <div class="pig-meta text-muted">
+                ${breed} · ${sex}${stage ? ` · ${stage}` : ""}
+              </div>
+            </div>
+
+            <span class="badge ${statusClass} flex-shrink-0">
+              ${health || "Active"}
             </span>
-
-            <div class="d-flex gap-2 linked-actions">
-              <button class="btn btn-sm btn-outline-primary view-pig-btn" data-id="${p._id}">
-                View
-              </button>
-
-              <button class="btn btn-sm btn-success analyze-pig-btn" data-id="${p._id}">
-                Analyze
-              </button>
-            </div>
           </div>
+
+          <div class="d-flex flex-wrap justify-content-end gap-2 mt-3 linked-actions">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary view-pig-btn"
+              data-id="${p._id}">
+              View
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-sm btn-success analyze-pig-btn"
+              data-id="${p._id}">
+              Analyze
+            </button>
+          </div>
+
         </div>
       `;
     });
@@ -229,13 +245,17 @@ export function initPigsModule(ctx, breedingModule) {
     const wrap = document.getElementById("linkedPigList");
     if (!wrap) return;
 
+    // ✅ remove any old pagination before adding a new one
+    wrap.querySelector("#pigPagination")?.remove();
+
     const pagination = document.createElement("div");
+    pagination.id = "pigPagination";
     pagination.className = "d-flex justify-content-between align-items-center mt-3";
 
     pagination.innerHTML = `
-      <button class="btn btn-sm btn-outline-secondary" id="pigPrevBtn">Prev</button>
+      <button class="btn btn-sm btn-outline-secondary" id="pigPrevBtn" type="button">Prev</button>
       <span class="small text-muted">Page ${state.pigPage} of ${totalPages}</span>
-      <button class="btn btn-sm btn-outline-secondary" id="pigNextBtn">Next</button>
+      <button class="btn btn-sm btn-outline-secondary" id="pigNextBtn" type="button">Next</button>
     `;
 
     wrap.appendChild(pagination);
@@ -246,19 +266,20 @@ export function initPigsModule(ctx, breedingModule) {
     if (prevBtn) prevBtn.disabled = state.pigPage <= 1;
     if (nextBtn) nextBtn.disabled = state.pigPage >= totalPages;
 
+    // ✅ use { once:true } to avoid accidental stacking if DOM is re-used
     prevBtn?.addEventListener("click", () => {
       if (state.pigPage > 1) {
         state.pigPage--;
         renderFarmerPigs();
       }
-    });
+    }, { once: true });
 
     nextBtn?.addEventListener("click", () => {
       if (state.pigPage < totalPages) {
         state.pigPage++;
         renderFarmerPigs();
       }
-    });
+    }, { once: true });
   }
 
   /* ================= APPLY PIG FILTERS ================= */
@@ -657,7 +678,51 @@ export function initPigsModule(ctx, breedingModule) {
 
     const sowBtn = e.target.closest(".view-sow-cycles-btn");
     if (sowBtn) {
-      breedingModule.openSowCycles(sowBtn.dataset.id);
+      breedingModule?.openSowCycles?.(sowBtn.dataset.id);
+      return;
+    }
+
+    // ✅ Cycle card "View" button (Breeding Performance cycle card)
+    const cycleBtn =
+      e.target.closest(".view-cycle-btn") ||
+      e.target.closest(".cycle-view-btn") ||
+      e.target.closest("[data-cycle-id]");
+
+    if (cycleBtn) {
+      const cycleId = cycleBtn.dataset.cycleId || cycleBtn.getAttribute("data-cycle-id");
+      const sowId = cycleBtn.dataset.sowId || cycleBtn.getAttribute("data-sow-id");
+      const farmerId = cycleBtn.dataset.farmerId || cycleBtn.getAttribute("data-farmer-id");
+
+      if (!cycleId) {
+        console.warn("Cycle View clicked but missing data-cycle-id");
+        return;
+      }
+
+      // ✅ Your real handler name (must be returned from initBreedingModule)
+      if (breedingModule && typeof breedingModule.openCycleDetail === "function") {
+        breedingModule.openCycleDetail(cycleId, sowId, farmerId);
+        return;
+      }
+
+      // fallbacks
+      if (breedingModule && typeof breedingModule.openCycleDetails === "function") {
+        breedingModule.openCycleDetails({ cycleId, sowId, farmerId });
+        return;
+      }
+      if (breedingModule && typeof breedingModule.openBreedingCycle === "function") {
+        breedingModule.openBreedingCycle(cycleId, sowId);
+        return;
+      }
+      if (breedingModule && typeof breedingModule.openCycle === "function") {
+        breedingModule.openCycle(cycleId, sowId);
+        return;
+      }
+      if (breedingModule && typeof breedingModule.viewCycle === "function") {
+        breedingModule.viewCycle(cycleId, sowId);
+        return;
+      }
+
+      console.warn("No breeding cycle handler found on breedingModule. Ensure openCycleDetail is returned from initBreedingModule().");
       return;
     }
 
@@ -697,7 +762,7 @@ export function initPigsModule(ctx, breedingModule) {
         document.getElementById(target)?.classList.remove("d-none");
 
         if (target === "breedingPerformanceTab") {
-          breedingModule.renderBreedingPerformance();
+          breedingModule?.renderBreedingPerformance?.();
         }
       });
     });
@@ -726,8 +791,10 @@ export function initPigsModule(ctx, breedingModule) {
 
   document.getElementById("resetPigFilters")
     ?.addEventListener("click", () => {
-      document.getElementById("pigSearchTag").value = "";
-      document.getElementById("pigStatusFilter").value = "";
+      const tagEl = document.getElementById("pigSearchTag");
+      const statusEl = document.getElementById("pigStatusFilter");
+      if (tagEl) tagEl.value = "";
+      if (statusEl) statusEl.value = "";
 
       state.activePigCategory = "all";
       state.pigPage = 1;

@@ -20,7 +20,7 @@ router.post(
       const { heatReportId, aiDate } = req.body;
 
       const report = await HeatReport.findById(heatReportId);
-      if (!report || report.status !== "accepted") {
+      if (!report || report.status !== "approved") {
         return res.status(400).json({ success: false, message: "Invalid or unapproved heat report" });
       }
 

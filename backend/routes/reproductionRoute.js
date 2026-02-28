@@ -400,18 +400,31 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
           ? c.performance_records[c.performance_records.length - 1]
           : null;
 
+      const canPromote = latestPerf ? !!latestPerf.passed_selection : false;
+
       return {
         id: c._id,
         swine_tag: c.swine_id,
         farmer_id: c.farmer_id,
         farmer_name: formatName(c.farmer_id) || "Unknown Farmer",
         current_stage: c.current_status,
-        can_promote: latestPerf ? latestPerf.passed_selection : false,
-        recommendation: latestPerf && latestPerf.passed_selection ? "Retain for Breeding" : "Mark for Sale"
+        can_promote: canPromote,
+        recommendation: canPromote ? "Retain for Breeding" : "Mark for Sale"
       };
     });
 
-    res.json({ success: true, data: formatted });
+    // Summary counts for stats card
+    const summary = formatted.reduce(
+      (acc, row) => {
+        acc.total += 1;
+        if (row.recommendation === "Retain for Breeding") acc.retain += 1;
+        else acc.sell += 1;
+        return acc;
+      },
+      { total: 0, retain: 0, sell: 0 }
+    );
+
+    res.json({ success: true, data: formatted, summary });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

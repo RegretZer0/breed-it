@@ -346,7 +346,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
         report.status = "under_observation";
         report.ai_confirmed_at = now;
         const heatCheckDate = new Date();
-        heatCheckDate.setDate(heatCheckDate.getDate() + 21);    
+        heatCheckDate.setDate(heatCheckDate.getDate() + 23);    
         report.next_heat_check = heatCheckDate;
         await report.save({ session });
 
@@ -392,8 +392,9 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
         if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
         const confirmationDate = new Date(); 
-        const farrowingDate = new Date(confirmationDate);
-        farrowingDate.setDate(confirmationDate.getDate() + 10);
+        const baseDate = report.ai_confirmed_at ? new Date(report.ai_confirmed_at) : confirmationDate;
+        const farrowingDate = new Date(baseDate);
+        farrowingDate.setDate(confirmationDate.getDate() + 144);
 
         report.status = "pregnant";
         report.expected_farrowing = farrowingDate;
@@ -511,7 +512,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
                 dam_id: sow.swine_id, 
                 birth_cycle_number: currentParity,
                 current_status: "Monitoring (Day 1-30)",
-                age_stage: "Monitoring (Day 1-30)",
+                age_stage: "piglet",
                 performance_records: [{
                     stage: "Registration",
                     record_date: farrowDate,
