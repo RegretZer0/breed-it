@@ -14,15 +14,17 @@ export function createReproductionStore({ user, token, baseUrl }) {
     rawMonitoringData: [],
 
     // selection summary (for stats card)
-    selectionSummary: { total: 0, retain: 0, sell: 0 },
+    selectionSummary: { total: 0, retain: 0, sell: 0, pending: 0 },
 
     // derived
-    sows: [], // filtered female breeders
-    sowMap: new Map(), // key -> sow (keys include swine_id and swine_tag)
-    pigletsBySow: new Map(), // key -> piglets[] (keys include dam_id and dam_tag)
-    cyclesBySow: new Map(), // key -> cycles[] (keys include sow_code and sow_tag)
+    sows: [],
+    sowMap: new Map(),
+    pigletsBySow: new Map(),
+    cyclesBySow: new Map(),
 
-    // load flags
+    // ✅ NEW: tag/swine_id -> Mongo _id (ObjectId string)
+    swineMongoIdByTag: new Map(),
+
     loaded: {
       monitoring: false,
       ai: false,
@@ -33,20 +35,15 @@ export function createReproductionStore({ user, token, baseUrl }) {
   };
 
   const sortByDateDesc = (a, b) => new Date(b || 0) - new Date(a || 0);
-
-  // Normalize map keys to strings (ObjectId -> string, etc.)
   const toKey = (v) => (v == null ? "" : String(v).trim());
 
   function getSowId(s) {
-    // main “display id”
     return toKey(s?.swine_id || s?.swine_tag || s?.tag || "");
   }
-
   function getSowTag(s) {
     return toKey(s?.swine_tag || s?.tag || "");
   }
 
-  // Try all likely dam identifiers (prefer tag-like)
   function getPigletDamKeyCandidates(p) {
     const candidates = [
       p?.dam_tag,
@@ -54,7 +51,6 @@ export function createReproductionStore({ user, token, baseUrl }) {
       p?.sow_tag,
       p?.dam_swine_tag,
       p?.mother_swine_tag,
-
       p?.dam_id,
       p?.mother_id,
       p?.sow_id,
@@ -64,7 +60,6 @@ export function createReproductionStore({ user, token, baseUrl }) {
       .map(toKey)
       .filter(Boolean);
 
-    // unique preserve order
     const seen = new Set();
     return candidates.filter((x) => (seen.has(x) ? false : (seen.add(x), true)));
   }
@@ -77,13 +72,11 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return toKey(s?.sex).toLowerCase() === "female" && isBreederStage;
   }
 
-  // Build a map so any sow id/tag can resolve to the canonical sow
   function buildSowAliasMap(sows) {
     const map = new Map();
     for (const s of sows) {
       const id = getSowId(s);
       const tag = getSowTag(s);
-
       if (id) map.set(id, s);
       if (tag) map.set(tag, s);
     }
@@ -97,24 +90,136 @@ export function createReproductionStore({ user, token, baseUrl }) {
     map.get(k).push(item);
   }
 
+  // ✅ NEW: prevents duplicate cycles per sow key
+  function addToGroupMapUnique(map, key, item, getIdFn) {
+    const k = toKey(key);
+    if (!k) return;
+    if (!map.has(k)) map.set(k, []);
+    const list = map.get(k);
+
+    if (typeof getIdFn === "function") {
+      const id = String(getIdFn(item) ?? "");
+      if (id) {
+        const exists = list.some((x) => String(getIdFn(x) ?? "") === id);
+        if (exists) return;
+      }
+    }
+    list.push(item);
+  }
+
+  // ✅ NEW: build quick map swine_id/tag -> Mongo _id
+  function rebuildSwineMongoMap() {
+    const m = new Map();
+    for (const s of store.allSwineData || []) {
+      const mongoId = toKey(s?._id);
+      if (!mongoId) continue;
+
+      const swineId = toKey(s?.swine_id);
+      const swineTag = toKey(s?.swine_tag);
+      const tag = toKey(s?.tag);
+
+      if (swineId) m.set(swineId, mongoId);
+      if (swineTag) m.set(swineTag, mongoId);
+      if (tag) m.set(tag, mongoId);
+    }
+    store.swineMongoIdByTag = m;
+  }
+
+  // ✅ NEW: public helper used by views when selection records have no Mongo _id
+  function getMongoIdForSwineTag(swineTagOrId) {
+    const k = toKey(swineTagOrId);
+    if (!k) return "";
+    return store.swineMongoIdByTag.get(k) || "";
+  }
+
+  // --------------------------
+  // Cycle field normalization (IMPORTANT)
+  // --------------------------
+  function pickFirst(obj, keys) {
+    for (const k of keys) {
+      const v = obj?.[k];
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s && s !== "null" && s !== "undefined") return v;
+    }
+    return null;
+  }
+
+  function normalizeCycleStatus(r) {
+    const raw = pickFirst(r, ["cycle_status", "status", "pregnancy_status", "result", "ai_result"]) || "Recorded";
+    const s = String(raw).trim();
+    if (!s) return "Recorded";
+    return s;
+  }
+
+  function normalizeCycleDate(r) {
+    const d = pickFirst(r, ["insemination_date", "ai_service_date", "service_date", "date", "createdAt", "updatedAt"]);
+    return d || null;
+  }
+
+  function normalizeBoarCode(r) {
+    const b = pickFirst(r, [
+      "male_swine_tag",
+      "boar_tag",
+      "male_swine_code",
+      "boar_code",
+      "male_swine_id",
+      "boar_id",
+      "boar",
+    ]);
+    return toKey(b) || "N/A";
+  }
+
+  function normalizeSowCode(r) {
+    const s = pickFirst(r, ["swine_code", "sow_tag", "sow_code", "swine_tag", "swine_id", "sow_id"]);
+    return toKey(s) || "";
+  }
+
+  function normalizeCycleId(r, sowCode, dateVal) {
+    const id = pickFirst(r, ["_id", "id", "record_id", "ai_record_id"]);
+    if (id) return toKey(id);
+    const stamp = dateVal ? new Date(dateVal).getTime() : Date.now();
+    return `${sowCode || "SOW"}-${stamp}`;
+  }
+
+  function computeSelectionSummary(list) {
+    const sum = { total: list.length, retain: 0, sell: 0, pending: 0 };
+    for (const row of list) {
+      const rec = String(row?.recommendation || row?.decision || row?.status || "").toLowerCase();
+      if (!rec) continue;
+
+      if (rec.includes("retain") || rec.includes("breeding") || rec.includes("keep")) sum.retain += 1;
+      else if (rec.includes("sell") || rec.includes("sale") || rec.includes("market")) sum.sell += 1;
+      else if (rec.includes("pending")) sum.pending += 1;
+    }
+    return sum;
+  }
+
+  // ✅ NEW: offspring detection (matches your OLD JS behavior)
+  // We consider a swine an "offspring record" if it has any dam/mother fields populated.
+  // This prevents "retain -> age_stage adult" from removing it from the sow's offspring list.
+  function isOffspringRecord(sw) {
+    const cands = getPigletDamKeyCandidates(sw);
+    return cands && cands.length > 0;
+  }
+
   function buildDerived() {
-    // 1) sows
+    // 1) Sows (female breeders)
     const femaleBreeders = store.allSwineData.filter(isBreederSow);
     femaleBreeders.sort((a, b) => (getSowId(a) || "").localeCompare(getSowId(b) || ""));
     store.sows = femaleBreeders;
 
-    // sowMap supports both id + tag keys
     store.sowMap = buildSowAliasMap(store.sows);
 
-    // 2) piglets grouped by sow
-    const piglets = store.allSwineData.filter((s) => {
-      const stage = toKey(s?.age_stage || s?.current_status || s?.current_stage).toLowerCase();
-      return ["piglet", "weaning", "day 1-30"].some((k) => stage.includes(k));
-    });
+    // 2) Offspring grouping (IMPORTANT FIX)
+    // OLD BEHAVIOR: offspring counted by dam_id/mother_id regardless of age_stage
+    // NEW BUG: you filtered by piglet/weaning/day1-30, so "retain" (adult) disappeared.
+    // ✅ FIX: group ALL offspring records (dam/mother fields present), regardless of stage.
+    const offspring = store.allSwineData.filter((s) => isOffspringRecord(s));
 
     const pigletsBySow = new Map();
 
-    for (const p of piglets) {
+    for (const p of offspring) {
       const damCandidates = getPigletDamKeyCandidates(p);
       if (!damCandidates.length) continue;
 
@@ -133,34 +238,43 @@ export function createReproductionStore({ user, token, baseUrl }) {
         addToGroupMap(pigletsBySow, sowId, p);
         addToGroupMap(pigletsBySow, sowTag, p);
       } else {
+        // fallback: group by raw candidate key if sow isn't in sowMap yet
         for (const c of damCandidates) addToGroupMap(pigletsBySow, c, p);
       }
     }
 
     store.pigletsBySow = pigletsBySow;
 
-    // 3) cycles derived from AI records (each record = 1 cycle)
+    // 3) cycles from AI records
     const cyclesBySow = new Map();
+    const cycleKey = (x) => toKey(x?.id);
 
     for (const r of store.rawAiData) {
-      const sowCode = toKey(r?.swine_code || r?.sow_tag || r?.sow_code || r?.swine_tag || "");
+      const sowCode = normalizeSowCode(r);
       if (!sowCode) continue;
 
+      const dateVal = normalizeCycleDate(r);
       const cycle = {
-        id: toKey(r?._id || r?.id || `${sowCode}-${r?.insemination_date || r?.createdAt || Date.now()}`),
+        id: normalizeCycleId(r, sowCode, dateVal),
         sowCode,
-        boarCode: toKey(r?.male_swine_id) || "N/A",
-        date: r?.insemination_date || r?.createdAt || null,
-        status: toKey(r?.status) || "Recorded",
+        boarCode: normalizeBoarCode(r),
+        date: dateVal,
+        status: normalizeCycleStatus(r),
         raw: r,
       };
 
-      addToGroupMap(cyclesBySow, sowCode, cycle);
+      // ✅ Always add under sowCode
+      addToGroupMapUnique(cyclesBySow, sowCode, cycle, cycleKey);
 
+      // ✅ Add aliases only if they are DIFFERENT keys (prevents duplicates)
       const sow = store.sowMap.get(sowCode);
       if (sow) {
-        addToGroupMap(cyclesBySow, getSowId(sow), cycle);
-        addToGroupMap(cyclesBySow, getSowTag(sow), cycle);
+        const idKey = getSowId(sow);
+        const tagKey = getSowTag(sow);
+
+        if (idKey && idKey !== sowCode) addToGroupMapUnique(cyclesBySow, idKey, cycle, cycleKey);
+        if (tagKey && tagKey !== sowCode && tagKey !== idKey)
+          addToGroupMapUnique(cyclesBySow, tagKey, cycle, cycleKey);
       }
     }
 
@@ -169,11 +283,15 @@ export function createReproductionStore({ user, token, baseUrl }) {
     }
     store.cyclesBySow = cyclesBySow;
 
+    // 4) selection summary derived too (farmer UI uses it)
+    store.selectionSummary = computeSelectionSummary(store.rawSelectionData || []);
+
     debugLog("DERIVED_BUILT", {
       sowCount: store.sows.length,
       pigletGroups: store.pigletsBySow.size,
       cyclesGroups: store.cyclesBySow.size,
       selectionSummary: store.selectionSummary,
+      mongoMapSize: store.swineMongoIdByTag.size,
     });
   }
 
@@ -194,14 +312,25 @@ export function createReproductionStore({ user, token, baseUrl }) {
 
     if (data?.success) {
       const rawList = data.data || data.records || [];
-      store.rawAiData = rawList.filter(isMySwine);
+      let list = rawList.filter(isMySwine);
 
-      store.rawAiData.sort(
+      // ✅ De-dupe by record id if backend returns duplicates
+      const seen = new Set();
+      list = list.filter((r) => {
+        const id = toKey(r?._id || r?.id || r?.record_id || r?.ai_record_id);
+        if (!id) return true;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+      list.sort(
         (a, b) =>
-          new Date(b?.insemination_date || b?.createdAt || 0) -
-          new Date(a?.insemination_date || a?.createdAt || 0)
+          new Date(b?.insemination_date || b?.ai_service_date || b?.createdAt || 0) -
+          new Date(a?.insemination_date || a?.ai_service_date || a?.createdAt || 0)
       );
 
+      store.rawAiData = list;
       store.loaded.ai = true;
     }
     return data;
@@ -217,8 +346,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
 
       store.rawPerformanceData.morphology.sort(
         (a, b) =>
-          new Date(b?.morphology?.date || b?.createdAt || 0) -
-          new Date(a?.morphology?.date || a?.createdAt || 0)
+          new Date(b?.morphology?.date || b?.createdAt || 0) - new Date(a?.morphology?.date || a?.createdAt || 0)
       );
       store.rawPerformanceData.deformities.sort(
         (a, b) => new Date(b?.date_detected || b?.createdAt || 0) - new Date(a?.date_detected || a?.createdAt || 0)
@@ -241,12 +369,15 @@ export function createReproductionStore({ user, token, baseUrl }) {
           new Date(a?.updatedAt || a?.date || a?.createdAt || 0)
       );
 
-      // pull summary from backend if present
+      // backend summary if present
       const s = data.summary || {};
+      const derived = computeSelectionSummary(store.rawSelectionData);
+
       store.selectionSummary = {
-        total: Number(s.total || store.rawSelectionData.length || 0),
-        retain: Number(s.retain || 0),
-        sell: Number(s.sell || 0),
+        total: Number(s.total || derived.total || 0),
+        retain: Number(s.retain || derived.retain || 0),
+        sell: Number(s.sell || derived.sell || 0),
+        pending: Number(s.pending || derived.pending || 0),
       };
 
       store.loaded.selection = true;
@@ -262,6 +393,9 @@ export function createReproductionStore({ user, token, baseUrl }) {
       const swineList = data.swine || data.data || [];
       store.allSwineData = swineList.filter(isMySwine);
       store.loaded.swine = true;
+
+      // ✅ NEW: build lookup for Mongo _id resolving
+      rebuildSwineMongoMap();
     }
     return data;
   }
@@ -278,7 +412,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return store;
   }
 
-  // ---------- selectors for UI ----------
+  // selectors
   function getPigletsForSow(sowId) {
     return store.pigletsBySow.get(toKey(sowId)) || [];
   }
@@ -339,20 +473,25 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return { aliveMale, aliveFemale, deceased, total: piglets.length };
   }
 
-  // selector for stats card
   function getSelectionSummary() {
-    return store.selectionSummary || { total: 0, retain: 0, sell: 0 };
+    return store.selectionSummary || { total: 0, retain: 0, sell: 0, pending: 0 };
   }
 
   return {
     store,
     loadAll,
     loadPigletMonitoring,
+    loadSelection,
+
     getPigletsForSow,
     getCyclesForSow,
     getMorphHistoryForPiglet,
     getDeformitiesForPiglet,
     getSelectionForPiglet,
+
+    // NEW (used by reproduction.views.js action buttons)
+    getMongoIdForSwineTag,
+
     computeBreedingStatsForSow,
     getSelectionSummary,
   };

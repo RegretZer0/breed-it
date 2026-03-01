@@ -1,26 +1,34 @@
 /* =========================================================
-   REPRODUCTION & MONITORING (Modal-centered panel)
+   REPRODUCTION & MONITORING — EVENT REMINDER APP THEME (UPDATED)
+   - Matches updated reproduction.views.js (chips, tabs, cards, detail mounts)
+   - Keeps ALL existing IDs intact
 ========================================================= */
 
 :root{
-  --repro-bg: #f6f7fb;
+  --repro-bg: #f3f6fb;
   --repro-card: #ffffff;
-  --repro-border: #e9edf3;
+  --repro-border: #e8eef6;
 
   --repro-text: #1f2937;
   --repro-muted: #6b7280;
 
+  /* App-like green palette */
   --repro-green: #1fb87a;
-  --repro-green-2: #0f7a34;
+  --repro-green-2: #11a56a;
+  --repro-green-3: #0f7a34;
 
-  --repro-radius-lg: 20px;
-  --repro-radius-md: 16px;
+  /* Accent (yellow-ish used in the reference UI for highlights) */
+  --repro-accent: #f6c75a;
+
+  --repro-radius-xl: 26px;
+  --repro-radius-lg: 22px;
+  --repro-radius-md: 18px;
   --repro-radius-sm: 14px;
 
-  --repro-shadow-sm: 0 6px 18px rgba(0,0,0,.06);
-  --repro-shadow-md: 0 12px 30px rgba(0,0,0,.08);
+  --repro-shadow-sm: 0 8px 22px rgba(16,24,40,.06);
+  --repro-shadow-md: 0 16px 42px rgba(16,24,40,.10);
 
-  --repro-focus: 0 0 0 .2rem rgba(31,184,122,.20);
+  --repro-focus: 0 0 0 .22rem rgba(31,184,122,.18);
 }
 
 /* =========================================================
@@ -29,58 +37,18 @@
 
 .app-root{
   padding-top: 54px;
-  background: var(--repro-bg);
+  background: radial-gradient(1200px 600px at 80% -10%, rgba(31,184,122,.10), transparent 60%),
+              radial-gradient(900px 520px at 10% 10%, rgba(246,199,90,.10), transparent 58%),
+              var(--repro-bg);
   min-height: 100vh;
 }
 
 .app-root *{ box-sizing: border-box; }
 
-/* Slightly constrain wide screens so layout feels app-like */
 @media (min-width: 1200px){
   .app-root main.container-fluid{
     max-width: 1240px;
   }
-}
-
-/* =========================================================
-   1) HERO (HEADER CARD)
-========================================================= */
-
-.repro-hero{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-lg);
-  overflow: hidden;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
-  box-shadow: var(--repro-shadow-sm);
-}
-
-.repro-title{
-  font-weight: 900;
-  letter-spacing: .02em;
-  color: var(--repro-text);
-}
-
-.repro-search{
-  width: 100%;
-  max-width: 520px;
-}
-
-.repro-hero .input-group-text{
-  border-color: var(--repro-border);
-  border-right: 0;
-  border-radius: 999px 0 0 999px;
-}
-
-.repro-hero .form-control{
-  border-color: var(--repro-border);
-  border-left: 0;
-  border-radius: 0 999px 999px 0;
-  padding: 10px 12px;
-}
-
-.repro-hero .form-control:focus{
-  border-color: rgba(31,184,122,.55);
-  box-shadow: var(--repro-focus);
 }
 
 .repro-center-wrap{
@@ -90,34 +58,93 @@
 }
 
 /* =========================================================
+   1) HERO (HEADER CARD) — APP-STYLE
+========================================================= */
+
+.repro-hero{
+  border: 1px solid var(--repro-border);
+  border-radius: var(--repro-radius-xl);
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--repro-shadow-sm);
+  position: relative;
+}
+
+.repro-hero::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height: 110px;
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 55%, #22c98a 100%);
+}
+
+.repro-hero .card-body{
+  position: relative;
+  padding: 18px 18px 16px;
+}
+
+.repro-title{
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: #fff;
+  margin-top: 4px;
+}
+
+.repro-hero .text-muted{
+  color: rgba(255,255,255,.78) !important;
+}
+
+.repro-search{
+  width: 100%;
+  max-width: 520px;
+}
+
+.repro-hero .input-group{
+  background: rgba(255,255,255,.92);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,.10);
+}
+
+.repro-hero .input-group-text{
+  border: 0;
+  background: transparent;
+  padding-left: 14px;
+  color: rgba(17,24,39,.65);
+}
+
+.repro-hero .form-control{
+  border: 0;
+  padding: 10px 14px 10px 8px;
+}
+
+.repro-hero .form-control:focus{ box-shadow: none; }
+
+/* =========================================================
    2) PANELS (LIST CARD)
 ========================================================= */
 
 .repro-panel-card{
   border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-lg);
+  border-radius: var(--repro-radius-xl);
   background: var(--repro-card);
   box-shadow: var(--repro-shadow-sm);
 }
 
 .repro-panel-card .card-body{ padding: 16px; }
-
 @media (min-width: 992px){
   .repro-panel-card .card-body{ padding: 18px; }
 }
 
-/* Ensure list wrapper stacks cards vertically */
-#sowCardsWrap .repro-card{ width: 100%; }
-
 /* =========================================================
-   3) SOW CARDS
+   3) SOW CARD — APP STYLE
 ========================================================= */
 
 .repro-card{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-md);
+  border-radius: var(--repro-radius-lg);
   background: var(--repro-card);
-  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  transition: transform .15s ease, box-shadow .15s ease;
+  box-shadow: var(--repro-shadow-sm);
 }
 
 .repro-card:hover{
@@ -126,14 +153,102 @@
 }
 
 .repro-card-active{
-  border-color: rgba(31,184,122,.45) !important;
-  box-shadow: 0 14px 32px rgba(31,184,122,.14);
+  box-shadow: 0 18px 46px rgba(31,184,122,.18) !important;
+  outline: 2px solid rgba(31,184,122,.20);
 }
 
-.repro-card .btn{ border-radius: 12px; }
+/* ✅ FIX: the views.js uses .repro-card (not .repro-card-app) */
+.repro-card .card-body{
+  padding: 14px 14px;
+}
+
+.repro-card-title{
+  font-weight: 900;
+  color: var(--repro-text);
+  letter-spacing: .01em;
+}
+
+.repro-card-sub{
+  font-size: 12px;
+  color: var(--repro-muted);
+}
+
+/* left “avatar” circle like the app */
+.repro-avatar{
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 60%, #22c98a 100%);
+  box-shadow: 0 12px 26px rgba(31,184,122,.22);
+  flex: 0 0 auto;
+}
+
+.repro-avatar.sm{
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  box-shadow: 0 10px 22px rgba(31,184,122,.18);
+}
+
+.repro-avatar.lg{
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+}
 
 /* =========================================================
-   4) ICON PILLS
+   3.1) STATUS CHIP (used by reproduction.views.js)
+   NOTE: chip is rendered as: <span class="repro-chip ...">Status: <b>...</b></span>
+========================================================= */
+
+.repro-chip{
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.15;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.repro-chip b{ font-weight: 900; }
+
+/* make bootstrap subtle badges look more “app-like” when applied to chip */
+.repro-chip.border{
+  border-color: rgba(17,24,39,.10) !important;
+}
+
+/* small pills like the reminder app */
+.repro-mini-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(31,184,122,.10);
+  color: var(--repro-green-3);
+  border: 1px solid rgba(31,184,122,.16);
+}
+
+.repro-mini-pill.is-danger{
+  background: rgba(220,53,69,.08);
+  border: 1px solid rgba(220,53,69,.14);
+  color: #b42318;
+}
+
+.repro-cta{
+  border-radius: 14px !important;
+  padding: .45rem .85rem;
+}
+
+/* =========================================================
+   4) ICON PILLS (legacy) — kept
 ========================================================= */
 
 .repro-pill{
@@ -144,7 +259,7 @@
   justify-content: center;
   border-radius: 999px;
   background: rgba(31,184,122,.12);
-  color: var(--repro-green-2);
+  color: var(--repro-green-3);
   flex: 0 0 auto;
 }
 
@@ -153,186 +268,44 @@
   height: 42px;
 }
 
+.repro-pill.is-white{
+  background: rgba(255,255,255,.18);
+  color: #fff;
+}
+
 /* =========================================================
-   5) SUBCARDS / TABS (INSIDE MODAL CONTENT)
+   5) SUBCARDS / TABS (INSIDE MODAL)
 ========================================================= */
 
 .repro-subcard{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-md);
-  background: var(--repro-card);
-  box-shadow: none;
-}
-
-.repro-tabs.nav-tabs{
-  border-bottom-color: var(--repro-border);
-}
-
-.repro-tabs.nav-tabs .nav-link{
-  border-radius: 14px 14px 0 0;
-  border-color: transparent;
-  color: var(--repro-muted);
-}
-
-.repro-tabs.nav-tabs .nav-link.active{
-  color: var(--repro-text);
-  border-color: var(--repro-border) var(--repro-border) transparent;
-  background: #fff;
-}
-
-.repro-pills .nav-link{
-  border-radius: 999px !important;
-  padding: .45rem .90rem;
-  color: var(--repro-green-2);
-}
-
-.repro-pills .nav-link:hover{
-  background: rgba(31,184,122,.10);
-}
-
-.repro-pills .nav-link.active{
-  background: var(--repro-green) !important;
-  color: #fff !important;
-}
-
-/* =========================================================
-   6) STATS / LISTS / ALERTS
-========================================================= */
-
-.repro-stat,
-.repro-stat-danger{
-  border-radius: var(--repro-radius-md);
-  background: #fff;
-}
-
-.repro-stat{ border: 1px solid var(--repro-border); }
-.repro-stat-danger{ border: 1px solid rgba(220,53,69,.25); }
-
-.repro-list .list-group-item{ border-color: var(--repro-border); }
-
-.repro-alert-item{
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(220,53,69,.18);
-  background: rgba(220,53,69,.06);
-  margin-bottom: 10px;
-}
-
-/* =========================================================
-   7) BUTTONS (THEME OVERRIDES)
-========================================================= */
-
-.btn-success{
-  background: var(--repro-green);
-  border-color: var(--repro-green);
-}
-
-.btn-success:hover{
-  background: var(--repro-green-2);
-  border-color: var(--repro-green-2);
-}
-
-.btn-outline-success{
-  border-color: rgba(31,184,122,.55);
-  color: var(--repro-green-2);
-}
-
-.btn-outline-success:hover{
-  background: rgba(31,184,122,.10);
-  border-color: rgba(31,184,122,.65);
-  color: var(--repro-green-2);
-}
-
-.btn-sm{
-  border-radius: 12px;
-  padding: .42rem .75rem;
-}
-
-/* =========================================================
-   8) MODAL THEME (CENTER PANEL)
-   JS creates: #reproSowModal + #reproSowModalMount
-========================================================= */
-
-/* Slight blur + darker backdrop (modern app feel) */
-.modal-backdrop.show{
-  opacity: .55;
-}
-
-/* Optional blur (works on modern browsers) */
-@supports ((-webkit-backdrop-filter: blur(6px)) or (backdrop-filter: blur(6px))){
-  .modal-backdrop.show{
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
-}
-
-/* Round the modal + match theme */
-#reproSowModal .modal-content{
-  border: 1px solid var(--repro-border);
   border-radius: var(--repro-radius-lg);
-  box-shadow: var(--repro-shadow-md);
-}
-
-#reproSowModal .modal-header{
   background: #fff;
 }
 
-#reproSowModal .modal-body{
-  background: var(--repro-bg);
+.repro-soft-card{
+  border: 1px solid var(--repro-border);
+  box-shadow: 0 10px 26px rgba(16,24,40,.06);
 }
-
-/* Make modal width feel like a centered “panel” */
-@media (min-width: 992px){
-  #reproSowModal .modal-dialog{
-    max-width: 1100px;
-  }
-}
-
-/* On small screens, make it near-full width */
-@media (max-width: 575.98px){
-  #reproSowModal .modal-dialog{
-    margin: .75rem;
-  }
-}
-
-/* =========================================================
-   9) SMALL SCREEN POLISH
-========================================================= */
-
-@media (max-width: 575.98px){
-  .repro-title{ font-size: 20px; }
-  .repro-search{ max-width: 100%; }
-  .repro-panel-card .card-body{ padding: 14px; }
-  .repro-hero{ border-radius: 18px; }
-}
-
-/* =========================================================
-   10) ACCESSIBILITY / FOCUS
-========================================================= */
-
-button:focus,
-.btn:focus,
-.form-control:focus,
-.form-select:focus{
-  box-shadow: var(--repro-focus);
-}
-
-/* =========================================================
-   CYCLE DETAIL TABS — STRONG ACTIVE STATE
-========================================================= */
 
 .repro-tabs.nav-tabs{
   gap: 8px;
   border-bottom: 1px solid var(--repro-border);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px; /* keeps active underline visible */
 }
 
 .repro-tabs.nav-tabs .nav-link{
+  white-space: nowrap;
+  flex: 0 0 auto;
   border: 1px solid transparent;
   border-bottom: 3px solid transparent;
-  border-radius: 14px 14px 0 0;
-  padding: .55rem .9rem;
+  border-radius: 16px 16px 0 0;
+  padding: .58rem .95rem;
   color: var(--repro-muted);
-  font-weight: 600;
+  font-weight: 800;
   background: transparent;
   transition: all .15s ease;
 }
@@ -343,77 +316,275 @@ button:focus,
 }
 
 .repro-tabs.nav-tabs .nav-link.active{
-  color: var(--repro-green-2);
-  font-weight: 900;
+  color: var(--repro-green-3);
   background: #fff;
   border-color: var(--repro-border);
   border-bottom-color: var(--repro-green);
-  box-shadow: 0 10px 22px rgba(31,184,122,.10);
+  box-shadow: 0 14px 28px rgba(31,184,122,.14);
+}
+
+.repro-pills .nav-link{
+  border-radius: 999px !important;
+  padding: .45rem .95rem;
+  color: var(--repro-green-3);
+  font-weight: 900;
+  background: rgba(31,184,122,.08);
+  border: 1px solid rgba(31,184,122,.14);
+}
+
+.repro-pills .nav-link:hover{
+  background: rgba(31,184,122,.12);
+}
+
+.repro-pills .nav-link.active{
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%) !important;
+  color: #fff !important;
+  border-color: rgba(255,255,255,.18);
+}
+
+/* ✅ Smoother tab content spacing */
+.tab-content{ min-height: 120px; }
+
+/* =========================================================
+   6) STATS / LISTS / ALERTS
+========================================================= */
+
+.repro-stat,
+.repro-stat-danger{
+  border-radius: var(--repro-radius-lg);
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(16,24,40,.06);
+}
+
+.repro-stat{ border: 1px solid var(--repro-border); }
+.repro-stat-danger{ border: 1px solid rgba(220,53,69,.20); }
+
+/* ✅ list-group polish */
+.repro-list .list-group-item{
+  border-color: var(--repro-border);
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* ✅ Deformity blocks */
+.repro-alert-item{
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(220,53,69,.18);
+  background: rgba(220,53,69,.06);
+  margin-bottom: 10px;
 }
 
 /* =========================================================
-   CYCLE FILTER — MOBILE FRIENDLY
+   6.1) Piglet Card Layout (updated views.js)
+   - supports .vstack gap-3 and inside content alignment
 ========================================================= */
 
-.repro-cycle-filter{
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+.repro-subcard .card-body{
+  padding: 14px 14px;
 }
-.repro-cycle-filter .btn{
-  white-space: nowrap;
+
+.repro-subcard .badge{
+  border-radius: 999px;
+  padding: .42rem .62rem;
+  font-weight: 800;
+}
+
+.repro-subcard .badge b{ font-weight: 900; }
+
+/* suggestion box */
+.repro-subcard .rounded-3.border{
+  border-radius: 18px !important;
+}
+
+/* detail action row (buttons align nicely on wrap) */
+.repro-action-row .btn{
+  border-radius: 14px !important;
 }
 
 /* =========================================================
-   MOBILE: make the modal usable (full-height + better spacing)
+   7) FORMS / INPUTS
 ========================================================= */
+
+.repro-input,
+.repro-select{
+  border-radius: 14px;
+  border-color: var(--repro-border);
+  background: #fff;
+}
+
+.repro-input:focus,
+.repro-select:focus{
+  border-color: rgba(31,184,122,.50);
+  box-shadow: var(--repro-focus);
+}
+
+/* ensure the small filter inputs in tabs look consistent */
+#growthFilterInput,
+#selectionFilterInput{
+  border-radius: 14px;
+  border-color: var(--repro-border);
+}
+
+#growthFilterInput:focus,
+#selectionFilterInput:focus{
+  border-color: rgba(31,184,122,.50);
+  box-shadow: var(--repro-focus);
+}
+
+/* =========================================================
+   8) BUTTONS (THEME OVERRIDES)
+========================================================= */
+
+.btn-success{
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%);
+  border-color: transparent;
+}
+
+.btn-success:hover{
+  background: linear-gradient(135deg, var(--repro-green-2) 0%, var(--repro-green-3) 100%);
+  border-color: transparent;
+}
+
+.btn-outline-success{
+  border-color: rgba(31,184,122,.55);
+  color: var(--repro-green-3);
+}
+
+.btn-outline-success:hover{
+  background: rgba(31,184,122,.10);
+  border-color: rgba(31,184,122,.65);
+  color: var(--repro-green-3);
+}
+
+.btn-sm{
+  border-radius: 14px;
+  padding: .42rem .78rem;
+}
+
+/* =========================================================
+   9) MODAL THEME (CENTER PANEL)
+========================================================= */
+
+.modal-backdrop.show{ opacity: .55; }
+
+@supports ((-webkit-backdrop-filter: blur(6px)) or (backdrop-filter: blur(6px))){
+  .modal-backdrop.show{
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}
+
+.repro-modal .modal-dialog{ max-width: 1100px; }
+
+.repro-modal-content{
+  border: 0;
+  border-radius: var(--repro-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--repro-shadow-md);
+}
+
+.repro-modal-header{
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 55%, #22c98a 100%);
+  padding: 14px 16px;
+}
+
+.repro-close-btn{
+  border-radius: 999px !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,.12);
+}
+
+.repro-modal-body{
+  background: var(--repro-bg);
+  padding: 14px 14px 16px;
+}
+
+.repro-panel-in-modal{
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+}
+
+.repro-panel-hero{
+  border-radius: var(--repro-radius-xl);
+  padding: 14px 14px;
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 55%, #22c98a 100%);
+  box-shadow: 0 16px 34px rgba(31,184,122,.18);
+}
+
+/* On small screens, full-height modal */
 @media (max-width: 575.98px){
-  #reproSowModal .modal-dialog{
+  .repro-modal .modal-dialog{
     margin: 0 !important;
     height: 100vh;
     max-width: 100%;
   }
 
-  #reproSowModal .modal-content{
+  .repro-modal .modal-content{
     height: 100vh;
     border-radius: 0 !important;
   }
 
-  #reproSowModal .modal-header{
-    padding: 12px 14px;
-    gap: 10px;
-  }
+  .repro-modal-header{ padding: 12px 14px; }
+  .repro-modal-body{ padding: 12px 12px 16px; }
 
-  #reproSowModal .modal-body{
-    padding: 12px 12px 16px;
-  }
+  .repro-subcard .card-body{ padding: 12px !important; }
 
-  /* Reduce inner card padding on small screens */
-  .repro-subcard .card-body{
-    padding: 12px !important;
-  }
+  .repro-title{ font-size: 20px; }
+  .repro-search{ max-width: 100%; }
+  .repro-hero{ border-radius: 20px; }
 }
 
 /* =========================================================
-   Cycle tabs: horizontal scroll instead of wrapping ugly
+   10) MINI STAT BLOCKS (Overview measurements)
 ========================================================= */
-.repro-tabs.nav-tabs{
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-}
 
-.repro-tabs.nav-tabs .nav-link{
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
-
-/* =========================================================
-   Mini stat blocks used in Overview measurements
-========================================================= */
 .repro-mini-stat{
   border: 1px solid var(--repro-border);
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   padding: 10px 12px;
+  box-shadow: 0 10px 24px rgba(16,24,40,.05);
 }
+
+/* =========================================================
+   11) Pager layout
+========================================================= */
+
+.repro-pager{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* =========================================================
+   12) ACCESSIBILITY / FOCUS
+========================================================= */
+
+button:focus,
+.btn:focus,
+.form-control:focus,
+.form-select:focus{
+  box-shadow: var(--repro-focus);
+}
+
+/* =========================================================
+   13) SMALL UI POLISH
+========================================================= */
+
+/* smoother horizontal scroll for tabs */
+.repro-tabs.nav-tabs::-webkit-scrollbar{ height: 8px; }
+.repro-tabs.nav-tabs::-webkit-scrollbar-thumb{
+  background: rgba(17,24,39,.12);
+  border-radius: 999px;
+}
+.repro-tabs.nav-tabs::-webkit-scrollbar-track{
+  background: transparent;
+}
+
+/* make card headings slightly tighter */
+.repro-subcard .fw-bold{ letter-spacing: .01em; }
+
+/* prevent long tags from breaking layout */
+.text-break{ word-break: break-word; }

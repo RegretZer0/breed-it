@@ -1,9 +1,12 @@
 // /js/reproduction/reproduction.ui.js
 
 import { authGuard } from "/js/authGuard.js";
-import { getCleanToken, debugLog, authPost } from "./reproduction.api.js";
+import { getCleanToken, debugLog } from "./reproduction.api.js";
 import { createReproductionStore } from "./reproduction.data.js";
 import { createReproViews } from "./reproduction.views.js";
+
+// ✅ Centralized action handler
+import { submitSelectionAction } from "./reproduction.actions.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   console.time("Reproduction_Load_Time");
@@ -14,6 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // NOTE: keep as-is if you’re still on local. Replace with your prod base when deploying.
   const BASE_URL = "http://localhost:5000";
 
   // ===== Required legacy IDs (DO NOT REMOVE) =====
@@ -91,6 +95,71 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!token) return;
 
   // =========================================================
+  // ✅ Feedback Modal (Action Result) — injected if missing
+  // NOTE: Add the same HTML in EJS if you prefer.
+  // =========================================================
+  function ensureReproActionModal() {
+    let modalEl = document.getElementById("reproActionModal");
+
+    if (!modalEl) {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="modal fade" id="reproActionModal" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+              <div class="modal-header" id="reproActionHeader">
+                <h5 class="modal-title" id="reproActionTitle">Action Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+
+              <div class="modal-body">
+                <p class="mb-0" id="reproActionMessage"></p>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm" data-bs-dismiss="modal">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        `
+      );
+
+      modalEl = document.getElementById("reproActionModal");
+    }
+
+    return modalEl;
+  }
+
+  function showReproModal({ title, message, type = "success" }) {
+    const modalEl = ensureReproActionModal();
+
+    if (!modalEl || !window.bootstrap) {
+      // fallback if bootstrap modal isn't available
+      alert(message || "Done.");
+      return;
+    }
+
+    const titleEl = document.getElementById("reproActionTitle");
+    const msgEl = document.getElementById("reproActionMessage");
+    const headerEl = document.getElementById("reproActionHeader");
+
+    if (titleEl) titleEl.textContent = title || "Result";
+    if (msgEl) msgEl.textContent = message || "";
+
+    if (headerEl) {
+      headerEl.classList.remove("text-success", "text-danger", "text-warning");
+      headerEl.classList.add(type === "danger" ? "text-danger" : type === "warning" ? "text-warning" : "text-success");
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+  }
+
+  // =========================================================
   // Modal Panel (single close button only)
   // =========================================================
   let panelMountEl = null;
@@ -103,27 +172,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.body.insertAdjacentHTML(
         "beforeend",
         `
-        <div class="modal fade" id="reproSowModal" tabindex="-1" aria-labelledby="reproSowModalLabel" aria-hidden="true">
+        <div class="modal fade repro-modal" id="reproSowModal" tabindex="-1" aria-labelledby="reproSowModalLabel" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-            <div class="modal-content">
-              <div class="modal-header">
+            <div class="modal-content repro-modal-content">
+              <div class="modal-header repro-modal-header">
                 <div class="d-flex align-items-center gap-2 min-w-0">
-                  <span class="repro-pill"><i class="bi bi-grid"></i></span>
+                  <span class="repro-pill is-white"><i class="bi bi-grid"></i></span>
                   <div class="min-w-0">
-                    <div class="fw-bold text-truncate" id="reproSowModalLabel">Sow Details</div>
-                    <div class="small text-muted text-truncate">Overview, cycles, piglets, selection</div>
+                    <div class="fw-bold text-truncate text-white" id="reproSowModalLabel">Sow Details</div>
+                    <div class="small text-truncate" style="color: rgba(255,255,255,.82)">Overview, cycles, piglets, selection</div>
                   </div>
                 </div>
 
-                <!-- Keep ONLY ONE close control -->
                 <div class="d-flex align-items-center gap-2">
-                  <button type="button" class="btn btn-outline-success btn-sm" data-bs-dismiss="modal">
+                  <button type="button" class="btn btn-light btn-sm repro-close-btn" data-bs-dismiss="modal">
                     <i class="bi bi-x-lg me-1"></i> Close
                   </button>
                 </div>
               </div>
 
-              <div class="modal-body">
+              <div class="modal-body repro-modal-body">
                 <div id="reproSowModalMount"></div>
               </div>
             </div>
@@ -134,6 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       modalEl = document.getElementById("reproSowModal");
 
+      // Cleanup mount on close
       modalEl.addEventListener("hidden.bs.modal", () => {
         const mount = document.getElementById("reproSowModalMount");
         if (mount) mount.innerHTML = "";
@@ -209,7 +278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return "N/A";
     },
 
-    // chart draw kept here (so views can call it)
+    // NOTE: chart colors are controlled by CSS fill/stroke (kept neutral here)
     drawAreaLineChart: (canvasId, points) => {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
@@ -227,6 +296,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (!points || !points.length) {
         ctx.font = "12px sans-serif";
+        ctx.fillStyle = "#6b7280";
         ctx.fillText("No growth data available.", 10, 20);
         return;
       }
@@ -263,7 +333,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       };
 
       // grid
-      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = "rgba(107,114,128,.35)";
+      ctx.globalAlpha = 0.35;
       ctx.lineWidth = 1;
       for (let i = 0; i <= 4; i++) {
         const y = padT + (plotH * i) / 4;
@@ -274,7 +345,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       ctx.globalAlpha = 1;
 
-      // y labels
+      // axis labels
       ctx.font = "11px sans-serif";
       ctx.fillStyle = "#6b7280";
       for (let i = 0; i <= 4; i++) {
@@ -283,7 +354,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ctx.fillText(`${yVal.toFixed(0)} kg`, 6, y + 4);
       }
 
-      // paths
+      // line + area
       const line = new Path2D();
       pts.forEach((p, i) => {
         const x = padL + i * xStep;
@@ -297,13 +368,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       area.lineTo(padL, padT + plotH);
       area.closePath();
 
-      ctx.globalAlpha = 0.12;
-      ctx.fill(area);
+      ctx.fillStyle = "rgba(31,184,122,.18)";
       ctx.globalAlpha = 1;
+      ctx.fill(area);
 
+      ctx.strokeStyle = "rgba(15,122,52,.95)";
       ctx.lineWidth = 3;
       ctx.stroke(line);
 
+      ctx.fillStyle = "rgba(15,122,52,.95)";
       pts.forEach((p, i) => {
         const x = padL + i * xStep;
         const y = yToPx(Number(p.y || 0));
@@ -335,6 +408,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const state = {
     PAGE_SIZE: 5,
 
+    // ✅ cycle list pagination (inside Reproduction tab)
+    CYCLE_PAGE_SIZE: 4,
+    cyclePage: 1,
+
     sowPage: 1,
     sowTerm: "",
     activeSowId: null,
@@ -361,6 +438,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     dom: { sowCardsWrap, sowPager },
     getPanelMount,
+
+    // ✅ local decision cache so UI updates immediately (mongoId -> "breeding" | "sell")
+    localSelectionLock: new Map(),
   };
 
   // =========================================================
@@ -373,7 +453,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================
   function renderLegacy() {
     if (legacyPigletMonitoringBody) {
-      const filtered = repo.store.rawMonitoringData;
+      const filtered = repo.store.rawMonitoringData || [];
       legacyPigletMonitoringBody.innerHTML = filtered.length
         ? filtered
             .slice(0, 10)
@@ -392,15 +472,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (legacyAiTableBody) {
-      const rows = repo.store.rawAiData.slice(0, 10);
+      const rows = (repo.store.rawAiData || []).slice(0, 10);
       legacyAiTableBody.innerHTML = rows.length
         ? rows
             .map(
               (r) => `
         <tr>
-          <td>${ui.esc(r.swine_code || r.sow_tag || "N/A")}</td>
-          <td>${ui.esc(r.male_swine_id || "N/A")}</td>
-          <td>${ui.esc(ui.fmtDate(r.insemination_date || r.createdAt))}</td>
+          <td>${ui.esc(r.swine_code || r.sow_tag || r.swine_tag || "N/A")}</td>
+          <td>${ui.esc(r.male_swine_tag || r.boar_tag || r.male_swine_id || "N/A")}</td>
+          <td>${ui.esc(ui.fmtDate(r.insemination_date || r.ai_service_date || r.createdAt))}</td>
         </tr>`
             )
             .join("")
@@ -408,20 +488,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (legacyMortalityBody) {
-      const sows = repo.store.sows;
+      const sows = repo.store.sows || [];
       legacyMortalityBody.innerHTML = sows.length
         ? sows
             .slice(0, 10)
             .map((s) => {
               const sowId = s.swine_id || s.swine_tag;
-              const stats = repo.computeBreedingStatsForSow(sowId);
-              const alive = stats.aliveMale + stats.aliveFemale;
-              const mortalityRate = stats.total > 0 ? ((stats.deceased / stats.total) * 100).toFixed(1) : "0.0";
+              const stats = repo.computeBreedingStatsForSow ? repo.computeBreedingStatsForSow(sowId) : null;
+
+              const safe = stats || { total: 0, deceased: 0, aliveMale: 0, aliveFemale: 0 };
+              const alive = (safe.aliveMale || 0) + (safe.aliveFemale || 0);
+              const mortalityRate = safe.total > 0 ? ((safe.deceased / safe.total) * 100).toFixed(1) : "0.0";
+
               return `
                 <tr>
                   <td>${ui.esc(sowId)}</td>
                   <td class="text-center">${alive}</td>
-                  <td class="text-center">${stats.deceased}</td>
+                  <td class="text-center">${safe.deceased || 0}</td>
                   <td class="text-center">${mortalityRate}%</td>
                 </tr>`;
             })
@@ -431,7 +514,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (legacyPigletSelect) {
       const seen = new Set();
-      const piglets = repo.store.rawPerformanceData.morphology
+      const morph = repo.store.rawPerformanceData?.morphology || [];
+
+      const piglets = morph
         .filter((m) => {
           const stage = (m?.morphology?.stage || "").toLowerCase();
           return stage.includes("day 1-30") || stage.includes("weaning");
@@ -447,7 +532,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       legacyPigletSelect.innerHTML =
         '<option value="">-- Choose a Piglet to View Performance --</option>' +
         piglets
-          .map((p) => `<option value="${ui.esc(p.swine_tag)}">${ui.esc(p.swine_tag)} (${ui.esc(p.swine_sex || "N/A")})</option>`)
+          .map(
+            (p) =>
+              `<option value="${ui.esc(p.swine_tag)}">${ui.esc(p.swine_tag)} (${ui.esc(p.swine_sex || "N/A")})</option>`
+          )
           .join("");
     }
 
@@ -460,7 +548,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Load all data (safe)
   // =========================================================
   async function loadAllSafe() {
-    views.renderListLoading();
+    views?.renderListLoading?.();
 
     const tok = getValidTokenOrLogout();
     if (!tok) return false;
@@ -469,40 +557,67 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await repo.loadAll();
 
       if (res?.authError) {
-        views.renderListError("Unable to load your swine data", "Your session may have expired. Please login again.");
+        views?.renderListError?.(
+          "Unable to load your swine data",
+          "Your session may have expired. Please login again."
+        );
         return false;
       }
 
       if (!repo.store.loaded?.swine) {
-        views.renderListError("Unable to load your swine data", "Server did not respond for swine list. Try again.");
+        views?.renderListError?.(
+          "Unable to load your swine data",
+          "Server did not respond for swine list. Try again."
+        );
         return false;
       }
 
       renderLegacy();
-      views.renderSowCards();
+      views?.renderSowCards?.();
       return true;
     } catch (err) {
       debugLog("LOAD_ALL_ERROR", err?.message || err, true);
-      views.renderListError("Unable to load your swine data", "Unexpected error while loading. Try again.");
+      views?.renderListError?.(
+        "Unable to load your swine data",
+        "Unexpected error while loading. Try again."
+      );
       return false;
     }
   }
 
   // =========================================================
-  // Piglet Action endpoint (Keep/Sell)
+  // Piglet Action endpoint (Retain/Sell only)
   // =========================================================
   window.processPigletAction = async (swineId, action) => {
     const tok = getValidTokenOrLogout();
     if (!tok) return;
 
-    const confirmMsg = action === "breeding" ? "Promote this piglet to Active Breeder?" : "Mark this piglet for Sale?";
+    let normalized = String(action || "").toLowerCase().trim();
+    if (normalized === "sale") normalized = "sell";
+    if (normalized === "keep") normalized = "breeding";
+
+    // ✅ Simplified like old UI: only 2 actions
+    const allowed = new Set(["breeding", "sell"]);
+    if (!allowed.has(normalized)) {
+      showReproModal({
+        title: "Not Allowed",
+        message: "Only Retain and Sell actions are available.",
+        type: "warning",
+      });
+      return;
+    }
+
+    let confirmMsg = "Apply selection action?";
+    if (normalized === "breeding") confirmMsg = "Retain this piglet for Breeding?";
+    else if (normalized === "sell") confirmMsg = "Mark this piglet for Sale?";
+
     if (!confirm(confirmMsg)) return;
 
-    const result = await authPost({
-      endpoint: "/piglet-action",
+    const result = await submitSelectionAction({
       token: tok,
       baseUrl: BASE_URL,
-      body: { swineId, action },
+      swineId,
+      action: normalized,
     });
 
     if (result?.authError) {
@@ -511,22 +626,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (result?.success) {
-      alert(result.message || "Updated.");
+      // ✅ lock decision locally so UI updates even if selection-candidates is empty
+      try {
+        if (swineId && normalized) {
+          state.localSelectionLock.set(String(swineId), normalized);
 
-      // Reload monitoring
-      await repo.loadPigletMonitoring();
+          // also lock current selected piglet if we can resolve mongo id from tag
+          if (state.selectedPigletTagForSelection) {
+            const m = repo.getMongoIdForSwineTag?.(state.selectedPigletTagForSelection);
+            if (m) state.localSelectionLock.set(String(m), normalized);
+          }
+        }
+      } catch {}
 
-      // ✅ ALSO reload selection to update summary counts
-      await repo.loadSelection();
+      showReproModal({
+        title: "Success",
+        message: result.message || "Updated successfully.",
+        type: "success",
+      });
+
+      // ✅ refresh derived state (stats/cards/status)
+      await repo.loadAll();
 
       renderLegacy();
+      views?.renderSowCards?.();
 
-      // If currently viewing selection tab, refresh panel
+      // keep user context in modal
       if (state.activeSowId && state.activeCycleId) {
-        views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      } else if (state.activeSowId) {
+        const mount = getPanelMount();
+        if (mount) views?.renderSowPanel?.(state.activeSowId, mount);
       }
     } else {
-        alert(result?.message || "Action failed.");
+      showReproModal({
+        title: "Action Failed",
+        message: result?.message || "Action failed.",
+        type: "danger",
+      });
     }
   };
 
@@ -536,7 +673,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("shown.bs.tab", (e) => {
     const btn = e.target;
     const t = btn?.getAttribute?.("data-bs-target");
-    if (t && state.CYCLE_TABS.includes(t)) views.setCycleTabTarget(t);
+    if (t && state.CYCLE_TABS.includes(t)) views?.setCycleTabTarget?.(t);
   });
 
   document.addEventListener("click", (e) => {
@@ -550,11 +687,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (act === "sowPrev") {
       state.sowPage = Math.max(1, state.sowPage - 1);
-      return void views.renderSowCards();
+      return void views?.renderSowCards?.();
     }
     if (act === "sowNext") {
       state.sowPage += 1;
-      return void views.renderSowCards();
+      return void views?.renderSowCards?.();
     }
 
     if (act === "openSow") {
@@ -569,6 +706,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.cycleView = "list";
       state.cycleFilterId = "all";
       state.activeCycleTabTarget = "#cycleAI";
+      state.cyclePage = 1;
 
       state.pigletPageGrowth = 1;
       state.pigletPageSelection = 1;
@@ -582,7 +720,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.growthSexFilter = "all";
       state.selectionSexFilter = "all";
 
-      views.renderSowCards();
+      views?.renderSowCards?.();
 
       const { modalEl, modal, mount } = ensureSowModal();
       const title = modalEl.querySelector("#reproSowModalLabel");
@@ -590,9 +728,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (modal) {
         modal.show();
-        modalEl.addEventListener("shown.bs.modal", () => views.renderSowPanel(state.activeSowId, mount), { once: true });
+        modalEl.addEventListener(
+          "shown.bs.modal",
+          () => views?.renderSowPanel?.(state.activeSowId, mount),
+          { once: true }
+        );
       } else {
-        views.renderSowPanel(state.activeSowId, mount);
+        views?.renderSowPanel?.(state.activeSowId, mount);
       }
       return;
     }
@@ -600,7 +742,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (act === "jumpRepro") {
       const mount = getPanelMount();
       mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-      views.renderReproTabInto(mount);
+      views?.renderReproTabInto?.(mount);
       return;
     }
 
@@ -608,7 +750,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const mount = getPanelMount();
       mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
 
-      const cycles = views.getCyclesForSowSafe(state.activeSowId);
+      const cycles = views?.getCyclesForSowSafe?.(state.activeSowId);
       if (cycles?.length) {
         state.activeCycleId = cycles[0].id;
         state.cycleView = "detail";
@@ -619,10 +761,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         state.selectedPigletTagForSelection = "";
         state.selectedPigletTagForGrowth = "";
 
-        views.renderSowPanel(state.activeSowId, mount);
+        views?.renderSowPanel?.(state.activeSowId, mount);
         mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-        views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       }
+      return;
+    }
+
+    if (act === "cyclePrev") {
+      state.cyclePage = Math.max(1, state.cyclePage - 1);
+      const mount = getPanelMount();
+      views?.renderReproTabInto?.(mount);
+      return;
+    }
+    if (act === "cycleNext") {
+      state.cyclePage += 1;
+      const mount = getPanelMount();
+      views?.renderReproTabInto?.(mount);
       return;
     }
 
@@ -638,12 +793,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.selectedPigletTagForGrowth = "";
       state.selectedPigletTagForSelection = "";
 
-      views.renderSowCards();
+      views?.renderSowCards?.();
 
       const mount = getPanelMount();
-      views.renderSowPanel(state.activeSowId, mount);
+      views?.renderSowPanel?.(state.activeSowId, mount);
       mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-      views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleAI");
+      views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleAI");
       return;
     }
 
@@ -657,7 +812,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.selectedPigletTagForSelection = "";
 
       const mount = getPanelMount();
-      views.renderReproTabInto(mount);
+      views?.renderReproTabInto?.(mount);
       return;
     }
 
@@ -666,7 +821,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.pigletPageGrowth = 1;
       state.growthView = "list";
       state.selectedPigletTagForGrowth = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
       return;
     }
 
@@ -675,42 +831,50 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.pigletPageSelection = 1;
       state.selectionView = "list";
       state.selectedPigletTagForSelection = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       return;
     }
 
     if (act === "growthBack") {
       state.growthView = "list";
       state.selectedPigletTagForGrowth = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
       return;
     }
 
     if (act === "selectionBack") {
       state.selectionView = "list";
       state.selectedPigletTagForSelection = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       return;
     }
 
     if (act === "growthPigletPrev") {
       state.pigletPageGrowth = Math.max(1, state.pigletPageGrowth - 1);
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
       return;
     }
     if (act === "growthPigletNext") {
       state.pigletPageGrowth += 1;
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
       return;
     }
+
     if (act === "selectionPigletPrev") {
       state.pigletPageSelection = Math.max(1, state.pigletPageSelection - 1);
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       return;
     }
     if (act === "selectionPigletNext") {
       state.pigletPageSelection += 1;
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       return;
     }
 
@@ -718,8 +882,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.selectedPigletTagForGrowth = btn.getAttribute("data-piglet") || "";
       state.growthView = "detail";
       if (state.activeSowId && state.activeCycleId) {
-        views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-        setTimeout(() => views.renderPigletGrowthDetail(state.selectedPigletTagForGrowth), 0);
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+        setTimeout(() => views?.renderPigletGrowthDetail?.(state.selectedPigletTagForGrowth), 0);
       }
       return;
     }
@@ -728,14 +892,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.selectedPigletTagForSelection = btn.getAttribute("data-piglet") || "";
       state.selectionView = "detail";
       if (state.activeSowId && state.activeCycleId) {
-        views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
-        setTimeout(() => views.renderPigletSelectionDetail(state.selectedPigletTagForSelection), 0);
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+        setTimeout(() => views?.renderPigletSelectionDetail?.(state.selectedPigletTagForSelection), 0);
       }
       return;
     }
   });
 
-  // Cycle dropdown change/input (fixed)
   function handleCycleFilterChange(selectEl) {
     if (!selectEl) return;
     if (!state.activeSowId) return;
@@ -744,26 +907,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.cycleView = "list";
     state.activeCycleId = null;
 
+    state.cyclePage = 1;
+
     state.growthView = "list";
     state.selectionView = "list";
     state.selectedPigletTagForGrowth = "";
     state.selectedPigletTagForSelection = "";
 
     const mount = getPanelMount();
-    views.renderReproTabInto(mount);
+    views?.renderReproTabInto?.(mount);
   }
 
   document.addEventListener("change", (e) => {
     if (e.target?.id === "cycleFilterSelect") handleCycleFilterChange(e.target);
   });
 
-  document.addEventListener("input", (e) => {
-    if (e.target?.id === "cycleFilterSelect") handleCycleFilterChange(e.target);
+  // =========================================================
+  // Input handling (debounced search to reduce re-render spam)
+  // =========================================================
+  let searchT = null;
+  function debounce(fn, ms = 150) {
+    return (...args) => {
+      clearTimeout(searchT);
+      searchT = setTimeout(() => fn(...args), ms);
+    };
+  }
 
+  const onSearchInput = debounce((val) => {
+    state.sowTerm = val || "";
+    state.sowPage = 1;
+    views?.renderSowCards?.();
+  }, 120);
+
+  document.addEventListener("input", (e) => {
     if (e.target?.id === "reproductionSearch") {
-      state.sowTerm = e.target.value || "";
-      state.sowPage = 1;
-      views.renderSowCards();
+      onSearchInput(e.target.value || "");
       return;
     }
 
@@ -772,7 +950,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.pigletPageGrowth = 1;
       state.growthView = "list";
       state.selectedPigletTagForGrowth = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
       return;
     }
 
@@ -781,7 +960,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.pigletPageSelection = 1;
       state.selectionView = "list";
       state.selectedPigletTagForSelection = "";
-      if (state.activeSowId && state.activeCycleId) views.renderCyclePanel(state.activeSowId, state.activeCycleId, "#cycleSelect");
+      if (state.activeSowId && state.activeCycleId)
+        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       return;
     }
   });

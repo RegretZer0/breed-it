@@ -3,6 +3,252 @@
 export function createReproViews({ repo, state, ui }) {
   const { esc, fmtDate, fmtShortDate, badge, sexLabel, normSex } = ui;
 
+  // =========================
+  // Selection UI Helpers
+  // =========================
+  function norm(v) {
+    return String(v ?? "").trim();
+  }
+  function normLower(v) {
+    return norm(v).toLowerCase();
+  }
+  function toKey(v) {
+    return v == null ? "" : String(v).trim();
+  }
+
+  function findSwineByTag(tag) {
+    const t = norm(tag);
+    if (!t) return null;
+    return (
+      (repo.store.allSwineData || []).find(
+        (s) => norm(s?.swine_tag) === t || norm(s?.swine_id) === t || norm(s?.tag) === t
+      ) || null
+    );
+  }
+
+  function findMonitoringRow(tag) {
+    const t = norm(tag);
+    if (!t) return null;
+    return (
+      (repo.store.rawMonitoringData || []).find(
+        (r) => norm(r?.swine_tag) === t || norm(r?.swine_id) === t || norm(r?.tag) === t
+      ) || null
+    );
+  }
+
+  // Current status to display for a piglet
+  // Priority: selection record -> swine final decision -> monitoring -> swine -> fallback
+  function getPigletDisplayStatus(tag) {
+    const sw = findSwineByTag(tag);
+
+    const swStatus = norm(sw?.current_status);
+    const swStatusLower = normLower(swStatus);
+    const swStageLower = normLower(sw?.age_stage);
+
+    // If swine already has a DECISION / FINAL status, show it immediately
+    // (these are enum-safe values you are using now)
+    const isFinalDecision =
+      swStageLower === "adult" ||
+      swStatusLower === "active" ||
+      swStatusLower.includes("culled") ||
+      swStatusLower.includes("sold") ||
+      swStatusLower.includes("inactive") ||
+      swStatusLower.includes("marked for sale");
+
+    if (isFinalDecision && swStatus) {
+      return swStatus;
+    }
+
+    // Priority: selection record -> monitoring -> swine -> fallback
+    const sel = repo.getSelectionForPiglet?.(tag);
+    const fromSel = sel?.recommendation || sel?.decision || sel?.status || "";
+    if (norm(fromSel)) return String(fromSel);
+
+    const mon = findMonitoringRow(tag);
+    if (norm(mon?.current_status)) return String(mon.current_status);
+
+    if (swStatus) return swStatus;
+    if (norm(sw?.age_stage)) return String(sw.age_stage);
+
+    return "Monitoring (Day 1-30)";
+  }
+
+  function statusVariant(statusText) {
+    const s = normLower(statusText);
+
+    // treat Final Selection as retain/success
+    if (s.includes("final selection")) return "success";
+
+    if (s.includes("retain") || s.includes("breeding") || s.includes("keep")) return "success";
+
+    // treat sold as sell/danger
+    if (
+      s.includes("sell") ||
+      s.includes("sale") ||
+      s.includes("market") ||
+      s.includes("cull") ||
+      s.includes("sold")
+    )
+      return "danger";
+
+    if (s.includes("pending") || s.includes("review") || s.includes("monitor")) return "warning";
+    return "light";
+  }
+
+  function statusChipHtml(statusText) {
+    // ✅ Default to real stage instead of "Pending"
+    const st = norm(statusText) || "Monitoring (Day 1-30)";
+    const v = statusVariant(st);
+    // Use app-like subtle chips (keeps theme consistent)
+    if (v === "success")
+      return `<span class="repro-chip bg-success-subtle text-success border border-success-subtle">Status: <b>${esc(
+        st
+      )}</b></span>`;
+    if (v === "danger")
+      return `<span class="repro-chip bg-danger-subtle text-danger border border-danger-subtle">Status: <b>${esc(
+        st
+      )}</b></span>`;
+    if (v === "warning")
+      return `<span class="repro-chip bg-warning-subtle text-dark border border-warning-subtle">Status: <b>${esc(
+        st
+      )}</b></span>`;
+    return `<span class="repro-chip bg-light text-dark border">Status: <b>${esc(st)}</b></span>`;
+  }
+
+  // ---------------------------------------------------------
+  // Selection Decision Helpers (Pending default)
+  // ---------------------------------------------------------
+  function decisionFromSelectionRow(selRow) {
+    const raw = String(selRow?.recommendation || selRow?.decision || selRow?.status || "").toLowerCase();
+    if (!raw) return ""; // unknown
+    if (raw.includes("retain") || raw.includes("keep") || raw.includes("breeding")) return "retain";
+    if (raw.includes("sell") || raw.includes("sale") || raw.includes("market")) return "sell";
+    if (raw.includes("pending")) return "pending";
+    return "";
+  }
+
+  // ✅ single source of truth for decision shown in UI
+  function getPigletDecision(pigletTag) {
+    const tag = toKey(pigletTag);
+    if (!tag) return { key: "", decision: "pending", locked: false, source: "default" };
+
+    // 1) DB selection row (if your endpoint returns it)
+    const sel = repo.getSelectionForPiglet?.(tag) || null;
+    const d1 = sel ? decisionFromSelectionRow(sel) : "";
+    if (d1) return { key: tag, decision: d1, locked: d1 !== "pending", source: "db" };
+
+    // 2) Local lock (works even if selection-candidates is empty)
+    const mongoId = toKey(repo.getMongoIdForSwineTag?.(tag) || "");
+    const local = mongoId ? state.localSelectionLock?.get(mongoId) : null;
+    if (local === "breeding") return { key: mongoId || tag, decision: "retain", locked: true, source: "local" };
+    if (local === "sell") return { key: mongoId || tag, decision: "sell", locked: true, source: "local" };
+
+    // 3) Default: Pending (this is what you want)
+    return { key: mongoId || tag, decision: "pending", locked: false, source: "default" };
+  }
+
+  function decisionLabel(decision) {
+    if (decision === "retain") return "Retain";
+    if (decision === "sell") return "For Sale";
+    return "Pending";
+  }
+
+  function decisionVariant(decision) {
+    if (decision === "retain") return "success";
+    if (decision === "sell") return "danger";
+    return "warning";
+  }
+
+  // ✅ Use this for the "Status pill" in selection UI
+  function selectionStatusChipHtml(decision) {
+    const label = decisionLabel(decision);
+    const variant = decisionVariant(decision);
+    const cls =
+      variant === "success"
+        ? "badge bg-success"
+        : variant === "danger"
+        ? "badge bg-danger"
+        : "badge bg-warning text-dark";
+    return `<span class="${cls}">${esc(label)}</span>`;
+  }
+
+  // ✅ Stats should be based on selection decisions, not Swine "Active"
+  function computeSelectionSummaryForPiglets(pigletTags) {
+    const sum = { total: 0, retain: 0, sell: 0, pending: 0 };
+    for (const tag of pigletTags || []) {
+      const d = getPigletDecision(tag).decision; // retain/sell/pending
+      sum.total += 1;
+      if (d === "retain") sum.retain += 1;
+      else if (d === "sell") sum.sell += 1;
+      else sum.pending += 1;
+    }
+    return sum;
+  }
+
+  // ---------------------------------------------------------
+  // Selection lock: once a decision is made, buttons should lock/hide
+  // ---------------------------------------------------------
+  function isDecisionLocked(statusText) {
+    const s = normLower(statusText);
+
+    // Any of these means: user already decided / no more actions
+    return (
+      s.includes("final selection") ||
+      s.includes("retain") ||
+      s.includes("breeding") ||
+      s.includes("keep") ||
+      s.includes("sell") ||
+      s.includes("sale") ||
+      s.includes("market") ||
+      s.includes("cull") ||
+      s.includes("culled") ||
+      s.includes("sold") ||
+      s.includes("inactive") ||
+      s.includes("to be culled") ||
+      s.includes("pending") // lock pending too (one-time selection)
+    );
+  }
+
+  function decisionLabelFromStatus(statusText) {
+    const s = normLower(statusText);
+    if (s.includes("final selection") || s.includes("retain") || s.includes("breeding") || s.includes("keep"))
+      return "Retain";
+    if (
+      s.includes("sell") ||
+      s.includes("sale") ||
+      s.includes("market") ||
+      s.includes("cull") ||
+      s.includes("culled") ||
+      s.includes("sold")
+    )
+      return "Sale";
+    if (s.includes("pending")) return "Pending";
+    return "";
+  }
+
+  function computeSelectionStatsFromPiglets(piglets) {
+    const sum = { total: 0, retain: 0, sell: 0, pending: 0 };
+    const list = Array.isArray(piglets) ? piglets : [];
+    sum.total = list.length;
+
+    for (const p of list) {
+      const tag = p?.swine_tag || p?.swine_id || p?.tag || "";
+      const st = normLower(getPigletDisplayStatus(tag));
+
+      // ✅ count Final Selection as retain
+      if (st.includes("final selection") || st.includes("retain") || st.includes("breeding") || st.includes("keep")) {
+        sum.retain += 1;
+      }
+      // ✅ count Sold as sell
+      else if (st.includes("sell") || st.includes("sale") || st.includes("market") || st.includes("cull") || st.includes("sold")) {
+        sum.sell += 1;
+      } else {
+        sum.pending += 1;
+      }
+    }
+    return sum;
+  }
+
   // ---------------------------------------------------------
   // Shared small helpers
   // ---------------------------------------------------------
@@ -14,11 +260,146 @@ export function createReproViews({ repo, state, ui }) {
     return { page: safePage, pages, total, items: list.slice(start, start + pageSize) };
   }
 
+  function pickFirst(obj, keys) {
+    for (const k of keys) {
+      const v = obj?.[k];
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s && s !== "null" && s !== "undefined") return v;
+    }
+    return null;
+  }
+
+  function yesNo(val) {
+    if (val === true) return "Yes";
+    if (val === false) return "No";
+    const s = String(val ?? "").toLowerCase().trim();
+    if (!s) return "N/A";
+    if (["yes", "y", "true", "1", "confirmed"].includes(s)) return "Yes";
+    if (["no", "n", "false", "0"].includes(s)) return "No";
+    return String(val);
+  }
+
+  function normalizeRecommendation(rec) {
+    const r = String(rec || "").trim();
+    if (!r) return { label: "Pending", variant: "warning" };
+
+    const low = r.toLowerCase();
+    if (low.includes("retain") || low.includes("breeding") || low.includes("keep"))
+      return { label: "Retain for Breeding", variant: "success" };
+    if (low.includes("sell") || low.includes("sale") || low.includes("market") || low.includes("cull"))
+      return { label: "Mark for Sale", variant: "danger" };
+    if (low.includes("pending")) return { label: "Pending", variant: "warning" };
+
+    return { label: r, variant: "light" };
+  }
+
+  // ---------------------------------------------------------
+  // System Suggestion (kept for details + helpful context)
+  // NOTE: The PILL on piglet cards is now CURRENT STATUS (per request).
+  // ---------------------------------------------------------
+  function computeSystemSuggestion(pigletTag, pigletObj) {
+    const tag = toKey(pigletTag || pigletObj?.swine_id || pigletObj?.swine_tag);
+    if (!tag) {
+      return {
+        badge: { label: "Pending", variant: "warning" },
+        text: "System Suggestion: Pending (missing piglet tag).",
+      };
+    }
+
+    const hs = String(pigletObj?.health_status || "").toLowerCase();
+    if (hs.includes("deceased") || hs.includes("dead")) {
+      return {
+        badge: { label: "Deceased", variant: "danger" },
+        text: "System Suggestion: No action (piglet is marked deceased).",
+      };
+    }
+
+    const defs = repo.getDeformitiesForPiglet(tag) || [];
+    if (defs.length) {
+      return {
+        badge: { label: "Mark for Sale", variant: "danger" },
+        text: "System Suggestion: Mark for sale (deformity detected).",
+      };
+    }
+
+    const sel = repo.getSelectionForPiglet(tag);
+    if (sel) {
+      const rec = normalizeRecommendation(sel?.recommendation || sel?.decision || sel?.status);
+      const text =
+        rec.variant === "success"
+          ? "System Suggestion: Retain this piglet for breeding based on evaluation."
+          : rec.variant === "danger"
+          ? "System Suggestion: Mark this piglet for sale (not ideal for breeding)."
+          : "System Suggestion: Set this piglet as Pending while awaiting more records or evaluation.";
+      return { badge: rec, text };
+    }
+
+    const history = repo.getMorphHistoryForPiglet(tag) || [];
+    const latest = history.length ? history[history.length - 1] : null;
+
+    const latestWeight = latest ? Number(latest.weight || 0) : 0;
+    const stageRaw = String(
+      latest?.stage || pigletObj?.age_stage || pigletObj?.current_status || pigletObj?.current_stage || ""
+    ).toLowerCase();
+
+    const sex = normSex(pigletObj?.sex);
+    const isFemale = sex.startsWith("f");
+
+    const isMonitoring = stageRaw.includes("day 1-30") || stageRaw.includes("monitoring") || stageRaw.includes("piglet");
+    const isWeaned =
+      stageRaw.includes("weaned") ||
+      stageRaw.includes("weaning") ||
+      stageRaw.includes("weaner") ||
+      stageRaw.includes("3 months");
+    const isFinal = stageRaw.includes("final selection") || stageRaw.includes("final") || stageRaw.includes("adult");
+
+    if (isFinal) {
+      if (latestWeight >= 15 && latestWeight <= 25) {
+        return {
+          badge: { label: isFemale ? "Retain for Breeding" : "Market Ready", variant: "success" },
+          text: `System Suggestion: Ideal selection weight (${latestWeight} kg). ${
+            isFemale ? "Retain for breeding." : "Market ready."
+          }`,
+        };
+      }
+      if (latestWeight > 25) {
+        return {
+          badge: { label: "Mark for Sale", variant: "danger" },
+          text: `System Suggestion: Overweight (${latestWeight} kg). Consider market/sale.`,
+        };
+      }
+      return {
+        badge: { label: "Pending", variant: "warning" },
+        text: `System Suggestion: Underweight (${latestWeight} kg). Continue monitoring.`,
+      };
+    }
+
+    if (isWeaned) {
+      return {
+        badge: { label: "Pending", variant: "warning" },
+        text: "System Suggestion: No deformities detected. Continue monitoring toward final selection.",
+      };
+    }
+
+    if (isMonitoring) {
+      return {
+        badge: { label: "Pending", variant: "warning" },
+        text: "System Suggestion: No deformities detected. Continue monitoring (Day 1–30).",
+      };
+    }
+
+    return {
+      badge: { label: "Pending", variant: "warning" },
+      text: "System Suggestion: Pending (insufficient records).",
+    };
+  }
+
   function filterPiglets(piglets, term) {
     const t = (term || "").trim().toLowerCase();
     if (!t) return piglets;
     return piglets.filter((p) => {
-      const tag = (p?.swine_id || p?.swine_tag || "").toLowerCase();
+      const tag = (p?.swine_id || p?.swine_tag || p?.tag || "").toLowerCase();
       const st = (p?.age_stage || p?.current_status || p?.current_stage || "").toLowerCase();
       return tag.includes(t) || st.includes(t);
     });
@@ -41,14 +422,13 @@ export function createReproViews({ repo, state, ui }) {
   function getSowByIdOrTag(sowId) {
     return (
       repo.store.sowMap?.get?.(sowId) ||
-      repo.store.allSwineData?.find?.((x) => (x?.swine_id || x?.swine_tag) === sowId) ||
+      repo.store.allSwineData?.find?.((x) => (x?.swine_id || x?.swine_tag || x?.tag) === sowId) ||
       null
     );
   }
 
   function getLatestPerf(swine) {
     const list = Array.isArray(swine?.performance_records) ? swine.performance_records : [];
-    // Most systems append newest last; if yours is newest first, switch to list[0]
     return list.length ? list[list.length - 1] : null;
   }
 
@@ -97,7 +477,7 @@ export function createReproViews({ repo, state, ui }) {
     if (!term) return list;
 
     return list.filter((s) => {
-      const sowId = (s?.swine_id || s?.swine_tag || "").toLowerCase();
+      const sowId = (s?.swine_id || s?.swine_tag || s?.tag || "").toLowerCase();
       const stage = (s?.age_stage || s?.current_status || s?.current_stage || "").toLowerCase();
       return sowId.includes(term) || stage.includes(term);
     });
@@ -120,7 +500,7 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   function sowCardHtml(s) {
-    const sowId = s?.swine_id || s?.swine_tag || "N/A";
+    const sowId = s?.swine_id || s?.swine_tag || s?.tag || "N/A";
     const stage = s?.age_stage || s?.current_status || s?.current_stage || "N/A";
     const breed = s?.breed || "N/A";
     const dob = s?.birth_date ? fmtDate(s.birth_date) : "N/A";
@@ -185,11 +565,23 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   // ---------------------------------------------------------
-  // Cycle dropdown / list (fixed)
+  // Cycle dropdown / list + pagination
   // ---------------------------------------------------------
   function getCyclesForSowSafe(sowId) {
-    const cycles = repo.getCyclesForSow(sowId) || [];
-    const ids = new Set(cycles.map((c) => String(c?.id)));
+    const raw = repo.getCyclesForSow(sowId) || [];
+
+    const seen = new Set();
+    const cycles = [];
+    for (const c of raw) {
+      const id = String(c?.id || "");
+      if (!id) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      cycles.push(c);
+    }
+
+    const ids = new Set(cycles.map((c) => String(c?.id || "")));
+
     if (state.cycleFilterId !== "all" && !ids.has(String(state.cycleFilterId))) {
       state.cycleFilterId = "all";
     }
@@ -211,9 +603,11 @@ export function createReproViews({ repo, state, ui }) {
       `<option value="all"${state.cycleFilterId === "all" ? " selected" : ""}>All cycles</option>` +
       cycles
         .map((c, idx) => {
-          const label = c?.date ? fmtDate(c.date) : `Cycle ${idx + 1}`;
+          const label = c?.date ? `Cycle ${idx + 1} • ${fmtDate(c.date)}` : `Cycle ${idx + 1}`;
           const val = String(c?.id ?? "");
-          return `<option value="${esc(val)}"${String(state.cycleFilterId) === val ? " selected" : ""}>${esc(label)}</option>`;
+          return `<option value="${esc(val)}"${
+            String(state.cycleFilterId) === val ? " selected" : ""
+          }>${esc(label)}</option>`;
         })
         .join("");
 
@@ -226,7 +620,7 @@ export function createReproViews({ repo, state, ui }) {
 
         <div class="d-flex align-items-center gap-2">
           <div class="small text-muted">Cycle</div>
-          <select class="form-select form-select-sm" style="min-width:220px" id="cycleFilterSelect">
+          <select class="form-select form-select-sm" style="min-width:260px" id="cycleFilterSelect">
             ${opts}
           </select>
         </div>
@@ -234,28 +628,48 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
-  function cycleCardHtml(cycle) {
-    const isActive = state.activeCycleId && String(state.activeCycleId) === String(cycle.id);
+  function cycleCardHtml(cycle, cycleNo, sowId) {
+    const dateLabel = cycle?.date ? fmtDate(cycle.date) : "N/A";
+    const boar = cycle?.boarCode || "N/A";
+    const status = cycle?.status || "Recorded";
+
+    const badgeVariant =
+      String(status).toLowerCase().includes("fail")
+        ? "danger"
+        : String(status).toLowerCase().includes("preg")
+        ? "info"
+        : String(status).toLowerCase().includes("success")
+        ? "success"
+        : "light";
+
     return `
-      <div class="card repro-subcard shadow-sm border-0 ${isActive ? "repro-card-active" : ""}">
+      <div class="card repro-subcard shadow-sm border-0">
         <div class="card-body">
           <div class="d-flex align-items-start justify-content-between gap-2">
             <div class="min-w-0">
               <div class="fw-bold text-truncate">
-                <i class="bi bi-calendar2-week me-1"></i> ${esc(fmtDate(cycle.date))}
+                <i class="bi bi-calendar2-week me-1"></i> Cycle ${cycleNo}
               </div>
               <div class="small text-muted text-truncate">
-                Boar: <b>${esc(cycle.boarCode)}</b>
+                Service Date: <b>${esc(dateLabel)}</b>
+              </div>
+              <div class="small text-muted text-truncate">
+                Boar: <b>${esc(boar)}</b>
               </div>
             </div>
 
             <div class="text-end">
-              ${badge(cycle.status, cycle.status === "Failed" ? "danger" : "light")}
+              ${badge(status, badgeVariant)}
             </div>
           </div>
 
-          <div class="d-flex gap-2 mt-3">
-            <button class="btn btn-success btn-sm" data-act="openCycle" data-cycle="${esc(String(cycle.id))}" data-sow="${esc(cycle.sowCode)}">
+          <div class="d-flex gap-2 mt-3 justify-content-end">
+            <button
+              class="btn btn-success btn-sm"
+              data-act="openCycle"
+              data-cycle="${esc(String(cycle.id))}"
+              data-sow="${esc(String(sowId))}"
+            >
               Open Cycle <i class="bi bi-chevron-right ms-1"></i>
             </button>
           </div>
@@ -264,9 +678,25 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
+  function renderCyclePager(meta) {
+    return `
+      <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+        <button class="btn btn-sm btn-outline-success" ${meta.page <= 1 ? "disabled" : ""} data-act="cyclePrev">
+          <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <div class="small text-muted">
+          Page <b>${meta.page}</b> of <b>${meta.pages}</b> • <b>${meta.total}</b> cycles
+        </div>
+        <button class="btn btn-sm btn-outline-success" ${meta.page >= meta.pages ? "disabled" : ""} data-act="cycleNext">
+          Next <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    `;
+  }
+
   function renderCycleList(sowId) {
-    const cycles = getCyclesForSowSafe(sowId);
-    if (!cycles.length) {
+    const cyclesAll = getCyclesForSowSafe(sowId);
+    if (!cyclesAll.length) {
       return `
         <div class="text-muted small">
           <i class="bi bi-info-circle me-1"></i> No AI records yet for this sow.
@@ -276,15 +706,21 @@ export function createReproViews({ repo, state, ui }) {
 
     const filtered = getFilteredCyclesForSow(sowId);
 
+    const meta = paginate(filtered, state.cyclePage, state.CYCLE_PAGE_SIZE);
+    state.cyclePage = meta.page;
+
+    const baseIndexOffset = meta.items.length ? Math.max(0, filtered.indexOf(meta.items[0])) : 0;
+
     return `
       ${renderCycleFilterDropdown(sowId)}
       <div class="vstack gap-3" id="cycleCardsWrap">
         ${
-          filtered.length
-            ? filtered.map((c) => cycleCardHtml(c)).join("")
+          meta.items.length
+            ? meta.items.map((c, idx) => cycleCardHtml(c, baseIndexOffset + idx + 1, sowId)).join("")
             : `<div class="text-muted small"><i class="bi bi-info-circle me-1"></i>No cycles match.</div>`
         }
       </div>
+      ${renderCyclePager(meta)}
     `;
   }
 
@@ -300,7 +736,6 @@ export function createReproViews({ repo, state, ui }) {
       return renderCycleList(sowId);
     }
 
-    // Context-aware Back behavior
     const activeTab = state.activeCycleTabTarget || "#cycleAI";
     const isGrowthDetail = activeTab === "#cycleGrowth" && state.growthView === "detail";
     const isSelectionDetail = activeTab === "#cycleSelect" && state.selectionView === "detail";
@@ -347,7 +782,6 @@ export function createReproViews({ repo, state, ui }) {
       return;
     }
 
-    // validate filter against current cycles (fix broken dropdown)
     getCyclesForSowSafe(state.activeSowId);
 
     m.innerHTML = renderReproTabBodyHtml(state.activeSowId);
@@ -371,22 +805,55 @@ export function createReproViews({ repo, state, ui }) {
     if (nextTarget && state.CYCLE_TABS.includes(nextTarget)) state.activeCycleTabTarget = nextTarget;
   }
 
+  // ✅ AI Record
   function renderCycleAIRecord(sowId, cycle) {
-    const boarId = cycle.boarCode;
-    const boar = repo.store.allSwineData.find((x) => (x?.swine_id || x?.swine_tag) === boarId);
-    const boarOwner = boar?.farmer_id?.name || boar?.farmer_name || boar?.owner_name || "N/A";
+    const r = cycle?.raw || {};
+
+    const boarId = toKey(
+      cycle.boarCode || pickFirst(r, ["male_swine_tag", "boar_tag", "male_swine_id", "boar_id"]) || "N/A"
+    );
+    const recordId = toKey(pickFirst(r, ["_id", "id", "record_id", "ai_record_id"]) || cycle.id);
+
+    const tech = pickFirst(r, ["technician", "ai_technician", "performed_by", "vet", "handled_by"]);
+    const semenSrc = pickFirst(r, ["semen_source", "source", "batch_source", "batch_id", "source_id"]);
+
+    const preg = pickFirst(r, ["pregnancy_confirmed", "pregnant", "is_pregnant", "pregnancy"]);
+    const expected = pickFirst(r, ["expected_farrowing", "expected_farrowing_date", "farrowing_date", "expected_date"]);
+
+    const serviceDate = pickFirst(r, ["insemination_date", "ai_service_date", "service_date", "date", "createdAt"]);
+    const status = pickFirst(r, ["cycle_status", "status", "pregnancy_status", "result"]) || cycle.status;
+
+    const notes = pickFirst(r, ["remarks", "notes", "comment", "description"]);
+
+    const badgeVariant =
+      String(status).toLowerCase().includes("fail")
+        ? "danger"
+        : String(status).toLowerCase().includes("preg")
+        ? "info"
+        : String(status).toLowerCase().includes("success")
+        ? "success"
+        : "light";
 
     return `
       <div class="row g-3">
         <div class="col-12 col-lg-6">
           <div class="card repro-subcard h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="small text-muted mb-1">Sow</div>
-              <div class="fw-bold">${esc(sowId)}</div>
-              <div class="small text-muted mt-2">Cycle Date</div>
-              <div class="fw-bold">${esc(fmtDate(cycle.date))}</div>
-              <div class="small text-muted mt-2">Status</div>
-              <div>${badge(cycle.status, cycle.status === "Failed" ? "danger" : "light")}</div>
+              <div class="fw-bold mb-2"><i class="bi bi-journal-text me-1"></i> Artificial Insemination Record</div>
+
+              <div class="small text-muted">Sow</div>
+              <div class="fw-semibold">${esc(sowId)}</div>
+
+              <div class="small text-muted mt-2">AI Service Date</div>
+              <div class="fw-semibold">${esc(fmtDate(serviceDate))}</div>
+
+              <div class="small text-muted mt-2">Cycle Status</div>
+              <div>${badge(status, badgeVariant)}</div>
+
+              <hr class="my-3"/>
+
+              <div class="small text-muted">AI Record ID</div>
+              <div class="fw-semibold text-break">${esc(recordId)}</div>
             </div>
           </div>
         </div>
@@ -394,15 +861,44 @@ export function createReproViews({ repo, state, ui }) {
         <div class="col-12 col-lg-6">
           <div class="card repro-subcard h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="small text-muted mb-1">Boar</div>
-              <div class="fw-bold">${esc(boarId)}</div>
-              <div class="small text-muted mt-2">Origin / Owner</div>
-              <div class="fw-bold">${esc(boarOwner)}</div>
+              <div class="fw-bold mb-2"><i class="bi bi-clipboard2-check me-1"></i> Service Details</div>
 
-              <div class="small text-muted mt-2">Result</div>
-              <div class="text-muted small">
-                If you track completed/pending/failed later, we’ll map it to a badge automatically.
-              </div>
+              <div class="small text-muted">Boar (Sire Tag / Code)</div>
+              <div class="fw-semibold text-break">${esc(boarId)}</div>
+
+              <div class="small text-muted mt-2">Pregnancy Confirmed</div>
+              <div class="fw-semibold">${esc(yesNo(preg))}</div>
+
+              <div class="small text-muted mt-2">Expected Farrowing</div>
+              <div class="fw-semibold">${esc(fmtDate(expected))}</div>
+
+              ${
+                tech
+                  ? `
+                <div class="small text-muted mt-2">Technician</div>
+                <div class="fw-semibold">${esc(tech)}</div>
+              `
+                  : ""
+              }
+
+              ${
+                semenSrc
+                  ? `
+                <div class="small text-muted mt-2">Batch / Source</div>
+                <div class="fw-semibold">${esc(semenSrc)}</div>
+              `
+                  : ""
+              }
+
+              ${
+                notes
+                  ? `
+                <hr class="my-3"/>
+                <div class="small text-muted">Notes</div>
+                <div class="small">${esc(notes)}</div>
+              `
+                  : ""
+              }
             </div>
           </div>
         </div>
@@ -415,7 +911,7 @@ export function createReproViews({ repo, state, ui }) {
 
     const rows = piglets
       .map((p) => {
-        const tag = p?.swine_id || p?.swine_tag || "N/A";
+        const tag = p?.swine_id || p?.swine_tag || p?.tag || "N/A";
         const sex = sexLabel(p?.sex);
         const stage = p?.age_stage || p?.current_status || p?.current_stage || "N/A";
         const hs = p?.health_status || "N/A";
@@ -435,8 +931,9 @@ export function createReproViews({ repo, state, ui }) {
     return `
       <div class="row g-3">
         <div class="col-12">
+          <!-- ✅ FIX: 2 columns on small screens -->
           <div class="row g-2">
-            <div class="col-12 col-md-4">
+            <div class="col-6 col-md-4">
               <div class="card repro-stat h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Alive Male</div>
@@ -444,7 +941,7 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-6 col-md-4">
               <div class="card repro-stat h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Alive Female</div>
@@ -452,11 +949,19 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-6 col-md-4">
               <div class="card repro-stat-danger h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Deceased</div>
                   <div class="h4 mb-0">${stats.deceased}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 d-md-none">
+              <div class="card repro-stat h-100 shadow-sm border-0">
+                <div class="card-body">
+                  <div class="small text-muted">Total Piglets</div>
+                  <div class="h4 mb-0">${stats.total}</div>
                 </div>
               </div>
             </div>
@@ -477,39 +982,70 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
+  // ✅ Piglet card redesign:
+  // - Keep 1 card per row (parent uses vstack)
+  // - Replace suggestion pill => Current Status chip
+  // - Move action button to bottom-right
   function pigletCardHtml(p, ctx) {
-    const tag = p?.swine_id || p?.swine_tag || "N/A";
+    const tag = p?.swine_id || p?.swine_tag || p?.tag || "N/A";
     const sex = sexLabel(p?.sex);
     const stage = p?.age_stage || p?.current_status || p?.current_stage || "N/A";
     const hs = p?.health_status || "N/A";
     const isDead = String(hs).toLowerCase().includes("deceased") || String(hs).toLowerCase().includes("dead");
     const btnAct = ctx === "growth" ? "openPigletGrowth" : "openPigletSelection";
 
-    const sel = repo.getSelectionForPiglet(tag);
-    const rec = sel?.recommendation || "Pending";
+    const currentStatus = getPigletDisplayStatus(tag);
+    const sug = computeSystemSuggestion(tag, p);
+
+    const statusChip = statusChipHtml(currentStatus);
+
+    const lifeBadge = isDead
+      ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle me-1"></i>Deceased</span>`
+      : `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Alive</span>`;
+
+    // Suggestion block (kept as supporting info, not the chip)
+    const sugBlockClass =
+      sug.badge.variant === "danger"
+        ? "bg-danger-subtle border-danger-subtle text-danger"
+        : sug.badge.variant === "success"
+        ? "bg-success-subtle border-success-subtle text-success"
+        : "bg-warning-subtle border-warning-subtle text-dark";
 
     return `
       <div class="card repro-subcard shadow-sm border-0">
-        <div class="card-body">
+        <div class="card-body d-flex flex-column gap-2">
+
+          <!-- Header row -->
           <div class="d-flex align-items-start justify-content-between gap-2">
             <div class="min-w-0">
-              <div class="fw-bold text-truncate">
-                <i class="bi bi-tag me-1"></i>${esc(tag)}
+              <div class="d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-tag"></i></span>
+                <div class="min-w-0">
+                  <div class="fw-bold text-truncate">${esc(tag)}</div>
+                  <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
+                </div>
               </div>
-              <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
-              <div class="small mt-1">${isDead ? badge("Deceased", "danger") : badge("Alive", "success")}</div>
             </div>
-            <div class="text-end">
-              <div class="small text-muted">Selection</div>
-              <div>${badge(rec, rec.toLowerCase().includes("cull") ? "danger" : "light")}</div>
+            <div class="text-end d-flex flex-column align-items-end gap-2">
+              ${statusChip}
+              ${lifeBadge}
             </div>
           </div>
 
-          <div class="d-flex gap-2 mt-3">
+          <!-- Support info -->
+          <div class="px-3 py-2 rounded-3 border ${sugBlockClass}">
+            <div class="fw-semibold small">
+              <i class="bi bi-lightbulb me-1"></i>${esc(sug.text)}
+            </div>
+          </div>
+
+          <!-- Footer actions: bottom-right -->
+          <div class="d-flex justify-content-end pt-1">
             <button class="btn btn-success btn-sm" data-act="${btnAct}" data-piglet="${esc(tag)}">
               Open <i class="bi bi-chevron-right ms-1"></i>
             </button>
           </div>
+
         </div>
       </div>
     `;
@@ -556,8 +1092,6 @@ export function createReproViews({ repo, state, ui }) {
       </div>
     `;
   }
-
-  
 
   function renderCycleGrowth(sowId, piglets) {
     const bySex = filterPigletsBySex(piglets, state.growthSexFilter);
@@ -624,42 +1158,64 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
-  function renderSelectionSummaryCards() {
-    const sum = repo.getSelectionSummary ? repo.getSelectionSummary() : { total: 0, retain: 0, sell: 0 };
+  // ✅ Selection summary should reflect CURRENT sow's piglets
+  // ✅ Uses decision-based counts (retain/sell/pending) when available
+  function renderSelectionSummaryCards(piglets) {
+    const list = Array.isArray(piglets) ? piglets : [];
 
-    // These are the placeholders (IDs) your controller can update if needed,
-    // but we already render actual values here too.
+    const tags = list
+      .map((p) => p?.swine_tag || p?.swine_id || p?.tag || "")
+      .filter((t) => String(t).trim());
+
+    // decision-based (db selection row OR state.localSelectionLock OR default pending)
+    const decisionSum = computeSelectionSummaryForPiglets(tags);
+
+    // fallback to old behavior if no decision info exists at all
+    const legacySum = computeSelectionStatsFromPiglets(list);
+    const hasAnyDecision = (decisionSum.retain + decisionSum.sell) > 0;
+
+    const sum = hasAnyDecision ? decisionSum : legacySum;
+
     return `
       <div class="row g-2 mt-2">
-        <div class="col-12 col-md-4">
+        <div class="col-6 col-md-3">
           <div class="card repro-stat h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="small text-muted">Total in Selection</div>
+              <div class="small text-muted">Total</div>
               <div class="h4 mb-0" id="selectionStatTotal">${sum.total}</div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-md-4">
+        <div class="col-6 col-md-3">
           <div class="card repro-stat h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="small text-muted">Retain for Breeding</div>
+              <div class="small text-muted">Retain</div>
               <div class="h4 mb-0" id="selectionStatRetain">${sum.retain}</div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-md-4">
+        <div class="col-6 col-md-3">
           <div class="card repro-stat-danger h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="small text-muted">Mark for Sale</div>
+              <div class="small text-muted">For Sale</div>
               <div class="h4 mb-0" id="selectionStatSell">${sum.sell}</div>
             </div>
           </div>
         </div>
+
+        <div class="col-6 col-md-3">
+          <div class="card repro-stat h-100 shadow-sm border-0">
+            <div class="card-body">
+              <div class="small text-muted">Pending</div>
+              <div class="h4 mb-0" id="selectionStatPending">${sum.pending || 0}</div>
+            </div>
+          </div>
+        </div>
       </div>
-  `;
-}
+    `;
+  }
 
   function renderCycleSelection(sowId, piglets) {
     const bySex = filterPigletsBySex(piglets, state.selectionSexFilter);
@@ -679,7 +1235,7 @@ export function createReproViews({ repo, state, ui }) {
                 <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
                     <div class="fw-bold text-truncate"><i class="bi bi-person-check me-1"></i> Selection Details</div>
-                    <div class="small text-muted text-truncate">Status and recommendation</div>
+                    <div class="small text-muted text-truncate">Status, suggestion, and actions</div>
                   </div>
                   <button type="button" class="btn btn-outline-success btn-sm" data-act="selectionBack">
                     <i class="bi bi-arrow-left me-1"></i> Back
@@ -694,7 +1250,7 @@ export function createReproViews({ repo, state, ui }) {
                 <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
                     <div class="fw-bold mb-1"><i class="bi bi-check2-circle me-1"></i> Selection Process</div>
-                    <div class="text-muted small">Filter piglets, then open one to view selection status.</div>
+                    <div class="text-muted small">Filter piglets, then open one to view selection status and actions.</div>
                   </div>
                   <div class="text-end">
                     <div class="small text-muted">Sex Filter</div>
@@ -702,7 +1258,7 @@ export function createReproViews({ repo, state, ui }) {
                   </div>
                 </div>
 
-                ${renderSelectionSummaryCards()}
+                ${renderSelectionSummaryCards(piglets)}
 
                 <div class="mt-3">
                   <input
@@ -728,29 +1284,157 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
+  // Selection detail includes ACTIONS
   function renderPigletSelectionDetail(pigletTag) {
     const mount = document.getElementById("selectionDetailMount");
     if (!mount) return;
 
-    const sel = repo.getSelectionForPiglet(pigletTag);
-    const rec = sel?.recommendation || "Pending";
-    const stage = sel?.current_stage || "N/A";
-    const date = sel?.updatedAt || sel?.date || sel?.createdAt || null;
+    const sel = repo.getSelectionForPiglet(pigletTag) || null;
+
+    const recObj = sel
+      ? normalizeRecommendation(sel?.recommendation || sel?.decision || sel?.status)
+      : normalizeRecommendation(getPigletDisplayStatus(pigletTag)); // derive from real status
+
+    // Fallback sources
+    const fallbackObj =
+      findSwineByTag(pigletTag) ||
+      findMonitoringRow(pigletTag) ||
+      null;
+
+    const fallbackPerf = repo.getMorphHistoryForPiglet?.(pigletTag);
+    const fallbackLatestPerf =
+      Array.isArray(fallbackPerf) && fallbackPerf.length
+        ? fallbackPerf[fallbackPerf.length - 1]
+        : null;
+
+    const stage =
+      sel?.current_stage ||
+      sel?.stage ||
+      fallbackObj?.current_status ||
+      fallbackObj?.age_stage ||
+      getPigletDisplayStatus(pigletTag) ||
+      "N/A";
+
+    const date =
+      sel?.updatedAt ||
+      sel?.date ||
+      sel?.createdAt ||
+      fallbackLatestPerf?.date ||
+      fallbackLatestPerf?.record_date ||
+      fallbackObj?.updatedAt ||
+      fallbackObj?.createdAt ||
+      null;
+
+    const swineId =
+      toKey(sel?.id) ||
+      toKey(sel?._id) ||
+      toKey(sel?.swine_mongo_id) ||
+      toKey(sel?.swineId) ||
+      "";
+
+    const mongoFromSwineList = repo.getMongoIdForSwineTag
+      ? toKey(repo.getMongoIdForSwineTag(pigletTag))
+      : "";
+
+    const actionSwineId = /^[a-f\d]{24}$/i.test(String(swineId))
+      ? swineId
+      : mongoFromSwineList;
+
+    const canAct = /^[a-f\d]{24}$/i.test(String(actionSwineId || ""));
+
+    const dec = getPigletDecision(pigletTag);
+    const currentDecision = dec.decision;      // pending/retain/sell
+    const decisionLocked = dec.locked;         // true for retain/sell
+    const decisionText = decisionLabel(currentDecision);
+
+    const fallbackSug = computeSystemSuggestion(pigletTag, fallbackObj);
 
     mount.innerHTML = `
       <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
         <div class="min-w-0">
-          <div class="fw-bold text-truncate"><i class="bi bi-tag me-1"></i>${esc(pigletTag)}</div>
-          <div class="small text-muted">Stage: <b>${esc(stage)}</b></div>
-          <div class="small text-muted">Last update: <b>${esc(fmtDate(date))}</b></div>
+          <div class="fw-bold text-truncate">
+            <i class="bi bi-tag me-1"></i>${esc(pigletTag)}
+          </div>
+          <div class="small text-muted">
+            Stage: <b>${esc(stage)}</b>
+          </div>
+          <div class="small text-muted">
+            Last update: <b>${esc(fmtDate(date))}</b>
+          </div>
         </div>
-        <div>${badge(rec, rec.toLowerCase().includes("cull") ? "danger" : "light")}</div>
+
+        <div class="d-flex flex-column align-items-end gap-2">
+          ${selectionStatusChipHtml(currentDecision)}
+          ${badge(recObj.label, recObj.variant)}
+        </div>
       </div>
 
       <hr class="my-3"/>
 
-      <div class="small text-muted">
-        This panel displays the selection info from your existing selection-candidates endpoint.
+      <div class="px-3 py-2 rounded-3 border ${
+        fallbackSug.badge.variant === "danger"
+          ? "bg-danger-subtle border-danger-subtle text-danger"
+          : fallbackSug.badge.variant === "success"
+          ? "bg-success-subtle border-success-subtle text-success"
+          : "bg-warning-subtle border-warning-subtle text-dark"
+      }">
+        <div class="fw-semibold small">
+          <i class="bi bi-lightbulb me-1"></i>${esc(fallbackSug.text)}
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end mt-3">
+        <div class="repro-action-row d-flex gap-2 flex-wrap">
+          ${
+            decisionLocked
+              ? `
+                <div class="px-3 py-2 rounded-3 border bg-light">
+                  <div class="small text-muted d-flex align-items-center gap-2">
+                    <i class="bi bi-lock-fill"></i>
+                    <span>
+                      Decision submitted${
+                        decisionText ? `: <b>${esc(decisionText)}</b>` : ""
+                      }.
+                    </span>
+                  </div>
+                </div>
+              `
+              : `
+                <button
+                  type="button"
+                  class="btn btn-success btn-sm"
+                  ${!canAct ? "disabled" : ""}
+                  onclick="processPigletAction('${esc(actionSwineId)}','breeding')"
+                >
+                  <i class="bi bi-check-circle me-1"></i> Retain
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-outline-danger btn-sm"
+                  ${!canAct ? "disabled" : ""}
+                  onclick="processPigletAction('${esc(actionSwineId)}','sell')"
+                >
+                  <i class="bi bi-tag-fill me-1"></i> Sell
+                </button>
+              `
+          }
+        </div>
+      </div>
+
+      <div class="text-muted small mt-2">
+        Actions update selection status for this piglet.
+        ${
+          !canAct
+            ? `
+            <div class="text-warning small mt-1">
+              Note: Unable to resolve this piglet's Mongo ID.
+              Ensure <code>/api/swine/all</code> returns <code>_id</code>
+              and this piglet exists in Swine collection.
+            </div>
+          `
+            : ""
+        }
       </div>
     `;
   }
@@ -839,7 +1523,7 @@ export function createReproViews({ repo, state, ui }) {
             <i class="bi bi-folder2-open me-1"></i> Cycle • ${esc(fmtDate(cycle.date))}
           </div>
           <div class="small text-muted">
-            Boar: <b>${esc(cycle.boarCode)}</b> • ${badge(cycle.status)}
+            Boar: <b>${esc(cycle.boarCode || "N/A")}</b> • ${badge(cycle.status || "Recorded")}
           </div>
 
           <ul class="nav nav-tabs mt-3 repro-tabs" role="tablist">
@@ -909,9 +1593,6 @@ export function createReproViews({ repo, state, ui }) {
     const dob = s?.birth_date ? fmtDate(s.birth_date) : "N/A";
     const stats = repo.computeBreedingStatsForSow(sowId);
 
-    // ---------------------------------------------------------
-    // Overview extra fields (health, status, measurements)
-    // ---------------------------------------------------------
     const sowObj = getSowByIdOrTag(sowId) || s;
 
     const hs = sowObj?.health_status || "N/A";
@@ -1078,7 +1759,6 @@ export function createReproViews({ repo, state, ui }) {
               </div>
             </div>
 
-            <!-- Single mount for reproduction content -->
             <div class="tab-pane fade" id="tabReproduction" role="tabpanel">
               <div id="reproReproMount"></div>
             </div>
@@ -1091,25 +1771,21 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   return {
-    // list
     renderListLoading,
     renderListError,
     renderListNoData,
     renderSowCards,
 
-    // cycle
     getCyclesForSowSafe,
     renderReproTabInto,
     renderCyclePanel,
 
-    // sow panel
     renderSowPanel,
 
-    // details
     renderPigletGrowthDetail,
+    renderPigletSelectionDetail: renderPigletSelectionDetail, // keep export name
     renderPigletSelectionDetail,
 
-    // expose for controller
     setCycleTabTarget,
   };
 }
