@@ -78,7 +78,37 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const PIGS_PER_PAGE = 5;
 
   // =========================================================
+  // Helpers: modal-open state
+  // =========================================================
+  function isElementVisible(el) {
+    return !!el && !el.classList.contains("hidden");
+  }
+
+  function ensureBodyModalState() {
+    const reportModal = document.getElementById("reportModal");
+    const trackModal = document.getElementById("trackModal");
+    const archiveModalEl = document.getElementById("archiveModal");
+    const evidenceLb = document.getElementById("evidenceLightbox");
+    const feedbackModal = document.getElementById("feedbackModal");
+    const pigPicker = document.getElementById("pigPickerPanel");
+
+    const anyOpen =
+      isElementVisible(reportModal) ||
+      isElementVisible(trackModal) ||
+      isElementVisible(archiveModalEl) ||
+      isElementVisible(feedbackModal) ||
+      isElementVisible(pigPicker) ||
+      (evidenceLb && evidenceLb.classList.contains("show"));
+
+    document.body.classList.toggle("modal-open", anyOpen);
+  }
+
+  // =========================================================
   // ✅ Themed Alerts / Confirms (NO native alert/confirm)
+  //   FIXES:
+  //   - Center the modal (no more flex-start + marginTop)
+  //   - Remove duplicate open/close/uiAlert/uiConfirm definitions
+  //   - Keep body modal-open state consistent
   // =========================================================
   function ensureFeedbackModal() {
     let modal = document.getElementById("feedbackModal");
@@ -89,7 +119,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     wrap.className = "modal-shell hidden"; // keep your theme
     wrap.setAttribute("aria-hidden", "true");
 
-    // ✅ IMPORTANT:
+    // IMPORTANT:
     // - DO NOT use "modal-backdrop" class (Bootstrap conflicts)
     // - Force z-index so backdrop never blocks the card/buttons
     wrap.innerHTML = `
@@ -118,11 +148,17 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     document.body.appendChild(wrap);
 
-    // ✅ Layering: ensure this modal always sits above your other modals/lightboxes
-    // (reportModal uses 1060 sometimes; evidence lightbox can be high too)
+    // Layering: ensure this modal always sits above your other modals/lightboxes
     wrap.style.position = "fixed";
     wrap.style.inset = "0";
     wrap.style.zIndex = "3000";
+
+    // ✅ center the card (this was the "positioned on top" bug)
+    wrap.style.display = "flex";
+    wrap.style.alignItems = "center";
+    wrap.style.justifyContent = "center";
+    wrap.style.padding = "18px";
+    wrap.style.overflow = "auto";
 
     const backdrop = wrap.querySelector(".fb-backdrop");
     const card = wrap.querySelector(".fb-card");
@@ -137,15 +173,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     if (card) {
       card.style.position = "relative";
-      card.style.zIndex = "1"; // ✅ above backdrop (clickable)
-      // Optional: if your .modal-shell doesn’t center by default
-      wrap.style.display = "flex";
-      wrap.style.alignItems = "flex-start";
-      wrap.style.justifyContent = "center";
-      wrap.style.padding = "18px";
-      wrap.style.overflowY = "auto";
-      card.style.marginTop = "18px";
-      card.style.maxWidth = "520px";
+      card.style.zIndex = "1"; // above backdrop (clickable)
+      card.style.marginTop = "0"; // ✅ remove forced top offset
+      card.style.maxWidth = "560px";
       card.style.width = "100%";
     }
 
@@ -226,7 +256,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     modal.classList.remove("hidden");
     modal.setAttribute("aria-hidden", "false");
-    ensureBodyModalState(); // ✅ don’t blindly add/remove; keep consistent with your other modals
+    ensureBodyModalState();
   }
 
   function closeFeedbackModal() {
@@ -237,120 +267,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     ensureBodyModalState();
   }
 
-  function uiAlert(message, opts = {}) {
-    openFeedbackModal({
-      title: opts.title || "Notice",
-      variant: opts.variant || "info",
-      html: `<div class="fb-text">${String(message || "")}</div>`,
-      actions: [{ label: "Close", icon: "bi-x-circle", primary: false }]
-    });
-  }
-
-  function uiConfirm(message, opts = {}) {
-    return new Promise((resolve) => {
-      openFeedbackModal({
-        title: opts.title || "Confirm",
-        variant: opts.variant || "warning",
-        html: `<div class="fb-text">${String(message || "")}</div>`,
-        actions: [
-          {
-            label: opts.cancelText || "Cancel",
-            icon: "bi-x-circle",
-            primary: false,
-            onClick: () => resolve(false)
-          },
-          {
-            label: opts.okText || "Confirm",
-            icon: "bi-check2-circle",
-            primary: true,
-            onClick: () => resolve(true)
-          }
-        ]
-      });
-    });
-  }
-
-  function openFeedbackModal({ title = "Message", html = "", variant = "info", actions = [] } = {}) {
-    const modal = ensureFeedbackModal();
-    const titleEl = modal.querySelector("#fbTitleText");
-    const bodyEl = modal.querySelector("#fbBody");
-    const actionsEl = modal.querySelector("#fbActions");
-    const iconEl = modal.querySelector(".modal-title i");
-
-    // set title + icon (bootstrap icons)
-    if (titleEl) titleEl.textContent = title;
-
-    const iconMap = {
-      info: "bi-info-circle",
-      success: "bi-check-circle",
-      warning: "bi-exclamation-triangle",
-      danger: "bi-x-circle"
-    };
-    const iconClass = iconMap[variant] || iconMap.info;
-    if (iconEl) iconEl.className = `bi ${iconClass}`;
-
-    // body
-    if (bodyEl) bodyEl.innerHTML = html;
-
-    // actions
-    const safeActions = Array.isArray(actions) ? actions : [];
-    if (actionsEl) {
-      if (safeActions.length) {
-        actionsEl.innerHTML = safeActions
-          .map((a, idx) => {
-            const btnClass = a.primary ? "btn-primary" : "btn-soft";
-            const icon = a.icon ? `<i class="bi ${a.icon}"></i>` : "";
-            return `<button type="button" class="${btnClass}" data-action-idx="${idx}">${icon}${a.label || "OK"}</button>`;
-          })
-          .join("");
-      } else {
-        actionsEl.innerHTML = `
-          <button type="button" class="btn-soft" data-close="1">
-            <i class="bi bi-x-circle"></i>
-            Close
-          </button>
-        `;
-      }
-
-      actionsEl.querySelectorAll("[data-action-idx]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const idx = Number(btn.dataset.actionIdx);
-          const act = safeActions[idx];
-          if (act?.onClick) {
-            try {
-              const ret = act.onClick();
-              if (ret && typeof ret.then === "function") await ret;
-            } catch (err) {
-              console.error(err);
-            }
-          }
-          if (act?.closeOnClick !== false) closeFeedbackModal();
-        });
-      });
-
-      actionsEl.querySelectorAll("[data-close='1']").forEach((btn) => {
-        btn.addEventListener("click", () => closeFeedbackModal());
-      });
-    }
-
-    // show
-    modal.classList.remove("hidden");
-    modal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-  }
-
-  function closeFeedbackModal() {
-    const modal = document.getElementById("feedbackModal");
-    if (!modal) return;
-    modal.classList.add("hidden");
-    modal.setAttribute("aria-hidden", "true");
-
-    // keep body modal-open state consistent with your other modals
-    if (typeof ensureBodyModalState === "function") ensureBodyModalState();
-    else document.body.classList.remove("modal-open");
-  }
-
-  // friendly wrappers
   function uiAlert(message, opts = {}) {
     openFeedbackModal({
       title: opts.title || "Notice",
@@ -423,16 +339,13 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   function canShowBackInHeat(report) {
     const st = normStatus(report?.status);
-    // ✅ Never if not accepted/usable
     if (st === "pending" || st === "rejected" || st === "completed") return false;
-    // allow during scheduled AI / observation only
     return st === "approved" || st === "under_observation";
   }
 
   function canShowConfirmPregnant(report) {
     const st = normStatus(report?.status);
     if (st !== "under_observation") return false;
-    // only when due date reached
     return isDue(report?.next_heat_check);
   }
 
@@ -467,7 +380,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       return d.toISOString();
     }
 
-    // pending / rejected / completed / others => no next check
     return "";
   }
 
@@ -478,14 +390,14 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!pigPickerPanel) return;
     pigPickerPanel.classList.remove("hidden");
     pigPickerPanel.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
+    ensureBodyModalState();
   }
 
   function closePigPicker() {
     if (!pigPickerPanel) return;
     pigPickerPanel.classList.add("hidden");
     pigPickerPanel.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
+    ensureBodyModalState();
   }
 
   function safePigImg(sw) {
@@ -567,8 +479,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!pigPickerPagination) return;
 
     const total = filteredOpenSows.length;
-
-    // No items => no pager
     if (total === 0) {
       pigPickerPagination.innerHTML = "";
       return;
@@ -578,7 +488,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (pigPickerPage < 1) pigPickerPage = 1;
     if (pigPickerPage > totalPages) pigPickerPage = totalPages;
 
-    // ✅ Always show (even 1/1) so user sees pager like your theme
     pigPickerPagination.innerHTML = `
       <div class="pager-mini">
         <button class="page-btn page-btn-sm" id="pigPrevBtn" ${pigPickerPage === 1 ? "disabled" : ""} aria-label="Previous page">
@@ -714,10 +623,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return !logsSection?.classList.contains("hidden");
   }
 
-  // ✅ IMPORTANT: tabs must represent APPROVAL, not stage.
   function getActiveApprovalTab() {
     const active = document.querySelector(".status-tab.active");
-    // support both data-approval and data-status (old)
     const raw = active?.dataset?.approval ?? active?.dataset?.status ?? "";
     return String(raw || "").trim().toLowerCase();
   }
@@ -726,7 +633,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   createTabBtn?.addEventListener("click", () => setActiveTab("create"));
   setActiveTab("logs");
 
-  // status tabs
   statusTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       statusTabs.forEach((t) => t.classList.remove("active"));
@@ -752,7 +658,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return allowed.has(s) ? s : "";
   }
 
-  // ✅ approval statuses we support in UI filters
   const APPROVAL_SET = new Set(["pending", "approved", "rejected", "ongoing", "completed"]);
 
   function normalizeApprovalFilter(v) {
@@ -783,11 +688,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return hours < 24;
   }
 
-  // ✅ FIXED RULE:
-  // Archive ONLY:
-  // - completed (immediate)
-  // - rejected AFTER 24 hours
-  // Everything else stays in logs (including approved).
   function shouldGoArchive(report) {
     const approval = normalizeApprovalStatus(report?.status);
 
@@ -800,30 +700,23 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return false;
   }
 
-  // ✅ FIXED: tabs + statusFilter now work
   function passesFilters(report) {
     const swineDisplay = (report.swine_id?.swine_id || "Unknown");
 
-    // tag search
     const tagVal = (tagSearchInput?.value || "").trim().toLowerCase();
     if (tagVal && !swineDisplay.toLowerCase().includes(tagVal)) return false;
 
-    // approval from report.status
     const approvalRaw = normalizeApprovalStatus(report?.status);
 
-    // active tab approval filter (Pending/Approved/Rejected/...)
-    const tabApproval = getActiveApprovalTab(); // e.g. "pending" | "approved" | ""
+    const tabApproval = getActiveApprovalTab();
     if (tabApproval && tabApproval !== "all" && approvalRaw !== tabApproval) return false;
 
-    // dropdown can be stage OR approval depending on your <option value="">
     const dropdownVal = (statusFilter?.value || "").trim();
     const dropdownApproval = normalizeApprovalFilter(dropdownVal);
 
     if (dropdownApproval) {
-      // dropdown is approval filter
       if (approvalRaw !== dropdownApproval) return false;
     } else if (dropdownVal) {
-      // dropdown is stage filter (this filter is based on swine current_status)
       const stageRaw = normalizeStage(report.swine_id?.current_status || "");
       if (stageRaw !== dropdownVal) return false;
     }
@@ -842,7 +735,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     updateCountdowns();
   }
 
-  // ✅ Always show pagination bar if there is at least 1 item
   function renderPagination() {
     if (!paginationEl) return;
 
@@ -915,10 +807,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     const approvalRaw = normalizeApprovalStatus(r.status);
     const approvalLabel = labelApprovalStatus(approvalRaw);
 
-    // ✅ FIX: stage should reflect REPORT status (not swine current_status)
     const productionLabel = reportStageLabelFromStatus(r.status);
-
-    // ✅ FIX: next check depends on report lifecycle
     const countdownTarget = computeNextCheckDate(r);
 
     const createdDate = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "-";
@@ -1021,7 +910,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!archiveModal) return;
     archiveModal.classList.remove("hidden");
     archiveModal.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
+    ensureBodyModalState();
 
     archivePage = 1;
     applyArchiveFiltersAndRender();
@@ -1031,7 +920,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!archiveModal) return;
     archiveModal.classList.add("hidden");
     archiveModal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
+    ensureBodyModalState();
   }
 
   function escArchiveOnce(e) {
@@ -1049,7 +938,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (archiveModal && !archiveModal.classList.contains("hidden")) escArchiveOnce(e);
   });
 
-  // ✅ FIXED: archive list should only ever include completed + rejected(after24h)
   function archivePassesFilters(report) {
     const swineDisplay = (report.swine_id?.swine_id || "Unknown");
     const approvalRaw = normalizeApprovalStatus(report.status);
@@ -1161,25 +1049,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       applyArchiveFiltersAndRender();
     }
   });
-
-  function isElementVisible(el) {
-    return !!el && !el.classList.contains("hidden");
-  }
-
-  function ensureBodyModalState() {
-    const reportModal = document.getElementById("reportModal");
-    const trackModal = document.getElementById("trackModal");
-    const archiveModalEl = document.getElementById("archiveModal");
-    const evidenceLb = document.getElementById("evidenceLightbox");
-
-    const anyOpen =
-      isElementVisible(reportModal) ||
-      isElementVisible(trackModal) ||
-      isElementVisible(archiveModalEl) ||
-      (evidenceLb && evidenceLb.classList.contains("show"));
-
-    document.body.classList.toggle("modal-open", anyOpen);
-  }
 
   function bringAboveArchive(modalEl) {
     if (!modalEl) return;
@@ -1506,10 +1375,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const swineTag = report.swine_id?.swine_id || "Unknown";
       const createdDate = report.createdAt ? new Date(report.createdAt).toLocaleString() : "-";
 
-      // ✅ FIX: stage comes from report.status
       const stageLabel = reportStageLabelFromStatus(report.status);
 
-      // ✅ FIX: next check depends on report lifecycle
       const nextCheckDate = computeNextCheckDate(report);
       const nextCheckText = nextCheckDate ? formatCountdown(nextCheckDate) : "—";
 
@@ -1540,7 +1407,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         ? `<div class="remarks-box">${remarksText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
         : `<div class="empty-mini">No remarks provided.</div>`;
 
-      // ✅ FIX: action visibility must depend on report.status (not pig status)
       const showBackInHeat = canShowBackInHeat(report);
       const showConfirmPreg = canShowConfirmPregnant(report);
       const showConfirmWean = canShowConfirmWeaning(report);
@@ -1751,11 +1617,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
       const report = data.report;
 
-      // ✅ FIX: stage in tracker should use report lifecycle
       const statusLabel = reportStageLabelFromStatus(report.status).toUpperCase();
       if (stageEl) stageEl.textContent = statusLabel;
 
-      // ✅ FIX: remaining uses next check based on lifecycle
       const due = computeNextCheckDate(report);
       if (remainEl) remainEl.textContent = due ? formatCountdown(due) : "—";
 
@@ -2030,7 +1894,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (statusFilter) statusFilter.value = "";
 
     statusTabs.forEach((t) => t.classList.remove("active"));
-    // ✅ if you have an "All" tab, this keeps it selected; otherwise selects first tab
     const first = statusTabs?.[0];
     if (first) first.classList.add("active");
 
@@ -2042,14 +1905,14 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   document.getElementById("trackCloseBtn")?.addEventListener("click", () => {
     const modal = document.getElementById("trackModal");
     modal?.classList.add("hidden");
-    document.body.classList.remove("modal-open");
+    ensureBodyModalState();
   });
 
   document.getElementById("trackModal")?.addEventListener("click", (e) => {
     if (e.target?.id === "trackModal") {
       const modal = document.getElementById("trackModal");
       modal?.classList.add("hidden");
-      document.body.classList.remove("modal-open");
+      ensureBodyModalState();
     }
   });
 

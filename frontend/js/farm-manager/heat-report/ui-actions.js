@@ -990,6 +990,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const events = [];
       const st = safeLower(getCycleStatus(r));
 
+      // Prefer correct backend fields
+      const aiDate = r.ai_confirmed_at || r.ai_date || null;
+
       if (st === "lactating") {
         events.push({
           title: "Lactating",
@@ -1022,7 +1025,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           title: "Under 30 Days Monitoring",
           desc: "Monitoring for 'return to heat' signs post-AI.",
           icon: "bi-eye",
-          date: r.ai_date ? `Started: ${new Date(r.ai_date).toLocaleDateString()}` : "Ongoing"
+          date: aiDate ? `Started: ${new Date(aiDate).toLocaleDateString()}` : "Ongoing"
         });
       }
 
@@ -1031,7 +1034,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           title: "Artificial Insemination Performed",
           desc: "Farm Manager/Encoder confirmed Artificial Insemination procedure.",
           icon: "bi-droplet-half",
-          date: r.ai_date ? new Date(r.ai_date).toLocaleDateString() : "Date N/A"
+          date: aiDate ? new Date(aiDate).toLocaleDateString() : "Date N/A"
         });
       }
 
@@ -1071,9 +1074,30 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const currentStageEl = document.getElementById("currentStage");
       if (currentStageEl) currentStageEl.textContent = st.replace(/_/g, " ").toUpperCase();
 
+      // ✅ FIX: Time Remaining should use the correct date per stage
       const remainingEl = document.getElementById("remainingDays");
       if (remainingEl) {
-        remainingEl.textContent = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing)} remaining` : "—";
+        let label = "—";
+
+        if (st === "approved") {
+          // AI due date is stored in next_heat_check on approve
+          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (AI Due)` : "—";
+        } else if (st === "under_observation" || st === "ai_confirmed") {
+          // pregnancy check date is also next_heat_check after confirm-ai
+          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (Pregnancy Check)` : "—";
+        } else if (st === "pregnant" || st === "farrowing_ready") {
+          label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing)} (Farrowing Due)` : "—";
+        } else if (st === "lactating") {
+          // optional: show weaning due (farrow date + 30 days)
+          const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
+          if (farrowDate) {
+            const weaningDue = new Date(farrowDate);
+            weaningDue.setDate(weaningDue.getDate() + 30);
+            label = `${getDaysLeft(weaningDue)} (Weaning Due)`;
+          }
+        }
+
+        remainingEl.textContent = label;
       }
     } catch (err) {
       console.error("Error loading dynamic progress:", err);
@@ -1085,7 +1109,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
     }
   }
-
+  
   /* =========================
      VIEW DETAILS
   ========================= */
