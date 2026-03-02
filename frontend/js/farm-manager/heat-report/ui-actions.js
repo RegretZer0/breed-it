@@ -101,6 +101,27 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const archivePageIndicator = document.getElementById("archivePageIndicator");
 
   /* =========================
+     FEEDBACK + CONFIRM MODALS (REPLACE alert/confirm)
+     (IDs must exist in modal.ejs)
+  ========================= */
+  const appFeedbackModal = document.getElementById("appFeedbackModal");
+  const appFeedbackTitle = document.getElementById("appFeedbackTitle");
+  const appFeedbackSub = document.getElementById("appFeedbackSub");
+  const appFeedbackBody = document.getElementById("appFeedbackBody");
+  const appFeedbackOkBtn = document.getElementById("appFeedbackOkBtn");
+  const appFeedbackCloseX = document.getElementById("appFeedbackCloseX");
+  const appFeedbackIconWrap = document.getElementById("appFeedbackIconWrap");
+  const appFeedbackIcon = document.getElementById("appFeedbackIcon");
+
+  const appConfirmModal = document.getElementById("appConfirmModal");
+  const appConfirmTitle = document.getElementById("appConfirmTitle");
+  const appConfirmSub = document.getElementById("appConfirmSub");
+  const appConfirmBody = document.getElementById("appConfirmBody");
+  const appConfirmOkBtn = document.getElementById("appConfirmOkBtn");
+  const appConfirmCancelBtn = document.getElementById("appConfirmCancelBtn");
+  const appConfirmCloseX = document.getElementById("appConfirmCloseX");
+
+  /* =========================
      STATE
   ========================= */
   let allReports = [];
@@ -132,9 +153,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   const filterState = {
-    selectedStatus: "",        // cycle tabs
-    selectedFarmerId: null,    // farmer dropdown
-    selectedReportStatus: ""   // workflow status dropdown
+    selectedStatus: "", // cycle tabs
+    selectedFarmerId: null, // farmer dropdown
+    selectedReportStatus: "" // workflow status dropdown
   };
 
   // Main pagination
@@ -221,8 +242,146 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   // =========================
-  // FARROWING MODAL STACK FIX + CONTROLS
+  // SCROLL/OVERLAY HELPERS (centralized)
   // =========================
+  function lockScroll() {
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlockScrollIfNoOverlayOpen() {
+    // If report details is open, keep locked
+    const rdOpen = reportDetailsModal && reportDetailsModal.style.display === "flex";
+    if (rdOpen) return;
+
+    // Any overlay still open?
+    const anyOverlayOpen = Array.from(document.querySelectorAll(".modal-overlay")).some(
+      (m) => m && m.style.display === "flex"
+    );
+    if (!anyOverlayOpen) document.body.style.overflow = "";
+  }
+
+  function openOverlay(modalEl, { zIndex } = {}) {
+    if (!modalEl) return;
+    if (zIndex != null) modalEl.style.zIndex = String(zIndex);
+    modalEl.style.display = "flex";
+    lockScroll();
+  }
+
+  function closeOverlay(modalEl) {
+    if (!modalEl) return;
+    modalEl.style.display = "none";
+    unlockScrollIfNoOverlayOpen();
+  }
+
+  function setFeedbackVariant(variant) {
+    if (!appFeedbackIconWrap || !appFeedbackIcon) return;
+
+    const map = {
+      info: { bg: "#eef2ff", bd: "#c7d2fe", fg: "#3730a3", icon: "bi-info-circle" },
+      success: { bg: "#f0fdf4", bd: "#dcfce7", fg: "#166534", icon: "bi-check2-circle" },
+      danger: { bg: "#fff1f2", bd: "#fecdd3", fg: "#be123c", icon: "bi-x-circle" },
+      warn: { bg: "#fff7e0", bd: "#fde68a", fg: "#92400e", icon: "bi-exclamation-triangle" }
+    };
+
+    const v = map[variant] || map.info;
+    appFeedbackIconWrap.style.background = v.bg;
+    appFeedbackIconWrap.style.borderColor = v.bd;
+    appFeedbackIconWrap.style.color = v.fg;
+    appFeedbackIcon.className = `bi ${v.icon}`;
+  }
+
+  function showFeedback({ title = "Notice", sub = "—", body = "", variant = "info" } = {}) {
+    return new Promise((resolve) => {
+      if (!appFeedbackModal) {
+        window.alert(body || title);
+        return resolve(true);
+      }
+
+      if (appFeedbackTitle) appFeedbackTitle.textContent = title;
+      if (appFeedbackSub) appFeedbackSub.textContent = sub;
+      if (appFeedbackBody) appFeedbackBody.textContent = body;
+      setFeedbackVariant(variant);
+
+      openOverlay(appFeedbackModal, { zIndex: 3000 });
+
+      const done = () => {
+        closeOverlay(appFeedbackModal);
+        cleanup();
+        resolve(true);
+      };
+
+      const onBackdrop = (e) => {
+        if (e.target === appFeedbackModal) done();
+      };
+
+      const onEsc = (e) => {
+        if (e.key === "Escape" && appFeedbackModal.style.display === "flex") done();
+      };
+
+      const cleanup = () => {
+        appFeedbackOkBtn?.removeEventListener("click", done);
+        appFeedbackCloseX?.removeEventListener("click", done);
+        appFeedbackModal?.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onEsc);
+      };
+
+      appFeedbackOkBtn?.addEventListener("click", done);
+      appFeedbackCloseX?.addEventListener("click", done);
+      appFeedbackModal?.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onEsc);
+    });
+  }
+
+  function showConfirm({ title = "Confirm", sub = "Please confirm to continue.", body = "" } = {}) {
+    return new Promise((resolve) => {
+      if (!appConfirmModal) {
+        return resolve(window.confirm(body || title));
+      }
+
+      if (appConfirmTitle) appConfirmTitle.textContent = title;
+      if (appConfirmSub) appConfirmSub.textContent = sub;
+      if (appConfirmBody) appConfirmBody.textContent = body;
+
+      openOverlay(appConfirmModal, { zIndex: 3000 });
+
+      const ok = () => {
+        closeOverlay(appConfirmModal);
+        cleanup();
+        resolve(true);
+      };
+      const cancel = () => {
+        closeOverlay(appConfirmModal);
+        cleanup();
+        resolve(false);
+      };
+
+      const onBackdrop = (e) => {
+        if (e.target === appConfirmModal) cancel();
+      };
+
+      const onEsc = (e) => {
+        if (e.key === "Escape" && appConfirmModal.style.display === "flex") cancel();
+      };
+
+      const cleanup = () => {
+        appConfirmOkBtn?.removeEventListener("click", ok);
+        appConfirmCancelBtn?.removeEventListener("click", cancel);
+        appConfirmCloseX?.removeEventListener("click", cancel);
+        appConfirmModal?.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onEsc);
+      };
+
+      appConfirmOkBtn?.addEventListener("click", ok);
+      appConfirmCancelBtn?.addEventListener("click", cancel);
+      appConfirmCloseX?.addEventListener("click", cancel);
+      appConfirmModal?.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onEsc);
+    });
+  }
+
+  /* =========================
+     FARROWING MODAL STACK FIX + CONTROLS
+  ========================= */
   function openFarrowingModal() {
     if (!farrowingModal) return;
 
@@ -230,14 +389,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     farrowingModal.style.zIndex = "2600";
     farrowingModal.style.display = "flex";
 
-    // keep scroll locked (report modal already locks it, but safe)
-    document.body.style.overflow = "hidden";
+    // keep scroll locked
+    lockScroll();
   }
 
   function closeFarrowingModalFn() {
     if (!farrowingModal) return;
     farrowingModal.style.display = "none";
-    // do NOT unlock body scroll here (report modal may still be open)
+    // do NOT unlock if report modal is still open
+    unlockScrollIfNoOverlayOpen();
   }
 
   closeFarrowingModal?.addEventListener("click", closeFarrowingModalFn);
@@ -286,22 +446,60 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   function closeReportDetails() {
     if (!reportDetailsModal) return;
     reportDetailsModal.style.display = "none";
-    document.body.style.overflow = "";
 
     const videos = reportDetailsModal.querySelectorAll("video");
-    videos.forEach(v => {
+    videos.forEach((v) => {
       v.pause();
       v.currentTime = 0;
     });
 
     if (evidenceGallery) evidenceGallery.innerHTML = "";
+    unlockScrollIfNoOverlayOpen();
   }
 
   if (closeReportModal) closeReportModal.onclick = closeReportDetails;
   if (closeReportModalBtn) closeReportModalBtn.onclick = closeReportDetails;
 
-  reportDetailsModal?.addEventListener("click", e => {
+  reportDetailsModal?.addEventListener("click", (e) => {
     if (e.target === reportDetailsModal) closeReportDetails();
+  });
+
+  // =========================
+  // REJECT MODAL (themed) close wiring
+  // (IDs must exist: closeRejectModal, cancelRejectModalBtn)
+  // =========================
+  const closeRejectModal = document.getElementById("closeRejectModal");
+  const cancelRejectModalBtn = document.getElementById("cancelRejectModalBtn");
+
+  function closeRejectModalFn() {
+    if (!rejectReasonModal) return;
+    rejectReasonModal.style.display = "none";
+    unlockScrollIfNoOverlayOpen();
+  }
+
+  closeRejectModal?.addEventListener("click", closeRejectModalFn);
+  cancelRejectModalBtn?.addEventListener("click", closeRejectModalFn);
+  rejectReasonModal?.addEventListener("click", (e) => {
+    if (e.target === rejectReasonModal) closeRejectModalFn();
+  });
+
+  // =========================
+  // AI CONFIRM MODAL (themed) close wiring
+  // (IDs must exist: closeAIConfirmModal, cancelAIConfirmModal)
+  // =========================
+  const closeAIConfirmModal = document.getElementById("closeAIConfirmModal");
+  const cancelAIConfirmModal = document.getElementById("cancelAIConfirmModal");
+
+  function closeAIConfirmModalFn() {
+    if (!aiConfirmModal) return;
+    aiConfirmModal.style.display = "none";
+    unlockScrollIfNoOverlayOpen();
+  }
+
+  closeAIConfirmModal?.addEventListener("click", closeAIConfirmModalFn);
+  cancelAIConfirmModal?.addEventListener("click", closeAIConfirmModalFn);
+  aiConfirmModal?.addEventListener("click", (e) => {
+    if (e.target === aiConfirmModal) closeAIConfirmModalFn();
   });
 
   function openArchiveModal() {
@@ -315,13 +513,13 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     renderArchiveCards(archivedFiltered);
 
     archiveModal.style.display = "flex";
-    document.body.style.overflow = "hidden";
+    lockScroll();
   }
 
   function closeArchive() {
     if (!archiveModal) return;
     archiveModal.style.display = "none";
-    document.body.style.overflow = "";
+    unlockScrollIfNoOverlayOpen();
   }
 
   function closeArchiveAndThen(fn) {
@@ -363,10 +561,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     const toD = parseDateInput(archiveDateTo?.value);
     if (toD) toD.setHours(23, 59, 59, 999);
 
-    archivedFiltered = archivedAll.filter(r => {
+    archivedFiltered = archivedAll.filter((r) => {
       const rs = safeLower(getReportStatus(r));
       const farmerName = safeLower(
-        r?.farmer_id ? `${r.farmer_id.first_name || ""} ${r.farmer_id.last_name || ""}`.trim() : ""
+        r?.farmer_id
+          ? `${r.farmer_id.first_name || ""} ${r.farmer_id.last_name || ""}`.trim()
+          : ""
       );
       const created = r?.createdAt ? new Date(r.createdAt) : null;
 
@@ -445,7 +645,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
 
       if (res.status === 401 || res.status === 403) {
-        alert("Session expired. Please log in again.");
+        await showFeedback({
+          title: "Session expired",
+          sub: "Please log in again.",
+          body: "Your session has expired. You’ll be redirected to login.",
+          variant: "warn"
+        });
         window.location.href = "login.html";
         return;
       }
@@ -454,13 +659,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       if (!res.ok || !data.success) throw new Error("Failed to load reports");
 
       const raw = data.reports || [];
-      allReports = SHOW_REJECTED_IN_LIST ? raw : raw.filter(r => safeLower(getReportStatus(r)) !== "rejected");
+      allReports = SHOW_REJECTED_IN_LIST
+        ? raw
+        : raw.filter((r) => safeLower(getReportStatus(r)) !== "rejected");
 
       renderStats(allReports);
 
       // active list excludes archive by default
       if (EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST) {
-        filteredReports = allReports.filter(r => !isArchivedReport(r));
+        filteredReports = allReports.filter((r) => !isArchivedReport(r));
       } else {
         filteredReports = [...allReports];
       }
@@ -475,6 +682,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       }
     } catch (err) {
       console.error("Reports load error:", err);
+      await showFeedback({
+        title: "Load failed",
+        sub: "Unable to load reports",
+        body: err?.message || "Failed to load reports.",
+        variant: "danger"
+      });
     }
   }
 
@@ -484,16 +697,17 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   function renderStats(reports) {
     const cycle = (r) => safeLower(getCycleStatus(r));
 
-    if (countInHeat) countInHeat.textContent = reports.filter(r => ["pending", "approved"].includes(cycle(r))).length;
-    if (countAwaitingRecheck) countAwaitingRecheck.textContent = reports.filter(r => ["under_observation", "waiting_heat_check"].includes(cycle(r))).length;
-    if (countPregnant) countPregnant.textContent = reports.filter(r => cycle(r) === "pregnant").length;
+    if (countInHeat) countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
+    if (countAwaitingRecheck)
+      countAwaitingRecheck.textContent = reports.filter((r) => ["under_observation", "waiting_heat_check"].includes(cycle(r))).length;
+    if (countPregnant) countPregnant.textContent = reports.filter((r) => cycle(r) === "pregnant").length;
 
     if (countLactating) {
-      countLactating.textContent = reports.filter(r => cycle(r) === "lactating").length;
+      countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
     }
 
     if (countFarrowingReady) {
-      countFarrowingReady.textContent = reports.filter(r => {
+      countFarrowingReady.textContent = reports.filter((r) => {
         const st = cycle(r);
         if (!["pregnant", "farrowing_ready"].includes(st) || !r.expected_farrowing) return false;
 
@@ -537,7 +751,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       return;
     }
 
-    pageItems.forEach(r => {
+    pageItems.forEach((r) => {
       const probability = r.heat_probability ?? 0;
 
       const pillStatus = safeLower(getReportStatus(r));
@@ -584,7 +798,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         <div class="indicators">
           ${
             Array.isArray(r.signs) && r.signs.length
-              ? r.signs.map(s => `<span class="indicator-chip">${s}</span>`).join("")
+              ? r.signs.map((s) => `<span class="indicator-chip">${s}</span>`).join("")
               : `<span class="text-muted">No indicators</span>`
           }
         </div>
@@ -607,11 +821,11 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
     if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
 
-    cardList.querySelectorAll(".btn-view").forEach(btn => {
+    cardList.querySelectorAll(".btn-view").forEach((btn) => {
       btn.onclick = () => viewReport(btn.dataset.id);
     });
 
-    cardList.querySelectorAll(".btn-track").forEach(btn => {
+    cardList.querySelectorAll(".btn-track").forEach((btn) => {
       btn.onclick = () => openProgressPanel(btn.dataset.id);
     });
   }
@@ -653,7 +867,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       return;
     }
 
-    pageItems.forEach(r => {
+    pageItems.forEach((r) => {
       const probability = r.heat_probability ?? 0;
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
@@ -700,7 +914,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         <div class="indicators">
           ${
             Array.isArray(r.signs) && r.signs.length
-              ? r.signs.slice(0, 6).map(s => `<span class="indicator-chip">${s}</span>`).join("")
+              ? r.signs.slice(0, 6).map((s) => `<span class="indicator-chip">${s}</span>`).join("")
               : `<span class="text-muted">No indicators</span>`
           }
         </div>
@@ -725,11 +939,11 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (archiveNextBtn) archiveNextBtn.disabled = archivePage === totalPages || totalPages === 0;
 
     // Important fix: close archive before opening overlays/panels
-    archiveCardList.querySelectorAll(".btn-view").forEach(btn => {
+    archiveCardList.querySelectorAll(".btn-view").forEach((btn) => {
       btn.onclick = () => closeArchiveAndThen(() => viewReport(btn.dataset.id));
     });
 
-    archiveCardList.querySelectorAll(".btn-track").forEach(btn => {
+    archiveCardList.querySelectorAll(".btn-track").forEach((btn) => {
       btn.onclick = () => closeArchiveAndThen(() => openProgressPanel(btn.dataset.id));
     });
   }
@@ -777,7 +991,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const st = safeLower(getCycleStatus(r));
 
       if (st === "lactating") {
-        events.push({ title: "Lactating", desc: "Sow is currently nursing piglets.", icon: "bi-heart-pulse-fill", date: "Currently Active" });
+        events.push({
+          title: "Lactating",
+          desc: "Sow is currently nursing piglets.",
+          icon: "bi-heart-pulse-fill",
+          date: "Currently Active"
+        });
       }
 
       if (["farrowing_ready", "lactating"].includes(st)) {
@@ -832,7 +1051,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "Pending"
       });
 
-      events.forEach(event => {
+      events.forEach((event) => {
         const stepDiv = document.createElement("div");
         stepDiv.className = "timeline-step completed";
         stepDiv.innerHTML = `
@@ -858,6 +1077,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       }
     } catch (err) {
       console.error("Error loading dynamic progress:", err);
+      await showFeedback({
+        title: "Progress load failed",
+        sub: "Unable to load progress details",
+        body: err?.message || "Error loading progress details.",
+        variant: "danger"
+      });
     }
   }
 
@@ -922,8 +1147,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         const farmerCode = f?.farmer_id || "—";
         const address = f?.address || "—";
         const phone = f?.contact_no || "—";
-        const pens = (f?.num_of_pens ?? "—");
-        const cap = (f?.pen_capacity ?? "—");
+        const pens = f?.num_of_pens ?? "—";
+        const cap = f?.pen_capacity ?? "—";
 
         const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
 
@@ -976,26 +1201,28 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       `;
 
       if (Array.isArray(r.signs) && r.signs.length) {
-        reportSigns.innerHTML = r.signs.map(sign => `<span class="sign-chip">${sign}</span>`).join("");
+        reportSigns.innerHTML = r.signs.map((sign) => `<span class="sign-chip">${sign}</span>`).join("");
       } else {
         reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
       }
 
-      // Notes / remarks
+      // Notes / remarks (FIXED: prioritize schema field "remarks" and trim)
       const notesEl = document.getElementById("reportNotes");
       if (notesEl) {
         const notes =
-          r.notes ||
-          r.remarks ||
-          r.remark ||
-          r.farmer_notes ||
-          r.farmer_note ||
-          r.comment ||
+          (r?.remarks ?? "") ||
+          (r?.notes ?? "") ||
+          (r?.remark ?? "") ||
+          (r?.farmer_notes ?? "") ||
+          (r?.farmer_note ?? "") ||
+          (r?.comment ?? "") ||
           "";
 
-        notesEl.innerHTML = notes
-          ? `<span>${String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`
-          : `<em class="text-muted">No notes provided.</em>`;
+        const safe = String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+
+        notesEl.innerHTML = safe
+          ? `<span>${safe}</span>`
+          : `<em class="text-muted">No remarks provided.</em>`;
       }
 
       // Created at + cycle stage chips
@@ -1005,7 +1232,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       const stageEl = document.getElementById("reportCycleStage");
       if (stageEl) {
-        const st = (r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—");
+        const st = r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—";
         const label = String(st || "—").replace(/_/g, " ");
         const span = stageEl.querySelector(".rd-chip-text");
         if (span) span.textContent = label;
@@ -1016,13 +1243,14 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const evidences = Array.isArray(r.evidence_url)
         ? r.evidence_url
         : r.evidence_url
-          ? [r.evidence_url]
-          : [];
+        ? [r.evidence_url]
+        : [];
 
       if (!evidences.length) {
-        if (evidenceGallery) evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
+        if (evidenceGallery)
+          evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
       } else {
-        evidences.forEach(path => {
+        evidences.forEach((path) => {
           if (!path || !evidenceGallery) return;
 
           const cleanPath = String(path).replace(/\\/g, "/");
@@ -1110,10 +1338,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       }
 
       if (reportDetailsModal) reportDetailsModal.style.display = "flex";
-      document.body.style.overflow = "hidden";
+      lockScroll();
     } catch (err) {
       console.error(err);
-      alert("Error loading report details.");
+      await showFeedback({
+        title: "Unable to load report",
+        sub: "Please try again.",
+        body: "We couldn’t load the report details.",
+        variant: "danger"
+      });
     }
   }
 
@@ -1136,12 +1369,23 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Action failed");
 
-      alert(message);
+      await showFeedback({
+        title: "Success",
+        sub: "Action completed",
+        body: message,
+        variant: "success"
+      });
+
       closeReportDetails();
       loadReports();
       return data;
     } catch (err) {
-      alert(err.message || "Action failed");
+      await showFeedback({
+        title: "Action failed",
+        sub: "Please review the details",
+        body: err?.message || "Action failed",
+        variant: "danger"
+      });
       throw err;
     }
   }
@@ -1151,7 +1395,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   if (rejectBtn) {
     rejectBtn.onclick = () => {
       if (rejectReasonInput) rejectReasonInput.value = "";
-      if (rejectReasonModal) rejectReasonModal.style.display = "flex";
+      if (rejectReasonModal) openOverlay(rejectReasonModal, { zIndex: 2800 });
     };
   }
 
@@ -1164,21 +1408,42 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         });
 
         const data = await res.json();
-        if (!data.success || !data.swine?.length) return alert("No adult boars found.");
+        if (!data.success || !data.swine?.length) {
+          await showFeedback({
+            title: "No boars found",
+            sub: "Selection unavailable",
+            body: "No adult boars found.",
+            variant: "warn"
+          });
+          return;
+        }
 
-        const masterBoars = data.swine.filter(b => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
-        if (!masterBoars.length) return alert("No Master Boars available.");
+        const masterBoars = data.swine.filter((b) => b.swine_id?.startsWith("BOAR-") || b.farmer_id === null);
+        if (!masterBoars.length) {
+          await showFeedback({
+            title: "No Master Boars",
+            sub: "Selection unavailable",
+            body: "No Master Boars available.",
+            variant: "warn"
+          });
+          return;
+        }
 
         if (boarSelect) {
           boarSelect.innerHTML = masterBoars
-            .map(b => `<option value="${b._id}">${b.swine_id}</option>`)
+            .map((b) => `<option value="${b._id}">${b.swine_id}</option>`)
             .join("");
         }
 
-        if (aiConfirmModal) aiConfirmModal.style.display = "flex";
+        if (aiConfirmModal) openOverlay(aiConfirmModal, { zIndex: 2800 });
       } catch (err) {
         console.error(err);
-        alert("Failed to load boars.");
+        await showFeedback({
+          title: "Load failed",
+          sub: "Unable to load boars",
+          body: "Failed to load boars.",
+          variant: "danger"
+        });
       }
     };
   }
@@ -1186,39 +1451,65 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   if (submitAIBtn) {
     submitAIBtn.onclick = async () => {
       const maleSwineId = boarSelect?.value;
-      if (!maleSwineId) return alert("Please select a boar.");
+      if (!maleSwineId) {
+        await showFeedback({
+          title: "Select a boar",
+          sub: "Required field",
+          body: "Please select a boar.",
+          variant: "warn"
+        });
+        return;
+      }
+
       await action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
-      if (aiConfirmModal) aiConfirmModal.style.display = "none";
+      closeAIConfirmModalFn();
     };
   }
 
   if (confirmRejectBtn) {
-    confirmRejectBtn.onclick = () => {
+    confirmRejectBtn.onclick = async () => {
       const reason = rejectReasonInput?.value.trim() || "";
       if (!reason) {
-        alert("Rejection reason is required.");
+        await showFeedback({
+          title: "Missing reason",
+          sub: "Rejection requires a reason.",
+          body: "Please enter a rejection reason before submitting.",
+          variant: "warn"
+        });
         return;
       }
 
-      action("reject", "Report rejected successfully.", { reason });
+      await action("reject", "Report rejected successfully.", { reason });
 
-      if (rejectReasonModal) rejectReasonModal.style.display = "none";
+      closeRejectModalFn();
       if (rejectReasonInput) rejectReasonInput.value = "";
     };
   }
 
   if (confirmPregnancyBtn) {
-    confirmPregnancyBtn.onclick = () => {
-      if (!confirm("Confirm pregnancy for this sow?")) return;
-      action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.");
+    confirmPregnancyBtn.onclick = async () => {
+      const ok = await showConfirm({
+        title: "Confirm pregnancy",
+        sub: "This will update the swine’s cycle stage.",
+        body: "Confirm pregnancy for this sow?"
+      });
+      if (!ok) return;
+
+      await action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.");
     };
   }
 
   // ✅ Fix: backend route is /still-heat (not /cycle-failed)
   if (followUpBtn) {
-    followUpBtn.onclick = () => {
-      if (!confirm("Mark cycle as failed and return sow to heat?")) return;
-      action("still-heat", "Cycle reset. Sow returned to In-Heat status.");
+    followUpBtn.onclick = async () => {
+      const ok = await showConfirm({
+        title: "Cycle failed",
+        sub: "This will return the sow to In-Heat status.",
+        body: "Mark cycle as failed and return sow to heat?"
+      });
+      if (!ok) return;
+
+      await action("still-heat", "Cycle reset. Sow returned to In-Heat status.");
     };
   }
 
@@ -1247,9 +1538,10 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const submitBtn = farrowingForm.querySelector('button[type="submit"]');
       if (submitBtn?.disabled) return;
 
+      let originalText = "";
       if (submitBtn) {
         submitBtn.disabled = true;
-        var originalText = submitBtn.innerHTML;
+        originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
       }
 
@@ -1259,11 +1551,16 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       const male = Number(maleCountInput?.value || 0);
       const female = Number(femaleCountInput?.value || 0);
-      const total_live = Number(liveInput?.value || (male + female));
+      const total_live = Number(liveInput?.value || male + female);
       const mortality = Number(mortalityInput?.value || 0);
 
       if (male + female !== total_live) {
-        alert("Male + Female must equal Total Live.");
+        await showFeedback({
+          title: "Validation error",
+          sub: "Please check the counts.",
+          body: "Male + Female must equal Total Live.",
+          variant: "warn"
+        });
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.innerHTML = originalText;
@@ -1293,7 +1590,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         if (totalLiveLabel) totalLiveLabel.textContent = "0";
       } catch (err) {
         console.error("Farrowing registration failed:", err);
-        alert("Error: " + (err.message || "Action failed"));
+        await showFeedback({
+          title: "Farrowing failed",
+          sub: "Please try again",
+          body: err?.message || "Action failed",
+          variant: "danger"
+        });
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -1308,8 +1610,10 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   ========================= */
   let evScale = 1;
   let isDragging = false;
-  let startX = 0, startY = 0;
-  let imgX = 0, imgY = 0;
+  let startX = 0,
+    startY = 0;
+  let imgX = 0,
+    imgY = 0;
 
   function setZoomLabel() {
     if (evZoomLabel) evZoomLabel.textContent = `${Math.round(evScale * 100)}%`;
@@ -1344,7 +1648,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
     // open modal
     evidenceViewerModal.style.display = "flex";
-    document.body.style.overflow = "hidden";
+    lockScroll();
 
     if (type === "image") {
       if (evImageWrap) evImageWrap.style.display = "block";
@@ -1372,11 +1676,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     }
 
     evidenceViewerModal.style.display = "none";
-
-    // restore scroll ONLY if report modal is not open
-    const rd = document.getElementById("reportDetailsModal");
-    const reportOpen = rd && rd.style.display === "flex";
-    if (!reportOpen) document.body.style.overflow = "";
+    unlockScrollIfNoOverlayOpen();
   }
 
   closeEvidenceViewer?.addEventListener("click", closeEvidenceViewerModal);
@@ -1401,14 +1701,18 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   evZoomReset?.addEventListener("click", resetImageView);
 
   /* Wheel zoom */
-  evStage?.addEventListener("wheel", (e) => {
-    if (evImageWrap?.style.display !== "block") return;
-    e.preventDefault();
+  evStage?.addEventListener(
+    "wheel",
+    (e) => {
+      if (evImageWrap?.style.display !== "block") return;
+      e.preventDefault();
 
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    evScale = Math.min(Math.max(evScale + delta, 0.4), 4);
-    applyImageTransform();
-  }, { passive: false });
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      evScale = Math.min(Math.max(evScale + delta, 0.4), 4);
+      applyImageTransform();
+    },
+    { passive: false }
+  );
 
   /* Drag to pan (image) */
   evStage?.addEventListener("mousedown", (e) => {
@@ -1429,7 +1733,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     applyImageTransform();
   });
 
-  window.addEventListener("mouseup", () => { isDragging = false; });
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
 
   /* Click handler on evidence items (delegated) */
   evidenceGallery?.addEventListener("click", (e) => {
@@ -1447,43 +1753,32 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
      FILTERING (MAIN)
   ========================= */
   function applyFilters() {
-    const swineTerm =
-      document.getElementById("filterSwine")?.value.trim().toLowerCase() || "";
+    const swineTerm = document.getElementById("filterSwine")?.value.trim().toLowerCase() || "";
 
     const reportStatusValue =
       document.getElementById("reportStatusFilter")?.value ||
       filterState.selectedReportStatus ||
       "";
 
-    filteredReports = allReports.filter(r => {
+    filteredReports = allReports.filter((r) => {
       if (EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST) {
-        const wantsArchived =
-          reportStatusValue && ARCHIVE_STATUSES.includes(safeLower(reportStatusValue));
+        const wantsArchived = reportStatusValue && ARCHIVE_STATUSES.includes(safeLower(reportStatusValue));
         if (!wantsArchived && isArchivedReport(r)) return false;
       }
 
-      const swineMatch =
-        !swineTerm ||
-        (r.swine_id?.swine_id || "").toLowerCase().includes(swineTerm);
+      const swineMatch = !swineTerm || (r.swine_id?.swine_id || "").toLowerCase().includes(swineTerm);
 
       const cycleValue = safeLower(getCycleStatus(r));
-      const statusMatch =
-        !filterState.selectedStatus ||
-        cycleValue === safeLower(filterState.selectedStatus);
+      const statusMatch = !filterState.selectedStatus || cycleValue === safeLower(filterState.selectedStatus);
 
       const reportValue = safeLower(getReportStatus(r));
-      const reportStatusMatch =
-        !reportStatusValue ||
-        reportValue === safeLower(reportStatusValue);
+      const reportStatusMatch = !reportStatusValue || reportValue === safeLower(reportStatusValue);
 
       let farmerMatch = true;
       if (filterState.selectedFarmerId) {
-        const farmerId =
-          typeof r.farmer_id === "object" ? r.farmer_id._id : r.farmer_id;
+        const farmerId = typeof r.farmer_id === "object" ? r.farmer_id._id : r.farmer_id;
 
-        farmerMatch =
-          farmerId &&
-          farmerId.toString() === filterState.selectedFarmerId.toString();
+        farmerMatch = farmerId && farmerId.toString() === filterState.selectedFarmerId.toString();
       }
 
       return swineMatch && statusMatch && reportStatusMatch && farmerMatch;
@@ -1494,9 +1789,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   function resetToAllAndRender() {
-    filteredReports = EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST
-      ? allReports.filter(r => !isArchivedReport(r))
-      : [...allReports];
+    filteredReports = EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST ? allReports.filter((r) => !isArchivedReport(r)) : [...allReports];
 
     currentPage = 1;
     renderCards(filteredReports);

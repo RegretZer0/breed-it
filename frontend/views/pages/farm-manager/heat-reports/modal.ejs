@@ -255,28 +255,41 @@
   </div>
 </div>
 
-<!-- ================= AI CONFIRM MODAL ================= -->
-<div id="aiConfirmModal" class="modal">
-  <div class="modal-content">
-    <h3 class="d-flex align-items-center gap-2">
-      <i class="bi bi-droplet-half"></i> Confirm AI Service
-    </h3>
+<!-- ================= AI CONFIRM MODAL (THEMED) ================= -->
+<div id="aiConfirmModal" class="modal-overlay" style="display:none;">
+  <div class="modal-panel" style="max-width:560px;">
 
-    <label>Select Sire (Boar)</label>
-    <select id="boarSelect"></select>
+    <div class="modal-header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="rd-head-icon">
+          <i class="bi bi-droplet-half"></i>
+        </span>
+        <div class="min-w-0">
+          <h5 class="mb-0 rd-title">Confirm AI Service</h5>
+          <div class="text-muted small">Select a sire (boar) to confirm AI.</div>
+        </div>
+      </div>
 
-    <div class="d-flex gap-2 mt-3">
-      <button id="submitAI" class="btn-nav">
-        <i class="bi bi-check-circle"></i> Confirm AI
-      </button>
-
-      <button
-        type="button"
-        class="btn-nav secondary"
-        onclick="document.getElementById('aiConfirmModal').style.display='none'">
-        Cancel
+      <button type="button" class="modal-close" id="closeAIConfirmModal" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
       </button>
     </div>
+
+    <div class="modal-body">
+      <label class="form-label fw-bold">Select Sire (Boar)</label>
+      <select id="boarSelect" class="form-select"></select>
+
+      <div class="d-flex gap-2 mt-3">
+        <button id="submitAI" type="button" class="rd-action rd-primary">
+          <i class="bi bi-check-circle"></i> Confirm AI
+        </button>
+
+        <button type="button" class="rd-action rd-secondary" id="cancelAIConfirmModal">
+          Cancel
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -341,33 +354,46 @@
   </div>
 </div>
 
-<!-- ================= REJECT MODAL ================= -->
-<div id="rejectReasonModal" class="modal">
-  <div class="modal-content">
-    <h3 class="mb-2">Reject Report</h3>
+<!-- ================= REJECT MODAL (THEMED) ================= -->
+<div id="rejectReasonModal" class="modal-overlay" style="display:none;">
+  <div class="modal-panel" style="max-width:560px;">
 
-    <p class="text-muted mb-2">
-      Please provide a reason for rejecting this report.
-    </p>
+    <div class="modal-header">
+      <div class="d-flex align-items-center gap-2">
+        <span class="rd-head-icon" style="background:#fff1f2;border-color:#fecdd3;color:#be123c;">
+          <i class="bi bi-x-circle"></i>
+        </span>
+        <div class="min-w-0">
+          <h5 class="mb-0 rd-title">Reject Report</h5>
+          <div class="text-muted small">Please provide a reason for rejection.</div>
+        </div>
+      </div>
 
-    <textarea
-      id="rejectReasonInput"
-      rows="4"
-      placeholder="Enter rejection reason..."
-      style="resize:none;"></textarea>
-
-    <div class="d-flex gap-2 mt-3">
-      <button id="confirmRejectBtn" class="btn-nav">
-        <i class="bi bi-x-circle"></i> Reject
-      </button>
-
-      <button
-        type="button"
-        class="btn-nav secondary"
-        onclick="document.getElementById('rejectReasonModal').style.display='none'">
-        Cancel
+      <button type="button" class="modal-close" id="closeRejectModal" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
       </button>
     </div>
+
+    <div class="modal-body">
+      <label class="form-label fw-bold">Reason</label>
+      <textarea
+        id="rejectReasonInput"
+        rows="4"
+        class="form-control"
+        placeholder="Enter rejection reason..."
+        style="resize:none;"></textarea>
+
+      <div class="d-flex gap-2 mt-3">
+        <button id="confirmRejectBtn" type="button" class="rd-action rd-danger">
+          <i class="bi bi-x-circle"></i> Reject
+        </button>
+
+        <button type="button" class="rd-action rd-secondary" id="cancelRejectModalBtn">
+          Cancel
+        </button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -408,5 +434,70 @@
       <div class="timeline-empty text-muted">No cycle data available.</div>
     </div>
 
+  </div>
+</div>
+
+<!-- ================= FEEDBACK MODAL (REPLACES alert()) ================= -->
+<div id="appFeedbackModal" class="modal-overlay" style="display:none;">
+  <div class="modal-panel" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="d-flex align-items-center gap-2 min-w-0">
+        <span class="rd-head-icon" id="appFeedbackIconWrap">
+          <i class="bi bi-info-circle" id="appFeedbackIcon"></i>
+        </span>
+        <div class="min-w-0">
+          <h5 class="mb-0 rd-title" id="appFeedbackTitle">Notice</h5>
+          <div class="text-muted small" id="appFeedbackSub">—</div>
+        </div>
+      </div>
+
+      <button type="button" class="modal-close" id="appFeedbackCloseX" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div id="appFeedbackBody" class="text-muted" style="font-weight:700;"></div>
+
+      <div class="modal-footer" style="border-top:0; padding:14px 0 0;">
+        <button id="appFeedbackOkBtn" type="button" class="rd-action rd-primary">
+          <i class="bi bi-check2-circle"></i> OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CONFIRM MODAL (REPLACES confirm()) ================= -->
+<div id="appConfirmModal" class="modal-overlay" style="display:none;">
+  <div class="modal-panel" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="d-flex align-items-center gap-2 min-w-0">
+        <span class="rd-head-icon" style="background:#fff7e0;border-color:#fde68a;color:#92400e;">
+          <i class="bi bi-question-circle"></i>
+        </span>
+        <div class="min-w-0">
+          <h5 class="mb-0 rd-title" id="appConfirmTitle">Confirm</h5>
+          <div class="text-muted small" id="appConfirmSub">Please confirm to continue.</div>
+        </div>
+      </div>
+
+      <button type="button" class="modal-close" id="appConfirmCloseX" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div id="appConfirmBody" class="text-muted" style="font-weight:700;"></div>
+
+      <div class="d-flex gap-2 mt-3 justify-content-end flex-wrap">
+        <button id="appConfirmCancelBtn" type="button" class="rd-action rd-secondary">
+          Cancel
+        </button>
+        <button id="appConfirmOkBtn" type="button" class="rd-action rd-primary">
+          <i class="bi bi-check-circle"></i> Confirm
+        </button>
+      </div>
+    </div>
   </div>
 </div>

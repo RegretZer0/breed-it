@@ -1622,3 +1622,62 @@ html, body{
   background: rgba(31,41,55,.18);
   background-clip: content-box;
 }
+
+/* =========================================================
+   THEMED SIMPLE MODALS (AI Confirm + Reject + Feedback + Confirm)
+========================================================= */
+
+/* make textarea match theme */
+#rejectReasonModal textarea.form-control{
+  border-radius: 14px;
+  border: 1px solid #dbe3ef;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: none;
+}
+#rejectReasonModal textarea.form-control:focus{
+  border-color: rgba(25,135,84,.45);
+  box-shadow: 0 0 0 .2rem rgba(25,135,84,.12);
+}
+
+/* make select match theme */
+#aiConfirmModal select.form-select{
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid #dbe3ef;
+  font-size: 13.5px;
+  font-weight: 800;
+  box-shadow: none;
+}
+#aiConfirmModal select.form-select:focus{
+  border-color: rgba(25,135,84,.45);
+  box-shadow: 0 0 0 .2rem rgba(25,135,84,.12);
+}
+
+/* feedback modal icon variants */
+#appFeedbackIconWrap{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex: 0 0 auto;
+}
+#appFeedbackModal .modal-footer{
+  justify-content:flex-end;
+}
+
+/* responsive: buttons fill on very small screens */
+@media (max-width: 420px){
+  #appConfirmModal .rd-action,
+  #appFeedbackModal .rd-action,
+  #aiConfirmModal .rd-action,
+  #rejectReasonModal .rd-action{
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -20,6 +20,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   // NOTE: keep as-is if you’re still on local. Replace with your prod base when deploying.
   const BASE_URL = "http://localhost:5000";
 
+  // =========================================================
+  // ✅ Persist local selection decisions so refresh won't reset
+  // =========================================================
+  const SELECTION_LOCK_KEY = `reproSelectionLock:${user?._id || user?.id || "anon"}`;
+
+  function loadSelectionLockFromStorage() {
+    try {
+      const raw = localStorage.getItem(SELECTION_LOCK_KEY);
+      if (!raw) return new Map();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Map();
+      return new Map(arr.map(([k, v]) => [String(k), String(v)]));
+    } catch {
+      return new Map();
+    }
+  }
+
+  function saveSelectionLockToStorage(map) {
+    try {
+      const arr = [...(map instanceof Map ? map.entries() : [])];
+      localStorage.setItem(SELECTION_LOCK_KEY, JSON.stringify(arr));
+    } catch {}
+  }
+
   // ===== Required legacy IDs (DO NOT REMOVE) =====
   const searchInput = document.getElementById("reproductionSearch");
   const legacyPigletMonitoringBody = document.getElementById("pigletMonitoringBody");
@@ -96,7 +120,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // =========================================================
   // ✅ Feedback Modal (Action Result) — injected if missing
-  // NOTE: Add the same HTML in EJS if you prefer.
   // =========================================================
   function ensureReproActionModal() {
     let modalEl = document.getElementById("reproActionModal");
@@ -138,7 +161,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const modalEl = ensureReproActionModal();
 
     if (!modalEl || !window.bootstrap) {
-      // fallback if bootstrap modal isn't available
       alert(message || "Done.");
       return;
     }
@@ -202,7 +224,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       modalEl = document.getElementById("reproSowModal");
 
-      // Cleanup mount on close
       modalEl.addEventListener("hidden.bs.modal", () => {
         const mount = document.getElementById("reproSowModalMount");
         if (mount) mount.innerHTML = "";
@@ -278,7 +299,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       return "N/A";
     },
 
-    // NOTE: chart colors are controlled by CSS fill/stroke (kept neutral here)
     drawAreaLineChart: (canvasId, points) => {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
@@ -332,7 +352,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return padT + (1 - t) * plotH;
       };
 
-      // grid
       ctx.strokeStyle = "rgba(107,114,128,.35)";
       ctx.globalAlpha = 0.35;
       ctx.lineWidth = 1;
@@ -345,7 +364,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       ctx.globalAlpha = 1;
 
-      // axis labels
       ctx.font = "11px sans-serif";
       ctx.fillStyle = "#6b7280";
       for (let i = 0; i <= 4; i++) {
@@ -354,7 +372,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ctx.fillText(`${yVal.toFixed(0)} kg`, 6, y + 4);
       }
 
-      // line + area
       const line = new Path2D();
       pts.forEach((p, i) => {
         const x = padL + i * xStep;
@@ -385,7 +402,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ctx.fill();
       });
 
-      // x labels
       const idxs = new Set([0, Math.floor((pts.length - 1) / 2), pts.length - 1]);
       ctx.fillStyle = "#6b7280";
       idxs.forEach((i) => {
@@ -408,7 +424,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const state = {
     PAGE_SIZE: 5,
 
-    // ✅ cycle list pagination (inside Reproduction tab)
     CYCLE_PAGE_SIZE: 4,
     cyclePage: 1,
 
@@ -436,11 +451,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     selectionView: "list",
     selectionSexFilter: "all",
 
+    // ✅ NEW: decision filter tabs (All | Pending | Sell | Retain)
+    selectionDecisionFilter: "all",
+
     dom: { sowCardsWrap, sowPager },
     getPanelMount,
 
-    // ✅ local decision cache so UI updates immediately (mongoId -> "breeding" | "sell")
-    localSelectionLock: new Map(),
+    // ✅ persisted selections (mongoId -> "breeding" | "sell")
+    localSelectionLock: loadSelectionLockFromStorage(),
   };
 
   // =========================================================
@@ -539,9 +557,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           .join("");
     }
 
-    if (legacyMorphBody) legacyMorphBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Use the new UI panels.</td></tr>`;
+    if (legacyMorphBody)
+      legacyMorphBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">Use the new UI panels.</td></tr>`;
     if (legacyDeformityList) legacyDeformityList.innerHTML = `<div class="text-muted">Use the new UI panels.</div>`;
-    if (legacySelectionBody) legacySelectionBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Use the new UI panels.</td></tr>`;
+    if (legacySelectionBody)
+      legacySelectionBody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">Use the new UI panels.</td></tr>`;
   }
 
   // =========================================================
@@ -557,30 +577,56 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await repo.loadAll();
 
       if (res?.authError) {
-        views?.renderListError?.(
-          "Unable to load your swine data",
-          "Your session may have expired. Please login again."
-        );
+        views?.renderListError?.("Unable to load your swine data", "Your session may have expired. Please login again.");
         return false;
       }
 
       if (!repo.store.loaded?.swine) {
-        views?.renderListError?.(
-          "Unable to load your swine data",
-          "Server did not respond for swine list. Try again."
-        );
+        views?.renderListError?.("Unable to load your swine data", "Server did not respond for swine list. Try again.");
         return false;
       }
+
+      // ✅ If backend returns decision fields, hydrate local cache from swine list
+      try {
+        const sw = repo.store?.allSwineData || repo.store?.swine || repo.store?.sows || [];
+        let changed = false;
+
+        for (const s of sw) {
+          const id = s?._id || s?.mongoId || s?.id;
+          if (!id) continue;
+
+          const decision =
+            s?.selection_action ||
+            s?.selectionAction ||
+            s?.selection_status ||
+            s?.selectionStatus ||
+            s?.final_selection ||
+            s?.finalSelection ||
+            "";
+
+          const norm = String(decision || "").toLowerCase().trim();
+          const mapped =
+            norm === "keep" || norm === "retain" || norm === "breeding"
+              ? "breeding"
+              : norm === "sale" || norm === "sell"
+              ? "sell"
+              : "";
+
+          if (mapped && !state.localSelectionLock.has(String(id))) {
+            state.localSelectionLock.set(String(id), mapped);
+            changed = true;
+          }
+        }
+
+        if (changed) saveSelectionLockToStorage(state.localSelectionLock);
+      } catch {}
 
       renderLegacy();
       views?.renderSowCards?.();
       return true;
     } catch (err) {
       debugLog("LOAD_ALL_ERROR", err?.message || err, true);
-      views?.renderListError?.(
-        "Unable to load your swine data",
-        "Unexpected error while loading. Try again."
-      );
+      views?.renderListError?.("Unable to load your swine data", "Unexpected error while loading. Try again.");
       return false;
     }
   }
@@ -596,7 +642,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (normalized === "sale") normalized = "sell";
     if (normalized === "keep") normalized = "breeding";
 
-    // ✅ Simplified like old UI: only 2 actions
     const allowed = new Set(["breeding", "sell"]);
     if (!allowed.has(normalized)) {
       showReproModal({
@@ -626,16 +671,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (result?.success) {
-      // ✅ lock decision locally so UI updates even if selection-candidates is empty
       try {
         if (swineId && normalized) {
           state.localSelectionLock.set(String(swineId), normalized);
 
-          // also lock current selected piglet if we can resolve mongo id from tag
           if (state.selectedPigletTagForSelection) {
             const m = repo.getMongoIdForSwineTag?.(state.selectedPigletTagForSelection);
             if (m) state.localSelectionLock.set(String(m), normalized);
           }
+
+          // ✅ persist so refresh won't reset stats
+          saveSelectionLockToStorage(state.localSelectionLock);
         }
       } catch {}
 
@@ -645,13 +691,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         type: "success",
       });
 
-      // ✅ refresh derived state (stats/cards/status)
       await repo.loadAll();
 
       renderLegacy();
       views?.renderSowCards?.();
 
-      // keep user context in modal
       if (state.activeSowId && state.activeCycleId) {
         views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
       } else if (state.activeSowId) {
@@ -676,228 +720,270 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (t && state.CYCLE_TABS.includes(t)) views?.setCycleTabTarget?.(t);
   });
 
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-act]");
-    if (!btn) return;
+  // ✅ FIX: robust event delegation (Text node safe) + capture
+  document.addEventListener(
+    "click",
+    (e) => {
+      try {
+        const rawTarget = e.target;
+        const targetEl =
+          rawTarget instanceof Element
+            ? rawTarget
+            : rawTarget && rawTarget.parentElement instanceof Element
+            ? rawTarget.parentElement
+            : null;
 
-    const act = btn.getAttribute("data-act");
+        const btn = targetEl?.closest?.("[data-act]");
+        if (!btn) return;
 
-    if (act === "retryLoad") return void loadAllSafe();
-    if (act === "goLogin") return void (window.location.href = "/login");
+        const act = btn.getAttribute("data-act");
 
-    if (act === "sowPrev") {
-      state.sowPage = Math.max(1, state.sowPage - 1);
-      return void views?.renderSowCards?.();
-    }
-    if (act === "sowNext") {
-      state.sowPage += 1;
-      return void views?.renderSowCards?.();
-    }
+        if (act === "retryLoad") return void loadAllSafe();
+        if (act === "goLogin") return void (window.location.href = "/login");
 
-    if (act === "openSow") {
-      const tok = getValidTokenOrLogout();
-      if (!tok) return;
+        if (act === "sowPrev") {
+          state.sowPage = Math.max(1, state.sowPage - 1);
+          return void views?.renderSowCards?.();
+        }
+        if (act === "sowNext") {
+          state.sowPage += 1;
+          return void views?.renderSowCards?.();
+        }
 
-      lastOpenBtn = btn;
+        // ✅ NEW: Selection decision tabs (All | Pending | Sell | Retain)
+        // NOTE: this is the required handler for data-act="selDecisionTab" in reproduction.views.js
+        if (act === "selDecisionTab") {
+          state.selectionDecisionFilter = btn.getAttribute("data-filter") || "all";
+          state.pigletPageSelection = 1;
 
-      state.activeSowId = btn.getAttribute("data-sow");
-      state.activeCycleId = null;
+          // Back to list when changing filter
+          state.selectionView = "list";
+          state.selectedPigletTagForSelection = "";
 
-      state.cycleView = "list";
-      state.cycleFilterId = "all";
-      state.activeCycleTabTarget = "#cycleAI";
-      state.cyclePage = 1;
+          if (state.activeSowId && state.activeCycleId) {
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          }
+          return;
+        }
 
-      state.pigletPageGrowth = 1;
-      state.pigletPageSelection = 1;
-      state.pigletGrowthFilter = "";
-      state.pigletSelectionFilter = "";
+        if (act === "openSow") {
+          const tok = getValidTokenOrLogout();
+          if (!tok) return;
 
-      state.growthView = "list";
-      state.selectionView = "list";
-      state.selectedPigletTagForGrowth = "";
-      state.selectedPigletTagForSelection = "";
-      state.growthSexFilter = "all";
-      state.selectionSexFilter = "all";
+          lastOpenBtn = btn;
 
-      views?.renderSowCards?.();
+          state.activeSowId = btn.getAttribute("data-sow");
+          state.activeCycleId = null;
 
-      const { modalEl, modal, mount } = ensureSowModal();
-      const title = modalEl.querySelector("#reproSowModalLabel");
-      if (title) title.textContent = `Sow • ${state.activeSowId}`;
+          state.cycleView = "list";
+          state.cycleFilterId = "all";
+          state.activeCycleTabTarget = "#cycleAI";
+          state.cyclePage = 1;
 
-      if (modal) {
-        modal.show();
-        modalEl.addEventListener(
-          "shown.bs.modal",
-          () => views?.renderSowPanel?.(state.activeSowId, mount),
-          { once: true }
-        );
-      } else {
-        views?.renderSowPanel?.(state.activeSowId, mount);
+          state.pigletPageGrowth = 1;
+          state.pigletPageSelection = 1;
+          state.pigletGrowthFilter = "";
+          state.pigletSelectionFilter = "";
+
+          state.growthView = "list";
+          state.selectionView = "list";
+          state.selectedPigletTagForGrowth = "";
+          state.selectedPigletTagForSelection = "";
+          state.growthSexFilter = "all";
+          state.selectionSexFilter = "all";
+
+          // ✅ reset decision filter on new sow open (optional but sane)
+          state.selectionDecisionFilter = "all";
+
+          views?.renderSowCards?.();
+
+          const { modalEl, modal, mount } = ensureSowModal();
+          const title = modalEl.querySelector("#reproSowModalLabel");
+          if (title) title.textContent = `Sow • ${state.activeSowId}`;
+
+          if (modal) {
+            modal.show();
+            modalEl.addEventListener("shown.bs.modal", () => views?.renderSowPanel?.(state.activeSowId, mount), {
+              once: true,
+            });
+          } else {
+            views?.renderSowPanel?.(state.activeSowId, mount);
+          }
+          return;
+        }
+
+        if (act === "jumpRepro") {
+          const mount = getPanelMount();
+          mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
+          views?.renderReproTabInto?.(mount);
+          return;
+        }
+
+        if (act === "jumpSelection") {
+          const mount = getPanelMount();
+          mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
+
+          const cycles = views?.getCyclesForSowSafe?.(state.activeSowId);
+          if (cycles?.length) {
+            state.activeCycleId = cycles[0].id;
+            state.cycleView = "detail";
+            state.activeCycleTabTarget = "#cycleSelect";
+
+            state.selectionView = "list";
+            state.growthView = "list";
+            state.selectedPigletTagForSelection = "";
+            state.selectedPigletTagForGrowth = "";
+
+            // ✅ keep current decision filter or reset; choose reset for clarity
+            state.selectionDecisionFilter = "all";
+            state.pigletPageSelection = 1;
+
+            views?.renderSowPanel?.(state.activeSowId, mount);
+            mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          }
+          return;
+        }
+
+        if (act === "cyclePrev") {
+          state.cyclePage = Math.max(1, state.cyclePage - 1);
+          const mount = getPanelMount();
+          views?.renderReproTabInto?.(mount);
+          return;
+        }
+        if (act === "cycleNext") {
+          state.cyclePage += 1;
+          const mount = getPanelMount();
+          views?.renderReproTabInto?.(mount);
+          return;
+        }
+
+        if (act === "openCycle") {
+          state.activeSowId = btn.getAttribute("data-sow");
+          state.activeCycleId = btn.getAttribute("data-cycle");
+
+          state.cycleView = "detail";
+          state.activeCycleTabTarget = "#cycleAI";
+
+          state.growthView = "list";
+          state.selectionView = "list";
+          state.selectedPigletTagForGrowth = "";
+          state.selectedPigletTagForSelection = "";
+
+          // ✅ reset selection decision filter when opening a cycle
+          state.selectionDecisionFilter = "all";
+          state.pigletPageSelection = 1;
+
+          views?.renderSowCards?.();
+
+          const mount = getPanelMount();
+          views?.renderSowPanel?.(state.activeSowId, mount);
+          mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
+          views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleAI");
+          return;
+        }
+
+        if (act === "cycleBack") {
+          state.cycleView = "list";
+          state.activeCycleId = null;
+
+          state.growthView = "list";
+          state.selectionView = "list";
+          state.selectedPigletTagForGrowth = "";
+          state.selectedPigletTagForSelection = "";
+
+          const mount = getPanelMount();
+          views?.renderReproTabInto?.(mount);
+          return;
+        }
+
+        if (act === "growthSexFilter") {
+          state.growthSexFilter = btn.getAttribute("data-sex") || "all";
+          state.pigletPageGrowth = 1;
+          state.growthView = "list";
+          state.selectedPigletTagForGrowth = "";
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+          return;
+        }
+
+        if (act === "selectionSexFilter") {
+          state.selectionSexFilter = btn.getAttribute("data-sex") || "all";
+          state.pigletPageSelection = 1;
+          state.selectionView = "list";
+          state.selectedPigletTagForSelection = "";
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          return;
+        }
+
+        if (act === "growthBack") {
+          state.growthView = "list";
+          state.selectedPigletTagForGrowth = "";
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+          return;
+        }
+
+        if (act === "selectionBack") {
+          state.selectionView = "list";
+          state.selectedPigletTagForSelection = "";
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          return;
+        }
+
+        if (act === "growthPigletPrev") {
+          state.pigletPageGrowth = Math.max(1, state.pigletPageGrowth - 1);
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+          return;
+        }
+        if (act === "growthPigletNext") {
+          state.pigletPageGrowth += 1;
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+          return;
+        }
+
+        if (act === "selectionPigletPrev") {
+          state.pigletPageSelection = Math.max(1, state.pigletPageSelection - 1);
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          return;
+        }
+        if (act === "selectionPigletNext") {
+          state.pigletPageSelection += 1;
+          if (state.activeSowId && state.activeCycleId)
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+          return;
+        }
+
+        if (act === "openPigletGrowth") {
+          state.selectedPigletTagForGrowth = btn.getAttribute("data-piglet") || "";
+          state.growthView = "detail";
+          if (state.activeSowId && state.activeCycleId) {
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
+            setTimeout(() => views?.renderPigletGrowthDetail?.(state.selectedPigletTagForGrowth), 0);
+          }
+          return;
+        }
+
+        if (act === "openPigletSelection") {
+          state.selectedPigletTagForSelection = btn.getAttribute("data-piglet") || "";
+          state.selectionView = "detail";
+          if (state.activeSowId && state.activeCycleId) {
+            views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
+            setTimeout(() => views?.renderPigletSelectionDetail?.(state.selectedPigletTagForSelection), 0);
+          }
+          return;
+        }
+      } catch (err) {
+        debugLog("CLICK_HANDLER_ERROR", err?.message || err, true);
       }
-      return;
-    }
-
-    if (act === "jumpRepro") {
-      const mount = getPanelMount();
-      mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-      views?.renderReproTabInto?.(mount);
-      return;
-    }
-
-    if (act === "jumpSelection") {
-      const mount = getPanelMount();
-      mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-
-      const cycles = views?.getCyclesForSowSafe?.(state.activeSowId);
-      if (cycles?.length) {
-        state.activeCycleId = cycles[0].id;
-        state.cycleView = "detail";
-        state.activeCycleTabTarget = "#cycleSelect";
-
-        state.selectionView = "list";
-        state.growthView = "list";
-        state.selectedPigletTagForSelection = "";
-        state.selectedPigletTagForGrowth = "";
-
-        views?.renderSowPanel?.(state.activeSowId, mount);
-        mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-      }
-      return;
-    }
-
-    if (act === "cyclePrev") {
-      state.cyclePage = Math.max(1, state.cyclePage - 1);
-      const mount = getPanelMount();
-      views?.renderReproTabInto?.(mount);
-      return;
-    }
-    if (act === "cycleNext") {
-      state.cyclePage += 1;
-      const mount = getPanelMount();
-      views?.renderReproTabInto?.(mount);
-      return;
-    }
-
-    if (act === "openCycle") {
-      state.activeSowId = btn.getAttribute("data-sow");
-      state.activeCycleId = btn.getAttribute("data-cycle");
-
-      state.cycleView = "detail";
-      state.activeCycleTabTarget = "#cycleAI";
-
-      state.growthView = "list";
-      state.selectionView = "list";
-      state.selectedPigletTagForGrowth = "";
-      state.selectedPigletTagForSelection = "";
-
-      views?.renderSowCards?.();
-
-      const mount = getPanelMount();
-      views?.renderSowPanel?.(state.activeSowId, mount);
-      mount?.querySelector?.('[data-bs-target="#tabReproduction"]')?.click();
-      views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleAI");
-      return;
-    }
-
-    if (act === "cycleBack") {
-      state.cycleView = "list";
-      state.activeCycleId = null;
-
-      state.growthView = "list";
-      state.selectionView = "list";
-      state.selectedPigletTagForGrowth = "";
-      state.selectedPigletTagForSelection = "";
-
-      const mount = getPanelMount();
-      views?.renderReproTabInto?.(mount);
-      return;
-    }
-
-    if (act === "growthSexFilter") {
-      state.growthSexFilter = btn.getAttribute("data-sex") || "all";
-      state.pigletPageGrowth = 1;
-      state.growthView = "list";
-      state.selectedPigletTagForGrowth = "";
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-      return;
-    }
-
-    if (act === "selectionSexFilter") {
-      state.selectionSexFilter = btn.getAttribute("data-sex") || "all";
-      state.pigletPageSelection = 1;
-      state.selectionView = "list";
-      state.selectedPigletTagForSelection = "";
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-      return;
-    }
-
-    if (act === "growthBack") {
-      state.growthView = "list";
-      state.selectedPigletTagForGrowth = "";
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-      return;
-    }
-
-    if (act === "selectionBack") {
-      state.selectionView = "list";
-      state.selectedPigletTagForSelection = "";
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-      return;
-    }
-
-    if (act === "growthPigletPrev") {
-      state.pigletPageGrowth = Math.max(1, state.pigletPageGrowth - 1);
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-      return;
-    }
-    if (act === "growthPigletNext") {
-      state.pigletPageGrowth += 1;
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-      return;
-    }
-
-    if (act === "selectionPigletPrev") {
-      state.pigletPageSelection = Math.max(1, state.pigletPageSelection - 1);
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-      return;
-    }
-    if (act === "selectionPigletNext") {
-      state.pigletPageSelection += 1;
-      if (state.activeSowId && state.activeCycleId)
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-      return;
-    }
-
-    if (act === "openPigletGrowth") {
-      state.selectedPigletTagForGrowth = btn.getAttribute("data-piglet") || "";
-      state.growthView = "detail";
-      if (state.activeSowId && state.activeCycleId) {
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleGrowth");
-        setTimeout(() => views?.renderPigletGrowthDetail?.(state.selectedPigletTagForGrowth), 0);
-      }
-      return;
-    }
-
-    if (act === "openPigletSelection") {
-      state.selectedPigletTagForSelection = btn.getAttribute("data-piglet") || "";
-      state.selectionView = "detail";
-      if (state.activeSowId && state.activeCycleId) {
-        views?.renderCyclePanel?.(state.activeSowId, state.activeCycleId, "#cycleSelect");
-        setTimeout(() => views?.renderPigletSelectionDetail?.(state.selectedPigletTagForSelection), 0);
-      }
-      return;
-    }
-  });
+    },
+    true
+  );
 
   function handleCycleFilterChange(selectEl) {
     if (!selectEl) return;
@@ -913,6 +999,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.selectionView = "list";
     state.selectedPigletTagForGrowth = "";
     state.selectedPigletTagForSelection = "";
+
+    // ✅ keep filters sane when changing cycles list
+    state.selectionDecisionFilter = "all";
+    state.pigletPageSelection = 1;
 
     const mount = getPanelMount();
     views?.renderReproTabInto?.(mount);

@@ -75,3 +75,49 @@
     <div class="lb-body" id="evidenceLightboxBody"></div>
   </div>
 </div>
+
+<!-- ================= ARCHIVE MODAL ================= -->
+<div id="archiveModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle">
+  <div class="modal-content report-details-modal archive-modal">
+
+    <button type="button" class="close-modal btn-icon" aria-label="Close" id="archiveCloseBtn">
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <h3 id="archiveModalTitle" class="modal-title">Archive</h3>
+    <p class="title-sub" style="color:#475569; margin-top:-6px;">
+      Approved / Rejected / Ongoing reports (non-pending)
+    </p>
+
+    <!-- Filters (Simplified) -->
+    <div class="archive-controls">
+      <div class="archive-search">
+        <i class="bi bi-tag"></i>
+        <input type="text" id="archiveSearchInput" placeholder="Search by tag..." autocomplete="off" />
+      </div>
+
+      <select id="archiveStatusFilter" class="archive-select" aria-label="Archive status filter">
+        <option value="">All</option>
+        <option value="approved">Completed</option>
+        <option value="rejected">Rejected</option>
+      </select>
+
+      <button type="button" class="btn-soft" id="archiveApplyBtn">
+        <i class="bi bi-funnel"></i> Apply
+      </button>
+
+      <button type="button" class="btn-soft" id="archiveResetBtn">
+        <i class="bi bi-x-circle"></i> Reset
+      </button>
+    </div>
+
+    <!-- Archive list -->
+    <div id="archiveReportsBody" class="reports-list reports-card-list" style="margin-top:12px;">
+      <div class="empty-state">Loading archived reports...</div>
+    </div>
+
+    <!-- Archive pagination (must be under the last report card) -->
+    <div id="archivePagination" class="reports-pagination"></div>
+
+  </div>
+</div>

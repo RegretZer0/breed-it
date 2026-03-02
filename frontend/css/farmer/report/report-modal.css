@@ -2,11 +2,6 @@
    REPORT DETAILS MODAL (Theme-matching + responsive)
 ========================================================= */
 
-/* If your modal container is #reportModal */
-#reportModal{
-  /* keep your existing styles; these are safe improvements */
-}
-
 /* Scroll area (if your modal body scrolls) */
 #reportModal .modal-body,
 #reportModal .modal-content,
@@ -452,4 +447,829 @@
   .details-actions .btn-primary{
     width: 100%;
   }
+}
+
+/* =========================================================
+   ARCHIVE MODAL (Theme-matching + responsive)
+   Targets: #archiveModal .archive-modal and its controls
+========================================================= */
+
+/* Main archive modal card */
+#archiveModal .modal-content.archive-modal{
+  width: min(1100px, calc(100vw - 34px));
+  max-height: min(88vh, 820px);
+  border-radius: 26px;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(17,24,39,0.08);
+  box-shadow: 0 26px 70px rgba(0,0,0,0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header spacing (title + subtitle) */
+#archiveModal .modal-title{
+  font-weight: 1000;
+  letter-spacing: .2px;
+  color: #0f172a;
+  margin: 0;
+}
+
+#archiveModal .title-sub{
+  font-weight: 800;
+  color: #475569;
+  margin: 6px 0 0;
+}
+
+/* Close button */
+#archiveModal #archiveCloseBtn.close-modal{
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(31,167,116,0.20);
+  background: rgba(255,255,255,0.9);
+  color: #1FA774;
+  display: grid;
+  place-items: center;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+#archiveModal #archiveCloseBtn.close-modal:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.10);
+}
+
+/* =========================================================
+   Controls bar (Search + Select + Buttons)
+========================================================= */
+#archiveModal .archive-controls{
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(246, 251, 248, 0.92);
+  border: 1px solid rgba(31,167,116,0.14);
+  display: grid;
+  grid-template-columns: 1fr 220px auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Search field */
+#archiveModal .archive-search{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(17,24,39,0.08);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.04);
+}
+#archiveModal .archive-search i{
+  color: rgba(15,23,42,0.55);
+  font-size: 16px;
+}
+#archiveModal .archive-search input{
+  border: none;
+  outline: none;
+  width: 100%;
+  background: transparent;
+  font-weight: 800;
+  color: #0f172a;
+}
+#archiveModal .archive-search input::placeholder{
+  color: rgba(71,85,105,0.85);
+  font-weight: 800;
+}
+
+/* Status select */
+#archiveModal .archive-select{
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(17,24,39,0.08);
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.04);
+  padding: 0 12px;
+  font-weight: 900;
+  color: #0f172a;
+  outline: none;
+}
+
+/* Apply/Reset buttons (match your pill buttons) */
+#archiveModal .archive-controls .btn-soft{
+  height: 46px;
+  border-radius: 999px;
+  padding: 0 16px;
+  font-weight: 1000;
+  letter-spacing: .2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(31,167,116,0.30);
+  color: #1FA774;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.04);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+#archiveModal .archive-controls .btn-soft:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(31,167,116,0.12);
+}
+#archiveModal .archive-controls .btn-soft i{
+  font-size: 16px;
+}
+
+/* =========================================================
+   Archive list wrapper (keeps pagination under the last card)
+========================================================= */
+#archiveModal #archiveReportsBody{
+  margin-top: 14px !important;
+  padding: 2px 2px 0;
+  overflow: auto;
+  flex: 1; /* makes list scroll, pagination stays visible below */
+}
+
+/* Give the scroll area a subtle scrollbar */
+#archiveModal #archiveReportsBody::-webkit-scrollbar{ width: 10px; }
+#archiveModal #archiveReportsBody::-webkit-scrollbar-track{ background: transparent; }
+#archiveModal #archiveReportsBody::-webkit-scrollbar-thumb{
+  background: rgba(17,24,39,0.12);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+#archiveModal #archiveReportsBody:hover::-webkit-scrollbar-thumb{
+  background: rgba(17,24,39,0.18);
+}
+
+/* =========================================================
+   Pagination (Archive) - pinned under the list, centered
+========================================================= */
+#archiveModal #archivePagination.reports-pagination{
+  padding: 14px 0 18px;
+  margin: 0; /* remove extra margin inside modal */
+  border-top: 1px solid rgba(17,24,39,0.06);
+  background: rgba(255,255,255,0.90);
+  backdrop-filter: blur(10px);
+}
+
+/* Make pagination buttons look like your theme */
+#archiveModal #archivePagination .page-btn{
+  height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 1000;
+  border: 1px solid rgba(31, 167, 116, 0.28);
+  background: rgba(246, 251, 248, 0.92);
+  color: #1FA774;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+#archiveModal #archivePagination .page-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(31,167,116,0.12);
+}
+#archiveModal #archivePagination .page-btn:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+#archiveModal #archivePagination .page-info{
+  font-weight: 900;
+  color: #0f172a;
+  font-size: 13px;
+  padding: 0 8px;
+}
+
+/* =========================================================
+   Responsive: tablet & mobile
+========================================================= */
+@media (max-width: 992px){
+  #archiveModal .modal-content.archive-modal{
+    width: min(980px, calc(100vw - 24px));
+  }
+
+  #archiveModal .archive-controls{
+    grid-template-columns: 1fr 200px auto auto;
+  }
+}
+
+@media (max-width: 768px){
+  #archiveModal .archive-controls{
+    grid-template-columns: 1fr;
+  }
+
+  #archiveModal .archive-select{
+    width: 100%;
+  }
+
+  #archiveModal .archive-controls .btn-soft{
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 576px){
+  #archiveModal .modal-content.archive-modal{
+    width: min(980px, calc(100vw - 18px));
+    border-radius: 22px;
+  }
+
+  #archiveModal .archive-controls{
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  #archiveModal .archive-search{
+    padding: 11px 12px;
+    border-radius: 14px;
+  }
+
+  #archiveModal #archivePagination.reports-pagination{
+    padding: 12px 0 14px;
+  }
+}
+
+/* =========================================================
+   ARCHIVE MOBILE OVERRIDES
+   - Apply/Reset side-by-side
+   - Smaller pagination
+========================================================= */
+
+@media (max-width: 768px){
+  /* Keep search + select full width */
+  #archiveModal .archive-controls{
+    grid-template-columns: 1fr;
+  }
+
+  /* Make Apply + Reset a 2-column row */
+  #archiveModal .archive-controls .btn-soft{
+    width: 100%;
+  }
+
+  /* Target just the buttons row layout by turning the controls into a small grid
+     (search + select stay 1col; buttons become 2col using nth-child positioning) */
+  #archiveModal .archive-controls{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* Search spans both columns */
+  #archiveModal .archive-controls .archive-search{
+    grid-column: 1 / -1;
+  }
+
+  /* Select spans both columns */
+  #archiveModal .archive-controls .archive-select{
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* Apply + Reset split into 2 columns */
+  #archiveModal #archiveApplyBtn{
+    grid-column: 1 / 2;
+  }
+  #archiveModal #archiveResetBtn{
+    grid-column: 2 / 3;
+  }
+
+  /* Button sizing a bit tighter on small screens */
+  #archiveModal .archive-controls .btn-soft{
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-weight: 1000;
+  }
+}
+
+@media (max-width: 576px){
+  /* Slightly tighter spacing */
+  #archiveModal .archive-controls{
+    gap: 8px;
+  }
+
+  /* Smaller pagination */
+  #archiveModal #archivePagination.reports-pagination{
+    padding: 10px 0 12px;
+    gap: 8px;
+  }
+
+  #archiveModal #archivePagination .page-btn{
+    height: 36px;
+    min-width: 38px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-weight: 1000;
+  }
+
+  #archiveModal #archivePagination .page-info{
+    font-size: 12px;
+    padding: 0 6px;
+  }
+}
+
+/* =========================================================
+   MODAL STACKING + SAFER FIX
+   - Avoid global ".modal" override (Bootstrap conflict)
+========================================================= */
+
+/* ✅ Only target your custom modals, NOT every Bootstrap modal */
+#archiveModal,
+#reportModal,
+#trackModal{
+  position: fixed;
+  inset: 0;
+}
+
+/* Archive sits under details/track */
+#archiveModal{ z-index: 1050; }
+
+/* Report details & track progress above archive */
+#reportModal{ z-index: 1060; }
+#trackModal{ z-index: 1060; }
+
+/* Evidence lightbox must be the top-most */
+.evidence-lightbox{ z-index: 1070; }
+
+/* =========================================================
+   LIGHTBOX ZOOM CONTROLS + PAN (NEW)
+========================================================= */
+
+.evidence-lightbox .lb-body{
+  position: relative;
+  overflow: hidden; /* so panning feels clean */
+  touch-action: none; /* allow custom pan/zoom behavior */
+}
+
+/* Shared media class for transform control */
+.evidence-lightbox .lb-media{
+  transform-origin: center center;
+  will-change: transform;
+  cursor: grab;
+}
+
+.evidence-lightbox .lb-body.panning .lb-media{
+  cursor: grabbing;
+}
+
+/* Zoom controls floating on top-right */
+.lb-zoom-controls{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(17,24,39,0.10);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.10);
+  z-index: 2;
+}
+
+.lb-zoom-btn{
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(31,167,116,0.22);
+  background: #fff;
+  color: #1FA774;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 900;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.lb-zoom-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(17,24,39,0.08);
+}
+
+.lb-zoom-btn i{ font-size: 16px; }
+
+/* Mobile: slightly smaller buttons */
+@media (max-width: 576px){
+  .lb-zoom-controls{ top: 10px; right: 10px; padding: 6px; gap: 6px; }
+  .lb-zoom-btn{ width: 36px; height: 36px; }
+}
+
+/* ================= REMARKS (Report Details) ================= */
+.remarks-box{
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(17,24,39,0.03);
+  border: 1px solid rgba(17,24,39,0.08);
+  color: #111827;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.45;
+  white-space: pre-wrap; /* keeps line breaks */
+  word-break: break-word;
+}
+
+/* =========================================================
+   PIG PICKER (Select an Open Sow) — theme aligned
+   Targets your existing markup:
+   #pigPickerPanel .pig-picker-card / .pig-picker-header / etc
+========================================================= */
+
+/* overlay */
+#pigPickerPanel.pig-picker-panel{
+  position: fixed;
+  inset: 0;
+  z-index: 1065;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+#pigPickerPanel.hidden{ display:none !important; }
+
+/* modal card */
+#pigPickerPanel .pig-picker-card{
+  width: min(1100px, 96vw);
+  max-height: min(86vh, 740px);
+  background: #ffffff;
+  border: 1px solid #e9edf3;
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* header */
+#pigPickerPanel .pig-picker-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+#pigPickerPanel .picker-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: .01em;
+  color: #0f172a;
+}
+
+#pigPickerPanel .picker-title i{
+  color: #198754;
+  font-size: 18px;
+}
+
+#pigPickerPanel .picker-close{
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid #e9edf3;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#pigPickerPanel .picker-close i{ color:#0f172a; }
+
+/* controls row */
+#pigPickerPanel .pig-picker-controls{
+  padding: 14px 18px 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+#pigPickerPanel .picker-search{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e9edf3;
+  background: #fbfcfe;
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+
+#pigPickerPanel .picker-search i{
+  color: #94a3b8;
+}
+
+#pigPickerPanel .picker-search input{
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+#pigPickerPanel .picker-search input::placeholder{
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+#pigPickerPanel #pigPickerSearchBtn{
+  border-radius: 16px;
+  padding: 10px 16px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* hint text spacing */
+#pigPickerPanel .hint-text{
+  padding: 0 18px;
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+/* list */
+#pigPickerPanel #pigPickerList.pig-picker-list{
+  padding: 10px 18px 14px;
+  overflow: auto;
+}
+
+/* card items you render in JS */
+#pigPickerPanel .pig-card{
+  border: 1px solid #e9edf3;
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.05);
+}
+
+#pigPickerPanel .pig-avatar{
+  width: 74px;
+  height: 74px;
+  border-radius: 18px;
+  border: 1px solid rgba(25,135,84,0.25);
+  background: rgba(25,135,84,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#pigPickerPanel .pig-avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#pigPickerPanel .pig-info h5{
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: .01em;
+  color: #0f172a;
+}
+
+#pigPickerPanel .pig-sub{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#pigPickerPanel .pig-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid #e9edf3;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 800;
+  font-size: 12.5px;
+}
+
+#pigPickerPanel .pig-chip i{ color:#198754; }
+
+/* select button */
+#pigPickerPanel .pig-actions{
+  display: flex;
+  justify-content: flex-end;
+}
+
+#pigPickerPanel .pig-actions .btn-primary{
+  border-radius: 16px;
+  padding: 12px 18px;
+  font-weight: 900;
+  min-width: 160px;
+  box-shadow: 0 12px 28px rgba(25,135,84,0.18);
+}
+
+/* =========================================================
+   pagination (CENTER LABEL + responsive)
+   - prev left, label centered, next right
+========================================================= */
+#pigPickerPanel #pigPickerPagination.picker-pagination{
+  padding: 10px 18px 16px;
+  border-top: 1px solid #eef2f7;
+  background: #fff;
+}
+
+#pigPickerPanel .pager-mini{
+  display: grid;
+  grid-template-columns: 44px 1fr 44px; /* prev | center | next */
+  align-items: center;
+  width: 100%;
+  max-width: 520px; /* centered block on wide screens */
+  margin: 0 auto;
+  gap: 10px;
+}
+
+#pigPickerPanel .pager-mini #pigPrevBtn{ justify-self: start; }
+#pigPickerPanel .pager-mini #pigNextBtn{ justify-self: end; }
+
+#pigPickerPanel .page-btn.page-btn-sm{
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(25,135,84,0.25);
+  background: rgba(25,135,84,0.06);
+  color: #0f7a34;
+}
+
+#pigPickerPanel .page-info.page-info-sm{
+  justify-self: center;
+  text-align: center;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e9edf3;
+  background: #fbfcfe;
+  color: #0f172a;
+}
+
+/* =========================================================
+   Mobile
+========================================================= */
+@media (max-width: 768px){
+  #pigPickerPanel.pig-picker-panel{ padding: 10px; }
+
+  #pigPickerPanel .pig-picker-card{
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 18px;
+  }
+
+  #pigPickerPanel .pig-picker-controls{
+    grid-template-columns: 1fr;
+  }
+
+  #pigPickerPanel .pig-card{
+    grid-template-columns: 64px 1fr;
+    gap: 12px;
+  }
+
+  #pigPickerPanel .pig-avatar{
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+  }
+
+  #pigPickerPanel .pig-actions{
+    justify-content: stretch;
+    margin-top: 6px;
+  }
+
+  #pigPickerPanel .pig-actions .btn-primary{
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* pagination stays centered + slightly tighter */
+  #pigPickerPanel .pager-mini{
+    max-width: 360px;
+    grid-template-columns: 38px 1fr 38px;
+    gap: 8px;
+  }
+
+  #pigPickerPanel .page-btn.page-btn-sm{
+    width: 34px;
+    height: 34px;
+  }
+
+  #pigPickerPanel .page-info.page-info-sm{
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+/* =========================================================
+   THEMED FEEDBACK MODAL (Alert/Confirm)
+   ✅ FIXES:
+   - True vertical center (no top margin)
+   - Correct stacking + clickability
+   - Backdrop never blocks the card (z-index split)
+========================================================= */
+
+/* hidden state */
+#feedbackModal.modal-shell.hidden{ display:none; }
+
+/* shell is the overlay */
+#feedbackModal.modal-shell{
+  position: fixed;
+  inset: 0;
+  z-index: 2000;               /* above all custom modals */
+  display: flex;               /* ✅ centers card */
+  align-items: center;         /* ✅ vertical center */
+  justify-content: center;     /* ✅ horizontal center */
+  padding: 18px;
+}
+
+/* backdrop layer */
+#feedbackModal .modal-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(15,23,42,.55);
+  z-index: 0;                  /* ✅ behind card */
+}
+
+/* card layer */
+#feedbackModal .modal-card{
+  position: relative;
+  z-index: 1;                  /* ✅ above backdrop */
+  width: min(560px, calc(100% - 28px));
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+
+  background: #fff;
+  border: 1px solid #e9edf3;
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0,0,0,.18);
+}
+
+/* header */
+#feedbackModal .modal-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f7;
+}
+#feedbackModal .modal-title{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+}
+
+/* body */
+#feedbackModal .modal-body{
+  padding: 14px 16px;
+}
+
+/* footer */
+#feedbackModal .modal-foot{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 16px;
+  border-top: 1px solid #eef2f7;
+}
+
+/* close icon */
+#feedbackModal .btn-icon{
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+#feedbackModal .btn-icon:hover{
+  background: #f3f6fb;
+}
+
+#feedbackModal .fb-text{
+  color:#334155;
+  line-height:1.45;
+}
+
+/* mobile: keep comfortable spacing */
+@media (max-width: 576px){
+  #feedbackModal.modal-shell{ padding: 12px; }
+  #feedbackModal .modal-foot{ justify-content: stretch; flex-wrap: wrap; }
+  #feedbackModal .modal-foot button{ width: 100%; }
 }

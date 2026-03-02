@@ -897,3 +897,69 @@ body.modal-open { overflow: hidden; }
   border:1px solid rgba(16,185,129,.18);
   white-space:nowrap;
 }
+
+/* =========================================================
+   ARCHIVE MODAL (Theme + responsive controls)
+========================================================= */
+.archive-modal{
+  max-width: 980px;
+}
+
+.archive-controls{
+  display: grid;
+  grid-template-columns: 1fr 220px auto auto;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.archive-search{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(17,24,39,0.10);
+  background: rgba(246, 251, 248, 0.92);
+}
+
+.archive-search i{
+  color: rgba(15, 23, 42, 0.60);
+}
+
+#archiveSearchInput{
+  border: none;
+  outline: none;
+  width: 100%;
+  background: transparent;
+  font-weight: 800;
+  color: #111827;
+}
+
+.archive-select{
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(17,24,39,0.10);
+  background: rgba(246, 251, 248, 0.92);
+  padding: 0 12px;
+  font-weight: 900;
+  color: #111827;
+}
+
+@media (max-width: 768px){
+  .archive-controls{
+    grid-template-columns: 1fr 1fr;
+  }
+  .archive-controls .btn-soft{
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (max-width: 420px){
+  .archive-controls{
+    grid-template-columns: 1fr;
+  }
+  .archive-select{
+    width: 100%;
+  }
+}

@@ -68,18 +68,24 @@
   background: #fff;
   box-shadow: var(--repro-shadow-sm);
   position: relative;
+  z-index: 0; /* create a clean stacking context */
 }
 
+/* Decorative top gradient — MUST NOT block clicks */
 .repro-hero::before{
   content:"";
   position:absolute;
   inset:0 0 auto 0;
   height: 110px;
   background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 55%, #22c98a 100%);
+  z-index: 0;
+  pointer-events: none; /* ✅ important */
 }
 
+/* Content sits above the decorative layer */
 .repro-hero .card-body{
   position: relative;
+  z-index: 1;
   padding: 18px 18px 16px;
 }
 
@@ -588,3 +594,4 @@ button:focus,
 
 /* prevent long tags from breaking layout */
 .text-break{ word-break: break-word; }
+

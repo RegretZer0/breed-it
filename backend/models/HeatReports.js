@@ -1,3 +1,4 @@
+// backend/models/HeatReports.js (or HeatReport.js)
 const mongoose = require("mongoose");
 
 const heatReportSchema = new mongoose.Schema(
@@ -18,7 +19,7 @@ const heatReportSchema = new mongoose.Schema(
     manager_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false 
+      required: false
     },
 
     // Tracking which cycle this report belongs to for the Sow
@@ -59,10 +60,19 @@ const heatReportSchema = new mongoose.Schema(
       default: false
     },
 
-    evidence_url: [{
+    // ✅ NEW: Farmer remarks / notes (shown in Report Details panel)
+    // Keeps existing flows intact even if empty.
+    remarks: {
       type: String,
-      required: true
-    }],
+      default: ""
+    },
+
+    evidence_url: [
+      {
+        type: String,
+        required: true
+      }
+    ],
 
     heat_probability: {
       type: Number,
@@ -70,16 +80,16 @@ const heatReportSchema = new mongoose.Schema(
     },
 
     // ---------------- APPROVAL/REJECTION DETAILS ----------------
-    approved_at: { 
-      type: Date, 
-      default: null 
+    approved_at: {
+      type: Date,
+      default: null
     },
-    approved_by: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User", 
-      default: null 
+    approved_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
     },
-    
+
     // Fields for Rejection
     rejection_reason: {
       type: String,
@@ -90,25 +100,25 @@ const heatReportSchema = new mongoose.Schema(
       default: null
     },
 
-    rejection_message: { 
-        type: String, 
-        default: "" 
+    rejection_message: {
+      type: String,
+      default: ""
     },
 
     // ---------------- WORKFLOW STATUS ----------------
     status: {
       type: String,
       enum: [
-        "pending",            // Submitted by farmer
-        "approved",           // Manager confirmed (In-Heat)
-        "rejected",           // Manager denied
-        "ai_service",         // Artificial Insemination performed
-        "under_observation",  // 23-day observation period
-        "pregnant",           // Passed 23-day check
-        "farrowing_ready",    // Ready for farrowing
-        "farrowed",           // Successfully farrowed
-        "lactating",          // Currently lactating
-        "completed"           // Cycle ended (Weaned)
+        "pending", // Submitted by farmer
+        "approved", // Manager confirmed (In-Heat)
+        "rejected", // Manager denied
+        "ai_service", // Artificial Insemination performed
+        "under_observation", // 23-day observation period
+        "pregnant", // Passed 23-day check
+        "farrowing_ready", // Ready for farrowing
+        "farrowed", // Successfully farrowed
+        "lactating", // Currently lactating
+        "completed" // Cycle ended (Weaned)
       ],
       default: "pending"
     },

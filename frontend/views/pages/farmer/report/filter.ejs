@@ -66,13 +66,12 @@
 <!-- ================= STATUS + FILTER (ONE BAR) ================= -->
 <div class="filter-bar-card">
 
-  <!-- LEFT: Status Tabs -->
+  <!-- LEFT: Approval Status Tabs -->
   <div class="status-tabs">
     <button class="status-tab active" data-status="">All</button>
     <button class="status-tab" data-status="pending">Pending</button>
     <button class="status-tab" data-status="approved">Approved</button>
     <button class="status-tab" data-status="rejected">Rejected</button>
-    <button class="status-tab" data-status="ongoing">Ongoing</button>
   </div>
 
   <!-- RIGHT: Filter Controls -->
@@ -83,18 +82,27 @@
     </div>
 
     <div class="filter filter-status">
-      <label>Status</label>
+      <label>Stage</label>
       <select id="statusFilter">
         <option value="">All</option>
-        <option value="pending">Pending</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-        <option value="ongoing">Ongoing</option>
+        <option value="open">Open</option>
+        <option value="in_heat">In-Heat</option>
+        <option value="under_observation">Under Observation</option>
+        <option value="pregnant">Pregnant</option>
+        <option value="farrowing">Farrowing</option>
+        <option value="lactating">Lactating</option>
       </select>
     </div>
 
-    <button class="search-btn btn-apply" id="searchBtn" type="button">Apply</button>
-    <button class="search-btn btn-reset" id="clearFilterBtn" type="button">Reset</button>
+    <button class="search-btn btn-apply" id="searchBtn" type="button">
+      <i class="bi bi-funnel"></i>
+      Apply
+    </button>
+
+    <button class="search-btn btn-reset" id="clearFilterBtn" type="button">
+      <i class="bi bi-x-circle"></i>
+      Reset
+    </button>
   </div>
 
 </div>
