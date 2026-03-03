@@ -144,123 +144,129 @@ document.addEventListener("DOMContentLoaded", () => {
     markAllNotificationsRead();
   });
 
-  // =========================================================
-  // ✅ FIX: Notifications Panel -> History Panel
-  // Your panels are CUSTOM (.side-panel), not Bootstrap Offcanvas/Modal.
-  // This prevents leftover backdrops / body locks that make page unclickable.
-  // =========================================================
-  const openNotificationsBtn = document.getElementById("openNotifications"); // bell icon
+  // Notification Panel - History Panel
+  const openNotificationsBtn = document.getElementById("openNotifications"); // farmer bell only
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
 
   const notificationsPanel = document.getElementById("notificationsPanel");
   const historyModalEl = document.getElementById("notificationHistoryModal");
 
-  const notifCloseBtn = document.querySelector('[data-close="notificationsPanel"]');
-  const historyCloseBtn = document.querySelector('[data-close="notificationHistoryModal"]');
+  // ✅ Detect if this page uses custom side-panel UI (farmer)
+  const isCustomSidePanelUI =
+    (notificationsPanel && notificationsPanel.classList.contains("side-panel")) ||
+    (historyModalEl && historyModalEl.classList.contains("side-panel"));
 
-  function removeAnyBackdrops() {
-    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop").forEach((b) => b.remove());
-  }
+  // ✅ If this is NOT the farmer side-panel UI (e.g., farm-manager bootstrap offcanvas/modal),
+  // DO NOT attach custom backdrop/body-lock logic.
+  if (isCustomSidePanelUI) {
+    const notifCloseBtn = document.querySelector('[data-close="notificationsPanel"]');
+    const historyCloseBtn = document.querySelector('[data-close="notificationHistoryModal"]');
 
-  function unlockBody() {
-    document.body.classList.remove("modal-open");
-    document.body.style.removeProperty("overflow");
-    document.body.style.removeProperty("padding-right");
+    function removeAnyBackdrops() {
+      document
+        .querySelectorAll(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop")
+        .forEach((b) => b.remove());
+    }
 
-    document.querySelectorAll(".fixed-top, .fixed-bottom, .is-fixed, .sticky-top").forEach((el) => {
-      el.style.removeProperty("padding-right");
-      el.style.removeProperty("margin-right");
+    function unlockBody() {
+      document.body.classList.remove("modal-open");
+      document.body.style.removeProperty("overflow");
+      document.body.style.removeProperty("padding-right");
+
+      document.querySelectorAll(".fixed-top, .fixed-bottom, .is-fixed, .sticky-top").forEach((el) => {
+        el.style.removeProperty("padding-right");
+        el.style.removeProperty("margin-right");
+      });
+    }
+
+    function hardCleanup() {
+      removeAnyBackdrops();
+      unlockBody();
+    }
+
+    function ensureBackdrop() {
+      if (document.querySelector(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop")) return;
+
+      const bd = document.createElement("div");
+      bd.className = "nav-backdrop";
+
+      Object.assign(bd.style, {
+        position: "fixed",
+        inset: "0",
+        background: "rgba(0,0,0,0.35)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        zIndex: "99999",
+      });
+
+      bd.addEventListener("click", () => {
+        historyModalEl?.classList.remove("active");
+        notificationsPanel?.classList.remove("active");
+        hardCleanup();
+      });
+
+      document.body.appendChild(bd);
+    }
+
+    function lockBody() {
+      // Prevent scroll while any panel is open
+      document.body.style.overflow = "hidden";
+    }
+
+    function anyPanelOpen() {
+      return Boolean(document.querySelector(".side-panel.active, .mobile-menu.active"));
+    }
+
+    function showPanel(el) {
+      if (!el) return;
+      el.classList.add("active");
+      ensureBackdrop();
+      lockBody();
+    }
+
+    function hidePanel(el) {
+      if (!el) return;
+      el.classList.remove("active");
+      if (!anyPanelOpen()) hardCleanup();
+    }
+
+    // Open notifications panel (farmer)
+    openNotificationsBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      showPanel(notificationsPanel);
     });
-  }
 
-  function hardCleanup() {
-    removeAnyBackdrops();
-    unlockBody();
-  }
-
-  function ensureBackdrop() {
-    if (document.querySelector(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop")) return;
-
-    const bd = document.createElement("div");
-    bd.className = "nav-backdrop";
-
-    Object.assign(bd.style, {
-      position: "fixed",
-      inset: "0",
-      background: "rgba(0,0,0,0.35)",
-      backdropFilter: "blur(6px)",
-      WebkitBackdropFilter: "blur(6px)",
-      zIndex: "99999",
+    // Switch Notifications -> History (farmer)
+    viewAllBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      hidePanel(notificationsPanel);
+      showPanel(historyModalEl);
     });
 
-    bd.addEventListener("click", () => {
-      historyModalEl?.classList.remove("active");
-      notificationsPanel?.classList.remove("active");
+    // Close buttons (farmer)
+    notifCloseBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      hidePanel(notificationsPanel);
       hardCleanup();
     });
 
-    document.body.appendChild(bd);
+    historyCloseBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      hidePanel(historyModalEl);
+      hardCleanup();
+    });
+
+    // Escape closes panels and cleans up (farmer)
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (historyModalEl?.classList.contains("active")) hidePanel(historyModalEl);
+      if (notificationsPanel?.classList.contains("active")) hidePanel(notificationsPanel);
+      hardCleanup();
+    });
+
+    // Safety: if anything else leaves bootstrap backdrops, remove them
+    window.addEventListener("pageshow", hardCleanup);
   }
-
-  function lockBody() {
-    // Prevent scroll while any panel is open
-    document.body.style.overflow = "hidden";
-  }
-
-  function anyPanelOpen() {
-    return Boolean(document.querySelector(".side-panel.active, .mobile-menu.active"));
-  }
-
-  function showPanel(el) {
-    if (!el) return;
-    el.classList.add("active");
-    ensureBackdrop();
-    lockBody();
-  }
-
-  function hidePanel(el) {
-    if (!el) return;
-    el.classList.remove("active");
-    if (!anyPanelOpen()) hardCleanup();
-  }
-
-  // Open notifications panel
-  openNotificationsBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    showPanel(notificationsPanel);
-  });
-
-  // Switch Notifications -> History
-  viewAllBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    hidePanel(notificationsPanel);
-    showPanel(historyModalEl);
-  });
-
-  // Close buttons
-  notifCloseBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    hidePanel(notificationsPanel);
-    hardCleanup();
-  });
-
-  historyCloseBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    hidePanel(historyModalEl);
-    hardCleanup();
-  });
-
-  // Escape closes panels and cleans up
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (historyModalEl?.classList.contains("active")) hidePanel(historyModalEl);
-    if (notificationsPanel?.classList.contains("active")) hidePanel(notificationsPanel);
-    hardCleanup();
-  });
-
-  // Safety: if anything else leaves bootstrap backdrops, remove them
-  // (helps if other modules open modals)
-  window.addEventListener("pageshow", hardCleanup);
 
   // =========================================================
   // Account Settings: Profile update + Photo upload
