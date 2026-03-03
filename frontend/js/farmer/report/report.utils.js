@@ -12,11 +12,20 @@ export function startOfDay(d) {
   return x;
 }
 
+/**
+ * UPDATED: formatCountdown
+ * Now respects the Virtual Time Warp offset stored in localStorage
+ */
 export function formatCountdown(targetDate) {
   const target = toDateOrNull(targetDate);
   if (!target) return "";
 
-  const today = startOfDay(new Date());
+  // ✅ Get the Virtual Now using the offset calculated in your header/dashboard
+  const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
+  const virtualNow = new Date(Date.now() + offset);
+
+  // Use the virtual date as the baseline for "Today"
+  const today = startOfDay(virtualNow);
   const t = startOfDay(target);
 
   const diffDays = Math.round((t.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

@@ -4,15 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-
-  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
   
-  <!-- Global Farmer Nav CSS -->
   <link rel="stylesheet" href="../../../css/farmer/globalNav.css">
 
   <% if (page_title === "Farmer Dashboard") { %>
@@ -43,22 +39,53 @@
     <link rel="stylesheet" href="../../../css/farmer/help.css">
     
   <% } %>
+
+  <script>
+    function initVirtualClock() {
+      const clockEl = document.getElementById('globalVirtualClock');
+      const containerEl = document.getElementById('virtualClockContainer');
+      if (!clockEl) return;
+
+      function updateClock() {
+        const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
+        const virtualNow = new Date(Date.now() + offset);
+
+        const options = { 
+          month: 'short', 
+          day: '2-digit',
+          year: 'numeric',
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        };
+
+        clockEl.textContent = virtualNow.toLocaleString('en-US', options);
+
+        if (offset !== 0) {
+          containerEl.style.color = "#dc3545"; 
+          containerEl.style.fontWeight = "bold";
+        } else {
+          containerEl.style.color = "inherit";
+          containerEl.style.fontWeight = "normal";
+        }
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    }
+    document.addEventListener('DOMContentLoaded', initVirtualClock);
+  </script>
 </head>
 
 <body>
 
-<!-- =========================
-     MOBILE MENU
-========================= -->
 <div class="mobile-menu" id="mobileMenu">
   <div class="menu-list">
 
-    <!-- Close Button -->
     <button class="close-btn" id="closeMenu" aria-label="Close menu">
       <i class="bi bi-x-lg"></i>
     </button>
 
-    <!-- Menu Items -->
     <ul class="menu-items">
       <li data-action="settings">
         <i class="bi bi-gear"></i>
@@ -75,9 +102,6 @@
 </div>
 
 
-<!-- =========================
-     HEADER
-========================= -->
 <header class="page-header">
   <div class="nav-left">
     <% if (current_page !== "farmer_dashboard") { %>
@@ -89,10 +113,13 @@
     <% } %>
   </div>
 
-  <!-- RIGHT SIDE ICONS -->
+  <div class="nav-center" id="virtualClockContainer" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; opacity: 0.9;">
+    <i class="bi bi-clock-history" style="font-size: 0.7rem;"></i>
+    <span id="globalVirtualClock">Loading...</span>
+  </div>
+
   <div class="nav-right">
 
-    <!-- Notifications -->
     <button class="icon-btn" id="openNotifications" aria-label="Notifications">
       <i class="bi bi-bell"></i>
       <span id="notificationBadge"
@@ -101,7 +128,6 @@
       </span>
     </button>
 
-    <!-- Burger Menu -->
     <button class="menu-btn" id="openMenu" aria-label="Menu">
       <i class="bi bi-list"></i>
     </button>
@@ -146,9 +172,6 @@
   </div>
 </div>
 
-<!-- =========================
-     NOTIFICATIONS PANEL (REDESIGNED)
-========================= -->
 <div class="side-panel notifications-panel" id="notificationsPanel">
 
   <div class="panel-hero">
@@ -163,8 +186,7 @@
   <div class="panel-body">
 
     <div id="notificationsList" class="notification-list">
-      <!-- Dynamic -->
-    </div>
+      </div>
 
     <button id="viewAllNotificationsBtn"
             class="view-all-btn">
@@ -174,9 +196,6 @@
   </div>
 </div>
 
-<!-- =========================
-     NOTIFICATION HISTORY PANEL (REDESIGNED)
-========================= -->
 <div class="side-panel notifications-panel history-panel"
      id="notificationHistoryModal">
 
@@ -197,4 +216,3 @@
 
   </div>
 </div>
-

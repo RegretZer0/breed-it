@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // INITIALIZE DATA FETCHING
   // =========================
-  syncVirtualTime(); // MVP: Sync the clock first
+  syncVirtualTime(); // UPDATED: Now calculates and saves offset
   loadGlobalAlerts(); // Fetches Maintenance broadcasts
 
   // =========================
@@ -89,26 +89,38 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.prepend(banner);
   }
 
-  // =========================
-  // MVP: SYNC VIRTUAL TIME
-  // =========================
+  // ==========================================
+  // UPDATED: SYNC VIRTUAL TIME & SAVE OFFSET
+  // ==========================================
   async function syncVirtualTime() {
     try {
       const res = await fetch("/health");
       const data = await res.json();
       
       const timeDisplay = document.getElementById("currentVirtualTime");
-      if (timeDisplay && data.virtualTime) {
-        timeDisplay.textContent = data.virtualTime;
-        
-        // Visual indicator that the farmer is in "Test Mode"
-        if (data.isMocked) {
-          timeDisplay.style.color = "#d97706";
-          console.log("🛠️ Testing Mode: Server time is being mocked.");
+      
+      if (data.virtualTime) {
+        // 1. Calculate the offset between local system time and server virtual time
+        const serverTime = new Date(data.virtualTime).getTime();
+        const localTime = Date.now();
+        const offset = serverTime - localTime;
+
+        // 2. Save offset to localStorage so MyPigs/Reports can use it for countdowns
+        localStorage.setItem('timeWarpOffset', offset.toString());
+
+        // 3. Update UI display
+        if (timeDisplay) {
+          timeDisplay.textContent = data.virtualTime;
+          
+          // Visual indicator that the farmer is in "Test Mode"
+          if (data.isMocked) {
+            timeDisplay.style.color = "#d97706";
+            console.log("🛠️ Testing Mode: Server time is being mocked. Offset saved.");
+          }
         }
       }
     } catch (err) {
-      console.warn("Could not sync virtual time.");
+      console.warn("Could not sync virtual time. Using local system time.");
     }
   }
 
@@ -129,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
+        // Note: Clear local storage but redirect to login
         localStorage.clear();
         window.location.href = "/login";
       }

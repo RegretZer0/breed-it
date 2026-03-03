@@ -9,7 +9,7 @@ const Notification = require("../models/Notifications");
  * Integrated with Global Virtual Time for Time Warp support.
  */
 const initHeatCron = () => {
-  // ✅ UPDATED: Runs every 5 minutes (instead of every hour)
+  // ✅ Runs every 5 minutes
   cron.schedule("*/5 * * * *", async () => {
     await runSwineTransitions();
   });
@@ -79,8 +79,9 @@ async function runSwineTransitions() {
     }
 
     // --- PART 2: AUTO-CONFIRM PREGNANCY ---
+    // ✅ UPDATED: Added "AI Scheduled" to the search to catch your warped swine
     const reportsToConfirm = await HeatReport.find({
-      status: "under_observation",
+      status: { $in: ["under_observation", "AI Scheduled"] },
       next_heat_check: { $exists: true, $ne: null, $lte: now },
     });
 
@@ -102,8 +103,9 @@ async function runSwineTransitions() {
     }
 
     // --- PART 3: FARROWING, LACTATING, & OPEN TRANSITIONS ---
+    // ✅ UPDATED: Include "awaiting_farrowing" in the query
     const activePregnancies = await HeatReport.find({
-      status: "pregnant",
+      status: { $in: ["pregnant", "awaiting_farrowing"] },
       expected_farrowing: { $exists: true, $ne: null },
     }).populate("farmer_id");
 
@@ -117,8 +119,15 @@ async function runSwineTransitions() {
       let newSwineStatus = null;
       let shouldNotifyWeaning = false;
 
+      // Day 114/115: Swine is ready to give birth
       if (diffDays >= 0 && diffDays < 2) {
         newSwineStatus = "Farrowing";
+        
+        // ✅ NEW: Transition report to "awaiting_farrowing" so the button appears in UI
+        if (report.status !== "awaiting_farrowing") {
+          report.status = "awaiting_farrowing";
+          await report.save();
+        }
       } else if (diffDays >= 2 && diffDays < 30) {
         newSwineStatus = "Lactating";
       } else if (diffDays >= 30) {
@@ -195,5 +204,4 @@ async function runSwineTransitions() {
   }
 }
 
-// Exporting the initializer and the runner (in case you want to trigger it via API)
 module.exports = { initHeatCron, runSwineTransitions };

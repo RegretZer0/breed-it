@@ -774,41 +774,70 @@ async function handleConfirmAI(reportId) {
   }
 
   /* =========================
-     STATS (MAIN)
-  ========================= */
-  function renderStats(reports) {
-    const cycle = (r) => safeLower(getCycleStatus(r));
+      STATS (MAIN)
+   ========================= */
+function renderStats(reports) {
+  // ✅ NEW: Get Virtual Time to calculate "Ready" status correctly
+  const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
+  const virtualNow = new Date(Date.now() + offset);
 
-    if (countInHeat) countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
-    if (countAwaitingRecheck)
-      countAwaitingRecheck.textContent = reports.filter((r) => ["under_observation", "waiting_heat_check"].includes(cycle(r))).length;
-    if (countPregnant) countPregnant.textContent = reports.filter((r) => cycle(r) === "pregnant").length;
+  const cycle = (r) => safeLower(getCycleStatus(r));
 
-    if (countLactating) {
-      countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
-    }
+  if (countInHeat) 
+    countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
+  
+  if (countAwaitingRecheck)
+    countAwaitingRecheck.textContent = reports.filter((r) => ["under_observation", "waiting_heat_check"].includes(cycle(r))).length;
 
-    if (countFarrowingReady) {
-      countFarrowingReady.textContent = reports.filter((r) => {
-        const st = cycle(r);
-        if (!["pregnant", "farrowing_ready"].includes(st) || !r.expected_farrowing) return false;
+  // ✅ UPDATED: Split "Pregnant" and "Farrowing Ready" based on Virtual Time
+  if (countPregnant || countFarrowingReady) {
+    let pregnantCount = 0;
+    let farrowingReadyCount = 0;
 
-        const daysStr = getDaysLeft(r.expected_farrowing);
-        if (daysStr === "Overdue" || daysStr === "TODAY") return true;
+    reports.forEach((r) => {
+      const st = cycle(r);
+      // Include the new awaiting_farrowing status from the Cron Job
+      if (["pregnant", "farrowing_ready", "awaiting_farrowing"].includes(st)) {
+        if (!r.expected_farrowing) {
+          pregnantCount++;
+          return;
+        }
 
-        const daysNum = parseInt(daysStr);
-        return !isNaN(daysNum) && daysNum <= 7;
-      }).length;
-    }
+        const farrowDate = new Date(r.expected_farrowing);
+        // Set to midnight for consistent "Day" comparison
+        farrowDate.setHours(0, 0, 0, 0);
+        const checkDate = new Date(virtualNow);
+        checkDate.setHours(0, 0, 0, 0);
 
-    if (archiveBtn) {
-      const archivedCount = reports.filter(isArchivedReport).length;
-      archiveBtn.innerHTML = `
+        // Calculate difference in days using virtual time
+        const diffTime = farrowDate - checkDate;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Logic: Ready if Overdue, Today, or within 7 days (as per your original feature)
+        if (diffDays <= 7) {
+          farrowingReadyCount++;
+        } else {
+          pregnantCount++;
+        }
+      }
+    });
+
+    if (countPregnant) countPregnant.textContent = pregnantCount;
+    if (countFarrowingReady) countFarrowingReady.textContent = farrowingReadyCount;
+  }
+
+  if (countLactating) {
+    countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
+  }
+
+  if (archiveBtn) {
+    const archivedCount = reports.filter(isArchivedReport).length;
+    archiveBtn.innerHTML = `
         <i class="bi bi-archive me-1"></i>
         Archive${archivedCount ? ` <span class="ms-1">(${archivedCount})</span>` : ""}
       `;
-    }
   }
+}
 
   /* =========================
      CARDS (MAIN)
@@ -1193,72 +1222,77 @@ async function handleConfirmAI(reportId) {
   }
   
   /* =========================
-     VIEW DETAILS
-  ========================= */
-  async function viewReport(id) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
-      });
+      VIEW DETAILS
+   ========================= */
+async function viewReport(id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include"
+    });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Could not load report details");
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || "Could not load report details");
 
-      const r = data.report;
-      currentReportId = id;
+    const r = data.report;
+    currentReportId = id;
 
-      // =========================
-      // Pig profile photo (default pig profile)
-      // =========================
-      if (reportSwinePhoto) {
-        const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
-        reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
-        reportSwinePhoto.onerror = () => {
-          reportSwinePhoto.onerror = null;
-          reportSwinePhoto.src = "/images/default-pig-profile.png";
-        };
-      }
+    // ✅ NEW: Support for Time Warp in UI
+    // Decides "Now" based on the stored offset if it exists
+    const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
+    const virtualNow = new Date(Date.now() + offset);
 
-      // Health status chip text
-      const hs = r?.swine_id?.health_status || "—";
-      setChipText("reportHealthStatus", hs);
+    // =========================
+    // Pig profile photo (default pig profile)
+    // =========================
+    if (reportSwinePhoto) {
+      const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
+      reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
+      reportSwinePhoto.onerror = () => {
+        reportSwinePhoto.onerror = null;
+        reportSwinePhoto.src = "/images/default-pig-profile.png";
+      };
+    }
 
-      const hsEl = document.getElementById("reportHealthStatus");
-      if (hsEl) hsEl.dataset.health = hs;
+    // Health status chip text
+    const hs = r?.swine_id?.health_status || "—";
+    setChipText("reportHealthStatus", hs);
 
-      reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+    const hsEl = document.getElementById("reportHealthStatus");
+    if (hsEl) hsEl.dataset.health = hs;
 
-      const rs = safeLower(getReportStatus(r));
-      const rsLabel = statusLabelOf(rs);
-      reportStatus.textContent = rsLabel;
-      reportStatus.setAttribute("data-status", rs);
+    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
 
-      reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
+    const rs = safeLower(getReportStatus(r));
+    const rsLabel = statusLabelOf(rs);
+    reportStatus.textContent = rsLabel;
+    reportStatus.setAttribute("data-status", rs);
 
-      // =========================
-      // Farmer mini card (View/Hide) — UPDATED default avatar
-      // =========================
-      (function setupFarmerMiniCard() {
-        if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
+    reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
 
-        // reset default state every time modal opens
-        farmerMiniCardWrap.style.display = "none";
-        toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
-        toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
+    // =========================
+    // Farmer mini card (View/Hide) — UPDATED default avatar
+    // =========================
+    (function setupFarmerMiniCard() {
+      if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
 
-        const f = r?.farmer_id && typeof r.farmer_id === "object" ? r.farmer_id : null;
+      // reset default state every time modal opens
+      farmerMiniCardWrap.style.display = "none";
+      toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
+      toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
 
-        const fullName = f ? `${f.first_name || ""} ${f.last_name || ""}`.trim() : "Unknown Farmer";
-        const farmerCode = f?.farmer_id || "—";
-        const address = f?.address || "—";
-        const phone = f?.contact_no || "—";
-        const pens = f?.num_of_pens ?? "—";
-        const cap = f?.pen_capacity ?? "—";
+      const f = r?.farmer_id && typeof r.farmer_id === "object" ? r.farmer_id : null;
 
-        const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
+      const fullName = f ? `${f.first_name || ""} ${f.last_name || ""}`.trim() : "Unknown Farmer";
+      const farmerCode = f?.farmer_id || "—";
+      const address = f?.address || "—";
+      const phone = f?.contact_no || "—";
+      const pens = f?.num_of_pens ?? "—";
+      const cap = f?.pen_capacity ?? "—";
 
-        farmerMiniCard.innerHTML = `
+      const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
+
+      farmerMiniCard.innerHTML = `
           <div class="rd-farmer-row">
             <div class="rd-avatar">
               <img
@@ -1282,94 +1316,94 @@ async function handleConfirmAI(reportId) {
           </div>
         `;
 
-        // Bind once (avoid stacking handlers)
-        if (!toggleFarmerCardBtn.dataset.bound) {
-          toggleFarmerCardBtn.dataset.bound = "true";
-          toggleFarmerCardBtn.addEventListener("click", () => {
-            const isOpen = farmerMiniCardWrap.style.display !== "none";
+      // Bind once (avoid stacking handlers)
+      if (!toggleFarmerCardBtn.dataset.bound) {
+        toggleFarmerCardBtn.dataset.bound = "true";
+        toggleFarmerCardBtn.addEventListener("click", () => {
+          const isOpen = farmerMiniCardWrap.style.display !== "none";
 
-            if (isOpen) {
-              farmerMiniCardWrap.style.display = "none";
-              toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
-              toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
-            } else {
-              farmerMiniCardWrap.style.display = "block";
-              toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye-slash me-1"></i> Hide`;
-              toggleFarmerCardBtn.setAttribute("aria-expanded", "true");
-            }
-          });
-        }
-      })();
+          if (isOpen) {
+            farmerMiniCardWrap.style.display = "none";
+            toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
+            toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
+          } else {
+            farmerMiniCardWrap.style.display = "block";
+            toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye-slash me-1"></i> Hide`;
+            toggleFarmerCardBtn.setAttribute("aria-expanded", "true");
+          }
+        });
+      }
+    })();
 
-      reportProbability.innerHTML = `
+    reportProbability.innerHTML = `
         <strong>Probability:</strong>
         ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}
       `;
 
-      if (Array.isArray(r.signs) && r.signs.length) {
-        reportSigns.innerHTML = r.signs.map((sign) => `<span class="sign-chip">${sign}</span>`).join("");
-      } else {
-        reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
-      }
+    if (Array.isArray(r.signs) && r.signs.length) {
+      reportSigns.innerHTML = r.signs.map((sign) => `<span class="sign-chip">${sign}</span>`).join("");
+    } else {
+      reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
+    }
 
-      // Notes / remarks (FIXED: prioritize schema field "remarks" and trim)
-      const notesEl = document.getElementById("reportNotes");
-      if (notesEl) {
-        const notes =
-          (r?.remarks ?? "") ||
-          (r?.notes ?? "") ||
-          (r?.remark ?? "") ||
-          (r?.farmer_notes ?? "") ||
-          (r?.farmer_note ?? "") ||
-          (r?.comment ?? "") ||
-          "";
+    // Notes / remarks (FIXED: prioritize schema field "remarks" and trim)
+    const notesEl = document.getElementById("reportNotes");
+    if (notesEl) {
+      const notes =
+        (r?.remarks ?? "") ||
+        (r?.notes ?? "") ||
+        (r?.remark ?? "") ||
+        (r?.farmer_notes ?? "") ||
+        (r?.farmer_note ?? "") ||
+        (r?.comment ?? "") ||
+        "";
 
-        const safe = String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+      const safe = String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
 
-        notesEl.innerHTML = safe
-          ? `<span>${safe}</span>`
-          : `<em class="text-muted">No remarks provided.</em>`;
-      }
+      notesEl.innerHTML = safe
+        ? `<span>${safe}</span>`
+        : `<em class="text-muted">No remarks provided.</em>`;
+    }
 
-      // Created at + cycle stage chips
-      const d = r.createdAt ? new Date(r.createdAt) : null;
-      const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
-      setChipText("reportCreatedAt", createdText);
+    // Created at + cycle stage chips
+    const d = r.createdAt ? new Date(r.createdAt) : null;
+    const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
+    setChipText("reportCreatedAt", createdText);
 
-      const stageEl = document.getElementById("reportCycleStage");
-      if (stageEl) {
-        const st = r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—";
-        const label = String(st || "—").replace(/_/g, " ");
-        const span = stageEl.querySelector(".rd-chip-text");
-        if (span) span.textContent = label;
-      }
+    const stageEl = document.getElementById("reportCycleStage");
+    if (stageEl) {
+      const st = r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—";
+      const label = String(st || "—").replace(/_/g, " ");
+      const span = stageEl.querySelector(".rd-chip-text");
+      if (span) span.textContent = label;
+    }
 
-      // Media
-      if (evidenceGallery) evidenceGallery.innerHTML = "";
-      const evidences = Array.isArray(r.evidence_url)
-        ? r.evidence_url
-        : r.evidence_url
-        ? [r.evidence_url]
-        : [];
+    // Media
+    if (evidenceGallery) evidenceGallery.innerHTML = "";
+    const evidences = Array.isArray(r.evidence_url)
+      ? r.evidence_url
+      : r.evidence_url
+      ? [r.evidence_url]
+      : [];
 
-      if (!evidences.length) {
-        if (evidenceGallery)
-          evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
-      } else {
-        evidences.forEach((path) => {
-          if (!path || !evidenceGallery) return;
+    if (!evidences.length) {
+      if (evidenceGallery)
+        evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
+    } else {
+      evidences.forEach((path) => {
+        if (!path || !evidenceGallery) return;
 
-          const cleanPath = String(path).replace(/\\/g, "/");
-          const fullUrl = cleanPath.startsWith("http")
-            ? cleanPath
-            : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
+        const cleanPath = String(path).replace(/\\/g, "/");
+        const fullUrl = cleanPath.startsWith("http")
+          ? cleanPath
+          : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
 
-          const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
-          const wrapper = document.createElement("div");
-          wrapper.className = "dynamic-media";
+        const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
+        const wrapper = document.createElement("div");
+        wrapper.className = "dynamic-media";
 
-          if (isVideo) {
-            wrapper.innerHTML = `
+        if (isVideo) {
+          wrapper.innerHTML = `
               <div class="rd-media-box">
                 <div class="d-flex align-items-center justify-content-center" style="width:100%;height:100%;">
                   <i class="bi bi-play-circle" style="font-size:42px;color:#fff;"></i>
@@ -1384,8 +1418,8 @@ async function handleConfirmAI(reportId) {
                 </a>
               </small>
             `;
-          } else {
-            wrapper.innerHTML = `
+        } else {
+          wrapper.innerHTML = `
               <div class="rd-media-box">
                 <img
                   src="${fullUrl}"
@@ -1396,65 +1430,77 @@ async function handleConfirmAI(reportId) {
               </div>
               <small>Tap / click to view</small>
             `;
-          }
-
-          evidenceGallery.appendChild(wrapper);
-        });
-      }
-
-      // Action buttons
-      if (approveBtn) approveBtn.style.display = "none";
-      if (rejectBtn) rejectBtn.style.display = "none";
-      if (confirmAIBtn) confirmAIBtn.style.display = "none";
-      if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
-      if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
-      if (followUpBtn) followUpBtn.style.display = "none";
-
-      switch (safeLower(r.status)) {
-        case "pending":
-          if (approveBtn) approveBtn.style.display = "inline-block";
-          if (rejectBtn) rejectBtn.style.display = "inline-block";
-          break;
-
-        case "approved":
-          if (confirmAIBtn) confirmAIBtn.style.display = "inline-block";
-          break;
-
-        case "ai_confirmed":
-        case "under_observation":
-          if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
-          if (followUpBtn) followUpBtn.style.display = "inline-block";
-          break;
-
-        case "pregnant":
-        case "farrowing_ready": {
-          if (!r.expected_farrowing) break;
-
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const farrowDate = new Date(r.expected_farrowing);
-          farrowDate.setHours(0, 0, 0, 0);
-
-          if (today >= farrowDate) {
-            if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "inline-block";
-          }
-          break;
         }
-      }
 
-      if (reportDetailsModal) reportDetailsModal.style.display = "flex";
-      lockScroll();
-    } catch (err) {
-      console.error(err);
-      await showFeedback({
-        title: "Unable to load report",
-        sub: "Please try again.",
-        body: "We couldn’t load the report details.",
-        variant: "danger"
+        evidenceGallery.appendChild(wrapper);
       });
     }
+
+    // Action buttons - Hidden by default
+    if (approveBtn) approveBtn.style.display = "none";
+    if (rejectBtn) rejectBtn.style.display = "none";
+    if (confirmAIBtn) confirmAIBtn.style.display = "none";
+    if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
+    if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
+    if (followUpBtn) followUpBtn.style.display = "none";
+
+    // ✅ UPDATED Action Button Logic
+    const reportStatusValue = safeLower(r.status);
+
+    switch (reportStatusValue) {
+      case "pending":
+        if (approveBtn) approveBtn.style.display = "inline-block";
+        if (rejectBtn) rejectBtn.style.display = "inline-block";
+        break;
+
+      case "approved":
+        if (confirmAIBtn) confirmAIBtn.style.display = "inline-block";
+        break;
+
+      case "ai_confirmed":
+      case "under_observation":
+        if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
+        if (followUpBtn) followUpBtn.style.display = "inline-block";
+        break;
+
+      // ✅ FIXED: Added awaiting_farrowing and used Virtual Time
+      case "pregnant":
+      case "farrowing_ready":
+      case "awaiting_farrowing": {
+        if (!r.expected_farrowing) break;
+
+        const farrowDate = new Date(r.expected_farrowing);
+        farrowDate.setHours(0, 0, 0, 0);
+        
+        // Use virtualNow instead of 'new Date()' to respect the warp
+        const checkTime = new Date(virtualNow);
+        checkTime.setHours(0, 0, 0, 0);
+
+        if (checkTime >= farrowDate) {
+          if (confirmFarrowingBtn) {
+            confirmFarrowingBtn.style.display = "inline-block";
+            // Ensure click actually triggers the modal
+            confirmFarrowingBtn.onclick = () => {
+              if (typeof openFarrowingModal === 'function') openFarrowingModal();
+            };
+          }
+        }
+        break;
+      }
+    }
+
+    if (reportDetailsModal) reportDetailsModal.style.display = "flex";
+    lockScroll();
+  } catch (err) {
+    console.error(err);
+    await showFeedback({
+      title: "Unable to load report",
+      sub: "Please try again.",
+      body: "We couldn’t load the report details.",
+      variant: "danger"
+    });
   }
+}
 
   /* =========================
      ACTION HANDLER
