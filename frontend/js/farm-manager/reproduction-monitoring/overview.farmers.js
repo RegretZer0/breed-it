@@ -1,13 +1,16 @@
 // overview.farmers.js
 export function initFarmersModule(ctx, pigsModule) {
-  const { BACKEND_URL, token, state, dom } = ctx;
+  const { BACKEND_URL, state, dom } = ctx;
   const { resolveImageUrl, isDeadStatus } = ctx;
+
+  // ✅ Always resolve token fresh (prevents stale token issues)
+  const getToken = () => ctx.token || localStorage.getItem("token") || "";
 
   /* ================= LOAD FARMERS ================= */
   async function loadFarmers() {
     try {
       const res = await fetch(`${BACKEND_URL}/api/auth/farmers/${state.managerId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
 
       const data = await res.json();
@@ -191,11 +194,28 @@ export function initFarmersModule(ctx, pigsModule) {
     }
   }
 
+  // ✅ decision helpers (match farmer-side persisted logic)
+  function decisionFromSwineStatus(sw) {
+    const st = String(sw?.current_status || "").toLowerCase();
+    const stage = String(sw?.age_stage || "").toLowerCase();
+
+    if (st === "active" || st.includes("breeding") || st.includes("breeder") || st.includes("active breeder")) {
+      return "retain";
+    }
+    if (st.includes("culled") || st.includes("sold") || st.includes("marked for sale") || st.includes("sale") || st.includes("market")) {
+      return "sell";
+    }
+    if (stage === "adult" && st && !st.includes("sold") && !st.includes("culled") && !st.includes("marked for sale")) {
+      return "retain";
+    }
+    return "pending";
+  }
+
   // NOTE: uses state.allSwineData if available; otherwise only sow-cycle based KPIs
   async function getFarmerReproSummary(farmerId) {
     try {
       const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${getToken()}` }
       });
 
       if (!res.ok) throw new Error("Failed to load farmer pigs");
@@ -211,7 +231,7 @@ export function initFarmersModule(ctx, pigsModule) {
       );
 
       const sowTags = sows
-        .map((s) => (s.swine_id || "").toString().trim())
+        .map((s) => (s.swine_id || s.swine_tag || "").toString().trim())
         .filter(Boolean);
 
       // Pregnancy / observation counts from sow breeding cycles
@@ -233,7 +253,7 @@ export function initFarmersModule(ctx, pigsModule) {
 
       if (Array.isArray(state.allSwineData) && state.allSwineData.length && sowTags.length) {
         const piglets = state.allSwineData.filter((p) =>
-          sowTags.includes((p.dam_id || "").toString().trim())
+          sowTags.includes((p.dam_id || p.mother_id || "").toString().trim())
         );
         totalBorn = piglets.length;
         totalDead = piglets.filter((p) => isDeadStatus(p.health_status)).length;
@@ -241,7 +261,25 @@ export function initFarmersModule(ctx, pigsModule) {
 
       const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
 
-      const needsAttention = observationCount > 0 || Number(mortalityPct) >= 10;
+      // ✅ NEW: selection mismatch fix for manager cards (derive from persisted swine status)
+      // Treat "piglets" as offspring records under this farmer (non-adult sow/boar)
+      const pigletsUnderFarmer = pigs.filter((p) => {
+        const stage = String(p?.age_stage || "").toLowerCase();
+        return stage.includes("piglet") || stage.includes("wean") || stage.includes("monitor") || stage.includes("growing");
+      });
+
+      let sellCount = 0;
+      let retainCount = 0;
+      let pendingCount = 0;
+
+      for (const p of pigletsUnderFarmer) {
+        const d = decisionFromSwineStatus(p);
+        if (d === "sell") sellCount++;
+        else if (d === "retain") retainCount++;
+        else pendingCount++;
+      }
+
+      const needsAttention = observationCount > 0 || Number(mortalityPct) >= 10 || sellCount > 0;
 
       return {
         activeSows: sows.length,
@@ -250,7 +288,10 @@ export function initFarmersModule(ctx, pigsModule) {
         totalBorn,
         totalDead,
         mortalityPct,
-        needsAttention
+        needsAttention,
+
+        // exposed if you want to show later
+        selection: { retain: retainCount, sell: sellCount, pending: pendingCount }
       };
     } catch (err) {
       console.error("getFarmerReproSummary error:", err);

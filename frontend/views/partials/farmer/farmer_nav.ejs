@@ -175,26 +175,112 @@
 </div>
 
 <!-- =========================
+     NOTIFICATIONS PANEL (REDESIGNED) — SINGLE INSTANCE ONLY
+========================= -->
+<div class="side-panel notifications-panel" id="notificationsPanel">
+  <div class="panel-hero">
+    <div class="d-flex flex-column">
+      <h3 class="mb-0">Notifications</h3>
+      <small class="opacity-75">Latest updates</small>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <!-- ✅ Mark all read -->
+      <button type="button"
+              class="btn btn-light btn-sm notif-hero-btn"
+              id="markAllNotificationsReadBtn">
+        <i class="bi bi-check2-all me-1"></i> Mark all
+      </button>
+
+      <button class="close-panel"
+              data-close="notificationsPanel"
+              aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    <div id="notificationsList" class="notification-list">
+      <!-- Dynamic -->
+    </div>
+
+    <button id="viewAllNotificationsBtn" class="view-all-btn">
+      View All Notifications
+    </button>
+  </div>
+</div>
+
+<!-- =========================
      NOTIFICATION HISTORY PANEL (REDESIGNED)
 ========================= -->
 <div class="side-panel notifications-panel history-panel"
      id="notificationHistoryModal">
 
   <div class="panel-hero">
-    <h3>Notification History</h3>
-    <button class="close-panel"
-            data-close="notificationHistoryModal"
-            aria-label="Close">
-      <i class="bi bi-x-lg"></i>
-    </button>
+    <div class="d-flex flex-column">
+      <h3 class="mb-0">Notification History</h3>
+      <small class="opacity-75">All notifications</small>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <!-- ✅ Mark all read (history) -->
+      <button type="button"
+              class="btn btn-light btn-sm notif-hero-btn"
+              id="markAllNotificationsReadBtnModal">
+        <i class="bi bi-check2-all me-1"></i> Mark all
+      </button>
+
+      <button class="close-panel"
+              data-close="notificationHistoryModal"
+              aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
   </div>
 
   <div class="panel-body">
+    <!-- Filters -->
+    <div class="notif-filters">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-6">
+          <label class="form-label notif-filter-label">Type</label>
+          <select class="form-select form-select-sm" id="notifFilterType">
+            <option value="">All Types</option>
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+          </select>
+        </div>
 
-    <div id="notificationHistoryList"
-         class="notification-list">
+        <div class="col-12 col-md-6">
+          <label class="form-label notif-filter-label">Time</label>
+          <select class="form-select form-select-sm" id="notifFilterTime">
+            <option value="">Any time</option>
+            <option value="today">Today</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+        </div>
+      </div>
     </div>
 
+    <!-- History list -->
+    <div id="notificationHistoryList" class="notification-list">
+      <!-- Dynamic -->
+    </div>
+
+    <!-- Pagination -->
+    <div class="notif-pager">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="notifPrevPageBtn">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+
+      <div class="notif-page-label" id="notifPageLabel">Page 1 / 1</div>
+
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="notifNextPageBtn">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </div>
-

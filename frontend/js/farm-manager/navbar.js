@@ -85,45 +85,182 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // Notifications: Offcanvas -> History modal (SAFE HANDOFF)
+  // Notifications: Badge count + Mark all read
+  // (IDs: notificationBadge, markAllNotificationsReadBtn, markAllNotificationsReadBtnModal)
   // =========================
+  const notifBadgeEl = document.getElementById("notificationBadge");
+  const markAllBtn = document.getElementById("markAllNotificationsReadBtn");
+  const markAllBtnHistory = document.getElementById("markAllNotificationsReadBtnModal");
+
+  function setNotificationBadgeCount(n) {
+    if (!notifBadgeEl) return;
+
+    const count = Number(n || 0);
+    if (!count) {
+      notifBadgeEl.style.display = "none";
+      notifBadgeEl.textContent = "";
+      return;
+    }
+
+    notifBadgeEl.textContent = count > 99 ? "99+" : String(count);
+    notifBadgeEl.style.display = "inline-flex";
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      // optimistic UI
+      setNotificationBadgeCount(0);
+      document.querySelectorAll(".notification-item.unread").forEach((el) => el.classList.remove("unread"));
+
+      // NOTE: if your backend route differs, change ONLY this endpoint
+      const res = await fetch("/api/notifications/mark-all-read", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+
+      const data = await safeJson(res);
+      if (isAuthError(res.status)) throw new Error("Session expired or unauthorized. Please login again.");
+      if (!res.ok || data?.success === false) throw new Error(data?.message || "Failed to mark all as read.");
+
+      // Ask existing notifications module to refresh, if present
+      window.dispatchEvent(new CustomEvent("notifications:refresh", { detail: { reason: "markAllRead" } }));
+
+      showFeedback("Success", "All notifications marked as read.");
+    } catch (err) {
+      console.error(err);
+      showFeedback("Error", err?.message || "Failed to mark all as read.");
+    }
+  }
+
+  markAllBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    markAllNotificationsRead();
+  });
+
+  markAllBtnHistory?.addEventListener("click", (e) => {
+    e.preventDefault();
+    markAllNotificationsRead();
+  });
+
+  // =========================================================
+  // ✅ FIX: Notifications Panel -> History Panel
+  // Your panels are CUSTOM (.side-panel), not Bootstrap Offcanvas/Modal.
+  // This prevents leftover backdrops / body locks that make page unclickable.
+  // =========================================================
+  const openNotificationsBtn = document.getElementById("openNotifications"); // bell icon
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
+
   const notificationsPanel = document.getElementById("notificationsPanel");
   const historyModalEl = document.getElementById("notificationHistoryModal");
 
-  if (viewAllBtn && notificationsPanel && historyModalEl && window.bootstrap) {
-    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(notificationsPanel);
-    const historyModal = bootstrap.Modal.getOrCreateInstance(historyModalEl, { backdrop: true, focus: true });
+  const notifCloseBtn = document.querySelector('[data-close="notificationsPanel"]');
+  const historyCloseBtn = document.querySelector('[data-close="notificationHistoryModal"]');
 
-    const hardCleanup = () => {
-      document.body.classList.remove("modal-open");
-      document.body.style.removeProperty("overflow");
-      document.body.style.removeProperty("padding-right");
+  function removeAnyBackdrops() {
+    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop").forEach((b) => b.remove());
+  }
 
-      document.querySelectorAll(".fixed-top, .fixed-bottom, .is-fixed, .sticky-top").forEach((el) => {
-        el.style.removeProperty("padding-right");
-        el.style.removeProperty("margin-right");
-      });
+  function unlockBody() {
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
 
-      document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach((b) => b.remove());
-    };
+    document.querySelectorAll(".fixed-top, .fixed-bottom, .is-fixed, .sticky-top").forEach((el) => {
+      el.style.removeProperty("padding-right");
+      el.style.removeProperty("margin-right");
+    });
+  }
 
-    const openHistoryModalSafely = () => {
-      hardCleanup();
-      requestAnimationFrame(() => {
-        hardCleanup();
-        historyModal.show();
-      });
-    };
+  function hardCleanup() {
+    removeAnyBackdrops();
+    unlockBody();
+  }
 
-    viewAllBtn.addEventListener("click", () => {
-      notificationsPanel.addEventListener("hidden.bs.offcanvas", openHistoryModalSafely, { once: true });
-      offcanvas.hide();
+  function ensureBackdrop() {
+    if (document.querySelector(".modal-backdrop, .offcanvas-backdrop, .nav-backdrop")) return;
+
+    const bd = document.createElement("div");
+    bd.className = "nav-backdrop";
+
+    Object.assign(bd.style, {
+      position: "fixed",
+      inset: "0",
+      background: "rgba(0,0,0,0.35)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      zIndex: "99999",
     });
 
-    historyModalEl.addEventListener("hidden.bs.modal", hardCleanup);
-    historyModalEl.addEventListener("hide.bs.modal", () => setTimeout(hardCleanup, 50));
+    bd.addEventListener("click", () => {
+      historyModalEl?.classList.remove("active");
+      notificationsPanel?.classList.remove("active");
+      hardCleanup();
+    });
+
+    document.body.appendChild(bd);
   }
+
+  function lockBody() {
+    // Prevent scroll while any panel is open
+    document.body.style.overflow = "hidden";
+  }
+
+  function anyPanelOpen() {
+    return Boolean(document.querySelector(".side-panel.active, .mobile-menu.active"));
+  }
+
+  function showPanel(el) {
+    if (!el) return;
+    el.classList.add("active");
+    ensureBackdrop();
+    lockBody();
+  }
+
+  function hidePanel(el) {
+    if (!el) return;
+    el.classList.remove("active");
+    if (!anyPanelOpen()) hardCleanup();
+  }
+
+  // Open notifications panel
+  openNotificationsBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showPanel(notificationsPanel);
+  });
+
+  // Switch Notifications -> History
+  viewAllBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    hidePanel(notificationsPanel);
+    showPanel(historyModalEl);
+  });
+
+  // Close buttons
+  notifCloseBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    hidePanel(notificationsPanel);
+    hardCleanup();
+  });
+
+  historyCloseBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    hidePanel(historyModalEl);
+    hardCleanup();
+  });
+
+  // Escape closes panels and cleans up
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (historyModalEl?.classList.contains("active")) hidePanel(historyModalEl);
+    if (notificationsPanel?.classList.contains("active")) hidePanel(notificationsPanel);
+    hardCleanup();
+  });
+
+  // Safety: if anything else leaves bootstrap backdrops, remove them
+  // (helps if other modules open modals)
+  window.addEventListener("pageshow", hardCleanup);
 
   // =========================================================
   // Account Settings: Profile update + Photo upload
@@ -131,13 +268,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const accountSettingsModalEl = document.getElementById("accountSettingsModal");
 
   // ✅ MATCH YOUR EJS IDS (with legacy fallbacks)
-  const editBtn =
-    document.getElementById("editAccountProfileBtn") ||
-    document.getElementById("editProfileBtn");
+  const editBtn = document.getElementById("editAccountProfileBtn") || document.getElementById("editProfileBtn");
 
-  const form =
-    document.getElementById("accountSettingsForm") ||
-    document.getElementById("accountProfileForm");
+  const form = document.getElementById("accountSettingsForm") || document.getElementById("accountProfileForm");
 
   const saveBtn =
     document.getElementById("accountSaveBtn") ||
@@ -155,17 +288,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const contact = document.getElementById("accountContact");
 
   // Photo nodes (your EJS)
-  const fileInput =
-    document.getElementById("accountProfilePhoto") ||
-    document.getElementById("accountProfilePhotoInput");
+  const fileInput = document.getElementById("accountProfilePhoto") || document.getElementById("accountProfilePhotoInput");
 
-  const uploadBtn =
-    document.getElementById("accountPhotoUploadBtn") ||
-    document.getElementById("uploadProfilePhotoBtn");
+  const uploadBtn = document.getElementById("accountPhotoUploadBtn") || document.getElementById("uploadProfilePhotoBtn");
 
-  const resetPhotoBtn =
-    document.getElementById("accountPhotoResetBtn") ||
-    document.getElementById("resetProfilePhotoBtn");
+  const resetPhotoBtn = document.getElementById("accountPhotoResetBtn") || document.getElementById("resetProfilePhotoBtn");
 
   // Preview images (your EJS)
   const avatarTop = document.getElementById("accountAvatarPreviewTop");
@@ -193,10 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initialState.contact = contact?.value ?? "";
 
     // use preview if exists, else top, else default
-    initialState.photo =
-      avatarPreview?.getAttribute("src") ||
-      avatarTop?.getAttribute("src") ||
-      DEFAULT_AVATAR;
+    initialState.photo = avatarPreview?.getAttribute("src") || avatarTop?.getAttribute("src") || DEFAULT_AVATAR;
   };
 
   const setEditMode = (on) => {
@@ -506,7 +630,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const msg = document.getElementById("helpMessage");
 
       if (cat) cat.value = "";
-      if (pri) pri.value = "normal"; 
+      if (pri) pri.value = "normal";
       applyAutoPriorityFromCategory();
       if (sub) sub.value = "";
       if (msg) msg.value = "";

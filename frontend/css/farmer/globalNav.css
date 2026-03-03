@@ -13,9 +13,20 @@ html, body {
 }
 
 /* =========================
+   FULL HEIGHT LAYOUT FIX
+========================= */
+html, body { min-height: 100%; }
+
+.app-root{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================
    MODERN APP HEADER
 ========================= */
-.page-header {
+.page-header{
   position: fixed;
   top: 12px;
   left: 50%;
@@ -37,14 +48,14 @@ html, body {
 
 .back-btn,
 .menu-btn,
-.icon-btn {
+.icon-btn{
   background: rgba(255,255,255,0.15);
   border: none;
   width: 38px;
   height: 38px;
   border-radius: 12px;
 
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 
@@ -56,16 +67,63 @@ html, body {
 
 .back-btn:hover,
 .menu-btn:hover,
-.icon-btn:hover {
+.icon-btn:hover{
   background: rgba(255,255,255,0.25);
 }
 
+/* HEADER RIGHT ICONS */
+.nav-right{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* =========================
+   NOTIFICATION ICON BUTTON
+   BUGFIX: avoid conflicting rules / badge shifting
+========================= */
+.icon-btn{
+  position: relative; /* badge anchor */
+  padding: 0;         /* stable badge position */
+}
+
+.icon-btn i{ color: #fff; }
+
+/* =========================
+   NOTIFICATION BADGE (NUMBER INSIDE)
+   BUGFIX: remove old 8x8 dot conflict
+========================= */
+.notification-badge{
+  position: absolute;
+  top: 2px;
+  right: 2px;
+
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+
+  border: 2px solid rgba(255,255,255,0.85);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+}
+
+.notification-badge:empty{ display:none !important; }
 
 /* =========================
    RESPONSIVE APP MENU PANEL
 ========================= */
-
-.mobile-menu {
+.mobile-menu{
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -83,21 +141,20 @@ html, body {
   transition: opacity 0.25s ease;
 }
 
-.mobile-menu.active {
+.mobile-menu.active{
   opacity: 1;
   pointer-events: auto;
 }
 
 /* PANEL CONTAINER */
-.mobile-menu .menu-list {
+.mobile-menu .menu-list{
   position: relative;
 
   width: 100%;
   max-width: 420px;
   background: #ffffff;
 
-  padding: 60px 28px 35px; /* more top padding for X */
-
+  padding: 60px 28px 35px;
   border-radius: 28px 28px 0 0;
 
   box-shadow:
@@ -108,12 +165,12 @@ html, body {
   transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.mobile-menu.active .menu-list {
+.mobile-menu.active .menu-list{
   transform: translateY(0);
 }
 
 /* Drag Indicator */
-.mobile-menu .menu-list::before {
+.mobile-menu .menu-list::before{
   content: "";
   width: 55px;
   height: 6px;
@@ -123,11 +180,14 @@ html, body {
   margin: 0 auto 24px;
 }
 
-/* =========================
-   MENU ITEMS
-========================= */
+/* MENU ITEMS */
+.mobile-menu .menu-items{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
-.mobile-menu .menu-list li {
+.mobile-menu .menu-items li{
   list-style: none;
   display: flex;
   align-items: center;
@@ -143,93 +203,15 @@ html, body {
   transition: all 0.2s ease;
 }
 
+.mobile-menu .menu-items li[data-action="settings"]{ background: #f3f6f5; }
+.mobile-menu .menu-items li[data-action="settings"]:hover{ background: #e9f6f1; }
 
-/* Settings */
-.mobile-menu .menu-list li[data-action="settings"] {
-  background: #f3f6f5;
-}
+.mobile-menu .menu-items li[data-action="logout"]{ background: #fff5f5; }
+.mobile-menu .menu-items li[data-action="logout"]:hover{ background: #ffecec; }
+.mobile-menu .menu-items li[data-action="logout"] i{ color: #e45c5c; }
 
-.mobile-menu .menu-list li[data-action="settings"]:hover {
-  background: #e9f6f1;
-}
-
-/* Logout (Danger Style) */
-.mobile-menu .menu-list li[data-action="logout"] {
-  background: #fff5f5;
-}
-
-.mobile-menu .menu-list li[data-action="logout"]:hover {
-  background: #ffecec;
-}
-
-.mobile-menu .menu-list li[data-action="logout"] i {
-  color: #e45c5c;
-}
-
-
-/* =========================
-   DESKTOP MODAL VERSION
-========================= */
-@media (min-width: 768px) {
-
-  .mobile-menu {
-    align-items: center;
-  }
-
-  .mobile-menu .menu-list {
-    max-width: 420px;
-    padding: 36px 28px;
-    padding-top: 70px ;
-
-    border-radius: 26px;
-    background: #ffffff;
-
-    box-shadow:
-      0 30px 80px rgba(0, 0, 0, 0.25),
-      0 10px 30px rgba(0, 0, 0, 0.1);
-
-    transform: scale(0.9);
-    opacity: 0;
-
-    transition: 
-      transform 0.25s ease,
-      opacity 0.25s ease;
-  }
-
-  .mobile-menu.active .menu-list {
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  .mobile-menu .menu-list::before {
-    display: none;
-  }
-}
-
-.mobile-menu .menu-items {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.mobile-menu .menu-items li {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  padding: 18px 20px;
-  border-radius: 18px;
-  margin-bottom: 16px;
-
-  font-size: 16px;
-  font-weight: 600;
-
-  transition: 0.2s ease;
-}
-
-
-/* Close Button Positioning */
-.mobile-menu .close-btn {
+/* Close Button */
+.mobile-menu .close-btn{
   position: absolute;
   top: 20px;
   right: 22px;
@@ -241,68 +223,107 @@ html, body {
   align-items: center;
   justify-content: center;
 
-  border: none;              
-  outline: none;            
-  box-shadow: none;       
-  background: transparent; 
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
 
   font-size: 20px;
   cursor: pointer;
 }
 
-.mobile-menu .close-btn:focus {
+.mobile-menu .close-btn:focus{
   outline: none;
   box-shadow: none;
 }
 
-
-.mobile-menu .close-btn:hover {
-  background: #e9e9e9;
+.mobile-menu .close-btn:hover{
+  background: rgba(0,0,0,0.1);
 }
 
+/* DESKTOP MODAL VERSION */
+@media (min-width: 768px){
+  .mobile-menu{ align-items: center; }
 
-.mobile-menu .close-btn:hover {
-  background: rgba(0,0,0,0.1);
+  .mobile-menu .menu-list{
+    max-width: 420px;
+    padding: 36px 28px;
+    padding-top: 70px;
+
+    border-radius: 26px;
+    background: #ffffff;
+
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.25),
+      0 10px 30px rgba(0, 0, 0, 0.1);
+
+    transform: scale(0.9);
+    opacity: 0;
+
+    transition:
+      transform 0.25s ease,
+      opacity 0.25s ease;
+  }
+
+  .mobile-menu.active .menu-list{
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  .mobile-menu .menu-list::before{ display: none; }
 }
 
 /* =========================
    SIDE PANELS (SETTINGS & NOTIFICATIONS)
+   BUGFIX: enforce clickability + smooth overlay behavior
 ========================= */
-.side-panel {
+.side-panel{
   position: fixed;
   top: 0;
   right: -100%;
   width: 100%;
   max-width: 420px;
   height: 100vh;
+
   background: #ffffff;
   z-index: 100000;
+
   transition: right 0.3s ease;
+
   display: flex;
   flex-direction: column;
+
   border-top-left-radius: 24px;
   border-bottom-left-radius: 24px;
   box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+
+  /* ✅ ensures the panel itself always receives pointer events */
+  pointer-events: auto;
 }
 
-.side-panel.active {
-  right: 0;
+.side-panel.active{ right: 0; }
+
+/* Ensure Bootstrap backdrops never block when panel is closed */
+.offcanvas-backdrop,
+.modal-backdrop{
+  pointer-events: auto;
 }
 
-/* PANEL HEADER */
-.panel-header {
+/* PANEL HEADER (settings) */
+.panel-header{
   height: 64px;
   background: linear-gradient(135deg, #1FA774, #38C98E);
   color: #ffffff;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
+
   border-top-left-radius: 24px;
 }
 
-
-.close-panel {
+.close-panel{
   background: none;
   border: none;
   font-size: 22px;
@@ -310,12 +331,10 @@ html, body {
   cursor: pointer;
 }
 
-.close-panel:active {
-  opacity: 0.7;
-}
+.close-panel:active{ opacity: 0.7; }
 
 /* PANEL CONTENT */
-.panel-content {
+.panel-content{
   padding: 16px;
   overflow-y: auto;
   flex: 1;
@@ -324,16 +343,14 @@ html, body {
 /* =========================
    SETTINGS PANEL UI
 ========================= */
-.settings-section {
-  margin-bottom: 28px;
-}
+.settings-section{ margin-bottom: 28px; }
 
-.settings-section h4 {
+.settings-section h4{
   margin-bottom: 12px;
   font-weight: 800;
 }
 
-.setting-row {
+.setting-row{
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -341,7 +358,7 @@ html, body {
 }
 
 /* LANGUAGE */
-.settings-select {
+.settings-select{
   width: 100%;
   padding: 10px;
   border-radius: 10px;
@@ -350,19 +367,19 @@ html, body {
 }
 
 /* TOGGLE SWITCH */
-.switch {
+.switch{
   position: relative;
   width: 46px;
   height: 24px;
 }
 
-.switch input {
+.switch input{
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.slider {
+.slider{
   position: absolute;
   inset: 0;
   background: #ccc;
@@ -371,7 +388,7 @@ html, body {
   transition: 0.3s;
 }
 
-.slider::before {
+.slider::before{
   content: "";
   position: absolute;
   height: 18px;
@@ -383,27 +400,20 @@ html, body {
   transition: 0.3s;
 }
 
-.switch input:checked + .slider {
-  background: #2ecc71;
-}
+.switch input:checked + .slider{ background: #2ecc71; }
+.switch input:checked + .slider::before{ transform: translateX(22px); }
 
-.switch input:checked + .slider::before {
-  transform: translateX(22px);
-}
-
-.theme-label {
-  font-weight: 700;
-}
+.theme-label{ font-weight: 700; }
 
 /* SETTINGS ACTIONS */
-.settings-actions {
+.settings-actions{
   display: flex;
   justify-content: space-between;
   gap: 12px;
   margin-top: 32px;
 }
 
-.save-btn {
+.save-btn{
   background: #2ecc71;
   color: #ffffff;
   border: none;
@@ -413,7 +423,7 @@ html, body {
   cursor: pointer;
 }
 
-.reset-btn {
+.reset-btn{
   background: #ffffff;
   border: 2px solid #ff6b6b;
   color: #ff6b6b;
@@ -422,137 +432,93 @@ html, body {
   font-weight: 700;
   cursor: pointer;
 }
+
 /* =========================
    DARK MODE – FULL OVERRIDE
 ========================= */
 body.dark,
-body.dark .app-root {
+body.dark .app-root{
   background: #121212;
   color: #eaeaea;
 }
 
-/* ALL PAGE CONTAINERS */
 body.dark .dashboard-container,
 body.dark .report-container,
 body.dark .help-container,
-body.dark .profile-container {
+body.dark .profile-container{
   background: #121212;
 }
 
-/* CARDS */
 body.dark .dashboard-card,
 body.dark .profile-card,
 body.dark .form-card,
 body.dark .report-card,
-body.dark .help-card {
+body.dark .help-card{
   background: #1e1e1e;
   border-color: #333;
 }
 
-/* HEADERS */
 body.dark .page-header,
-body.dark .panel-header {
+body.dark .panel-header,
+body.dark .notifications-panel .panel-hero{
   background: #1b7a4a;
 }
 
-/* MENUS */
 body.dark .mobile-menu,
-body.dark .side-panel {
+body.dark .side-panel{
   background: #1e1e1e;
 }
 
-body.dark .menu-list li {
+body.dark .menu-items li{
   color: #eaeaea;
   border-color: #333;
 }
 
-body.dark .menu-list li:hover {
-  background: #2a2a2a;
-}
+body.dark .menu-items li:hover{ background: #2a2a2a; }
 
-/* INPUTS */
 body.dark input,
 body.dark select,
-body.dark textarea {
+body.dark textarea{
   background: #2a2a2a;
   color: #ffffff;
   border-color: #444;
 }
 
-/* =========================
-   FULL HEIGHT LAYOUT FIX
-========================= */
-html, body {
-  min-height: 100%;
-}
+body.dark .notifications-panel .panel-body{ background: #151515; }
+body.dark .notification-item{ background: #1f1f1f; }
 
-.app-root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* HEADER RIGHT ICONS */
-.nav-right {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-/* Bell button */
-.icon-btn {
-  position: relative;
-  background: none;
-  border: none;
-  color: #fff;        
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 6px;
-}
-
-/* Ensure icon itself is white */
-.icon-btn i {
-  color: #fff;
-}
-
-/* Notification badge */
-.notification-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  background: red;
-  border-radius: 50%;
+body.dark .notif-filters,
+body.dark .notif-pager{
+  background: #1f1f1f;
+  border-color: #333;
 }
 
 /* =========================================
    NOTIFICATIONS PANEL – MODERN APP STYLE
 ========================================= */
-
-.notifications-panel {
+.notifications-panel{
   max-width: 420px;
   border-radius: 28px 0 0 28px;
   overflow: hidden;
 }
 
-/* Gradient Header */
-.notifications-panel .panel-hero {
+.notifications-panel .panel-hero{
   background: linear-gradient(135deg, #1FA774, #38C98E);
   padding: 22px 24px;
   color: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
-.notifications-panel .panel-hero h3 {
+.notifications-panel .panel-hero h3{
   margin: 0;
   font-weight: 700;
   font-size: 18px;
 }
 
-.notifications-panel .close-panel {
+.notifications-panel .close-panel{
   background: rgba(255,255,255,0.2);
   border-radius: 12px;
   width: 36px;
@@ -563,7 +529,7 @@ html, body {
 }
 
 /* Body */
-.notifications-panel .panel-body {
+.notifications-panel .panel-body{
   padding: 20px;
   overflow-y: auto;
   flex: 1;
@@ -571,14 +537,14 @@ html, body {
 }
 
 /* Notification List */
-.notification-list {
+.notification-list{
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
 /* Individual Notification Card */
-.notification-item {
+.notification-item{
   background: #ffffff;
   border-radius: 18px;
   padding: 16px;
@@ -587,36 +553,36 @@ html, body {
   cursor: pointer;
 }
 
-.notification-item:hover {
+.notification-item:hover{
   transform: translateY(-3px);
   box-shadow: 0 12px 30px rgba(0,0,0,0.08);
 }
 
 /* Unread Indicator */
-.notification-item.unread {
+.notification-item.unread{
   border-left: 4px solid #1FA774;
   background: #f0faf6;
 }
 
-.notification-title {
+.notification-title{
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 6px;
 }
 
-.notification-message {
+.notification-message{
   font-size: 13px;
   color: #555;
   margin-bottom: 6px;
 }
 
-.notification-time {
+.notification-time{
   font-size: 11px;
   color: #8a8a8a;
 }
 
 /* View All Button */
-.view-all-btn {
+.view-all-btn{
   margin-top: 20px;
   width: 100%;
   padding: 14px;
@@ -629,20 +595,14 @@ html, body {
   transition: 0.2s ease;
 }
 
-.view-all-btn:hover {
-  filter: brightness(1.05);
-}
+.view-all-btn:hover{ filter: brightness(1.05); }
 
 /* =========================================
    HISTORY PANEL EXTENSION
 ========================================= */
+.history-panel{ max-width: 480px; }
 
-.history-panel {
-  max-width: 480px;
-}
-
-/* Type Badge */
-.notification-type {
+.notification-type{
   font-size: 11px;
   font-weight: 700;
   padding: 4px 10px;
@@ -650,36 +610,106 @@ html, body {
   text-transform: uppercase;
 }
 
-/* SUCCESS */
-.notification-type.success {
+.notification-type.success{
   background: rgba(31,167,116,0.15);
   color: #1FA774;
 }
 
-/* INFO */
-.notification-type.info {
+.notification-type.info{
   background: rgba(54,162,235,0.15);
   color: #1e88e5;
 }
 
-/* WARNING (future safe) */
-.notification-type.warning {
+.notification-type.warning{
   background: rgba(255,193,7,0.15);
   color: #f39c12;
 }
 
-/* History Card Layout */
-.notification-item.history {
-  padding: 18px;
-}
+.notification-item.history{ padding: 18px; }
 
-.notification-header {
+.notification-header{
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.notification-header strong {
-  font-size: 14px;
+.notification-header strong{ font-size: 14px; }
+
+/* =========================
+   NOTIFICATION PANEL HERO BUTTON (THEME)
+========================= */
+.notif-hero-btn{
+  border: none !important;
+  font-weight: 800;
+  border-radius: 14px;
+  padding: 8px 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  white-space: nowrap;
+}
+
+@media (max-width: 420px){
+  .notif-hero-btn{
+    padding: 7px 8px;
+    font-size: 12px;
+  }
+}
+
+/* =========================
+   HISTORY FILTERS + PAGER
+========================= */
+.notif-filters{
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.05);
+  margin-bottom: 14px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.notif-filter-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.notif-pager{
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 10px 12px;
+
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.05);
+}
+
+.notif-page-label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #1f2937;
+  text-align: center;
+  flex: 1;
+}
+
+/* =========================
+   SMALL SCREEN POLISH
+========================= */
+@media (max-width: 480px){
+  .notifications-panel .panel-hero{ padding: 18px 16px; }
+  .notifications-panel .panel-body{ padding: 16px; }
+  .notification-item{ padding: 14px; }
+}
+
+/* =========================
+   SIDE PANEL WIDTH ON LARGE SCREENS
+========================= */
+@media (min-width: 1200px){
+  .side-panel{ max-width: 460px; }
+  .history-panel{ max-width: 520px; }
 }
