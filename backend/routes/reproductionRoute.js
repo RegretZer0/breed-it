@@ -20,7 +20,7 @@ const formatName = (userObj) => {
 };
 
 /* =========================================================
-   ENUM-SAFE HELPERS (fixes your retain/pending error)
+    ENUM-SAFE HELPERS (fixes your retain/pending error)
 ========================================================= */
 function getEnumValues(model, path) {
   try {
@@ -80,8 +80,13 @@ function setEnumSafeCurrentStatus(swineDoc, candidates, fuzzyKeywords) {
 }
 
 /* =========================================================
-   Optional debug endpoint to see allowed enum values
-   GET /api/reproduction/debug/status-enum
+    MVP: VIRTUAL TIME HELPER
+========================================================= */
+const getVirtualNow = () => (typeof global.getNow === "function" ? global.getNow() : new Date());
+
+/* =========================================================
+    Optional debug endpoint to see allowed enum values
+    GET /api/reproduction/debug/status-enum
 ========================================================= */
 router.get("/debug/status-enum", requireSessionAndToken, async (req, res) => {
   const allowed = getEnumValues(Swine, "current_status");
@@ -237,7 +242,7 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. PIGLET MONITORING & LIFECYCLE
+// 3. PIGLET MONITORING & LIFECYCLE (Updated with Virtual Time)
 // ---------------------------------------------------------
 router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
   try {
@@ -249,7 +254,9 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
     }
 
     const piglets = await Swine.find(query);
-
+    // Note: If your Swine model uses a virtual/method for lifecycle_phase, 
+    // ensure that model logic also uses global.getNow().
+    
     const data = piglets.map((p) => {
       const phaseInfo = p.lifecycle_phase;
       const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
@@ -290,7 +297,6 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     const act = actRaw === "retain" ? "breeding" : actRaw === "sale" ? "sell" : actRaw;
 
     // ✅ Pending: DO NOT update enum field if you don't know enum values.
-    // This prevents enum validation crash.
     if (act === "pending") {
       return res.json({
         success: true,
@@ -302,12 +308,10 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     if (act === "breeding") {
       swine.age_stage = "adult";
 
-      // Choose enum-safe value based on your schema
-      // Try exact first then fuzzy
       const result = setEnumSafeCurrentStatus(
         swine,
         ["Active", "Active Breeder", "Breeding", "Breeder"],
-        ["active"] // fuzzy keyword
+        ["active"] 
       );
 
       if (!result.ok) {
@@ -330,7 +334,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     const result = setEnumSafeCurrentStatus(
       swine,
       ["Culled/Sold", "Sold", "Marked for Sale", "Culled"],
-      ["sold"] // fuzzy keyword
+      ["sold"] 
     );
 
     if (!result.ok) {
@@ -435,11 +439,13 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 7. FETCH PREGNANT SOWS (READY FOR FARROWING)
+// 7. FETCH PREGNANT SOWS (Updated with Overdue logic for Warp)
 // ---------------------------------------------------------
 router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
   try {
     const { id: userId, role, managerId, farmerProfileId } = req.user;
+    const now = getVirtualNow();
+
     let query = {
       current_status: "Pregnant",
       "breeding_cycles.is_pregnant": true,
@@ -457,12 +463,18 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
 
     const formatted = pregnantSows.map((sow) => {
       const activeCycle = sow.breeding_cycles.find((c) => c.is_pregnant && !c.farrowed) || {};
+      
+      // Virtual Time check: compare expected date to warped "now"
+      const expected = activeCycle.expected_farrowing_date ? new Date(activeCycle.expected_farrowing_date) : null;
+      const isOverdue = expected && expected <= now;
+
       return {
         id: sow._id,
         swine_tag: sow.swine_id,
         breed: sow.breed,
         parity: sow.parity,
         expected_date: activeCycle.expected_farrowing_date,
+        is_overdue: isOverdue, // Extra data for UI highlights
         ai_record_id: activeCycle.ai_record_id,
         sire_id: activeCycle.cycle_sire_id || "N/A",
       };
@@ -475,7 +487,7 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 8. COMPLETE BREEDING CYCLE (FARROWING)
+// 8. COMPLETE BREEDING CYCLE (Updated for Virtual Time)
 // ---------------------------------------------------------
 router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
   const { ai_record_id, farrowing_date } = req.body;
@@ -490,7 +502,8 @@ router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
     }
 
     aiRecord.status = "Success";
-    aiRecord.farrowing_date = farrowing_date;
+    // If user didn't pick a date, use the Virtual/Warped date
+    aiRecord.farrowing_date = farrowing_date || getVirtualNow();
 
     await aiRecord.save();
 

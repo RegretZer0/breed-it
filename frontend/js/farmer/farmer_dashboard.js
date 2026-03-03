@@ -10,8 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // INITIALIZE DATA FETCHING
   // =========================
+  syncVirtualTime(); // MVP: Sync the clock first
   loadGlobalAlerts(); // Fetches Maintenance broadcasts
-  // You can also call your private user notifications here if needed
 
   // =========================
   // DASHBOARD NAVIGATION
@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadGlobalAlerts() {
     try {
-      // Fetch alerts where ends_at is still in the future
       const response = await fetch("/api/notifications/global");
       const data = await response.json();
 
@@ -60,10 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function displayMaintenanceBanner(alert) {
-    // Check if banner already exists to prevent duplicates
     if (document.getElementById(`banner-${alert._id}`)) return;
 
-    const header = document.querySelector("header") || document.body;
     const banner = document.createElement("div");
     
     banner.id = `banner-${alert._id}`;
@@ -85,12 +82,34 @@ document.addEventListener("DOMContentLoaded", () => {
     banner.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
         <span>🚧 <strong>${alert.title}:</strong> ${alert.message} 
-        <small>(Scheduled: ${start} to ${end})</small></span>
+        <br><small>(Scheduled Server Time: ${start} to ${end})</small></span>
       </div>
     `;
 
-    // Insert at the very top of the page
     document.body.prepend(banner);
+  }
+
+  // =========================
+  // MVP: SYNC VIRTUAL TIME
+  // =========================
+  async function syncVirtualTime() {
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      
+      const timeDisplay = document.getElementById("currentVirtualTime");
+      if (timeDisplay && data.virtualTime) {
+        timeDisplay.textContent = data.virtualTime;
+        
+        // Visual indicator that the farmer is in "Test Mode"
+        if (data.isMocked) {
+          timeDisplay.style.color = "#d97706";
+          console.log("🛠️ Testing Mode: Server time is being mocked.");
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync virtual time.");
+    }
   }
 
   // =========================

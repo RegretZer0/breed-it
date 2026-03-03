@@ -1,4 +1,4 @@
-// backend/models/HeatReports.js (or HeatReport.js)
+// backend/models/HeatReports.js
 const mongoose = require("mongoose");
 
 const heatReportSchema = new mongoose.Schema(
@@ -29,7 +29,6 @@ const heatReportSchema = new mongoose.Schema(
     },
 
     // ---------------- HEAT DETAILS ----------------
-    // UPDATED: Added new behavioral signs to the enum to match calculation logic
     signs: [
       {
         type: String,
@@ -60,8 +59,6 @@ const heatReportSchema = new mongoose.Schema(
       default: false
     },
 
-    // ✅ NEW: Farmer remarks / notes (shown in Report Details panel)
-    // Keeps existing flows intact even if empty.
     remarks: {
       type: String,
       default: ""
@@ -109,45 +106,45 @@ const heatReportSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        "pending", // Submitted by farmer
-        "approved", // Manager confirmed (In-Heat)
-        "rejected", // Manager denied
-        "ai_service", // Artificial Insemination performed
-        "under_observation", // 23-day observation period
-        "pregnant", // Passed 23-day check
-        "farrowing_ready", // Ready for farrowing
-        "farrowed", // Successfully farrowed
-        "lactating", // Currently lactating
-        "completed" // Cycle ended (Weaned)
+        "pending", 
+        "approved", 
+        "rejected", 
+        "ai_service", 
+        "under_observation", 
+        "pregnant", 
+        "farrowing_ready", 
+        "farrowed", 
+        "lactating", 
+        "completed" 
       ],
       default: "pending"
     },
 
-    // ---------------- TRACKING DATES ----------------
+    // ---------------- TRACKING DATES (Supports Time Warp) ----------------
     ai_confirmed_at: {
       type: Date,
       default: null
     },
 
-    // 23-day recheck date
+    // 23-day recheck date (Calculated from ai_confirmed_at)
     next_heat_check: {
       type: Date,
       default: null
     },
 
-    // 114–115 days countdown
+    // 114–115 days countdown (Bio-Standard)
     expected_farrowing: {
       type: Date,
       default: null
     },
 
-    // Actual date farrowing occurred (Used for weaning calculations)
+    // Actual date farrowing occurred
     actual_farrowing_date: {
       type: Date,
       default: null
     },
 
-    // Date the piglets were weaned and the cycle was closed
+    // Date the piglets were weaned
     weaning_date: {
       type: Date,
       default: null
@@ -163,7 +160,30 @@ const heatReportSchema = new mongoose.Schema(
       default: Date.now
     }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+// ------------------- LOGIC / HELPERS -------------------
+
+// Virtual to calculate days remaining until farrowing
+heatReportSchema.virtual('days_until_farrowing').get(function() {
+  if (!this.expected_farrowing || this.status === 'farrowed' || this.status === 'completed') return 0;
+  
+  const now = new Date();
+  const diffTime = this.expected_farrowing - now;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  return diffDays > 0 ? diffDays : 0;
+});
+
+// Virtual to see if the 23-day heat check is overdue
+heatReportSchema.virtual('is_heat_check_overdue').get(function() {
+  if (this.status !== 'under_observation' || !this.next_heat_check) return false;
+  return new Date() > this.next_heat_check;
+});
 
 module.exports = mongoose.model("HeatReport", heatReportSchema);

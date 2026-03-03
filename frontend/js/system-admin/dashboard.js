@@ -16,6 +16,19 @@ document.addEventListener("DOMContentLoaded", () => {
     sendMaintBtn.addEventListener("click", broadcastMaintenance);
   }
 
+  // ==========================================
+  // NEW: TIME WARP (TELEPORT) LISTENERS
+  // ==========================================
+  const teleportBtn = document.getElementById("teleportBtn");
+  if (teleportBtn) {
+    teleportBtn.addEventListener("click", () => teleportSystemTime(false));
+  }
+
+  const resetTimeBtn = document.getElementById("resetTimeBtn");
+  if (resetTimeBtn) {
+    resetTimeBtn.addEventListener("click", () => teleportSystemTime(true));
+  }
+
   // Optional: Listener for a manual refresh button
   const manualBtn = document.getElementById("manualRefreshBtn");
   if (manualBtn) {
@@ -32,8 +45,44 @@ document.addEventListener("DOMContentLoaded", () => {
 function refreshDashboard() {
   loadAdminStats();
   loadDataOversight();
-  // We don't necessarily need to refresh the whole ticket table every 3 seconds 
-  // to save bandwidth, but you can add loadAdminTickets() here if desired.
+}
+
+/**
+ * FIXED: TELEPORT SYSTEM TIME
+ * Sends the target date to adminRoutes.js and reloads the page
+ */
+async function teleportSystemTime(isReset = false) {
+  const timeInput = document.getElementById("systemTimeInput");
+  
+  // Explicitly handle the target date value
+  let targetDateValue = isReset ? null : timeInput.value;
+
+  // Validation: If not resetting, we MUST have a date selected
+  if (!isReset && (!targetDateValue || targetDateValue === "")) {
+    alert("Please select a target date and time from the picker first.");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:5000/api/admin/set-system-time", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ targetDate: targetDateValue })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      // ✅ CRITICAL: Reload the page so EJS templates and tokens sync to the new time
+      window.location.reload(); 
+    } else {
+      alert("Teleport failed: " + data.message);
+    }
+  } catch (err) {
+    console.error("Teleport Error:", err);
+    alert("Error connecting to admin service.");
+  }
 }
 
 /**
@@ -112,6 +161,13 @@ function loadAdminStats() {
 
       const stats = data.stats || {};
       
+      // UPDATE: VIRTUAL TIME DISPLAY
+      const virtualTimeEl = document.getElementById("virtualTimeDisplay");
+      if (virtualTimeEl) {
+        virtualTimeEl.textContent = stats.virtualTime || "--";
+        virtualTimeEl.style.color = stats.isTimeMocked ? "#f59e0b" : "#10b981";
+      }
+
       const statusEl = document.getElementById("serverStatus");
       if (statusEl) {
         statusEl.textContent = stats.serverStatus ?? "--";
@@ -320,7 +376,6 @@ function renderAdminTickets(tickets = []) {
   tickets.forEach(t => {
     if (t.status === 'open') openCount++;
     
-    // User data is populated from the user_id reference in the route
     const userName = getDisplayName(t.user_id);
     const userRole = t.user_id?.role?.replace('_', ' ') || 'unknown';
 
@@ -350,9 +405,6 @@ function renderAdminTickets(tickets = []) {
   if (badge) badge.textContent = `${openCount} Open Tickets`;
 }
 
-/**
- * Updates the status of a specific ticket via the admin endpoint
- */
 function updateTicketStatus(mongoId, newStatus) {
   fetch(`http://localhost:5000/api/support/admin/ticket/${mongoId}`, {
     method: "PATCH",
@@ -364,7 +416,7 @@ function updateTicketStatus(mongoId, newStatus) {
     .then(data => {
       if (data.success) {
         console.log(`Ticket ${mongoId} updated to ${newStatus}`);
-        loadAdminTickets(); // Refresh list to update UI and badges
+        loadAdminTickets();
       } else {
         alert("Failed to update ticket status.");
       }

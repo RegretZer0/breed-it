@@ -59,6 +59,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const boarSelect = document.getElementById("boarSelect");
   const submitAIBtn = document.getElementById("submitAI");
 
+  const aiDateInput = document.getElementById("ai_date_input"); 
+  const confirmWeaningBtn = document.getElementById("confirmWeaningBtn");
+  const weaningDateInput = document.getElementById("weaning_date_input");
+  const weaningWeightInput = document.getElementById("weaning_weight_input");
+  const weaningRemarksInput = document.getElementById("weaning_remarks_input");
+
   // Evidence viewer modal
   const evidenceViewerModal = document.getElementById("evidenceViewerModal");
   const closeEvidenceViewer = document.getElementById("closeEvidenceViewer");
@@ -482,6 +488,82 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   rejectReasonModal?.addEventListener("click", (e) => {
     if (e.target === rejectReasonModal) closeRejectModalFn();
   });
+
+  /* ======================================================
+    MANAGER ACTIONS (Time Warp & Schema Compatible)
+====================================================== */
+
+// 1. Confirm Artificial Insemination (AI)
+async function handleConfirmAI(reportId) {
+    // These IDs must exist in your Manager Action Modal HTML
+    const maleSwineId = document.getElementById(`male_swine_id_${reportId}`)?.value;
+    const aiDate = document.getElementById(`ai_date_${reportId}`)?.value; // Time Warp date picker
+
+    if (!maleSwineId) {
+        await showFeedback({
+            title: "Data Required",
+            body: "Please provide a Boar ID for the AI record.",
+            variant: "warn"
+        });
+        return;
+    }
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/confirm-ai`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                maleSwineId, 
+                ai_date: aiDate // Sends selected date to backend
+            })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            await showFeedback({ title: "Success", body: "AI Procedure recorded successfully.", variant: "success" });
+            location.reload();
+        } else {
+            await showFeedback({ title: "Error", body: data.message, variant: "danger" });
+        }
+    } catch (err) {
+        console.error("AI Error:", err);
+    }
+}
+
+  // 2. Confirm Weaning (Graduates piglets to 'growing' stage)
+  async function handleConfirmWeaning(reportId) {
+      const weaningDate = document.getElementById(`weaning_date_${reportId}`)?.value;
+      const weight = document.getElementById(`weaning_weight_${reportId}`)?.value;
+      const remarks = document.getElementById(`weaning_remarks_${reportId}`)?.value;
+
+      try {
+          const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/confirm-weaning`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({ 
+                  weaning_date: weaningDate, // Time Warp
+                  weight: weight,            // Required for ADG in Swine.js
+                  remarks: remarks 
+              })
+          });
+
+          const data = await res.json();
+          if (data.success) {
+              await showFeedback({ title: "Graduated", body: "Weaning confirmed. Piglets are now in Growing stage.", variant: "success" });
+              location.reload();
+          } else {
+              await showFeedback({ title: "Error", body: data.message, variant: "danger" });
+          }
+      } catch (err) {
+          console.error("Weaning Error:", err);
+      }
+  }
 
   // =========================
   // AI CONFIRM MODAL (themed) close wiring
@@ -1474,19 +1556,46 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   if (submitAIBtn) {
     submitAIBtn.onclick = async () => {
+      // 1. Get the Boar ID
       const maleSwineId = boarSelect?.value;
+
+      // 2. TIME WARP: Capture the specific date
+      const aiDate = document.getElementById("ai_date_input")?.value;
+
+      // 3. Keep your existing validation feature
       if (!maleSwineId) {
-        await showFeedback({
-          title: "Select a boar",
-          sub: "Required field",
-          body: "Please select a boar.",
-          variant: "warn"
-        });
+        // If showFeedback is a custom function in your UI
+        if (typeof showFeedback === "function") {
+          await showFeedback({
+            title: "Select a boar",
+            sub: "Required field",
+            body: "Please select a boar before confirming.",
+            variant: "warn"
+          });
+        } else {
+          alert("Please select a boar.");
+        }
         return;
       }
 
-      await action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", { maleSwineId });
-      closeAIConfirmModalFn();
+      // 4. Trigger the action with the Time Warp payload
+      // We send 'ai_date' so the backend can set the insemination_date in AIRecord.js
+      await action(
+        "confirm-ai", 
+        "AI Confirmed! Swine moved to Under Observation.", 
+        { 
+          maleSwineId,
+          ai_date: aiDate || null, // Sends null if empty, letting backend use Date.now()
+          reportId: currentReportId // Ensuring the ID is explicitly linked
+        }
+      );
+
+      // 5. Keep your existing feature to close the modal
+      if (typeof closeAIConfirmModalFn === "function") {
+        closeAIConfirmModalFn();
+      } else if (aiConfirmModal) {
+        aiConfirmModal.style.display = "none";
+      }
     };
   }
 
@@ -1510,8 +1619,17 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     };
   }
 
+  /* ======================================================
+     UPDATE: CONFIRM PREGNANCY (With Time Warp)
+  ====================================================== */
   if (confirmPregnancyBtn) {
     confirmPregnancyBtn.onclick = async () => {
+      // 1. TIME WARP: Capture the specific date from the UI
+      // Ensure you have an <input type="date" id="preg_date_input"> in your HTML/Modal
+      const pregDateInput = document.getElementById("preg_date_input");
+      const checkDate = pregDateInput ? pregDateInput.value : null;
+
+      // 2. Keep your existing confirmation feature
       const ok = await showConfirm({
         title: "Confirm pregnancy",
         sub: "This will update the swine’s cycle stage.",
@@ -1519,7 +1637,48 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
       if (!ok) return;
 
-      await action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.");
+      // 3. Trigger the action, passing the check_date to the backend
+      // This matches the 'const { check_date } = req.body' in heatReportRoutes.js
+      await action(
+        "confirm-pregnancy", 
+        "Pregnancy confirmed. Expected farrowing date calculated.",
+        {
+          check_date: checkDate // Sends the warped date or null to use current time
+        }
+      );
+    };
+  }
+
+  /* ======================================================
+     CONFIRM WEANING (Integrated with Time Portal)
+  ====================================================== */
+  if (confirmWeaningBtn) {
+    confirmWeaningBtn.onclick = async () => {
+      // 1. Capture the data from the modal
+      const weaningDate = weaningDateInput?.value;
+      const weaningWeight = weaningWeightInput?.value;
+      const remarks = weaningRemarksInput?.value || "Standard weaning";
+
+      // 2. Validation
+      if (!weaningWeight || weaningWeight <= 0) {
+        alert("Please enter a valid weaning weight.");
+        return;
+      }
+
+      // 3. User Confirmation
+      const ok = await showConfirm({
+        title: "Confirm Weaning",
+        sub: "This will move piglets to 'Growing' and reset the Sow to 'Open'.",
+        body: "Are you sure you want to finalize weaning for this batch?"
+      });
+      if (!ok) return;
+
+      // 4. Send to Backend (Matches the route we updated earlier)
+      await action("confirm-weaning", "Weaning confirmed and cycle completed!", {
+        weaning_date: weaningDate,
+        weight: weaningWeight,
+        remarks: remarks
+      });
     };
   }
 

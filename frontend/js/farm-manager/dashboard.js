@@ -19,6 +19,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ============================
+  // MVP: SYNC VIRTUAL TIME
+  // ============================
+  // This ensures the manager sees the "Server Date" during testing
+  await syncVirtualTime();
+
+  // ============================
   // WELCOME MESSAGE
   // ============================
   const welcome = document.querySelector(".dashboard-welcome");
@@ -73,5 +79,29 @@ async function loadDashboardStats(token) {
 
   } catch (err) {
     console.error("Dashboard stats error:", err);
+  }
+}
+
+/**
+ * MVP FEATURE: SYNC VIRTUAL TIME
+ * Fetches the server's perception of "Now" so testing remains consistent
+ */
+async function syncVirtualTime() {
+  try {
+    const res = await fetch("/health");
+    const data = await res.json();
+    
+    const timeDisplay = document.getElementById("currentVirtualTime");
+    if (timeDisplay && data.virtualTime) {
+      timeDisplay.textContent = data.virtualTime;
+      
+      // If the time is mocked, give it a subtle highlight so the tester knows
+      if (data.isMocked) {
+        timeDisplay.parentElement.style.borderLeft = "4px solid #f59e0b";
+        timeDisplay.style.color = "#d97706";
+      }
+    }
+  } catch (err) {
+    console.warn("Could not sync virtual time with server.");
   }
 }

@@ -6,8 +6,22 @@ const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
-const initHeatCron = require("./utils/cronJobs");
+const { initHeatCron } = require("./utils/cronJobs");
 const fs = require("fs");
+
+/* =========================
+    MVP: GLOBAL TIME CONTROL
+========================= */
+// This allows teleporting the server into the future for testing
+global.timeControl = {
+  offsetMS: 0, 
+  isMocked: false
+};
+
+// Global helper to get "Virtual Now" instead of real system time
+global.getNow = function() {
+  return new Date(Date.now() + global.timeControl.offsetMS);
+};
 
 // ROUTES
 const adminRoutes = require("./routes/adminRoutes");
@@ -39,6 +53,13 @@ const app = express();
 app.use((req, res, next) => {
   res.locals.page_title = "BreedIT";
   res.locals.current_page = "";
+  
+  // Create a function helper for EJS so it always gets the LATEST time
+  res.locals.getVirtualNow = () => global.getNow(); 
+  res.locals.isTimeMocked = () => global.timeControl.isMocked;
+  
+  // Keep these for simple variable access
+  res.locals.virtualNow = global.getNow();
   next();
 });
 
@@ -71,17 +92,17 @@ app.use(
   session({
     name: "breedit.sid",
     secret: process.env.SESSION_SECRET,
-    resave: true, // Change to true to ensure session is touched on every refresh
+    resave: true, 
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
-      sameSite: "lax", // Essential for local development sessions
-      secure: false,   // Must be false if you are not using HTTPS/SSL
+      sameSite: "lax",
+      secure: false,   
     },
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
-      collectionName: 'sessions', // Explicitly name the collection
+      collectionName: 'sessions', 
       ttl: 24 * 60 * 60,
     }),
   })
@@ -98,15 +119,10 @@ app.use((req, res, next) => {
 /* =========================
     STATIC FILES
 ========================= */
-// Specific asset folders
 app.use("/images", express.static(path.join(__dirname, "../frontend/images")));
 app.use("/css", express.static(path.join(__dirname, "../frontend/css")));
 app.use("/js", express.static(path.join(__dirname, "../frontend/js")));
-
-// ✅ UPDATED: Serve the frontend root to allow access to audit_logs.html and others
 app.use(express.static(path.join(__dirname, "../frontend")));
-
-// Uploaded & public assets
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -116,16 +132,14 @@ app.use(express.static(path.join(__dirname, "public")));
 ========================= */
 const uploadsDir = path.join(__dirname, "uploads");
 const pigUploadsDir = path.join(uploadsDir, "pigs");
-
 const userProfileUploadsDir = path.join(uploadsDir, "user_profiles");
 
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(pigUploadsDir)) fs.mkdirSync(pigUploadsDir, { recursive: true });
-
 if (!fs.existsSync(userProfileUploadsDir)) fs.mkdirSync(userProfileUploadsDir, { recursive: true });
 
 /* =========================
-    BODY LIMITS (OPTIONAL, HELPS WITH FORMS)
+    BODY LIMITS
 ========================= */
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -147,7 +161,6 @@ mongoose
   });
 
 
-
 /* =========================
     PREVENT CACHE AFTER LOGOUT
 ========================= */
@@ -166,7 +179,6 @@ app.use("/", require("./routes/pageRoutes"));
 /* =========================
     API ROUTES
 ========================= */
-// ✅ The audit log endpoint is contained within authRoutes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/swine", require("./routes/swineRoutes"));
 app.use("/api/heat", require("./routes/heatReportRoutes"));
@@ -185,7 +197,13 @@ app.use("/api/support", supportRoutes);
     HEALTH CHECK
 ========================= */
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", service: "BreedIT Backend" });
+  res.json({ 
+    status: "ok", 
+    service: "BreedIT Backend",
+    systemTime: new Date().toLocaleString(),
+    virtualTime: global.getNow().toLocaleString(),
+    isMocked: global.timeControl.isMocked
+  });
 });
 
 /* =========================
@@ -195,7 +213,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log("📄 EJS Views:", path.join(__dirname, "../frontend/views"));
-  console.log("🎨 Frontend Root Static Assets Enabled");
+  console.log(`⏰ Current Virtual Time: ${global.getNow().toLocaleString()}`);
   console.log("🔐 JWT Secret Loaded:", !!process.env.JWT_SECRET);
 });

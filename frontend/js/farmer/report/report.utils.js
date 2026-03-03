@@ -48,18 +48,19 @@ export function pickFirst(obj, keys) {
 
 export function normalizeApprovalStatus(raw) {
   const s = (raw || "pending").toLowerCase().trim().replace(/\s+/g, "_");
-  if (s === "waiting_heat_check") return "ongoing";
-  if (s === "in_progress") return "ongoing";
-  if (s === "ongoing") return "ongoing";
+  // Updated to include the new lifecycle stages as "ongoing"
+  if (["waiting_heat_check", "in_progress", "ongoing", "under_observation", "pregnant", "lactating"].includes(s)) return "ongoing";
   if (s === "approved") return "approved";
   if (s === "rejected") return "rejected";
+  if (s === "completed") return "completed";
   return "pending";
 }
 
 export function labelApprovalStatus(normalized) {
-  if (normalized === "approved") return "Approved";
+  if (normalized === "approved") return "AI Scheduled";
   if (normalized === "rejected") return "Rejected";
-  if (normalized === "ongoing") return "Ongoing";
+  if (normalized === "ongoing") return "Active Cycle";
+  if (normalized === "completed") return "Cycle Completed";
   return "Pending";
 }
 
@@ -67,8 +68,12 @@ export function buildTimelineSteps(report) {
   const sw = report?.swine_id || {};
   const approval = normalizeApprovalStatus(report?.status);
 
+  // Extract Dates (Including Warped Dates from Backend)
   const createdAt = toDateOrNull(report?.createdAt);
+  const aiDate = toDateOrNull(report?.ai_confirmed_at);
   const nextHeat = toDateOrNull(report?.next_heat_check);
+  const pregCheckDate = toDateOrNull(report?.pregnancy_confirmed_at);
+  const weaningDate = toDateOrNull(report?.weaning_date);
 
   const expectedFarrow = toDateOrNull(
     report?.expected_farrowing ||
@@ -79,28 +84,14 @@ export function buildTimelineSteps(report) {
   const reviewedAt = pickFirst(report, ["reviewedAt", "reviewed_at", "updatedAt", "updated_at"]);
   const reviewedDate = toDateOrNull(reviewedAt);
 
-  const reason = pickFirst(report, [
-    "rejection_reason",
-    "rejectionReason",
-    "admin_comment",
-    "adminComment",
-    "remarks",
-    "note",
-    "message"
-  ]);
+  const reason = pickFirst(report, ["rejection_reason", "rejectionReason", "admin_comment", "remarks", "note"]);
+  const approvedMsg = pickFirst(report, ["approval_note", "approved_note", "approvalNote"]);
 
-  const approvedMsg = pickFirst(report, [
-    "approval_note",
-    "approved_note",
-    "approvalNote",
-    "approvedNote"
-  ]);
-
-  const status = String(sw?.current_status || "").toLowerCase();
-  const isPregnant = status.includes("preg") || !!expectedFarrow;
-
+  const status = String(report?.status || sw?.current_status || "").toLowerCase();
+  
   const events = [];
 
+  // 1. Initial Submission
   events.push({
     title: "Report Submitted",
     desc: "Farmer submitted the heat detection report.",
@@ -110,26 +101,22 @@ export function buildTimelineSteps(report) {
     badge: "recorded"
   });
 
+  // 2. Review / Approval Step
   let decisionTitle = "Report Review";
-  let decisionDesc = "Your report is pending review.";
+  let decisionDesc = "Pending review by manager.";
   let decisionIcon = "bi-hourglass-split";
   let decisionBadge = "pending";
 
-  if (approval === "approved") {
-    decisionTitle = "Report Approved";
-    decisionDesc = approvedMsg ? `Your report has been approved. ${approvedMsg}` : "Your report has been approved.";
-    decisionIcon = "bi-check2-circle";
-    decisionBadge = "recorded";
-  } else if (approval === "rejected") {
+  if (approval === "rejected") {
     decisionTitle = "Report Rejected";
-    decisionDesc = reason ? `Reason: ${reason}` : "Your report has been rejected. Please review and resubmit.";
+    decisionDesc = reason ? `Reason: ${reason}` : "Your report has been rejected.";
     decisionIcon = "bi-x-circle";
     decisionBadge = "recorded";
-  } else if (approval === "ongoing") {
-    decisionTitle = "Report Under Review";
-    decisionDesc = "Your report is currently being reviewed.";
-    decisionIcon = "bi-arrow-repeat";
-    decisionBadge = "ongoing";
+  } else if (aiDate || approval === "approved" || approval === "ongoing" || approval === "completed") {
+    decisionTitle = "Report Approved";
+    decisionDesc = "Report verified. Breeding cycle initiated.";
+    decisionIcon = "bi-check2-circle";
+    decisionBadge = "recorded";
   }
 
   events.push({
@@ -137,32 +124,59 @@ export function buildTimelineSteps(report) {
     desc: decisionDesc,
     icon: decisionIcon,
     date: reviewedDate || createdAt,
-    dateText: reviewedDate
-      ? `Reviewed: ${reviewedDate.toLocaleDateString()}`
-      : (createdAt ? `Submitted: ${createdAt.toLocaleDateString()}` : "Date N/A"),
+    dateText: reviewedDate ? `Reviewed: ${reviewedDate.toLocaleDateString()}` : "In Review",
     badge: decisionBadge
   });
 
-  events.push({
-    title: "Under 30 Days Monitoring",
-    desc: "Monitoring for return-to-heat signs post-AI.",
-    icon: "bi-eye",
-    date: nextHeat || null,
-    dateText: nextHeat ? `Due: ${nextHeat.toLocaleDateString()}` : "Ongoing",
-    badge: nextHeat ? "recorded" : "pending"
-  });
-
-  if (isPregnant) {
+  // 3. AI Service (Time Warp Aware)
+  if (aiDate) {
     events.push({
-      title: "Pregnant & Under 115 Days Monitoring",
-      desc: "Pregnancy confirmed. Monitoring gestation period.",
-      icon: "bi-heart-pulse",
-      date: expectedFarrow || null,
-      dateText: expectedFarrow ? `Due: ${expectedFarrow.toLocaleDateString()}` : "Due: N/A",
+      title: "AI Service Confirmed",
+      desc: "Artificial Insemination has been performed.",
+      icon: "bi-droplet-half",
+      date: aiDate,
+      dateText: `Date: ${aiDate.toLocaleDateString()}`,
       badge: "recorded"
     });
   }
 
+  // 4. Monitoring / Pregnancy Check
+  if (status.includes("observation") || status.includes("preg") || status.includes("lactating") || status === "completed") {
+    events.push({
+      title: "Pregnancy Monitoring",
+      desc: pregCheckDate ? "Pregnancy confirmed via observation." : "Monitoring for return-to-heat signs.",
+      icon: pregCheckDate ? "bi-heart-pulse" : "bi-eye",
+      date: pregCheckDate || nextHeat,
+      dateText: pregCheckDate ? `Confirmed: ${pregCheckDate.toLocaleDateString()}` : (nextHeat ? `Due: ${nextHeat.toLocaleDateString()}` : "Ongoing"),
+      badge: pregCheckDate ? "recorded" : "ongoing"
+    });
+  }
+
+  // 5. Gestation & Farrowing
+  if (status.includes("preg") || status.includes("lactating") || status === "completed") {
+    events.push({
+      title: status.includes("preg") ? "Gestation (114 Days)" : "Farrowing Completed",
+      desc: status.includes("preg") ? "Sow is pregnant. Awaiting farrowing." : "Sow has successfully given birth.",
+      icon: "bi-egg-fried",
+      date: expectedFarrow,
+      dateText: expectedFarrow ? `Target: ${expectedFarrow.toLocaleDateString()}` : "Date N/A",
+      badge: status.includes("preg") ? "ongoing" : "recorded"
+    });
+  }
+
+  // 6. Weaning (Final Step)
+  if (weaningDate || status === "completed") {
+    events.push({
+      title: "Cycle Completed (Weaning)",
+      desc: "Piglets weaned. Sow returned to open pool.",
+      icon: "bi-flag-fill",
+      date: weaningDate,
+      dateText: weaningDate ? `Weaned: ${weaningDate.toLocaleDateString()}` : "Completed",
+      badge: "recorded"
+    });
+  }
+
+  // Sort: Newest at the top
   events.sort((a, b) => {
     const at = a.date ? a.date.getTime() : -Infinity;
     const bt = b.date ? b.date.getTime() : -Infinity;

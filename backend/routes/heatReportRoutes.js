@@ -36,19 +36,20 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-/**
- * UPDATED: logic to cap score at 100
- */
 const calculateProbability = (signs, swine) => {
   // 1. Check if the swine has an established "First Success Basis"
   const hasBasis =
-    swine.first_success_basis && swine.first_success_basis.signs && swine.first_success_basis.signs.length > 0;
+    swine.first_success_basis && 
+    swine.first_success_basis.signs && 
+    swine.first_success_basis.signs.length > 0;
 
   if (hasBasis) {
     const basisSigns = swine.first_success_basis.signs;
 
     // Check if current signs are EXACTLY the same as the successful ones
-    const isIdentical = signs.length === basisSigns.length && signs.every((s) => basisSigns.includes(s));
+    const isIdentical = 
+      signs.length === basisSigns.length && 
+      signs.every((s) => basisSigns.includes(s));
 
     if (isIdentical) {
       return 100; // Same signs = 100% Probability
@@ -157,31 +158,44 @@ router.post(
 
       const evidenceData = files.map((file) => `/uploads/${file.filename}`);
 
-      // 5. --- CULLING CHECK (Your Feature) ---
+      // 5. --- CULLING CHECK (Auto-Cull Feature) ---
       const hasBasis =
-        swine.first_success_basis && swine.first_success_basis.signs && swine.first_success_basis.signs.length > 0;
+        swine.first_success_basis && 
+        swine.first_success_basis.signs && 
+        swine.first_success_basis.signs.length > 0;
 
       if (hasBasis) {
         const basisSigns = swine.first_success_basis.signs;
-        const isIdentical =
-          parsedSigns.length === basisSigns.length && parsedSigns.every((s) => basisSigns.includes(s));
+        
+        // REFINED LOGIC: Instead of a strict identical match, we check for core compatibility.
+        // 1. If 'Standing Reflex' was present in the successful history, it MUST be present now.
+        const historyHadStandingReflex = basisSigns.includes("Standing Reflex");
+        const currentHasStandingReflex = parsedSigns.includes("Standing Reflex");
+        
+        // 2. Calculate overlap percentage (How many historical signs are present now?)
+        const matchingSigns = basisSigns.filter(sign => parsedSigns.includes(sign));
+        const overlapPercentage = (matchingSigns.length / basisSigns.length) * 100;
 
-        if (!isIdentical) {
-          // Update Swine status to Culled/Sold because signs changed
-          swine.current_status = "Culled/Sold";
+        // CULL CRITERIA: 
+        // - Missing Standing Reflex if it was historically required
+        // - OR Overlap is less than 50% (Too many different signs)
+        const isCompatible = (!historyHadStandingReflex || currentHasStandingReflex) && overlapPercentage >= 50;
+
+        if (!isCompatible) {
+          swine.current_status = "Culled/Sold"; // Match Swine.js enum
           await swine.save();
 
           await logAction(
             req.user.id,
             "AUTO_CULL",
             "BREEDING",
-            `Swine ${swineId} auto-culled due to irregular heat signs.`,
+            `Swine ${swineId} auto-culled: Current signs (${parsedSigns.join(", ")}) failed compatibility check against history (${basisSigns.join(", ")}).`,
             req
           );
 
           return res.status(403).json({
             success: false,
-            message: `Report rejected: Swine ${swineId} has been marked as Culled/Sold because current heat signs do not match its successful history.`
+            message: `Report rejected: Swine ${swineId} has been auto-culled. The current heat signs deviate significantly from its successful breeding history.`
           });
         }
       }
@@ -328,19 +342,29 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
 });
 
 /* ======================================================
-    CONFIRM AI
+    CONFIRM AI (With Time Warp & Double-Entry Protection)
 ====================================================== */
 router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { maleSwineId } = req.body;
+    const { maleSwineId, ai_date } = req.body; 
     if (!maleSwineId) throw new Error("Male Swine ID is required.");
 
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) throw new Error("Report not found");
 
-    const now = new Date();
+    // Ensures an AI record isn't already linked to this specific heat report
+    const existingAI = await AIRecord.findOne({ heat_report_id: report._id });
+    if (existingAI) {
+      throw new Error("An AI record has already been submitted for this heat report.");
+    }
+
+    // TIME WARP: Use provided date or default to now for the biological event
+    const finalAiDate = ai_date ? new Date(ai_date) : new Date();
+    // Use actual system time for the administrative confirmation timestamp
+    const actualConfirmationTime = new Date();
+
     const newAIRecord = new AIRecord({
       insemination_id: `AI-${Date.now()}`,
       swine_id: report.swine_id._id,
@@ -349,25 +373,31 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       manager_id: req.user.id,
       farmer_id: report.farmer_id._id,
       heat_report_id: report._id,
-      insemination_date: now,
+      
+      // Data-driven fields for your updated model
+      insemination_date: finalAiDate, // The "Warped" date for timeline calculation
       ai_confirmed: true,
-      ai_confirmed_at: now,
+      ai_confirmed_at: actualConfirmationTime, // The actual time the button was clicked
       status: "Ongoing"
     });
     await newAIRecord.save({ session });
 
+    // Update Heat Report status and anchor dates
     report.status = "under_observation";
-    report.ai_confirmed_at = now;
-    const heatCheckDate = new Date();
+    report.ai_confirmed_at = finalAiDate; 
+    
+    // Calculate 23-day check based on the Warped date
+    const heatCheckDate = new Date(finalAiDate);
     heatCheckDate.setDate(heatCheckDate.getDate() + 23);
     report.next_heat_check = heatCheckDate;
     await report.save({ session });
 
+    // Update Swine lifecycle and breeding cycle history
     await Swine.updateOne(
       { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
       {
         $set: {
-          "breeding_cycles.$.ai_service_date": now,
+          "breeding_cycles.$.ai_service_date": finalAiDate, 
           "breeding_cycles.$.ai_record_id": newAIRecord._id,
           "breeding_cycles.$.cycle_sire_id": maleSwineId,
           current_status: "Under Observation"
@@ -376,20 +406,32 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       { session }
     );
 
-    await logAction(req.user.id, "CONFIRM_AI", "BREEDING", `AI Confirmed for Swine ${report.swine_id.swine_id}.`, req);
-
+    // Logging the action with the warped date for clarity in audit logs
+    await logAction(
+      req.user.id, 
+      "CONFIRM_AI", 
+      "BREEDING", 
+      `AI Confirmed for Swine ${report.swine_id.swine_id} on ${finalAiDate.toDateString()}.`, 
+      req
+    );
+    
+    // Notify the team including the recorded date to verify the Time Warp was successful
     await notifyBreedingTeam(
-      req.user.id,
-      report.farmer_id.user_id,
-      "AI Confirmed",
-      `AI completed for Swine ${report.swine_id.swine_id}. Now under observation.`,
+      req.user.id, 
+      report.farmer_id.user_id, 
+      "AI Confirmed", 
+      `AI completed for Swine ${report.swine_id.swine_id} (Recorded Date: ${finalAiDate.toLocaleDateString()}). Now under observation.`, 
       "info"
     );
 
     await session.commitTransaction();
-    res.json({ success: true, message: "AI Record created." });
+    res.json({ 
+      success: true, 
+      message: `AI Record created for ${finalAiDate.toLocaleDateString()}.` 
+    });
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
+    console.error("AI Confirmation Error:", err.message);
     res.status(500).json({ success: false, message: err.message });
   } finally {
     session.endSession();
@@ -397,29 +439,48 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
 });
 
 /* ======================================================
-    CONFIRM PREGNANCY
+    CONFIRM PREGNANCY (REFINED LOGIC & DATA CONSISTENCY)
 ====================================================== */
 router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
+    const { check_date } = req.body; // Supports Time Warp for the check-up date
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
 
-    const confirmationDate = new Date();
+    // 1. TIME WARP: Use manual check date (the day the farmer actually saw the signs) or default to now
+    const confirmationDate = check_date ? new Date(check_date) : new Date();
+
+    // 2. CALCULATION: Farrowing is always ~114 days from the AI date (stored in ai_confirmed_at)
     const baseDate = report.ai_confirmed_at ? new Date(report.ai_confirmed_at) : confirmationDate;
     const farrowingDate = new Date(baseDate);
-    farrowingDate.setDate(confirmationDate.getDate() + 144);
+    farrowingDate.setDate(farrowingDate.getDate() + 114); 
 
+    // 3. Update Heat Report
     report.status = "pregnant";
     report.expected_farrowing = farrowingDate;
     report.pregnancy_confirmed_at = confirmationDate;
-    await report.save();
+    await report.save({ session });
 
-    await AIRecord.findOneAndUpdate({ heat_report_id: report._id }, {
-      pregnancy_confirmed: true,
-      status: "Success",
-      farrowing_date: farrowingDate
-    });
+    // 4. Update AIRecord with the new model fields
+    // This ensures your AIRecord.js virtual 'expected_farrowing_date' has correct data
+    await AIRecord.findOneAndUpdate(
+      { heat_report_id: report._id }, 
+      {
+        pregnancy_confirmed: true,
+        status: "Ongoing", 
+        // Syncing with your updated AIRecord schema fields
+        pregnancy_check_date: confirmationDate,
+        farrowing_date: farrowingDate // Sets the anchor for the virtual calculation
+      },
+      { session }
+    );
 
+    // 5. Update Swine Lifecycle and the specific breeding cycle entry
     await Swine.updateOne(
       { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
       {
@@ -429,10 +490,18 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
           "breeding_cycles.$.expected_farrowing_date": farrowingDate,
           current_status: "Pregnant"
         }
-      }
+      },
+      { session }
     );
 
-    await logAction(req.user.id, "CONFIRM_PREGNANCY", "BREEDING", `Pregnancy confirmed for Swine ${report.swine_id.swine_id}.`, req);
+    // 6. Logging & Notifications
+    await logAction(
+      req.user.id, 
+      "CONFIRM_PREGNANCY", 
+      "BREEDING", 
+      `Pregnancy confirmed for Swine ${report.swine_id.swine_id}. Expected farrowing: ${farrowingDate.toDateString()}`, 
+      req
+    );
 
     await notifyBreedingTeam(
       report.manager_id,
@@ -442,16 +511,26 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
       "success"
     );
 
-    res.json({ success: true, expected_farrowing: report.expected_farrowing });
+    await session.commitTransaction();
+    res.json({ 
+      success: true, 
+      message: "Pregnancy confirmed and farrowing date scheduled.",
+      expected_farrowing: report.expected_farrowing 
+    });
   } catch (error) {
+    if (session.inTransaction()) await session.abortTransaction();
+    console.error("Pregnancy Confirmation Error:", error);
     res.status(500).json({ success: false, message: "Error confirming pregnancy" });
+  } finally {
+    session.endSession();
   }
 });
 
-/* ======================================================
-    UPGRADED CONFIRM FARROWING (WITH MULTI-CLICK PROTECTION)
+  /* ======================================================
+    UPGRADED CONFIRM FARROWING (CLEANED & OPTIMIZED)
 ====================================================== */
 router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
+  // 1. Multi-click protection: Pre-check status before starting transaction
   const initialCheck = await HeatReport.findById(req.params.id).select("status");
   if (initialCheck && initialCheck.status === "lactating") {
     return res.status(400).json({ success: false, message: "Farrowing already registered for this report." });
@@ -465,21 +544,26 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-    const aiRecord = await AIRecord.findOne({ heat_report_id: report._id });
+    // TIME WARP: Use the manual date if provided, otherwise default to now
     const farrowDate = farrowing_date ? new Date(farrowing_date) : new Date();
+    
     const sow = await Swine.findById(report.swine_id._id);
+    const aiRecord = await AIRecord.findOne({ heat_report_id: report._id });
     const sire_id = aiRecord ? aiRecord.male_swine_id : "Unknown Boar";
 
+    // 2. Update Heat Report Status
     report.status = "lactating";
     report.actual_farrowing_date = farrowDate;
     await report.save({ session });
 
+    // 3. Update AI Record Status
     if (aiRecord) {
       aiRecord.status = "Success";
       aiRecord.farrowing_date = farrowDate;
       await aiRecord.save({ session });
     }
 
+    // 4. Update Sow (Dam) Status, Parity, and Breeding Cycle
     const currentParity = (sow.parity || 0) + 1;
     await Swine.updateOne(
       { _id: sow._id, "breeding_cycles.heat_report_id": report._id },
@@ -499,12 +583,17 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
       { session }
     );
 
+    // 5. Auto-Register Piglets
     const liveCount = Number(total_live);
     const pigletsToInsert = [];
     const generatedIds = [];
 
+    // Formatted date string for consistent ID generation (YYYYMMDD)
+    const dateStr = `${farrowDate.getFullYear()}${String(farrowDate.getMonth() + 1).padStart(2, '0')}${String(farrowDate.getDate()).padStart(2, '0')}`;
+
     for (let i = 1; i <= liveCount; i++) {
-      const pigletId = `PIG-${sow.swine_id}-${farrowDate.getFullYear()}${farrowDate.getMonth() + 1}${farrowDate.getDate()}-${i}`;
+      // Swine ID generation uses farrowDate (Time Warp) for naming consistency
+      const pigletId = `PIG-${sow.swine_id}-${dateStr}-${i}`;
       generatedIds.push(pigletId);
 
       pigletsToInsert.push({
@@ -514,7 +603,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         manager_id: report.manager_id,
         sex: i % 2 === 0 ? "Female" : "Male",
         breed: sow.breed,
-        birth_date: farrowDate,
+        birth_date: farrowDate, // Age is calculated from the warped farrowDate
         sire_id: sire_id,
         dam_id: sow.swine_id,
         birth_cycle_number: currentParity,
@@ -531,6 +620,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
       });
     }
 
+    // FEATURE: Duplicate Swine ID check
     const existingSwine = await Swine.find({
       swine_id: { $in: generatedIds }
     }).select("swine_id");
@@ -545,6 +635,8 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     if (pigletsToInsert.length > 0) {
       await Swine.insertMany(pigletsToInsert, { session });
     }
+
+    // 6. Logging and Notifications
     await logAction(
       req.user.id,
       "CONFIRM_FARROWING",
@@ -557,7 +649,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
       report.manager_id,
       report.farmer_id.user_id,
       "Farrowing Confirmed",
-      `Swine ${sow.swine_id} has farrowed ${liveCount} live piglets.`,
+      `Swine ${sow.swine_id} has farrowed ${liveCount} live piglets on ${farrowDate.toLocaleDateString()}.`,
       "success"
     );
 
@@ -565,56 +657,10 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     res.json({ success: true, message: `Farrowing confirmed. ${liveCount} piglets registered.` });
   } catch (err) {
     if (session.inTransaction()) await session.abortTransaction();
+    console.error("Farrowing Error:", err);
     res.status(500).json({ success: false, message: err.message });
   } finally {
     session.endSession();
-  }
-});
-
-/* ======================================================
-    CONFIRM WEANING (Updated with Weaning Window)
-====================================================== */
-router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
-  try {
-    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
-    if (report.status !== "lactating") return res.status(400).json({ success: false, message: "Only lactating sows can be weaned." });
-
-    const now = new Date();
-
-    report.status = "completed";
-    report.weaning_date = now;
-    await report.save();
-
-    await AIRecord.findOneAndUpdate({ heat_report_id: report._id }, { status: "Completed" });
-
-    await Swine.updateOne(
-      { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
-      {
-        $set: {
-          "breeding_cycles.$.weaning_date": now,
-          current_status: "Open"
-        }
-      }
-    );
-
-    await logAction(req.user.id, "CONFIRM_WEANING", "BREEDING", `Weaning confirmed for Swine ${report.swine_id.swine_id}.`, req);
-
-    await notifyBreedingTeam(
-      report.manager_id,
-      report.farmer_id.user_id,
-      "Sow Weaned",
-      `Swine ${report.swine_id.swine_id} has been weaned. 7-day window to return to heat has started.`,
-      "info"
-    );
-
-    res.json({
-      success: true,
-      message:
-        "Weaning confirmed. Swine is now Open. Note: Sow must return to heat within 7 days to avoid automatic culling."
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -651,6 +697,117 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     res.json({ success: true, message: "Cycle reset." });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/* ======================================================
+    CONFIRM WEANING (Closing the Breeding Cycle)
+====================================================== */
+router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { weaning_date, remarks, weight } = req.body;
+    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
+
+    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    
+    // Safety check: Can only wean if the sow is currently lactating
+    if (report.status !== "lactating") {
+      return res.status(400).json({ success: false, message: "Report must be in 'lactating' status to confirm weaning." });
+    }
+
+    // TIME WARP: Use manual weaning date or default to now
+    const finalWeaningDate = weaning_date ? new Date(weaning_date) : new Date();
+    const finalWeight = Number(weight) || 0;
+
+    // 1. Update Heat Report Status to Completed
+    report.status = "completed";
+    report.weaning_date = finalWeaningDate;
+    await report.save({ session });
+
+    // 2. UPDATE THE AI RECORD (Crucial for Time Portal & History)
+    // We update the AIRecord with the weaning data to finalize the cycle audit trail
+    await AIRecord.findOneAndUpdate(
+      { heat_report_id: report._id },
+      {
+        weaning_date: finalWeaningDate,
+        weaning_weight: finalWeight,
+        status: "Completed",
+        remarks: remarks || "Standard weaning"
+      },
+      { session }
+    );
+
+    // 3. Update Sow Status back to "Open" for the next cycle
+    await Swine.updateOne(
+      { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
+      {
+        $set: {
+          "breeding_cycles.$.weaning_date": finalWeaningDate,
+          "breeding_cycles.$.weaning_remarks": remarks || "Standard weaning",
+          "breeding_cycles.$.weaning_weight": finalWeight, // Store weight in cycle history
+          current_status: "Open" 
+        }
+      },
+      { session }
+    );
+
+    const sow = await Swine.findById(report.swine_id._id);
+
+    // 4. Update Offspring (Piglets) status and age stage based on Swine.js Schema
+    // - current_status: "Weaning"
+    // - age_stage: "growing"
+    await Swine.updateMany(
+      { 
+        dam_id: sow.swine_id, 
+        birth_cycle_number: sow.parity,
+        age_stage: "piglet" 
+      },
+      { 
+        $set: { 
+          current_status: "Weaning", 
+          age_stage: "growing" 
+        },
+        // Log a performance record for the weaning stage
+        $push: {
+          performance_records: {
+            stage: "Weaning",
+            record_date: finalWeaningDate,
+            weight: finalWeight,
+            remarks: remarks || "Auto-updated during weaning confirmation",
+            recorded_by: req.user.id
+          }
+        }
+      },
+      { session }
+    );
+
+    // 5. Logging and Notifications
+    await logAction(
+      req.user.id,
+      "CONFIRM_WEANING",
+      "BREEDING",
+      `Weaning confirmed for Swine ${sow.swine_id} on ${finalWeaningDate.toDateString()}. Weight: ${finalWeight}kg recorded.`,
+      req
+    );
+
+    await notifyBreedingTeam(
+      report.manager_id,
+      report.farmer_id.user_id,
+      "Weaning Completed",
+      `Swine ${sow.swine_id} has been weaned (Recorded Date: ${finalWeaningDate.toLocaleDateString()}). She is now back in the 'Open' pool.`,
+      "info"
+    );
+
+    await session.commitTransaction();
+    res.json({ success: true, message: "Weaning confirmed. Sow is now Open and piglets moved to Growing stage." });
+  } catch (err) {
+    if (session.inTransaction()) await session.abortTransaction();
+    console.error("Weaning Error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  } finally {
+    session.endSession();
   }
 });
 
