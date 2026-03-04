@@ -1,8 +1,15 @@
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
+const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Time Warp
 
 exports.getFarmManagerStats = async (req, res) => {
   try {
+    // 1. Get the current "Logical Time" (Real or Mocked)
+    const systemSettings = await SystemSettings.findOne();
+    const virtualNow = (systemSettings && systemSettings.mockDate) 
+                ? new Date(systemSettings.mockDate) 
+                : new Date();
+
     // ✅ SUPPORT FARM MANAGER + ENCODER
     const managerId =
       req.user.role === "farm_manager"
@@ -35,7 +42,7 @@ exports.getFarmManagerStats = async (req, res) => {
       current_status: { $ne: "Culled/Sold" }
     };
 
-    // 📊 Aggregate stats
+    // 📊 Aggregate stats using virtualNow for time-sensitive logic
     const [
       totalPigs,
       alive,
@@ -58,18 +65,27 @@ exports.getFarmManagerStats = async (req, res) => {
         ...baseQuery,
         current_status: "In-Heat"
       }),
+      // ✅ Updated Pregnant: Females who are pregnant but NOT ready to farrow yet
       Swine.countDocuments({
         ...baseQuery,
         sex: "Female",
-        current_status: "Pregnant"
+        current_status: "Pregnant",
+        "breeding_cycles.expected_farrowing_date": { $gt: virtualNow }
+      }),
+      // ✅ Updated Farrowing: Pigs in farrowing stage OR pregnant pigs whose date has arrived in 2026
+      Swine.countDocuments({
+        ...baseQuery,
+        $or: [
+          { current_status: { $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing"] } },
+          { 
+            current_status: "Pregnant", 
+            "breeding_cycles.expected_farrowing_date": { $lte: virtualNow } 
+          }
+        ]
       }),
       Swine.countDocuments({
         ...baseQuery,
-        current_status: "Farrowing"
-      }),
-      Swine.countDocuments({
-        ...baseQuery,
-        current_status: "Weaned"
+        current_status: { $in: ["Weaned", "Weaning"] }
       })
     ]);
 
@@ -81,7 +97,7 @@ exports.getFarmManagerStats = async (req, res) => {
         alive,
         mortality,
         inHeat,
-        pregnant,
+        pregnant, // Fixed: removed stray 'a'
         farrowing,
         weaning
       }

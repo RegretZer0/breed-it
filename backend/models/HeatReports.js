@@ -112,6 +112,7 @@ const heatReportSchema = new mongoose.Schema(
         "ai_service", 
         "under_observation", 
         "pregnant", 
+        'awaiting_farrowing',
         "farrowing_ready", 
         "farrowed", 
         "lactating", 

@@ -30,7 +30,7 @@ const swineSchema = new mongoose.Schema({
     type: String,
     enum: [
       "Monitoring (Day 1-30)", "Weaning", "3-Month Monitoring", "Final Selection", 
-      "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
+      "Open", "In-Heat", "Under Observation", "Bred", "Pregnant", "awaiting_farrowing", "farrowing_ready",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
       "Active", "Inactive", "Under Monitoring", "Routine Monitoring", "Completed",
       "To be Culled/Sold (Deformity)"
