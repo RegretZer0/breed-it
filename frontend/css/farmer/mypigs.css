@@ -207,7 +207,8 @@ body {
 }
 
 /* =========================================================
-   PIG LIST GRID
+   PIG LIST GRID (FORCE 1 CARD PER ROW)
+   Fixes the "still small" issue caused by a 2-col rule.
 ========================================================= */
 #pigList.pig-list{
   display: grid;
@@ -215,10 +216,10 @@ body {
   gap: 14px;
 }
 
-/* Remove/disable any 2-column desktop rule */
+/* Keep explicit override for desktop too */
 @media (min-width: 992px){
   #pigList.pig-list{
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr; /* do not allow 2 columns */
   }
 }
 
@@ -233,6 +234,9 @@ body {
   border: 1px solid var(--border);
   transition: 0.25s ease;
   cursor: pointer;
+
+  width: 100%;          /* ensure full row width */
+  max-width: 100%;
 }
 
 .pig-card:hover{
