@@ -3,20 +3,23 @@
 export function createReproViews({ repo, state, ui }) {
   const { esc, fmtDate, fmtShortDate, badge, sexLabel, normSex } = ui;
 
-  // =========================================================
-  // Internal render cache (prevents heavy full re-renders)
-  // =========================================================
+  /* =========================================================
+     MODULE: Internal Render Cache
+     PURPOSE: Prevent unnecessary re-rendering when state keys
+              have not changed (improves responsiveness).
+  ========================================================= */
   const renderCache = (state._reproRenderCache ||= {
-    sowShellKey: "", // sowId
-    reproTabKey: "", // sowId|cycleView|cycleId|cycleFilter|cyclePage
-    cyclePanelKey: "", // sowId|cycleId|tab|growthView|selectionView|filters/pages
-    pigletCtxKey: "", // sowId|cycleId (for cached piglet maps)
+    sowShellKey: "",
+    reproTabKey: "",
+    cyclePanelKey: "",
+    pigletCtxKey: "",
     pigletMaps: null,
   });
 
-  // =========================
-  // Selection UI Helpers
-  // =========================
+  /* =========================================================
+     MODULE: Selection / Piglet Utility Helpers
+     PURPOSE: Normalize and resolve identifiers and statuses.
+  ========================================================= */
   function norm(v) {
     return String(v ?? "").trim();
   }
@@ -50,28 +53,21 @@ export function createReproViews({ repo, state, ui }) {
     );
   }
 
-  // ---------------------------------------------------------
-  // Piglet key resolver (IMPORTANT for stats + local lock)
-  // ---------------------------------------------------------
   function pigletTagOf(p) {
     return toKey(p?.swine_tag || p?.swine_id || p?.tag || "");
   }
 
-  // ✅ NEW: stronger mongo-id resolver (works even if repo.getMongoIdForSwineTag is missing)
   function resolveMongoIdForTag(tag) {
     const t = toKey(tag);
     if (!t) return "";
 
-    // 1) repo helper (if implemented)
     const fromRepo = toKey(repo.getMongoIdForSwineTag?.(t) || "");
     if (isObjectId(fromRepo)) return fromRepo;
 
-    // 2) swine list lookup
     const sw = findSwineByTag(t);
     const fromSw = toKey(sw?._id || sw?.id || sw?.mongoId || "");
     if (isObjectId(fromSw)) return fromSw;
 
-    // 3) monitoring row might contain mongo ref (optional)
     const mon = findMonitoringRow(t);
     const fromMon = toKey(mon?._id || mon?.swine_mongo_id || mon?.swineId || "");
     if (isObjectId(fromMon)) return fromMon;
@@ -82,10 +78,7 @@ export function createReproViews({ repo, state, ui }) {
   function resolvePigletDecisionKeyFromTag(tag) {
     const t = toKey(tag);
     if (!t) return "";
-    // If tag itself is a mongo id (rare), use it
     if (isObjectId(t)) return t;
-
-    // ✅ Use strong resolver
     const mongoId = resolveMongoIdForTag(t);
     return mongoId || t;
   }
@@ -93,13 +86,10 @@ export function createReproViews({ repo, state, ui }) {
   function resolvePigletDecisionKeyFromPiglet(p) {
     const direct = toKey(p?._id || p?.id || p?.mongoId || "");
     if (isObjectId(direct)) return direct;
-
     const tag = pigletTagOf(p);
     return resolvePigletDecisionKeyFromTag(tag);
   }
 
-  // Current status to display for a piglet
-  // Priority: selection record -> swine final decision -> monitoring -> swine -> fallback
   function getPigletDisplayStatus(tag) {
     const sw = findSwineByTag(tag);
 
@@ -107,7 +97,6 @@ export function createReproViews({ repo, state, ui }) {
     const swStatusLower = normLower(swStatus);
     const swStageLower = normLower(sw?.age_stage);
 
-    // If swine already has a DECISION / FINAL status, show it immediately
     const isFinalDecision =
       swStageLower === "adult" ||
       swStatusLower === "active" ||
@@ -162,9 +151,6 @@ export function createReproViews({ repo, state, ui }) {
     )}</b></span>`;
   }
 
-  // ---------------------------------------------------------
-  // Selection Decision Helpers
-  // ---------------------------------------------------------
   function decisionFromSelectionRow(selRow) {
     const raw = String(selRow?.recommendation || selRow?.decision || selRow?.status || "").toLowerCase();
     if (!raw) return "";
@@ -174,24 +160,20 @@ export function createReproViews({ repo, state, ui }) {
     return "";
   }
 
-  // ✅ NEW: find swine row by Mongo _id (for stats key = mongo id)
   function findSwineByMongoId(id) {
     const k = toKey(id);
     if (!k) return null;
     return (repo.store.allSwineData || []).find((s) => toKey(s?._id) === k || toKey(s?.id) === k) || null;
   }
 
-  // ✅ NEW: infer decision from Swine.current_status (PERSISTED in DB)
   function decisionFromSwineStatus(sw) {
     const st = normLower(sw?.current_status || "");
     const stage = normLower(sw?.age_stage || "");
 
-    // your backend sets enum-safe "Active/Active Breeder/Breeding/Breeder"
     if (st === "active" || st.includes("active breeder") || st.includes("breeding") || st.includes("breeder")) {
       return "retain";
     }
 
-    // your backend sets enum-safe sale values (examples in your code)
     if (
       st.includes("culled") ||
       st.includes("sold") ||
@@ -202,63 +184,51 @@ export function createReproViews({ repo, state, ui }) {
       return "sell";
     }
 
-    // optional: if you promote to adult on retain, treat adult+active-like as retain
     if (stage === "adult" && st) {
-      // if adult but status isn't clearly sell-ish, assume retained
       if (!st.includes("sold") && !st.includes("culled") && !st.includes("marked for sale")) return "retain";
     }
 
     return "";
   }
 
-  // ✅ single source of truth for decision shown in UI
-  // - Supports lookup by mongoId OR tag
-  // - NOW also supports persisted Swine.current_status so refresh won't reset to Pending
   function getPigletDecision(pigletTagOrId) {
     const rawKey = toKey(pigletTagOrId);
     if (!rawKey) return { key: "", decision: "pending", locked: false, source: "default" };
 
     const isId = isObjectId(rawKey);
 
-    // If caller passes mongo id, check local lock immediately
     if (isId) {
       const local = state.localSelectionLock?.get(rawKey) || null;
       if (local === "breeding") return { key: rawKey, decision: "retain", locked: true, source: "local" };
       if (local === "sell") return { key: rawKey, decision: "sell", locked: true, source: "local" };
 
-      // ✅ NEW: persisted decision from Swine row (mongo lookup)
       const sw = findSwineByMongoId(rawKey);
       const ds = sw ? decisionFromSwineStatus(sw) : "";
       if (ds) return { key: rawKey, decision: ds, locked: true, source: "swine" };
     }
 
-    // 1) DB selection row (from /selection-candidates) — needs TAG
     const tag = isId ? "" : rawKey;
     if (tag) {
       const sel = repo.getSelectionForPiglet?.(tag) || null;
       const d1 = sel ? decisionFromSelectionRow(sel) : "";
       if (d1) return { key: tag, decision: d1, locked: d1 !== "pending", source: "db" };
 
-      // ✅ NEW: persisted decision from Swine.current_status (tag lookup)
       const sw = findSwineByTag(tag);
       const ds = sw ? decisionFromSwineStatus(sw) : "";
       if (ds) return { key: tag, decision: ds, locked: true, source: "swine" };
     }
 
-    // 2) Local lock (mongo id derived from tag)
     const mongoId = isId ? rawKey : toKey(repo.getMongoIdForSwineTag?.(rawKey) || "");
     if (mongoId) {
       const local = state.localSelectionLock?.get(mongoId) || null;
       if (local === "breeding") return { key: mongoId, decision: "retain", locked: true, source: "local" };
       if (local === "sell") return { key: mongoId, decision: "sell", locked: true, source: "local" };
 
-      // ✅ NEW: persisted decision from Swine row (mongo lookup)
       const sw = findSwineByMongoId(mongoId);
       const ds = sw ? decisionFromSwineStatus(sw) : "";
       if (ds) return { key: mongoId, decision: ds, locked: true, source: "swine" };
     }
 
-    // 3) Default
     return { key: mongoId || rawKey, decision: "pending", locked: false, source: "default" };
   }
 
@@ -286,13 +256,12 @@ export function createReproViews({ repo, state, ui }) {
     return `<span class="${cls}">${esc(label)}</span>`;
   }
 
-  // ✅ FIXED: stats now persist after refresh because getPigletDecision() reads Swine.current_status
   function computeSelectionSummaryForPigletsFromList(piglets) {
     const sum = { total: 0, retain: 0, sell: 0, pending: 0 };
     const list = Array.isArray(piglets) ? piglets : [];
     for (const p of list) {
       const key = resolvePigletDecisionKeyFromPiglet(p);
-      const d = getPigletDecision(key).decision; // retain/sell/pending
+      const d = getPigletDecision(key).decision;
       sum.total += 1;
       if (d === "retain") sum.retain += 1;
       else if (d === "sell") sum.sell += 1;
@@ -301,9 +270,10 @@ export function createReproViews({ repo, state, ui }) {
     return sum;
   }
 
-  // ---------------------------------------------------------
-  // Shared small helpers
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Shared Small Helpers
+     PURPOSE: Common utilities used across render functions.
+  ========================================================= */
   function paginate(list, page, pageSize) {
     const total = list.length;
     const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -346,15 +316,14 @@ export function createReproViews({ repo, state, ui }) {
     return { label: r, variant: "light" };
   }
 
-  // =========================================================
-  // FAST Piglet Maps (computed once per cycle render)
-  // - Avoids calling getMorphHistoryForPiglet/getDeformitiesForPiglet in loops
-  // =========================================================
+  /* =========================================================
+     MODULE: Fast Piglet Maps
+     PURPOSE: Speed up list rendering (deformity counts, latest morph).
+  ========================================================= */
   function buildPigletMaps(piglets) {
     const list = Array.isArray(piglets) ? piglets : [];
     const tagSet = new Set(list.map((p) => pigletTagOf(p)).filter(Boolean));
 
-    // deformity count by tag
     const defCount = new Map();
     const defs = repo.store?.rawPerformanceData?.deformities || [];
     for (const d of defs) {
@@ -363,7 +332,6 @@ export function createReproViews({ repo, state, ui }) {
       defCount.set(tag, (defCount.get(tag) || 0) + 1);
     }
 
-    // latest morph by tag
     const latestMorph = new Map();
     const morphRows = repo.store?.rawPerformanceData?.morphology || [];
     for (const row of morphRows) {
@@ -373,8 +341,8 @@ export function createReproViews({ repo, state, ui }) {
       const date = row?.morphology?.date || row?.createdAt || null;
       const when = date ? new Date(date).getTime() : 0;
       const prev = latestMorph.get(tag);
-
       const prevWhen = prev?.__when || 0;
+
       if (!prev || when >= prevWhen) {
         latestMorph.set(tag, {
           __when: when,
@@ -397,10 +365,6 @@ export function createReproViews({ repo, state, ui }) {
     return maps;
   }
 
-  // ---------------------------------------------------------
-  // Fast list suggestion (theme-friendly, no heavy DB lookups)
-  // NOTE: Details still use full suggestion logic below.
-  // ---------------------------------------------------------
   function quickSuggestionForList(tag, pigletObj, maps) {
     const hs = String(pigletObj?.health_status || "").toLowerCase();
     if (hs.includes("deceased") || hs.includes("dead")) {
@@ -413,9 +377,6 @@ export function createReproViews({ repo, state, ui }) {
     return { variant: "warning", text: "System Suggestion: Continue monitoring and record growth updates." };
   }
 
-  // ---------------------------------------------------------
-  // Full System Suggestion (DETAIL ONLY)
-  // ---------------------------------------------------------
   function computeSystemSuggestion(pigletTag, pigletObj) {
     const tag = toKey(pigletTag || pigletObj?.swine_id || pigletObj?.swine_tag);
     if (!tag) {
@@ -534,22 +495,21 @@ export function createReproViews({ repo, state, ui }) {
     });
   }
 
-  // ✅ NEW: filter piglets by decision (Pending/Retain/Sell)
   function filterPigletsByDecision(piglets, decisionFilter) {
     const f = String(decisionFilter || "all").toLowerCase();
     if (f === "all") return piglets;
-
     const list = Array.isArray(piglets) ? piglets : [];
     return list.filter((p) => {
       const key = resolvePigletDecisionKeyFromPiglet(p);
-      const d = getPigletDecision(key).decision; // retain/sell/pending
+      const d = getPigletDecision(key).decision;
       return d === f;
     });
   }
 
-  // ---------------------------------------------------------
-  // Sow helpers (for Overview tab)
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Sow Helpers
+     PURPOSE: Pull sow + latest performance safely.
+  ========================================================= */
   function getSowByIdOrTag(sowId) {
     return (
       repo.store.sowMap?.get?.(sowId) ||
@@ -563,12 +523,51 @@ export function createReproViews({ repo, state, ui }) {
     return list.length ? list[list.length - 1] : null;
   }
 
-  // ---------------------------------------------------------
-  // Left list rendering
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Left List Rendering (Sow list)
+     PURPOSE: List, pagination, and empty/error states.
+  ========================================================= */
   function renderListLoading() {
-    state.dom.sowCardsWrap.innerHTML = `<div class="text-muted small">Loading sows...</div>`;
-    state.dom.sowPager.innerHTML = "";
+    state.dom.sowCardsWrap.innerHTML = `
+      <div class="vstack gap-3">
+        <div class="card repro-subcard shadow-sm border-0 repro-skel-card">
+          <div class="card-body">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+              <div class="min-w-0 w-100">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="repro-pill"><i class="bi bi-heart-pulse"></i></span>
+                  <div class="min-w-0 w-100">
+                    <div class="repro-skel-line skel-title"></div>
+                    <div class="repro-skel-line skel-sub"></div>
+                  </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                  <span class="repro-skel-pill"></span>
+                  <span class="repro-skel-pill w-25"></span>
+                </div>
+              </div>
+
+              <div class="text-end flex-shrink-0" style="min-width: 90px;">
+                <div class="repro-skel-line skel-mini"></div>
+                <div class="repro-skel-line skel-num"></div>
+                <div class="repro-skel-line skel-mini"></div>
+              </div>
+            </div>
+
+            <div class="mt-2 d-flex justify-content-end">
+              <div class="repro-skel-btn"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    state.dom.sowPager.innerHTML = `
+      <div class="small text-muted text-center py-2">
+        <span class="spinner-border spinner-border-sm text-success me-2" role="status" aria-hidden="true"></span>
+        Loading sows...
+      </div>
+    `;
   }
 
   function renderListError(
@@ -577,10 +576,10 @@ export function createReproViews({ repo, state, ui }) {
   ) {
     state.dom.sowCardsWrap.innerHTML = `
       <div class="text-center text-muted py-4">
-        <div class="mb-2"><i class="bi bi-wifi-off"></i></div>
+        <div class="mb-2"><i class="bi bi-wifi-off fs-3"></i></div>
         <div class="fw-bold">${esc(message)}</div>
         <div class="small">${esc(sub)}</div>
-        <div class="d-flex justify-content-center gap-2 mt-3">
+        <div class="d-flex justify-content-center gap-2 mt-3 flex-wrap">
           <button class="btn btn-outline-success btn-sm" data-act="retryLoad">
             <i class="bi bi-arrow-clockwise me-1"></i> Retry
           </button>
@@ -604,27 +603,108 @@ export function createReproViews({ repo, state, ui }) {
 
   function getFilteredSows() {
     const term = (state.sowTerm || "").trim().toLowerCase();
+    const status = String(state.sowStatus || "all").trim().toLowerCase();
     const list = repo.store.sows || [];
-    if (!term) return list;
+
+    function normStage(s) {
+      // Combine fields because backend strings vary by endpoint/schema
+      const parts = [
+        s?.current_status,
+        s?.current_stage,
+        s?.age_stage,
+        s?.reproductive_status,
+        s?.pregnancy_status,
+        s?.cycle_status,
+        s?.status,
+      ]
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean);
+
+      return parts.join(" ").toLowerCase();
+    }
+
+    // Status matching for sow filters (value from #reproStatusFilter)
+    function matchesStatus(stageText, statusKey) {
+      if (statusKey === "all") return true;
+
+      // Normalize both sides
+      const st = String(stageText || "").toLowerCase();
+      const key = String(statusKey || "").toLowerCase();
+
+      // Open sows: accept explicit "open" plus adult/breeder-like stages,
+      // but exclude pregnant/lactating/heat/farrow/wean/observation.
+      if (key === "open_sows") {
+        const isOpenish =
+          st.includes("open") ||
+          st.includes("adult") ||
+          st.includes("sow") ||
+          st.includes("breeder") ||
+          st.includes("active");
+
+        const excluded =
+          st.includes("preg") ||
+          st.includes("lact") ||
+          st.includes("farrow") ||
+          st.includes("wean") ||
+          st.includes("heat") ||
+          st.includes("estrus") ||
+          st.includes("observation") ||
+          st.includes("under_observation");
+
+        return isOpenish && !excluded;
+      }
+
+      // In-heat
+      if (key === "in_heat") {
+        return st.includes("in-heat") || st.includes("in heat") || st.includes("heat") || st.includes("estrus");
+      }
+
+      // Under observation
+      if (key === "under_observation") {
+        return st.includes("under_observation") || st.includes("under observation") || st.includes("observation");
+      }
+
+      // Pregnant
+      if (key === "pregnant") return st.includes("preg");
+
+      // Farrowing
+      if (key === "farrowing") return st.includes("farrow");
+
+      // Lactating (your dropdown shows this)
+      if (key === "lactating") return st.includes("lact");
+
+      // Weaning
+      if (key === "weaning") return st.includes("wean") || st.includes("weaning") || st.includes("weaned");
+
+      // Fallback: try direct contains match for unexpected keys
+      return st.includes(key);
+    }
 
     return list.filter((s) => {
       const sowId = (s?.swine_id || s?.swine_tag || s?.tag || "").toLowerCase();
-      const stage = (s?.age_stage || s?.current_status || s?.current_stage || "").toLowerCase();
-      return sowId.includes(term) || stage.includes(term);
+      const st = normStage(s);
+
+      const termOk = !term || sowId.includes(term) || st.includes(term);
+      const statusOk = matchesStatus(st, status);
+
+      return termOk && statusOk;
     });
   }
 
   function renderSowPagination(meta) {
     state.dom.sowPager.innerHTML = `
-      <div class="d-flex align-items-center justify-content-between gap-2">
+      <div class="repro-pager-compact">
         <button class="btn btn-sm btn-outline-success" ${meta.page <= 1 ? "disabled" : ""} data-act="sowPrev">
-          <i class="bi bi-chevron-left"></i> Prev
+          <i class="bi bi-chevron-left"></i><span class="ms-1">Prev</span>
         </button>
-        <div class="small text-muted">
-          Page <b>${meta.page}</b> of <b>${meta.pages}</b> • <b>${meta.total}</b> sows
+
+        <div class="small text-muted text-center">
+          Page <b>${meta.page}</b> of <b>${meta.pages}</b>
+          <span class="d-none d-sm-inline"> • <b>${meta.total}</b> sows</span>
         </div>
+
         <button class="btn btn-sm btn-outline-success" ${meta.page >= meta.pages ? "disabled" : ""} data-act="sowNext">
-          Next <i class="bi bi-chevron-right"></i>
+          <span class="me-1">Next</span><i class="bi bi-chevron-right"></i>
         </button>
       </div>
     `;
@@ -632,40 +712,86 @@ export function createReproViews({ repo, state, ui }) {
 
   function sowCardHtml(s) {
     const sowId = s?.swine_id || s?.swine_tag || s?.tag || "N/A";
-    const stage = s?.age_stage || s?.current_status || s?.current_stage || "N/A";
+
+    const rawStatus = s?.current_status || s?.current_stage || s?.age_stage || "";
+    const statusLower = String(rawStatus || "").toLowerCase();
+
     const breed = s?.breed || "N/A";
-    const dob = s?.birth_date ? fmtDate(s.birth_date) : "N/A";
 
     const stats = repo.computeBreedingStatsForSow(sowId);
-    const alive = stats.aliveMale + stats.aliveFemale;
+    const totalPiglets = Number(stats?.total || 0);
+    const totalAlive = Number((stats?.aliveMale || 0) + (stats?.aliveFemale || 0));
+    const totalDead = Number(stats?.deceased || 0);
+
+    const cycles = repo.getCyclesForSow ? (repo.getCyclesForSow(sowId) || []) : [];
+    const latestCycle = cycles.length ? cycles[0] : null;
+    const lastAI = latestCycle?.date ? fmtDate(latestCycle.date) : "N/A";
+
+    function phaseInfo() {
+      if (statusLower.includes("preg")) return { label: "Pregnant", variant: "info", icon: "bi bi-heart-fill" };
+      if (statusLower.includes("farrow")) return { label: "Farrowing", variant: "warning", icon: "bi bi-box2-heart" };
+      if (statusLower.includes("lact")) return { label: "Lactating", variant: "success", icon: "bi bi-droplet-half" };
+      if (statusLower.includes("wean")) return { label: "Weaning", variant: "warning", icon: "bi bi-arrow-down-circle" };
+      if (statusLower.includes("under_observation") || statusLower.includes("observation"))
+        return { label: "Under observation", variant: "warning", icon: "bi bi-eye" };
+      if (statusLower.includes("heat") || statusLower.includes("estrus"))
+        return { label: "In-heat", variant: "danger", icon: "bi bi-lightning-charge" };
+
+      return { label: "Open", variant: "light", icon: "bi bi-check2-circle" };
+    }
+
+    const ph = phaseInfo();
+
+    const phaseBadge =
+      ph.variant === "info"
+        ? "badge bg-info text-dark"
+        : ph.variant === "warning"
+        ? "badge bg-warning text-dark"
+        : ph.variant === "danger"
+        ? "badge bg-danger"
+        : ph.variant === "success"
+        ? "badge bg-success"
+        : "badge bg-light text-dark border";
+
     const isActive = state.activeSowId && state.activeSowId === sowId;
 
     return `
-      <div class="repro-card card shadow-sm border-0 ${isActive ? "repro-card-active" : ""}">
+      <div class="repro-card card border-0 ${isActive ? "repro-card-active" : ""}">
         <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between gap-2">
+          <div class="d-flex align-items-start justify-content-between gap-3">
             <div class="min-w-0">
               <div class="d-flex align-items-center gap-2">
                 <span class="repro-pill"><i class="bi bi-heart-pulse"></i></span>
-                <h6 class="mb-0 text-truncate">${esc(sowId)}</h6>
+                <div class="min-w-0">
+                  <div class="fw-bold text-truncate">${esc(sowId)}</div>
+                  <div class="small text-muted text-truncate">${esc(breed)}</div>
+                </div>
               </div>
-              <div class="small text-muted mt-1 text-truncate">
-                Stage: <b>${esc(stage)}</b> • Breed: <b>${esc(breed)}</b>
-              </div>
-              <div class="small text-muted text-truncate">
-                DOB: ${esc(dob)}
+
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <span class="${phaseBadge}">
+                  <i class="${esc(ph.icon)} me-1"></i>${esc(ph.label)}
+                </span>
+
+                <span class="badge bg-light text-dark border">
+                  <i class="bi bi-calendar-event me-1"></i>Last AI: <b>${esc(lastAI)}</b>
+                </span>
               </div>
             </div>
 
-            <div class="text-end">
+            <div class="text-end flex-shrink-0">
               <div class="small text-muted">Piglets</div>
-              <div class="fw-bold">${alive} alive</div>
-              <div class="small text-danger">${stats.deceased} dead</div>
+              <div class="fw-bold">${totalPiglets}</div>
+              <div class="small text-muted">
+                <span class="text-success fw-semibold">${totalAlive}</span> alive
+                <span class="mx-1">•</span>
+                <span class="text-danger fw-semibold">${totalDead}</span> dead
+              </div>
             </div>
           </div>
 
-          <div class="d-flex gap-2 mt-3">
-            <button class="btn btn-success btn-sm flex-grow-1" data-act="openSow" data-sow="${esc(sowId)}">
+          <div class="mt-2 d-flex justify-content-end">
+            <button class="btn btn-success btn-sm" data-act="openSow" data-sow="${esc(sowId)}">
               View <i class="bi bi-arrow-right-circle ms-1"></i>
             </button>
           </div>
@@ -695,9 +821,12 @@ export function createReproViews({ repo, state, ui }) {
     renderSowPagination(meta);
   }
 
-  // ---------------------------------------------------------
-  // Cycle dropdown / list + pagination
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Cycles (Single Source of Truth)
+     PURPOSE: Render cycle filter card + cycle list consistently.
+     IMPORTANT: This replaces the duplicated functions that were
+                overriding your "card" version of the filter.
+  ========================================================= */
   function getCyclesForSowSafe(sowId) {
     const raw = repo.getCyclesForSow(sowId) || [];
     const seen = new Set();
@@ -733,25 +862,54 @@ export function createReproViews({ repo, state, ui }) {
         .map((c, idx) => {
           const label = c?.date ? `Cycle ${idx + 1} • ${fmtDate(c.date)}` : `Cycle ${idx + 1}`;
           const val = String(c?.id ?? "");
-          return `<option value="${esc(val)}"${
-            String(state.cycleFilterId) === val ? " selected" : ""
-          }>${esc(label)}</option>`;
+          return `<option value="${esc(val)}"${String(state.cycleFilterId) === val ? " selected" : ""}>${esc(
+            label
+          )}</option>`;
         })
         .join("");
 
+    /* The filter is a card so the UI matches the theme consistently */
     return `
-      <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
-        <div class="min-w-0">
-          <div class="fw-bold"><i class="bi bi-diagram-3 me-1"></i> Cycles</div>
-          <div class="small text-muted">Choose a cycle to view records.</div>
+      <div class="card repro-subcard shadow-sm border-0 repro-cycle-headcard">
+        <div class="card-body">
+          <div class="repro-cycle-head">
+            <div class="min-w-0">
+              <div class="d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-diagram-3"></i></span>
+                <div class="min-w-0">
+                  <div class="fw-bold text-truncate">Cycles</div>
+                  <div class="small text-muted text-truncate">Choose a cycle to view records.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="repro-cycle-filter">
+              <label class="small text-muted mb-1 d-block" for="cycleFilterSelect">Cycle</label>
+              <select class="form-select form-select-sm w-100" id="cycleFilterSelect">
+                ${opts}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCyclePager(meta) {
+    return `
+      <div class="repro-pager-compact mt-3">
+        <button class="btn btn-sm btn-outline-success" ${meta.page <= 1 ? "disabled" : ""} data-act="cyclePrev">
+          <i class="bi bi-chevron-left"></i><span class="ms-1">Prev</span>
+        </button>
+
+        <div class="small text-muted text-center">
+          Page <b>${meta.page}</b> of <b>${meta.pages}</b>
+          <span class="d-none d-sm-inline"> • <b>${meta.total}</b> cycles</span>
         </div>
 
-        <div class="d-flex align-items-center gap-2">
-          <div class="small text-muted">Cycle</div>
-          <select class="form-select form-select-sm" style="min-width:260px" id="cycleFilterSelect">
-            ${opts}
-          </select>
-        </div>
+        <button class="btn btn-sm btn-outline-success" ${meta.page >= meta.pages ? "disabled" : ""} data-act="cycleNext">
+          <span class="me-1">Next</span><i class="bi bi-chevron-right"></i>
+        </button>
       </div>
     `;
   }
@@ -760,40 +918,40 @@ export function createReproViews({ repo, state, ui }) {
     const dateLabel = cycle?.date ? fmtDate(cycle.date) : "N/A";
     const boar = cycle?.boarCode || "N/A";
     const status = cycle?.status || "Recorded";
+    const sLow = String(status || "").toLowerCase();
 
-    const badgeVariant =
-      String(status).toLowerCase().includes("fail")
-        ? "danger"
-        : String(status).toLowerCase().includes("preg")
-        ? "info"
-        : String(status).toLowerCase().includes("success")
-        ? "success"
-        : "light";
+    const statusPill =
+      sLow.includes("preg")
+        ? `<span class="badge bg-info text-dark"><i class="bi bi-heart-fill me-1"></i>Pregnant</span>`
+        : sLow.includes("success")
+        ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Success</span>`
+        : sLow.includes("fail")
+        ? `<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Failed</span>`
+        : `<span class="badge bg-light text-dark border"><i class="bi bi-info-circle me-1"></i>${esc(status)}</span>`;
 
     return `
-      <div class="card repro-subcard shadow-sm border-0">
+      <div class="card repro-subcard shadow-sm border-0 repro-cycle-card">
         <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between gap-2">
+          <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
             <div class="min-w-0">
-              <div class="fw-bold text-truncate">
-                <i class="bi bi-calendar2-week me-1"></i> Cycle ${cycleNo}
-              </div>
-              <div class="small text-muted text-truncate">
-                Service Date: <b>${esc(dateLabel)}</b>
-              </div>
-              <div class="small text-muted text-truncate">
-                Boar: <b>${esc(boar)}</b>
+              <div class="d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-calendar2-week"></i></span>
+                <div class="min-w-0">
+                  <div class="fw-bold text-truncate">Cycle ${cycleNo}</div>
+                  <div class="small text-muted text-truncate">Service Date: <b>${esc(dateLabel)}</b></div>
+                  <div class="small text-muted text-truncate">Boar: <b>${esc(boar)}</b></div>
+                </div>
               </div>
             </div>
 
-            <div class="text-end">
-              ${badge(status, badgeVariant)}
+            <div class="d-flex align-items-center gap-2 ms-auto">
+              ${statusPill}
             </div>
           </div>
 
-          <div class="d-flex gap-2 mt-3 justify-content-end">
+          <div class="d-flex justify-content-end mt-3">
             <button
-              class="btn btn-success btn-sm"
+              class="btn btn-success btn-sm repro-cycle-open"
               data-act="openCycle"
               data-cycle="${esc(String(cycle.id))}"
               data-sow="${esc(String(sowId))}"
@@ -806,55 +964,52 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
-  function renderCyclePager(meta) {
-    return `
-      <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
-        <button class="btn btn-sm btn-outline-success" ${meta.page <= 1 ? "disabled" : ""} data-act="cyclePrev">
-          <i class="bi bi-chevron-left"></i> Prev
-        </button>
-        <div class="small text-muted">
-          Page <b>${meta.page}</b> of <b>${meta.pages}</b> • <b>${meta.total}</b> cycles
-        </div>
-        <button class="btn btn-sm btn-outline-success" ${meta.page >= meta.pages ? "disabled" : ""} data-act="cycleNext">
-          Next <i class="bi bi-chevron-right"></i>
-        </button>
-      </div>
-    `;
-  }
-
   function renderCycleList(sowId) {
     const cyclesAll = getCyclesForSowSafe(sowId);
     if (!cyclesAll.length) {
       return `
-        <div class="text-muted small">
-          <i class="bi bi-info-circle me-1"></i> No AI records yet for this sow.
+        <div class="card repro-subcard shadow-sm border-0">
+          <div class="card-body">
+            <div class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i> No cycle records yet for this sow.
+            </div>
+          </div>
         </div>
       `;
     }
 
     const filtered = getFilteredCyclesForSow(sowId);
-
     const meta = paginate(filtered, state.cyclePage, state.CYCLE_PAGE_SIZE);
     state.cyclePage = meta.page;
 
     const baseIndexOffset = meta.items.length ? Math.max(0, filtered.indexOf(meta.items[0])) : 0;
 
     return `
-      ${renderCycleFilterDropdown(sowId)}
-      <div class="vstack gap-3" id="cycleCardsWrap">
-        ${
-          meta.items.length
-            ? meta.items.map((c, idx) => cycleCardHtml(c, baseIndexOffset + idx + 1, sowId)).join("")
-            : `<div class="text-muted small"><i class="bi bi-info-circle me-1"></i>No cycles match.</div>`
-        }
+      <div class="card repro-subcard shadow-sm border-0">
+        <div class="card-body">
+
+          <div class="mb-3">
+            ${renderCycleFilterDropdown(sowId)}
+          </div>
+
+          <div class="vstack gap-3" id="cycleCardsWrap">
+            ${
+              meta.items.length
+                ? meta.items.map((c, idx) => cycleCardHtml(c, baseIndexOffset + idx + 1, sowId)).join("")
+                : `<div class="text-muted small"><i class="bi bi-info-circle me-1"></i>No cycles match.</div>`
+            }
+          </div>
+
+          ${renderCyclePager(meta)}
+        </div>
       </div>
-      ${renderCyclePager(meta)}
     `;
   }
 
-  // ---------------------------------------------------------
-  // Reduce stacking in Reproduction tab: single mount
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Reproduction Tab Mount
+     PURPOSE: Render cycle list or cycle detail panel.
+  ========================================================= */
   function getReproTabMount(mountRoot) {
     return mountRoot?.querySelector?.("#reproReproMount") || document.getElementById("reproReproMount");
   }
@@ -878,28 +1033,33 @@ export function createReproViews({ repo, state, ui }) {
     }
 
     return `
-      <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-        <div class="min-w-0">
-          <div class="fw-bold text-truncate">
-            <i class="bi bi-folder2-open me-1"></i> Cycle Details
-          </div>
-          <div class="small text-muted text-truncate">
-            AI record • performance • growth • selection
+      <!-- CYCLE DETAILS HEADER CARD -->
+      <div class="card repro-subcard shadow-sm border-0 repro-cycle-detail-headcard">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="min-w-0">
+              <div class="fw-bold text-truncate d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-folder2-open"></i></span>
+                <span>Cycle Details</span>
+              </div>
+              <div class="small text-muted text-truncate">AI record • performance • growth • selection</div>
+            </div>
+
+            <div class="repro-cycle-backwrap">
+              <button type="button" class="btn btn-outline-success btn-sm repro-cycle-backbtn" data-act="${backAct}">
+                <i class="bi bi-arrow-left me-1"></i> ${backLabel}
+              </button>
+            </div>
           </div>
         </div>
-
-        <button type="button" class="btn btn-outline-success btn-sm" data-act="${backAct}">
-          <i class="bi bi-arrow-left me-1"></i> ${backLabel}
-        </button>
       </div>
 
-      <hr class="my-3"/>
+      <div class="my-3"></div>
 
       <div id="cyclePanelMount"></div>
     `;
   }
 
-  // ✅ Optimized: only replaces tab content if key changed
   function renderReproTabInto(mountRoot) {
     const m = getReproTabMount(mountRoot);
     if (!m) return;
@@ -909,7 +1069,6 @@ export function createReproViews({ repo, state, ui }) {
       return;
     }
 
-    // keep filter sane
     getCyclesForSowSafe(state.activeSowId);
 
     const key = [
@@ -930,9 +1089,10 @@ export function createReproViews({ repo, state, ui }) {
     }
   }
 
-  // ---------------------------------------------------------
-  // Cycle Panel (tabs)
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Cycle Panel Tabs
+     PURPOSE: Tab selection and detail rendering.
+  ========================================================= */
   function getCurrentActiveCycleTabTarget() {
     const activeBtn = document.querySelector(".repro-tabs .nav-link.active");
     const t = activeBtn?.getAttribute("data-bs-target");
@@ -944,7 +1104,6 @@ export function createReproViews({ repo, state, ui }) {
     if (nextTarget && state.CYCLE_TABS.includes(nextTarget)) state.activeCycleTabTarget = nextTarget;
   }
 
-  // ✅ AI Record
   function renderCycleAIRecord(sowId, cycle) {
     const r = cycle?.raw || {};
 
@@ -978,7 +1137,10 @@ export function createReproViews({ repo, state, ui }) {
         <div class="col-12 col-lg-6">
           <div class="card repro-subcard h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="fw-bold mb-2"><i class="bi bi-journal-text me-1"></i> Artificial Insemination Record</div>
+              <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-journal-text"></i></span>
+                <span>Artificial Insemination Record</span>
+              </div>
 
               <div class="small text-muted">Sow</div>
               <div class="fw-semibold">${esc(sowId)}</div>
@@ -1000,7 +1162,10 @@ export function createReproViews({ repo, state, ui }) {
         <div class="col-12 col-lg-6">
           <div class="card repro-subcard h-100 shadow-sm border-0">
             <div class="card-body">
-              <div class="fw-bold mb-2"><i class="bi bi-clipboard2-check me-1"></i> Service Details</div>
+              <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-clipboard2-check"></i></span>
+                <span>Service Details</span>
+              </div>
 
               <div class="small text-muted">Boar (Sire Tag / Code)</div>
               <div class="fw-semibold text-break">${esc(boarId)}</div>
@@ -1109,7 +1274,10 @@ export function createReproViews({ repo, state, ui }) {
         <div class="col-12">
           <div class="card repro-subcard shadow-sm border-0">
             <div class="card-body">
-              <div class="fw-bold mb-2"><i class="bi bi-list-ul me-1"></i> Piglets</div>
+              <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-list-ul"></i></span>
+                <span>Piglets</span>
+              </div>
               <div class="list-group list-group-flush repro-list">
                 ${rows || `<div class="text-muted small">No piglets found for this sow.</div>`}
               </div>
@@ -1120,7 +1288,10 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
-  // ✅ Piglet card redesign (FAST)
+  /* =========================================================
+     MODULE: Piglet Cards / Pagers / Filters (Growth & Selection)
+     PURPOSE: Shared rendering utilities for piglet lists.
+  ========================================================= */
   function pigletCardHtml(p, ctx, maps) {
     const tag = p?.swine_id || p?.swine_tag || p?.tag || "N/A";
     const sex = sexLabel(p?.sex);
@@ -1129,20 +1300,17 @@ export function createReproViews({ repo, state, ui }) {
     const isDead = String(hs).toLowerCase().includes("deceased") || String(hs).toLowerCase().includes("dead");
     const btnAct = ctx === "growth" ? "openPigletGrowth" : "openPigletSelection";
 
-    // ✅ Only selection tab should show selection decision/status chips
     let statusChip = "";
     if (ctx === "selection") {
       const decisionKey = resolvePigletDecisionKeyFromTag(tag);
       const dec = getPigletDecision(decisionKey);
       statusChip = selectionStatusChipHtml(dec.decision);
     }
-    // NOTE: Growth tab intentionally shows NO status chip (no Active/Culled/etc chips here)
 
     const lifeBadge = isDead
       ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle me-1"></i>Deceased</span>`
       : `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Alive</span>`;
 
-    // ✅ Only Selection tab shows System Suggestion in the list
     let suggestionHtml = "";
     if (ctx === "selection") {
       const quick = quickSuggestionForList(tag, p, maps);
@@ -1165,6 +1333,7 @@ export function createReproViews({ repo, state, ui }) {
     return `
       <div class="card repro-subcard shadow-sm border-0">
         <div class="card-body d-flex flex-column gap-2">
+
           <div class="d-flex align-items-start justify-content-between gap-2">
             <div class="min-w-0">
               <div class="d-flex align-items-center gap-2">
@@ -1177,18 +1346,19 @@ export function createReproViews({ repo, state, ui }) {
             </div>
 
             <div class="text-end d-flex flex-column align-items-end gap-2">
-              ${statusChip /* selection only */}
-              ${lifeBadge /* growth + selection */}
+              ${statusChip}
+              ${lifeBadge}
             </div>
           </div>
 
-          ${suggestionHtml /* selection only */}
+          ${suggestionHtml}
 
           <div class="d-flex justify-content-end pt-1">
             <button class="btn btn-success btn-sm" data-act="${btnAct}" data-piglet="${esc(tag)}">
               Open <i class="bi bi-chevron-right ms-1"></i>
             </button>
           </div>
+
         </div>
       </div>
     `;
@@ -1196,11 +1366,11 @@ export function createReproViews({ repo, state, ui }) {
 
   function renderPagerHtml(which, meta) {
     return `
-      <div class="d-flex align-items-center justify-content-between gap-2">
+      <div class="repro-pager">
         <button class="btn btn-sm btn-outline-success" ${meta.page <= 1 ? "disabled" : ""} data-act="${which}Prev">
           <i class="bi bi-chevron-left"></i>
         </button>
-        <div class="small text-muted">
+        <div class="small text-muted text-center">
           Page <b>${meta.page}</b> of <b>${meta.pages}</b> • <b>${meta.total}</b> items
         </div>
         <button class="btn btn-sm btn-outline-success" ${meta.page >= meta.pages ? "disabled" : ""} data-act="${which}Next">
@@ -1217,7 +1387,7 @@ export function createReproViews({ repo, state, ui }) {
       { k: "female", label: "Female" },
     ];
     return `
-      <div class="d-flex gap-2 flex-wrap">
+      <div class="d-flex gap-2 flex-wrap justify-content-start justify-content-sm-end">
         ${opts
           .map(
             (o) => `
@@ -1236,7 +1406,6 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
-  // ✅ NEW: decision tabs (replaces selection search input)
   function renderDecisionTabs(active, actName = "selDecisionTab") {
     const f = String(active || "all");
     const opts = [
@@ -1276,13 +1445,15 @@ export function createReproViews({ repo, state, ui }) {
     return `
       <div class="card repro-subcard shadow-sm border-0">
         <div class="card-body">
-
           ${
             state.growthView === "detail" && state.selectedPigletTagForGrowth
               ? `
                 <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
-                    <div class="fw-bold text-truncate"><i class="bi bi-activity me-1"></i> Weight Trend</div>
+                    <div class="fw-bold text-truncate d-flex align-items-center gap-2">
+                      <span class="repro-pill"><i class="bi bi-activity"></i></span>
+                      <span>Weight Trend</span>
+                    </div>
                     <div class="small text-muted text-truncate">Auto-updated based on recorded morphology entries</div>
                   </div>
                   <button type="button" class="btn btn-outline-success btn-sm" data-act="growthBack">
@@ -1297,11 +1468,15 @@ export function createReproViews({ repo, state, ui }) {
               : `
                 <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
-                    <div class="fw-bold mb-1"><i class="bi bi-graph-up-arrow me-1"></i> Growth Monitoring</div>
+                    <div class="fw-bold mb-1 d-flex align-items-center gap-2">
+                      <span class="repro-pill"><i class="bi bi-graph-up-arrow"></i></span>
+                      <span>Growth Monitoring</span>
+                    </div>
                     <div class="text-muted small">Filter piglets, then open one to view chart and deformities.</div>
                   </div>
-                  <div class="text-end">
-                    <div class="small text-muted">Sex Filter</div>
+
+                  <div class="w-100 w-sm-auto text-start text-sm-end">
+                    <div class="small text-muted mb-1">Sex Filter</div>
                     ${renderSexPills(state.growthSexFilter, "growthSexFilter")}
                   </div>
                 </div>
@@ -1324,18 +1499,14 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               `
           }
-
         </div>
       </div>
     `;
   }
 
-  // ✅ Selection summary (FIXED retain) + icons
   function renderSelectionSummaryCards(piglets) {
     const list = Array.isArray(piglets) ? piglets : [];
-
-    const decisionSum = computeSelectionSummaryForPigletsFromList(list);
-    const sum = decisionSum;
+    const sum = computeSelectionSummaryForPigletsFromList(list);
 
     return `
       <div class="row g-2 mt-2">
@@ -1387,7 +1558,6 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   function renderCycleSelection(sowId, piglets, maps) {
-    // ensure default
     state.selectionDecisionFilter = state.selectionDecisionFilter || "all";
 
     const bySex = filterPigletsBySex(piglets, state.selectionSexFilter);
@@ -1401,13 +1571,15 @@ export function createReproViews({ repo, state, ui }) {
     return `
       <div class="card repro-subcard shadow-sm border-0">
         <div class="card-body">
-
           ${
             state.selectionView === "detail" && state.selectedPigletTagForSelection
               ? `
                 <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
-                    <div class="fw-bold text-truncate"><i class="bi bi-person-check me-1"></i> Selection Details</div>
+                    <div class="fw-bold text-truncate d-flex align-items-center gap-2">
+                      <span class="repro-pill"><i class="bi bi-person-check"></i></span>
+                      <span>Selection Details</span>
+                    </div>
                     <div class="small text-muted text-truncate">Status, suggestion, and actions</div>
                   </div>
                   <button type="button" class="btn btn-outline-success btn-sm" data-act="selectionBack">
@@ -1422,11 +1594,15 @@ export function createReproViews({ repo, state, ui }) {
               : `
                 <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
                   <div class="min-w-0">
-                    <div class="fw-bold mb-1"><i class="bi bi-check2-circle me-1"></i> Selection Process</div>
+                    <div class="fw-bold mb-1 d-flex align-items-center gap-2">
+                      <span class="repro-pill"><i class="bi bi-check2-circle"></i></span>
+                      <span>Selection Process</span>
+                    </div>
                     <div class="text-muted small">Filter piglets, then open one to view selection status and actions.</div>
                   </div>
-                  <div class="text-end">
-                    <div class="small text-muted">Sex Filter</div>
+
+                  <div class="w-100 w-sm-auto text-start text-sm-end">
+                    <div class="small text-muted mb-1">Sex Filter</div>
                     ${renderSexPills(state.selectionSexFilter, "selectionSexFilter")}
                   </div>
                 </div>
@@ -1447,13 +1623,15 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               `
           }
-
         </div>
       </div>
     `;
   }
 
-  // Selection detail includes ACTIONS
+  /* =========================================================
+     MODULE: Piglet Details (Growth + Selection)
+     PURPOSE: Detail view rendering for the selected piglet.
+  ========================================================= */
   function renderPigletSelectionDetail(pigletTag) {
     const mount = document.getElementById("selectionDetailMount");
     if (!mount) return;
@@ -1502,7 +1680,6 @@ export function createReproViews({ repo, state, ui }) {
     const hsLower = String(fallbackObj?.health_status || "").toLowerCase();
     const isDeceased = hsLower.includes("deceased") || hsLower.includes("dead");
 
-    // ✅ Eligibility: do NOT allow Retain/Sell until weaned/final selection
     const stageLower = String(stage || "").toLowerCase();
     const isEligible =
       stageLower.includes("weaned") ||
@@ -1514,7 +1691,6 @@ export function createReproViews({ repo, state, ui }) {
     const canActBase = isObjectId(actionSwineId);
     const canAct = canActBase && isEligible && !isDeceased;
 
-    // ✅ use mongo-aware key for decision
     const decisionKey = resolvePigletDecisionKeyFromTag(pigletTag);
     const dec = getPigletDecision(decisionKey);
     const currentDecision = dec.decision;
@@ -1526,15 +1702,12 @@ export function createReproViews({ repo, state, ui }) {
     mount.innerHTML = `
       <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
         <div class="min-w-0">
-          <div class="fw-bold text-truncate">
-            <i class="bi bi-tag me-1"></i>${esc(pigletTag)}
+          <div class="fw-bold text-truncate d-flex align-items-center gap-2">
+            <span class="repro-pill"><i class="bi bi-tag"></i></span>
+            <span>${esc(pigletTag)}</span>
           </div>
-          <div class="small text-muted">
-            Stage: <b>${esc(stage)}</b>
-          </div>
-          <div class="small text-muted">
-            Last update: <b>${esc(fmtDate(date))}</b>
-          </div>
+          <div class="small text-muted">Stage: <b>${esc(stage)}</b></div>
+          <div class="small text-muted">Last update: <b>${esc(fmtDate(date))}</b></div>
         </div>
 
         <div class="d-flex flex-column align-items-end gap-2">
@@ -1591,9 +1764,7 @@ export function createReproViews({ repo, state, ui }) {
                 <div class="px-3 py-2 rounded-3 border bg-light">
                   <div class="small text-muted d-flex align-items-center gap-2">
                     <i class="bi bi-lock-fill"></i>
-                    <span>
-                      Decision submitted${decisionText ? `: <b>${esc(decisionText)}</b>` : ""}.
-                    </span>
+                    <span>Decision submitted${decisionText ? `: <b>${esc(decisionText)}</b>` : ""}.</span>
                   </div>
                 </div>
               `
@@ -1665,16 +1836,19 @@ export function createReproViews({ repo, state, ui }) {
     mount.innerHTML = `
       <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
         <div class="min-w-0">
-          <div class="fw-bold text-truncate"><i class="bi bi-tag me-1"></i>${esc(pigletTag)}</div>
+          <div class="fw-bold text-truncate d-flex align-items-center gap-2">
+            <span class="repro-pill"><i class="bi bi-tag"></i></span>
+            <span>${esc(pigletTag)}</span>
+          </div>
           <div class="small text-muted">Entries: <b>${points.length}</b></div>
         </div>
         ${
           first && last
             ? `<div class="text-end">
                  <div class="small text-muted">${esc(fmtShortDate(first.x))} → ${esc(fmtShortDate(last.x))}</div>
-                 <div class="badge bg-success-subtle text-success border"><i class="bi bi-arrow-up-right me-1"></i>Δ ${esc(
-                   delta
-                 )} kg</div>
+                 <div class="badge bg-success-subtle text-success border">
+                   <i class="bi bi-arrow-up-right me-1"></i>Δ ${esc(delta)} kg
+                 </div>
                </div>`
             : `<div class="small text-muted">No weight summary.</div>`
         }
@@ -1686,7 +1860,11 @@ export function createReproViews({ repo, state, ui }) {
 
       <hr class="my-3"/>
 
-      <div class="fw-bold mb-2"><i class="bi bi-exclamation-triangle me-1"></i> Deformities</div>
+      <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+        <span class="repro-pill"><i class="bi bi-exclamation-triangle"></i></span>
+        <span>Deformities</span>
+      </div>
+
       ${
         deformities.length
           ? deformities
@@ -1705,7 +1883,10 @@ export function createReproViews({ repo, state, ui }) {
     ui.drawAreaLineChart("growthChartCanvas", points);
   }
 
-  // ✅ Optimized: cycle panel rebuild only when necessary
+  /* =========================================================
+     MODULE: Cycle Panel (Tabs Container)
+     PURPOSE: Render the cycle details container with tabs.
+  ========================================================= */
   function renderCyclePanel(sowId, cycleId, keepTabTarget = null) {
     const mount = document.getElementById("cyclePanelMount");
     if (!mount) return;
@@ -1730,17 +1911,14 @@ export function createReproViews({ repo, state, ui }) {
       String(state.growthSexFilter || ""),
       String(state.selectionSexFilter || ""),
       String(state.pigletGrowthFilter || ""),
-      String(state.pigletSelectionFilter || ""), // keep for compatibility (even if selection now uses tabs)
-      String(state.selectionDecisionFilter || "all"), // ✅ NEW: include decision filter in cache key
+      String(state.pigletSelectionFilter || ""),
+      String(state.selectionDecisionFilter || "all"),
       String(state.pigletPageGrowth || 1),
       String(state.pigletPageSelection || 1),
     ].join("|");
 
-    // ensure maps cached for this cycle
     const maps = ensurePigletMapsForCycle(sowId, cycleId, piglets);
 
-    // If the panel key hasn't changed, we don't rebuild the whole HTML.
-    // But we still may need to render detail mounts when switching list/detail.
     const needsFull = renderCache.cyclePanelKey !== key;
     renderCache.cyclePanelKey = key;
 
@@ -1752,8 +1930,9 @@ export function createReproViews({ repo, state, ui }) {
       mount.innerHTML = `
         <div class="card repro-subcard shadow-sm border-0">
           <div class="card-body">
-            <div class="fw-bold">
-              <i class="bi bi-folder2-open me-1"></i> Cycle • ${esc(fmtDate(cycle.date))}
+            <div class="fw-bold d-flex align-items-center gap-2">
+              <span class="repro-pill"><i class="bi bi-folder2-open"></i></span>
+              <span>Cycle • ${esc(fmtDate(cycle.date))}</span>
             </div>
             <div class="small text-muted">
               Boar: <b>${esc(cycle.boarCode || "N/A")}</b> • ${badge(cycle.status || "Recorded")}
@@ -1762,22 +1941,30 @@ export function createReproViews({ repo, state, ui }) {
             <ul class="nav nav-tabs mt-3 repro-tabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="${tabBtnClass("#cycleAI")}" data-bs-toggle="tab" data-bs-target="#cycleAI" type="button" role="tab">
-                  <i class="bi bi-journal-text me-1"></i> Artificial Insemination Record
+                  <i class="bi bi-journal-text me-1"></i>
+                  <span class="d-none d-sm-inline">Artificial Insemination Record</span>
+                  <span class="d-inline d-sm-none">AI</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="${tabBtnClass("#cyclePerf")}" data-bs-toggle="tab" data-bs-target="#cyclePerf" type="button" role="tab">
-                  <i class="bi bi-bar-chart-line me-1"></i> Breeding Performance
+                  <i class="bi bi-bar-chart-line me-1"></i>
+                  <span class="d-none d-sm-inline">Breeding Performance</span>
+                  <span class="d-inline d-sm-none">Perf</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="${tabBtnClass("#cycleGrowth")}" data-bs-toggle="tab" data-bs-target="#cycleGrowth" type="button" role="tab">
-                  <i class="bi bi-graph-up-arrow me-1"></i> Growth Monitoring
+                  <i class="bi bi-graph-up-arrow me-1"></i>
+                  <span class="d-none d-sm-inline">Growth Monitoring</span>
+                  <span class="d-inline d-sm-none">Growth</span>
                 </button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="${tabBtnClass("#cycleSelect")}" data-bs-toggle="tab" data-bs-target="#cycleSelect" type="button" role="tab">
-                  <i class="bi bi-check2-circle me-1"></i> Selection Process
+                  <i class="bi bi-check2-circle me-1"></i>
+                  <span class="d-none d-sm-inline">Selection Process</span>
+                  <span class="d-inline d-sm-none">Select</span>
                 </button>
               </li>
             </ul>
@@ -1800,12 +1987,10 @@ export function createReproViews({ repo, state, ui }) {
         </div>
       `;
     } else {
-      // Lightweight refresh for the active tab content only (filters/pages changed)
       const activePane = mount.querySelector(target);
       if (activePane) {
         if (target === "#cycleGrowth") activePane.innerHTML = renderCycleGrowth(sowId, piglets, maps);
         else if (target === "#cycleSelect") activePane.innerHTML = renderCycleSelection(sowId, piglets, maps);
-        // AI and Perf rarely change due to filters, so skip unless needed
       }
     }
 
@@ -1817,10 +2002,10 @@ export function createReproViews({ repo, state, ui }) {
     }
   }
 
-  // ---------------------------------------------------------
-  // Main panel (sow modal content)
-  // - Optimized: only rebuild shell when sow changes
-  // ---------------------------------------------------------
+  /* =========================================================
+     MODULE: Sow Panel (Modal Content)
+     PURPOSE: Render summary and tabs (Overview / Reproduction).
+  ========================================================= */
   function renderSowPanel(sowId, mountEl) {
     const mount = mountEl || state.getPanelMount();
     if (!mount) return;
@@ -1840,7 +2025,6 @@ export function createReproViews({ repo, state, ui }) {
 
     const hs = sowObj?.health_status || "N/A";
     const cs = sowObj?.current_status || sowObj?.current_stage || sowObj?.age_stage || stage || "N/A";
-    const parity = Number.isFinite(Number(sowObj?.parity)) ? Number(sowObj.parity) : "N/A";
     const sex = sowObj?.sex ? sexLabel(sowObj.sex) : "N/A";
 
     const latestPerf = getLatestPerf(sowObj);
@@ -1852,6 +2036,19 @@ export function createReproViews({ repo, state, ui }) {
     const latestTeat = latestPerf?.teat_count ?? null;
     const latestTeeth = latestPerf?.teeth_count ?? latestPerf?.teeth ?? null;
 
+    const alive = Number((stats?.aliveMale || 0) + (stats?.aliveFemale || 0));
+    const dead = Number(stats?.deceased || 0);
+    const total = Number(stats?.total || 0);
+
+    const csLower = String(cs || "").toLowerCase();
+    const phase =
+      csLower.includes("preg") ? { label: "Pregnant", cls: "bg-info text-dark", icon: "bi bi-heart-fill" } :
+      csLower.includes("heat") || csLower.includes("estrus") ? { label: "In-heat", cls: "bg-danger", icon: "bi bi-lightning-charge" } :
+      csLower.includes("under_observation") || csLower.includes("observation") ? { label: "Under observation", cls: "bg-warning text-dark", icon: "bi bi-eye" } :
+      csLower.includes("farrow") ? { label: "Farrowing", cls: "bg-warning text-dark", icon: "bi bi-box2-heart" } :
+      csLower.includes("wean") ? { label: "Weaning", cls: "bg-warning text-dark", icon: "bi bi-arrow-down-circle" } :
+      { label: "Open", cls: "bg-light text-dark border", icon: "bi bi-check2-circle" };
+
     const shellKey = String(sowId || "");
     const shouldBuildShell = renderCache.sowShellKey !== shellKey || !mount.querySelector("#reproReproMount");
 
@@ -1859,169 +2056,171 @@ export function createReproViews({ repo, state, ui }) {
       renderCache.sowShellKey = shellKey;
 
       mount.innerHTML = `
-        <div class="card shadow-sm repro-panel-card border-0">
-          <div class="card-body">
-            <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-              <div class="min-w-0">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="repro-pill lg"><i class="bi bi-heart-pulse"></i></span>
-                  <div>
-                    <h5 class="mb-0 text-truncate">${esc(sowId)}</h5>
-                    <div class="small text-muted text-truncate">
-                      Stage: <b>${esc(stage)}</b> • Breed: <b>${esc(breed)}</b> • DOB: ${esc(dob)}
+        <div class="repro-sow-shell">
+          <div class="card border-0 shadow-sm repro-sow-top">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                <div class="d-flex align-items-start gap-3 min-w-0">
+                  <div class="repro-sow-avatar">
+                    <i class="bi bi-heart-pulse"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <h5 class="mb-0 text-truncate">${esc(sowId)}</h5>
+                      <span class="badge ${phase.cls}">
+                        <i class="${esc(phase.icon)} me-1"></i>${esc(phase.label)}
+                      </span>
+                    </div>
+                    <div class="small text-muted mt-1 text-truncate">
+                      Breed: <b>${esc(breed)}</b> • DOB: <b>${esc(dob)}</b>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                      <span class="badge bg-success-subtle text-success border">
+                        <i class="bi bi-people me-1"></i>Alive: <b>${alive}</b>
+                      </span>
+                      <span class="badge bg-danger-subtle text-danger border">
+                        <i class="bi bi-x-circle me-1"></i>Dead: <b>${dead}</b>
+                      </span>
+                      <span class="badge bg-light text-dark border">
+                        <i class="bi bi-collection me-1"></i>Total: <b>${total}</b>
+                      </span>
                     </div>
                   </div>
                 </div>
+
+                <div class="repro-sow-meta ms-auto">
+                  <div class="repro-sow-meta-item">
+                    <div class="repro-sow-meta-k">Status</div>
+                    <div class="repro-sow-meta-v text-truncate">${esc(cs)}</div>
+                  </div>
+                  <div class="repro-sow-meta-item">
+                    <div class="repro-sow-meta-k">Health</div>
+                    <div class="repro-sow-meta-v text-truncate">${esc(hs)}</div>
+                  </div>
+                  <div class="repro-sow-meta-item">
+                    <div class="repro-sow-meta-k">Sex</div>
+                    <div class="repro-sow-meta-v">${esc(sex)}</div>
+                  </div>
+                </div>
               </div>
-              <div class="d-flex gap-2">
-                <span class="badge bg-success-subtle text-success border"><i class="bi bi-people me-1"></i>Alive: <b>${stats.aliveMale +
-                  stats.aliveFemale}</b></span>
-                <span class="badge bg-danger-subtle text-danger border"><i class="bi bi-x-octagon me-1"></i>Dead: <b>${stats.deceased}</b></span>
+
+              <hr class="my-3"/>
+
+              <ul class="nav nav-pills repro-pills gap-2" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabOverview" type="button" role="tab">
+                    <i class="bi bi-clipboard-data me-1"></i> Overview
+                  </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabReproduction" type="button" role="tab">
+                    <i class="bi bi-diagram-3 me-1"></i> Reproduction
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tab-content mt-3">
+            <div class="tab-pane fade show active" id="tabOverview" role="tabpanel">
+              <div class="row g-3">
+                <div class="col-12 col-lg-8">
+                  <div class="card border-0 shadow-sm repro-subcard">
+                    <div class="card-body">
+                      <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-2">
+                        <div class="min-w-0">
+                          <div class="fw-bold"><i class="bi bi-rulers me-1"></i>Latest Measurements</div>
+                          <div class="small text-muted">
+                            Last record: <b>${esc(fmtDate(latestDate))}</b>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row g-2">
+                        <div class="col-6 col-md-4">
+                          <div class="repro-sow-statbox">
+                            <div class="k">Weight</div>
+                            <div class="v">${latestWeight != null ? esc(latestWeight) + " kg" : "N/A"}</div>
+                          </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                          <div class="repro-sow-statbox">
+                            <div class="k">Body Length</div>
+                            <div class="v">${latestBodyLength != null ? esc(latestBodyLength) + " cm" : "N/A"}</div>
+                          </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                          <div class="repro-sow-statbox">
+                            <div class="k">Heart Girth</div>
+                            <div class="v">${latestHeartGirth != null ? esc(latestHeartGirth) + " cm" : "N/A"}</div>
+                          </div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                          <div class="repro-sow-statbox">
+                            <div class="k">Teat Count</div>
+                            <div class="v">${latestTeat != null ? esc(latestTeat) : "N/A"}</div>
+                          </div>
+                        </div>
+                        <div class="col-12 col-md-8">
+                          <div class="repro-sow-statbox">
+                            <div class="k">Teeth</div>
+                            <div class="v">${latestTeeth != null ? esc(latestTeeth) : "N/A"}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="small text-muted mt-3">
+                        Measurements are pulled from the latest <code>performance_records</code> entry (if available).
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                  <div class="card border-0 shadow-sm repro-subcard mb-3">
+                    <div class="card-body">
+                      <div class="fw-bold mb-2"><i class="bi bi-people me-1"></i>Piglet Summary</div>
+                      <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-success-subtle text-success border">
+                          <i class="bi bi-check-circle me-1"></i>Alive: <b>${alive}</b>
+                        </span>
+                        <span class="badge bg-danger-subtle text-danger border">
+                          <i class="bi bi-x-circle me-1"></i>Dead: <b>${dead}</b>
+                        </span>
+                        <span class="badge bg-light text-dark border">
+                          <i class="bi bi-collection me-1"></i>Total: <b>${total}</b>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card border-0 shadow-sm repro-subcard">
+                    <div class="card-body">
+                      <div class="fw-bold mb-2"><i class="bi bi-lightning-charge me-1"></i>Quick Actions</div>
+                      <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success btn-sm" data-act="jumpRepro">
+                          <i class="bi bi-arrow-down-right-circle me-1"></i> View Cycles
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" data-act="jumpSelection">
+                          <i class="bi bi-check2-square me-1"></i> Selection Process
+                        </button>
+                      </div>
+                      <div class="small text-muted mt-2">
+                        Use the Reproduction tab to open a cycle and manage piglets.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
 
-            <hr class="my-3"/>
-
-            <ul class="nav nav-pills repro-pills" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabOverview" type="button" role="tab">
-                  <i class="bi bi-clipboard-data me-1"></i> Overview
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabReproduction" type="button" role="tab">
-                  <i class="bi bi-diagram-3 me-1"></i> Reproduction
-                </button>
-              </li>
-            </ul>
-
-            <div class="tab-content mt-3">
-              <div class="tab-pane fade show active" id="tabOverview" role="tabpanel">
-                <div class="row g-3">
-
-                  <div class="col-12 col-lg-4">
-                    <div class="card repro-subcard h-100 shadow-sm border-0">
-                      <div class="card-body">
-                        <div class="fw-bold mb-2"><i class="bi bi-clipboard-heart me-1"></i> Sow Information</div>
-
-                        <div class="small text-muted">Current Status</div>
-                        <div class="fw-semibold">${esc(cs)}</div>
-
-                        <div class="small text-muted mt-2">Health</div>
-                        <div class="fw-semibold">${esc(hs)}</div>
-
-                        <div class="small text-muted mt-2">Sex</div>
-                        <div class="fw-semibold">${esc(sex)}</div>
-
-                        <div class="small text-muted mt-2">Parity</div>
-                        <div class="fw-semibold">${esc(parity)}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-12 col-lg-8">
-                    <div class="card repro-subcard h-100 shadow-sm border-0">
-                      <div class="card-body">
-                        <div class="fw-bold mb-2"><i class="bi bi-rulers me-1"></i> Latest Measurements</div>
-
-                        <div class="small text-muted mb-2">
-                          Last record: <b>${esc(fmtDate(latestDate))}</b>
-                        </div>
-
-                        <div class="row g-2">
-                          <div class="col-6 col-md-4">
-                            <div class="repro-mini-stat">
-                              <div class="small text-muted">Weight</div>
-                              <div class="fw-bold">${latestWeight != null ? esc(latestWeight) + " kg" : "N/A"}</div>
-                            </div>
-                          </div>
-
-                          <div class="col-6 col-md-4">
-                            <div class="repro-mini-stat">
-                              <div class="small text-muted">Body Length</div>
-                              <div class="fw-bold">${latestBodyLength != null ? esc(latestBodyLength) + " cm" : "N/A"}</div>
-                            </div>
-                          </div>
-
-                          <div class="col-6 col-md-4">
-                            <div class="repro-mini-stat">
-                              <div class="small text-muted">Heart Girth</div>
-                              <div class="fw-bold">${latestHeartGirth != null ? esc(latestHeartGirth) + " cm" : "N/A"}</div>
-                            </div>
-                          </div>
-
-                          <div class="col-6 col-md-4">
-                            <div class="repro-mini-stat">
-                              <div class="small text-muted">Teat Count</div>
-                              <div class="fw-bold">${latestTeat != null ? esc(latestTeat) : "N/A"}</div>
-                            </div>
-                          </div>
-
-                          <div class="col-12 col-md-8">
-                            <div class="repro-mini-stat">
-                              <div class="small text-muted">Teeth</div>
-                              <div class="fw-bold">${latestTeeth != null ? esc(latestTeeth) : "N/A"}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="text-muted small mt-3">
-                          Measurements are pulled from the latest <code>performance_records</code> entry (if available).
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-12 col-lg-4">
-                    <div class="card repro-subcard shadow-sm border-0">
-                      <div class="card-body">
-                        <div class="small text-muted mb-1">Piglet Summary</div>
-                        <div class="d-flex gap-2 flex-wrap">
-                          <span class="badge bg-success-subtle text-success border"><i class="bi bi-gender-male me-1"></i>Alive Male: <b>${stats.aliveMale}</b></span>
-                          <span class="badge bg-success-subtle text-success border"><i class="bi bi-gender-female me-1"></i>Alive Female: <b>${stats.aliveFemale}</b></span>
-                          <span class="badge bg-danger-subtle text-danger border"><i class="bi bi-x-circle me-1"></i>Dead: <b>${stats.deceased}</b></span>
-                        </div>
-                        <div class="small text-muted mt-2">
-                          Total piglets recorded: <b>${stats.total}</b>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-12 col-lg-8">
-                    <div class="card repro-subcard shadow-sm border-0">
-                      <div class="card-body">
-                        <div class="small text-muted mb-1">Quick Actions</div>
-                        <div class="d-flex flex-wrap gap-2">
-                          <button class="btn btn-outline-success btn-sm" data-act="jumpRepro">
-                            <i class="bi bi-arrow-down-right-circle me-1"></i> View Cycles
-                          </button>
-                          <button class="btn btn-outline-success btn-sm" data-act="jumpSelection">
-                            <i class="bi bi-check2-square me-1"></i> Selection Process
-                          </button>
-                        </div>
-                        <div class="text-muted small mt-2">
-                          Use the Reproduction tab to open a cycle and manage piglets.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              <div class="tab-pane fade" id="tabReproduction" role="tabpanel">
-                <div id="reproReproMount"></div>
-              </div>
+            <div class="tab-pane fade" id="tabReproduction" role="tabpanel">
+              <div id="reproReproMount"></div>
             </div>
           </div>
         </div>
       `;
-    } else {
-      // Minimal update: only top header values (keeps tab state)
-      const title = mount.querySelector("h5");
-      if (title) title.textContent = String(sowId || "");
-      // We avoid deep patching here to keep it safe and fast.
     }
 
     renderReproTabInto(mount);
@@ -2040,9 +2239,7 @@ export function createReproViews({ repo, state, ui }) {
     renderSowPanel,
 
     renderPigletGrowthDetail,
-    renderPigletSelectionDetail: renderPigletSelectionDetail, // keep export name
     renderPigletSelectionDetail,
-
     setCycleTabTarget,
   };
 }

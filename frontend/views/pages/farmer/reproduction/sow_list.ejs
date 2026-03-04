@@ -1,34 +1,22 @@
-<div class="card shadow-sm repro-panel-card">
+<div class="card shadow-sm repro-panel-card border-0">
   <div class="card-body">
 
     <!-- Header -->
-    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-      <div class="fw-bold d-flex align-items-center gap-2">
-        <span class="repro-pill"><i class="bi bi-list-ul"></i></span>
-        <span>Sows</span>
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+      <div class="min-w-0">
+        <div class="d-flex align-items-center gap-2">
+          <span class="repro-pill"><i class="bi bi-list-ul"></i></span>
+          <div class="min-w-0">
+            <div class="fw-bold text-truncate">Sows</div>
+            <div class="text-muted small text-truncate">
+              Tap <b>View</b> to open the sow details panel.
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-success-subtle text-success border">5 / page</span>
-      </div>
     </div>
 
-    <!-- Helper text -->
-    <div class="text-muted small mb-3">
-      Tap <b>View</b> to open the sow panel in the middle (closable overlay).
-    </div>
-
-    <!-- Optional: quick filter hints (uses existing #reproductionSearch) -->
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <span class="badge bg-light text-dark border">
-        <i class="bi bi-search me-1"></i> Use search above to filter
-      </span>
-      <span class="badge bg-light text-dark border">
-        <i class="bi bi-tags me-1"></i> Tag / Stage
-      </span>
-    </div>
-
-    <!-- IMPORTANT: vertical stack, 1 card per row -->
+    <!-- Cards mount -->
     <div class="vstack gap-3" id="sowCardsWrap">
       <div class="text-muted small">Loading sows...</div>
     </div>

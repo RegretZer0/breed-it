@@ -45,7 +45,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ===== Required legacy IDs (DO NOT REMOVE) =====
-  const searchInput = document.getElementById("reproductionSearch");
+  const searchInput = document.getElementById("reproductionSearch"); // ✅ keep id
+  const statusFilterEl = document.getElementById("reproStatusFilter"); // ✅ NEW filter dropdown id (from EJS)
+
   const legacyPigletMonitoringBody = document.getElementById("pigletMonitoringBody");
   const legacyAiTableBody = document.getElementById("aiTableBody");
   const legacyMortalityBody = document.getElementById("breedingMortalityTableBody");
@@ -131,9 +133,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="modal fade" id="reproActionModal" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
-              <div class="modal-header" id="reproActionHeader">
-                <h5 class="modal-title" id="reproActionTitle">Action Result</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <div class="modal-header" id="reproActionHeader" style="background: linear-gradient(135deg, var(--repro-green, #1fb87a), var(--repro-green-2, #11a56a));">
+                <h5 class="modal-title text-white" id="reproActionTitle">Action Result</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
 
               <div class="modal-body">
@@ -172,6 +174,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (titleEl) titleEl.textContent = title || "Result";
     if (msgEl) msgEl.textContent = message || "";
 
+    // text color only (keep header gradient)
     if (headerEl) {
       headerEl.classList.remove("text-success", "text-danger", "text-warning");
       headerEl.classList.add(type === "danger" ? "text-danger" : type === "warning" ? "text-warning" : "text-success");
@@ -182,7 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================
-  // Modal Panel (single close button only)
+  // Modal Panel (single close button only) — THEME + RESPONSIVE
   // =========================================================
   let panelMountEl = null;
   let lastOpenBtn = null;
@@ -195,27 +198,32 @@ document.addEventListener("DOMContentLoaded", async () => {
         "beforeend",
         `
         <div class="modal fade repro-modal" id="reproSowModal" tabindex="-1" aria-labelledby="reproSowModalLabel" aria-hidden="true">
-          <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
-            <div class="modal-content repro-modal-content">
-              <div class="modal-header repro-modal-header">
+          <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg overflow-hidden" style="border-radius: var(--repro-radius-lg, 22px); background: var(--repro-bg, #f3f6fb);">
+              
+              <!-- Sticky header (app-like) -->
+              <div class="modal-header border-0 position-sticky top-0" style="z-index: 2; background: linear-gradient(135deg, var(--repro-green, #1fb87a), var(--repro-green-2, #11a56a));">
                 <div class="d-flex align-items-center gap-2 min-w-0">
-                  <span class="repro-pill is-white"><i class="bi bi-grid"></i></span>
+                  <span class="repro-pill is-white" style="background: rgba(255,255,255,.15); color:#fff;">
+                    <i class="bi bi-grid"></i>
+                  </span>
                   <div class="min-w-0">
                     <div class="fw-bold text-truncate text-white" id="reproSowModalLabel">Sow Details</div>
-                    <div class="small text-truncate" style="color: rgba(255,255,255,.82)">Overview, cycles, piglets, selection</div>
+                    <div class="small text-truncate" style="color: rgba(255,255,255,.82)">
+                      Overview, cycles, piglets, selection
+                    </div>
                   </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
-                  <button type="button" class="btn btn-light btn-sm repro-close-btn" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg me-1"></i> Close
-                  </button>
-                </div>
+                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius: 999px;">
+                  <i class="bi bi-x-lg me-1"></i> Close
+                </button>
               </div>
 
-              <div class="modal-body repro-modal-body">
+              <div class="modal-body pt-3" style="background: var(--repro-bg, #f3f6fb);">
                 <div id="reproSowModalMount"></div>
               </div>
+
             </div>
           </div>
         </div>
@@ -422,13 +430,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // State object (shared with views)
   // =========================================================
   const state = {
-    PAGE_SIZE: 5,
+    PAGE_SIZE: 6, // ✅ slightly denser grid on big screens
 
     CYCLE_PAGE_SIZE: 4,
     cyclePage: 1,
 
     sowPage: 1,
     sowTerm: "",
+    sowStatus: "all", // ✅ NEW: dropdown filter (views will use this)
+    sowTermDraft: "", // ✅ NEW: input draft (Apply button commits this)
     activeSowId: null,
     activeCycleId: null,
 
@@ -451,7 +461,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     selectionView: "list",
     selectionSexFilter: "all",
 
-    // ✅ NEW: decision filter tabs (All | Pending | Sell | Retain)
+    // ✅ decision filter tabs (All | Pending | Sell | Retain)
     selectionDecisionFilter: "all",
 
     dom: { sowCardsWrap, sowPager },
@@ -741,6 +751,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (act === "retryLoad") return void loadAllSafe();
         if (act === "goLogin") return void (window.location.href = "/login");
 
+        // ✅ NEW: Apply/Reset filters (Search + Status)
+        if (act === "applySowFilters") {
+          const term = (document.getElementById("reproductionSearch")?.value || "").trim();
+          const st = (document.getElementById("reproStatusFilter")?.value || "all").trim();
+
+          state.sowTermDraft = term;
+          state.sowTerm = term;
+
+          state.sowStatus = st || "all";
+          state.sowPage = 1;
+
+          return void views?.renderSowCards?.();
+        }
+
+        if (act === "resetSowFilters") {
+          const inEl = document.getElementById("reproductionSearch");
+          const selEl = document.getElementById("reproStatusFilter");
+
+          if (inEl) inEl.value = "";
+          if (selEl) selEl.value = "all";
+
+          state.sowTermDraft = "";
+          state.sowTerm = "";
+          state.sowStatus = "all";
+          state.sowPage = 1;
+
+          return void views?.renderSowCards?.();
+        }
+
         if (act === "sowPrev") {
           state.sowPage = Math.max(1, state.sowPage - 1);
           return void views?.renderSowCards?.();
@@ -750,13 +789,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           return void views?.renderSowCards?.();
         }
 
-        // ✅ NEW: Selection decision tabs (All | Pending | Sell | Retain)
-        // NOTE: this is the required handler for data-act="selDecisionTab" in reproduction.views.js
+        // ✅ Selection decision tabs (All | Pending | Sell | Retain)
         if (act === "selDecisionTab") {
           state.selectionDecisionFilter = btn.getAttribute("data-filter") || "all";
           state.pigletPageSelection = 1;
 
-          // Back to list when changing filter
           state.selectionView = "list";
           state.selectedPigletTagForSelection = "";
 
@@ -792,7 +829,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           state.growthSexFilter = "all";
           state.selectionSexFilter = "all";
 
-          // ✅ reset decision filter on new sow open (optional but sane)
           state.selectionDecisionFilter = "all";
 
           views?.renderSowCards?.();
@@ -834,7 +870,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             state.selectedPigletTagForSelection = "";
             state.selectedPigletTagForGrowth = "";
 
-            // ✅ keep current decision filter or reset; choose reset for clarity
             state.selectionDecisionFilter = "all";
             state.pigletPageSelection = 1;
 
@@ -870,7 +905,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           state.selectedPigletTagForGrowth = "";
           state.selectedPigletTagForSelection = "";
 
-          // ✅ reset selection decision filter when opening a cycle
           state.selectionDecisionFilter = "all";
           state.pigletPageSelection = 1;
 
@@ -1000,7 +1034,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.selectedPigletTagForGrowth = "";
     state.selectedPigletTagForSelection = "";
 
-    // ✅ keep filters sane when changing cycles list
     state.selectionDecisionFilter = "all";
     state.pigletPageSelection = 1;
 
@@ -1010,10 +1043,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.addEventListener("change", (e) => {
     if (e.target?.id === "cycleFilterSelect") handleCycleFilterChange(e.target);
+
+    // ✅ Optional: changing status dropdown can update the draft, but does not re-render until Apply
+    if (e.target?.id === "reproStatusFilter") {
+      state.sowStatus = String(e.target.value || "all").trim();
+      // If you want instant apply on change, uncomment:
+      // state.sowPage = 1;
+      // views?.renderSowCards?.();
+    }
   });
 
   // =========================================================
-  // Input handling (debounced search to reduce re-render spam)
+  // Input handling (debounced search draft)
+  // - Search now waits for "Apply" button to actually filter
   // =========================================================
   let searchT = null;
   function debounce(fn, ms = 150) {
@@ -1024,9 +1066,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const onSearchInput = debounce((val) => {
-    state.sowTerm = val || "";
-    state.sowPage = 1;
-    views?.renderSowCards?.();
+    // ✅ draft only; Apply button commits to state.sowTerm
+    state.sowTermDraft = val || "";
   }, 120);
 
   document.addEventListener("input", (e) => {
@@ -1046,6 +1087,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (e.target?.id === "selectionFilterInput") {
+      // kept for backward compatibility (selection now uses decision tabs)
       state.pigletSelectionFilter = e.target.value || "";
       state.pigletPageSelection = 1;
       state.selectionView = "list";
@@ -1060,7 +1102,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Boot
   // =========================================================
   if (searchInput && typeof searchInput.value === "string" && searchInput.value.trim()) {
+    // If server rendered a value, treat it as the applied filter
+    state.sowTermDraft = searchInput.value || "";
     state.sowTerm = searchInput.value || "";
+  }
+
+  if (statusFilterEl) {
+    state.sowStatus = String(statusFilterEl.value || "all").trim();
   }
 
   await loadAllSafe();

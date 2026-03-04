@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
       messageEl.textContent = "Registration successful! Redirecting to login...";
 
       setTimeout(() => {
-        window.location.href = "login.html"; // Updated to .html if you aren't using EJS routes
+        window.location.href = "/login";
       }, 2000);
 
     } catch (err) {

@@ -16,7 +16,7 @@ function loadAdminStats() {
         const data = JSON.parse(text);
         if (!data.success) {
           alert("Access denied.");
-          window.location.href = "login.html";
+          window.location.href = "/login";
           return;
         }
 
@@ -39,7 +39,7 @@ function logout() {
   fetch("http://localhost:5000/api/auth/logout", {
     method: "POST",
     credentials: "include"
-  }).then(() => window.location.href = "login.html");
+  }).then(() => window.location.href = "/login");
 }
 
 // USER & ACCESS CONTROL
