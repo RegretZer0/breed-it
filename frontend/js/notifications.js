@@ -362,6 +362,12 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   }
 
   /* =========================
+    PUBLIC HOOK (so navbar.js can call the real implementation)
+  ========================= */
+  window.__notificationsApi = window.__notificationsApi || {};
+  window.__notificationsApi.markAllRead = markAllRead;
+
+  /* =========================
       LOAD
   ========================= */
   async function load() {

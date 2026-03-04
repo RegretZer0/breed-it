@@ -9,96 +9,411 @@
 }
 
 /* =========================
-   HELP CONTAINER
+   PAGE CONTAINER
 ========================= */
 .help-container {
   padding: 24px;
   padding-top: 90px;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: auto;
   width: 100%;
 }
 
 /* =========================
-   HERO SECTION (GREEN HEADER)
+   HERO (THEME)
 ========================= */
 .help-hero {
   background: linear-gradient(135deg, #1fbf8f, #16a085);
-  color: white;
-  padding: 40px 28px;
+  color: #fff;
+  padding: 26px 22px;
   border-radius: 24px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
-  margin-bottom: 40px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.10);
 }
 
 .help-hero h2 {
   margin: 0;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 .help-hero p {
-  margin-top: 8px;
-  opacity: 0.9;
+  margin-top: 6px;
+  opacity: 0.92;
   font-size: 14px;
 }
 
+.help-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 /* =========================
-   HELP OPTIONS WRAPPER
+   OPTIONS (1 ROW PER CARD)
 ========================= */
 .help-options {
-  display: flex;
-  flex-direction: column;
-  gap: 28px; /* more space between cards */
   margin-top: 10px;
 }
 
-/* =========================
-   HELP CARDS (SOFT FLOATING)
-========================= */
-.help-card {
-  background: white;
-  border-radius: 22px;
-  padding: 24px 26px; /* more internal breathing room */
+.help-row-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 18px 18px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  gap: 14px;
   width: 100%;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.03);
 }
 
-/* Hover effect */
-.help-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+.help-row-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.09);
 }
 
-/* LEFT SIDE */
-.card-left {
+.row-card-left {
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-weight: 600;
-  color: #333;
+  gap: 14px;
+  min-width: 0;
 }
 
-/* ICON STYLE */
-.card-icon {
-  background: rgba(31, 191, 143, 0.1);
+.row-card-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: rgba(31, 191, 143, 0.12);
   color: #1fbf8f;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
+  flex: 0 0 auto;
 }
 
-/* RIGHT ARROW */
-.arrow {
-  color: #bdbdbd;
-  font-size: 16px;
+.row-card-title {
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.15;
+}
+
+.row-card-sub {
+  margin-top: 3px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.row-card-right {
+  color: #b7b7b7;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+/* =========================
+   MODAL THEME SHELL
+========================= */
+.help-modal-shell {
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.15);
+}
+
+.help-modal-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: rgba(31, 191, 143, 0.12);
+  color: #1fbf8f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.help-pane {
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
+}
+
+/* Pane icon */
+.pane-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  background: rgba(31, 191, 143, 0.12);
+  color: #1fbf8f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================
+   LEFT PANE BULLETS
+========================= */
+.help-bullets li {
+  padding: 10px 0;
+}
+
+.help-bullets .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(31, 191, 143, 0.25);
+  border: 2px solid rgba(31, 191, 143, 0.35);
+  margin-top: 6px;
+  flex: 0 0 auto;
+}
+
+/* Common issue cards */
+.issue-card {
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 16px;
+  padding: 12px 12px;
+  background: #fbfcfc;
+}
+
+/* =========================
+   FORMS (SMALLER INPUTS)
+========================= */
+.help-input {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.help-textarea {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 160px;
+}
+
+.form-label {
+  font-weight: 700;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.btn-help-primary {
+  background: #1fbf8f;
+  border-color: #1fbf8f;
+  color: #fff;
+  font-weight: 800;
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+.btn-help-primary:hover {
+  background: #16a085;
+  border-color: #16a085;
+  color: #fff;
+}
+
+.btn-help-soft {
+  background: rgba(31, 191, 143, 0.12);
+  border: 1px solid rgba(31, 191, 143, 0.25);
+  color: #0f7f68;
+  font-weight: 800;
+  border-radius: 12px;
+}
+
+.btn-help-soft:hover {
+  background: rgba(31, 191, 143, 0.18);
+  color: #0f7f68;
+}
+
+/* =========================
+   TICKET HISTORY CARD STYLE (used by your JS renderer)
+========================= */
+.ticket-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.ticket-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket-ref {
+  font-weight: 900;
+  font-size: 12px;
+  color: #0f7f68;
+}
+
+.ticket-subject {
+  font-weight: 900;
+  font-size: 14px;
+  color: #111827;
+}
+
+.ticket-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ticket-msg {
+  margin-top: 10px;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ticket-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(0,0,0,0.05);
+  color: #374151;
+}
+
+/* Status pills */
+.ticket-pill.open { background: rgba(59,130,246,0.12); color: #1d4ed8; }
+.ticket-pill.in_progress { background: rgba(245,158,11,0.14); color: #b45309; }
+.ticket-pill.resolved { background: rgba(16,185,129,0.14); color: #047857; }
+.ticket-pill.closed { background: rgba(107,114,128,0.14); color: #374151; }
+
+/* Priority pills */
+.ticket-pill.low { background: rgba(107,114,128,0.14); color: #374151; }
+.ticket-pill.normal { background: rgba(59,130,246,0.12); color: #1d4ed8; }
+.ticket-pill.high { background: rgba(245,158,11,0.14); color: #b45309; }
+.ticket-pill.urgent { background: rgba(239,68,68,0.14); color: #b91c1c; }
+
+/* =========================
+   RESPONSIVE TWEAKS
+========================= */
+@media (max-width: 576px) {
+  .help-container {
+    padding: 16px;
+    padding-top: 82px;
+  }
+
+  .help-hero {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .help-hero h2 {
+    font-size: 22px;
+  }
+
+  .help-row-card {
+    padding: 16px 14px;
+    border-radius: 18px;
+  }
+
+  .row-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    font-size: 17px;
+  }
+
+  .help-textarea {
+    min-height: 140px;
+  }
+}
+
+/* =========================
+   Ticket History Modal (matched snippet classes)
+========================= */
+.help-modal-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  background: #ffffff;
+}
+
+.help-modal-body {
+  padding: 16px 16px 18px;
+}
+
+.help-ic {
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background: rgba(31, 191, 143, 0.12);
+  color: #1fbf8f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.help-sub {
+  line-height: 1.2;
+}
+
+.help-close {
+  opacity: 0.85;
+}
+
+.help-card {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.help-card-body {
+  padding: 14px 14px;
+}
+
+.help-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.help-control {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.help-btn {
+  border-radius: 14px;
+  font-weight: 800;
+  padding: 10px 12px;
+}
+
+.ticket-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* Make the list + pager comfortable on mobile */
+@media (max-width: 576px) {
+  .help-modal-header {
+    padding: 14px 14px;
+  }
+  .help-modal-body {
+    padding: 14px 12px 16px;
+  }
+  .help-card-body {
+    padding: 12px 12px;
+  }
 }
