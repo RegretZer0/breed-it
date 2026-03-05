@@ -80,28 +80,9 @@ async function runSwineTransitions() {
       }
     }
 
-    // --- PART 2: AUTO-CONFIRM PREGNANCY ---
-    const reportsToConfirm = await HeatReport.find({
-      status: { $in: ["under_observation", "AI Scheduled"] },
-      next_heat_check: { $exists: true, $ne: null, $lte: now },
-    });
-
-    for (const report of reportsToConfirm) {
-      report.status = "pregnant";
-
-      const baseDate = toValidDate(report.ai_confirmed_at) || now;
-      const farrowDate = new Date(baseDate.getTime());
-      farrowDate.setDate(farrowDate.getDate() + 115);
-      report.expected_farrowing = farrowDate;
-
-      await report.save();
-
-      await Swine.findByIdAndUpdate(report.swine_id, {
-        current_status: "Pregnant",
-      });
-
-      console.log(`Swine ${report.swine_id} auto-confirmed as Pregnant (Virtual Time: ${now.toLocaleDateString()}).`);
-    }
+    // --- PART 2: AUTO-CONFIRM PREGNANCY (REMOVED/DISABLED) ---
+    // This section was removed to allow for manual confirmation in heatReportRoutes.js
+    // Swine will now stay "Under Observation" until a manager clicks Confirm Pregnancy.
 
     // --- PART 3: FARROWING, LACTATING, & OPEN TRANSITIONS ---
     const activePregnancies = await HeatReport.find({
@@ -158,7 +139,6 @@ async function runSwineTransitions() {
     }
 
     // --- PART 4: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
-    // ✅ FIX: Use 'now.getTime()' to ensure we calculate 7 days back from the WARPED date
     const sevenDaysAgo = new Date(now.getTime());
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
@@ -173,7 +153,6 @@ async function runSwineTransitions() {
       const weaningDate = toValidDate(lastCycle?.weaning_date);
       if (!weaningDate) continue;
 
-      // If weaning happened more than 7 days ago (relative to June 2026)
       if (weaningDate < sevenDaysAgo) {
         const recentReport = await HeatReport.findOne({
           swine_id: sow._id,
@@ -186,7 +165,6 @@ async function runSwineTransitions() {
 
           console.log(`Swine ${sow.swine_id} auto-culled (Virtual Time Check: 7 days post-weaning).`);
 
-          // Notify the Manager
           const managerId = sow.registered_by || sow.manager_id;
           if (managerId) {
             await Notification.create({
