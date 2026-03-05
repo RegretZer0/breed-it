@@ -15,9 +15,16 @@
         </div>
       </div>
 
-      <button id="closeReportModal" class="modal-close" type="button" aria-label="Close">
-        <i class="bi bi-x-lg"></i>
-      </button>
+      <!-- Header actions (Confirm Farrowing appears here when JS enables it) -->
+      <div class="rd-header-actions">
+        <button id="confirmFarrowingBtn" style="display:none;" class="rd-action rd-primary" type="button">
+          <i class="bi bi-egg-fried"></i> Confirm Farrowing
+        </button>
+
+        <button id="closeReportModal" class="modal-close" type="button" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
     </div>
 
     <!-- BODY -->
@@ -30,14 +37,14 @@
           <!-- LEFT: pig avatar + swine meta -->
           <div class="rd-swine-wrap d-flex align-items-start gap-3">
 
-            <!-- NEW: Pig profile slot -->
+            <!-- Pig profile slot -->
             <div class="rd-avatar">
               <img
                 id="reportSwinePhoto"
-                src="/images/pig-default.png"
+                src="/images/default-pig-profile.png"
                 alt="Swine profile"
                 loading="lazy"
-                onerror="this.src='/images/pig-default.png';"
+                onerror="this.onerror=null; this.src='/images/default-pig-profile.png';"
               />
             </div>
 
@@ -47,14 +54,14 @@
 
               <div class="rd-submeta mt-2">
 
-                <!-- Date chip (labeled) -->
+                <!-- Date chip -->
                 <span class="rd-chip" id="reportCreatedAt">
                   <i class="bi bi-calendar3"></i>
                   <span class="rd-chip-label">Date</span>
                   <span class="rd-chip-text">—</span>
                 </span>
 
-                <!-- CHANGED: health status pill -->
+                <!-- Health status pill -->
                 <span class="rd-chip" id="reportHealthStatus" data-health="">
                   <i class="bi bi-heart-pulse"></i>
                   <span class="rd-chip-label">Health</span>
@@ -182,10 +189,6 @@
 
         <button id="followUpBtn" style="display:none;" class="rd-action rd-warn" type="button">
           <i class="bi bi-arrow-repeat"></i> Cycle Failed
-        </button>
-
-        <button id="confirmFarrowingBtn" style="display:none;" class="rd-action rd-primary" type="button">
-          <i class="bi bi-egg-fried"></i> Confirm Farrowing
         </button>
 
         <button id="closeReportModalBtn" class="rd-action rd-secondary" type="button">

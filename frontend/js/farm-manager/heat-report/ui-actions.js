@@ -130,6 +130,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   let urlAutoOpened = false;
 
+  /* =========================
+     URL HELPERS
+  ========================= */
   function getUrlReportId() {
     const sp = new URLSearchParams(window.location.search);
     return sp.get("reportId");
@@ -177,6 +180,39 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   let archivedAll = [];
   let archivedFiltered = [];
 
+  //Helper - Normalize Life Cycle Status
+  function normalizeLifecycleStatus(r) {
+    const raw =
+      r?.status ??
+      r?.cycle_status ??
+      r?.heat_cycle_status ??
+      r?.cycleStage ??
+      r?.cycleStatus ??
+      "";
+
+    const s = safeLower(raw).replace(/\s+/g, "_");
+
+    const map = {
+      awaiting_farrowing: "farrowing_ready",
+      awaiting_farrow: "farrowing_ready",
+      farrowing: "farrowing_ready",
+      farrowing_due: "farrowing_ready"
+    };
+
+    return map[s] || s;
+  }
+
+  function getExpectedFarrowingDate(r) {
+    return (
+      r?.expected_farrowing ||
+      r?.expected_farrowing_date ||
+      r?.expectedFarrowing ||
+      r?.farrowing_due ||
+      r?.farrowing_due_date ||
+      null
+    );
+  }
+  
   /* =========================
      STATUS RESOLUTION
   ========================= */
@@ -241,9 +277,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     return d;
   }
 
-  // =========================
-  // SCROLL/OVERLAY HELPERS (centralized)
-  // =========================
+  /* =========================
+     SCROLL / OVERLAY HELPERS
+  ========================= */
   function lockScroll() {
     document.body.style.overflow = "hidden";
   }
@@ -273,6 +309,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     unlockScrollIfNoOverlayOpen();
   }
 
+  /* =========================
+     FEEDBACK MODAL HELPERS
+  ========================= */
   function setFeedbackVariant(variant) {
     if (!appFeedbackIconWrap || !appFeedbackIcon) return;
 
@@ -332,6 +371,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     });
   }
 
+  /* =========================
+     CONFIRM MODAL HELPERS
+  ========================= */
   function showConfirm({ title = "Confirm", sub = "Please confirm to continue.", body = "" } = {}) {
     return new Promise((resolve) => {
       if (!appConfirmModal) {
@@ -380,7 +422,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     FARROWING MODAL STACK FIX + CONTROLS
+     FARROWING MODAL CONTROLS
   ========================= */
   function openFarrowingModal() {
     if (!farrowingModal) return;
@@ -419,9 +461,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   maleCountInput?.addEventListener("input", syncTotalLive);
   femaleCountInput?.addEventListener("input", syncTotalLive);
 
-  // =========================
-  // URL + CHIP HELPERS
-  // =========================
+  /* =========================
+     URL + CHIP HELPERS
+  ========================= */
   function toPublicUrl(path) {
     if (!path) return "";
     if (/^https?:\/\//i.test(path)) return path;
@@ -441,7 +483,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     MODAL HELPERS
+     REPORT DETAILS MODAL HELPERS
   ========================= */
   function closeReportDetails() {
     if (!reportDetailsModal) return;
@@ -464,10 +506,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (e.target === reportDetailsModal) closeReportDetails();
   });
 
-  // =========================
-  // REJECT MODAL (themed) close wiring
-  // (IDs must exist: closeRejectModal, cancelRejectModalBtn)
-  // =========================
+  /* =========================
+     REJECT MODAL CONTROLS
+  ========================= */
   const closeRejectModal = document.getElementById("closeRejectModal");
   const cancelRejectModalBtn = document.getElementById("cancelRejectModalBtn");
 
@@ -483,10 +524,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (e.target === rejectReasonModal) closeRejectModalFn();
   });
 
-  // =========================
-  // AI CONFIRM MODAL (themed) close wiring
-  // (IDs must exist: closeAIConfirmModal, cancelAIConfirmModal)
-  // =========================
+  /* =========================
+     AI CONFIRM MODAL CONTROLS
+  ========================= */
   const closeAIConfirmModal = document.getElementById("closeAIConfirmModal");
   const cancelAIConfirmModal = document.getElementById("cancelAIConfirmModal");
 
@@ -502,6 +542,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (e.target === aiConfirmModal) closeAIConfirmModalFn();
   });
 
+  /* =========================
+     ARCHIVE MODAL CONTROLS
+  ========================= */
   function openArchiveModal() {
     if (!archiveModal) return;
 
@@ -709,7 +752,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (countFarrowingReady) {
       countFarrowingReady.textContent = reports.filter((r) => {
         const st = cycle(r);
-        if (!["pregnant", "farrowing_ready"].includes(st) || !r.expected_farrowing) return false;
+        if (st !== "pregnant" || !r.expected_farrowing) return false;
 
         const daysStr = getDaysLeft(r.expected_farrowing);
         if (daysStr === "Overdue" || daysStr === "TODAY") return true;
@@ -753,6 +796,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
     pageItems.forEach((r) => {
       const probability = r.heat_probability ?? 0;
+
+      console.log("BADGE SOURCE CHECK:", {
+        id: r._id,
+        status: r.status,
+        report_status: r.report_status,
+        workflow_status: r.workflow_status,
+        review_status: r.review_status,
+        reportStatus: r.reportStatus
+      });
 
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
@@ -949,7 +1001,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     PROGRESS PANEL
+    PROGRESS PANEL
   ========================= */
   async function openProgressPanel(reportId) {
     if (!progressPanel) return;
@@ -972,6 +1024,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       if (!data.success) return;
 
       const r = data.report;
+      console.log("REPORT RAW:", {
+        status: r?.status,
+        report_status: r?.report_status,
+        workflow_status: r?.workflow_status,
+        review_status: r?.review_status,
+        reportStatus: r?.reportStatus,
+        cycle_status: r?.cycle_status,
+        heat_cycle_status: r?.heat_cycle_status
+      });
 
       const farmerEl = document.getElementById("progressFarmerName");
       if (farmerEl) {
@@ -988,7 +1049,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       timelineContainer.innerHTML = "";
 
       const events = [];
-      const st = safeLower(getCycleStatus(r));
+
+      // Use HeatReport.status as the lifecycle source of truth
+      const st = normalizeLifecycleStatus(r);
 
       // Prefer correct backend fields
       const aiDate = r.ai_confirmed_at || r.ai_date || null;
@@ -1000,9 +1063,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           icon: "bi-heart-pulse-fill",
           date: "Currently Active"
         });
-      }
 
-      if (["farrowing_ready", "lactating"].includes(st)) {
         events.push({
           title: "Farrowing Confirmed",
           desc: "Birth process recorded successfully.",
@@ -1011,28 +1072,26 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         });
       }
 
-      if (["pregnant", "farrowing_ready", "lactating"].includes(st)) {
+      if (st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
         events.push({
-          title: "Pregnant & Under 115 Days Monitoring",
+          title: "Pregnant Monitoring",
           desc: "Pregnancy confirmed. Monitoring gestation period.",
           icon: "bi-person-hearts",
           date: r.expected_farrowing ? `Due: ${new Date(r.expected_farrowing).toLocaleDateString()}` : "Ongoing"
         });
       }
 
-      if (["under_observation", "pregnant", "farrowing_ready", "lactating"].includes(st)) {
+      if (st === "under_observation" || st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
         events.push({
-          title: "Under 30 Days Monitoring",
-          desc: "Monitoring for 'return to heat' signs post-AI.",
+          title: "Under Observation",
+          desc: "Monitoring for return to heat signs post-AI.",
           icon: "bi-eye",
           date: aiDate ? `Started: ${new Date(aiDate).toLocaleDateString()}` : "Ongoing"
         });
-      }
 
-      if (["ai_confirmed", "under_observation", "pregnant", "farrowing_ready", "lactating"].includes(st)) {
         events.push({
           title: "Artificial Insemination Performed",
-          desc: "Farm Manager/Encoder confirmed Artificial Insemination procedure.",
+          desc: "Farm Manager confirmed Artificial Insemination procedure.",
           icon: "bi-droplet-half",
           date: aiDate ? new Date(aiDate).toLocaleDateString() : "Date N/A"
         });
@@ -1074,21 +1133,18 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const currentStageEl = document.getElementById("currentStage");
       if (currentStageEl) currentStageEl.textContent = st.replace(/_/g, " ").toUpperCase();
 
-      // ✅ FIX: Time Remaining should use the correct date per stage
+      // Time Remaining uses the correct date per stage
       const remainingEl = document.getElementById("remainingDays");
       if (remainingEl) {
         let label = "—";
 
         if (st === "approved") {
-          // AI due date is stored in next_heat_check on approve
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (AI Due)` : "—";
-        } else if (st === "under_observation" || st === "ai_confirmed") {
-          // pregnancy check date is also next_heat_check after confirm-ai
+        } else if (st === "under_observation") {
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (Pregnancy Check)` : "—";
         } else if (st === "pregnant" || st === "farrowing_ready") {
           label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing)} (Farrowing Due)` : "—";
         } else if (st === "lactating") {
-          // optional: show weaning due (farrow date + 30 days)
           const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
           if (farrowDate) {
             const weaningDue = new Date(farrowDate);
@@ -1109,7 +1165,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
     }
   }
-  
+
   /* =========================
      VIEW DETAILS
   ========================= */
@@ -1126,9 +1182,11 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const r = data.report;
       currentReportId = id;
 
-      // =========================
+      /* =========================
+         REPORT DETAILS RENDERING
+      ========================= */
+
       // Pig profile photo (default pig profile)
-      // =========================
       if (reportSwinePhoto) {
         const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
         reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
@@ -1154,9 +1212,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
 
-      // =========================
-      // Farmer mini card (View/Hide) — UPDATED default avatar
-      // =========================
+      // Farmer mini card (View/Hide)
       (function setupFarmerMiniCard() {
         if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
 
@@ -1230,7 +1286,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
       }
 
-      // Notes / remarks (FIXED: prioritize schema field "remarks" and trim)
+      // Notes / remarks
       const notesEl = document.getElementById("reportNotes");
       if (notesEl) {
         const notes =
@@ -1249,7 +1305,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           : `<em class="text-muted">No remarks provided.</em>`;
       }
 
-      // Created at + cycle stage chips
+      // Created at chip
       const d = r.createdAt ? new Date(r.createdAt) : null;
       const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
       setChipText("reportCreatedAt", createdText);
@@ -1320,7 +1376,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         });
       }
 
-      // Action buttons
+      /* =========================
+         ACTION BUTTONS (ALIGNED TO HEAT REPORT ROUTES)
+      ========================= */
       if (approveBtn) approveBtn.style.display = "none";
       if (rejectBtn) rejectBtn.style.display = "none";
       if (confirmAIBtn) confirmAIBtn.style.display = "none";
@@ -1328,36 +1386,32 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
       if (followUpBtn) followUpBtn.style.display = "none";
 
-      switch (safeLower(r.status)) {
-        case "pending":
-          if (approveBtn) approveBtn.style.display = "inline-block";
-          if (rejectBtn) rejectBtn.style.display = "inline-block";
-          break;
+      // HeatReportRoutes uses HeatReport.status for lifecycle
+      const st = normalizeLifecycleStatus(r);
 
-        case "approved":
-          if (confirmAIBtn) confirmAIBtn.style.display = "inline-block";
-          break;
+      if (st === "pending") {
+        if (approveBtn) approveBtn.style.display = "inline-flex";
+        if (rejectBtn) rejectBtn.style.display = "inline-flex";
+      } else if (st === "approved") {
+        if (confirmAIBtn) confirmAIBtn.style.display = "inline-flex";
+      } else if (st === "under_observation") {
+        if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-flex";
+        if (followUpBtn) followUpBtn.style.display = "inline-flex";
+      } else if (st === "pregnant" || st === "farrowing_ready") {
+        const expected = getExpectedFarrowingDate(r);
 
-        case "ai_confirmed":
-        case "under_observation":
-          if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
-          if (followUpBtn) followUpBtn.style.display = "inline-block";
-          break;
+        if (expected) {
+          const daysStr = getDaysLeft(expected);
+          const daysNum = parseInt(daysStr, 10);
 
-        case "pregnant":
-        case "farrowing_ready": {
-          if (!r.expected_farrowing) break;
+          const isReadyWindow =
+            daysStr === "Overdue" ||
+            daysStr === "TODAY" ||
+            (!isNaN(daysNum) && daysNum <= 7);
 
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-
-          const farrowDate = new Date(r.expected_farrowing);
-          farrowDate.setHours(0, 0, 0, 0);
-
-          if (today >= farrowDate) {
-            if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "inline-block";
+          if (isReadyWindow) {
+            if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "inline-flex";
           }
-          break;
         }
       }
 
@@ -1523,7 +1577,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     };
   }
 
-  // ✅ Fix: backend route is /still-heat (not /cycle-failed)
+  // backend route is /still-heat
   if (followUpBtn) {
     followUpBtn.onclick = async () => {
       const ok = await showConfirm({
@@ -1537,7 +1591,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     };
   }
 
-  // ✅ Fix: Open farrowing modal ABOVE report details + reset values + calc total live
+  // Open farrowing modal above report details + reset values + calc total live
   if (confirmFarrowingBtn) {
     confirmFarrowingBtn.onclick = () => {
       if (!farrowingModal) return;
