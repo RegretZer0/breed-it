@@ -14,6 +14,7 @@ const UserModel = require("../models/UserModel");
 const AIRecord = require("../models/AIRecord");
 const logAction = require("../middleware/logger");
 const SystemSettings = require("../models/SystemSettings");
+const timeHelper = require("../utils/timeHelper");
 
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -904,7 +905,7 @@ router.get(
         query.manager_id = user.role === "farm_manager" ? user.id : user.managerId;
       }
 
-      // ✅ TIME WARP: Get the virtual "Today"
+      // ✅ TIME WARP: Get the virtual "Today" from your helper
       const virtualNow = await timeHelper.getVirtualNow();
 
       const reports = await HeatReport.find(query).populate("swine_id", "swine_id").lean();
@@ -920,6 +921,7 @@ router.get(
       reports.forEach((r) => {
         const swineCode = r.swine_id?.swine_id || "Unknown";
 
+        // 1. AI DUE
         if (r.status === "approved" && r.next_heat_check) {
           events.push({
             id: `${r._id}-ai-due`,
@@ -934,6 +936,7 @@ router.get(
           });
         }
 
+        // 2. PREGNANCY CHECK
         if (r.status === "under_observation" && r.next_heat_check) {
           events.push({
             id: `${r._id}-preg-check`,
@@ -948,6 +951,7 @@ router.get(
           });
         }
 
+        // 3. EXPECTED FARROWING
         if (r.status === "pregnant" && r.expected_farrowing) {
           events.push({
             id: `${r._id}-expected-farrow`,
@@ -962,6 +966,7 @@ router.get(
           });
         }
 
+        // 4. ACTUAL FARROWING (LACTATING)
         if (r.status === "lactating" && r.actual_farrowing_date) {
           events.push({
             id: `${r._id}-actual-farrow`,
@@ -976,9 +981,9 @@ router.get(
           });
         }
 
+        // 5. WEANING DUE CALCULATION
         const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
         if (r.status === "lactating" && farrowDate) {
-          // ✅ TIME WARP: weaning calculation based on farrowing date
           const weaningDate = new Date(farrowDate);
           weaningDate.setDate(weaningDate.getDate() + 30);
           events.push({
@@ -994,6 +999,7 @@ router.get(
           });
         }
 
+        // 6. WEANED (COMPLETED)
         if (r.status === "completed" && r.weaning_date) {
           events.push({
             id: `${r._id}-weaned`,
@@ -1009,6 +1015,7 @@ router.get(
         }
       });
 
+      // 7. HEAT DETECTION WINDOWS (OPEN SWINE)
       openSwine.forEach((s) => {
         const lastCycle =
           s.breeding_cycles && s.breeding_cycles.length > 0 ? s.breeding_cycles[s.breeding_cycles.length - 1] : null;
