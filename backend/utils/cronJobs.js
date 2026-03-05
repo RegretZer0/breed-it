@@ -23,7 +23,7 @@ async function runSwineTransitions() {
   const now = global.getNow ? global.getNow() : new Date();
 
   console.log(
-    `[${now.toLocaleString()}] Executing Swine transitions & AI reminders (5-min check)...`
+    `[${now.toLocaleString()}] ⏲️ Cron Check: Executing Swine transitions (Warp Active: ${global.timeControl?.isMocked || false})`
   );
 
   try {
@@ -37,7 +37,8 @@ async function runSwineTransitions() {
     };
 
     // --- PART 1: AI REMINDERS ---
-    const tomorrow = new Date(now);
+    // ✅ FIX: Use 'now' (Virtual Time) as the base for tomorrow
+    const tomorrow = new Date(now.getTime()); 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
@@ -55,7 +56,8 @@ async function runSwineTransitions() {
       const aiDateStr = aiDate.toISOString().split("T")[0];
 
       if (aiDateStr === tomorrowStr && report.farmer_id?.user_id) {
-        const todayStart = new Date(now);
+        // ✅ FIX: Use 'now' (Virtual Time) as the base for todayStart
+        const todayStart = new Date(now.getTime());
         todayStart.setHours(0, 0, 0, 0);
 
         const existingNotif = await Notification.findOne({
@@ -79,7 +81,6 @@ async function runSwineTransitions() {
     }
 
     // --- PART 2: AUTO-CONFIRM PREGNANCY ---
-    // ✅ UPDATED: Added "AI Scheduled" to the search to catch your warped swine
     const reportsToConfirm = await HeatReport.find({
       status: { $in: ["under_observation", "AI Scheduled"] },
       next_heat_check: { $exists: true, $ne: null, $lte: now },
@@ -89,7 +90,7 @@ async function runSwineTransitions() {
       report.status = "pregnant";
 
       const baseDate = toValidDate(report.ai_confirmed_at) || now;
-      const farrowDate = new Date(baseDate);
+      const farrowDate = new Date(baseDate.getTime());
       farrowDate.setDate(farrowDate.getDate() + 115);
       report.expected_farrowing = farrowDate;
 
@@ -103,7 +104,6 @@ async function runSwineTransitions() {
     }
 
     // --- PART 3: FARROWING, LACTATING, & OPEN TRANSITIONS ---
-    // ✅ UPDATED: Include "awaiting_farrowing" in the query
     const activePregnancies = await HeatReport.find({
       status: { $in: ["pregnant", "awaiting_farrowing"] },
       expected_farrowing: { $exists: true, $ne: null },
@@ -113,17 +113,14 @@ async function runSwineTransitions() {
       const farrowDate = toValidDate(report.expected_farrowing);
       if (!farrowDate) continue;
 
-      const diffTime = now - farrowDate;
+      const diffTime = now.getTime() - farrowDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       let newSwineStatus = null;
       let shouldNotifyWeaning = false;
 
-      // Day 114/115: Swine is ready to give birth
       if (diffDays >= 0 && diffDays < 2) {
         newSwineStatus = "Farrowing";
-        
-        // ✅ NEW: Transition report to "awaiting_farrowing" so the button appears in UI
         if (report.status !== "awaiting_farrowing") {
           report.status = "awaiting_farrowing";
           await report.save();
@@ -132,7 +129,6 @@ async function runSwineTransitions() {
         newSwineStatus = "Lactating";
       } else if (diffDays >= 30) {
         newSwineStatus = "Open";
-
         if (report.status !== "completed") {
           report.status = "completed";
           await report.save();
@@ -162,7 +158,8 @@ async function runSwineTransitions() {
     }
 
     // --- PART 4: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
-    const sevenDaysAgo = new Date(now);
+    // ✅ FIX: Use 'now.getTime()' to ensure we calculate 7 days back from the WARPED date
+    const sevenDaysAgo = new Date(now.getTime());
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const openSows = await Swine.find({ current_status: "Open" });
@@ -176,6 +173,7 @@ async function runSwineTransitions() {
       const weaningDate = toValidDate(lastCycle?.weaning_date);
       if (!weaningDate) continue;
 
+      // If weaning happened more than 7 days ago (relative to June 2026)
       if (weaningDate < sevenDaysAgo) {
         const recentReport = await HeatReport.findOne({
           swine_id: sow._id,
@@ -186,13 +184,15 @@ async function runSwineTransitions() {
           sow.current_status = "Culled/Sold";
           await sow.save();
 
-          console.log(`Swine ${sow.swine_id} auto-culled (Virtual Time Check).`);
+          console.log(`Swine ${sow.swine_id} auto-culled (Virtual Time Check: 7 days post-weaning).`);
 
-          if (sow.manager_id) {
+          // Notify the Manager
+          const managerId = sow.registered_by || sow.manager_id;
+          if (managerId) {
             await Notification.create({
-              user_id: sow.manager_id,
+              user_id: managerId,
               title: "Productivity Cull",
-              message: `Swine ${sow.swine_id} has been automatically culled. It failed to show heat signs within 7 days post-weaning.`,
+              message: `Swine ${sow.swine_id} has been automatically culled. It failed to show heat signs within 7 days post-weaning (Warp Check).`,
               type: "danger",
             });
           }

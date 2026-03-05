@@ -8,11 +8,11 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const { initHeatCron } = require("./utils/cronJobs");
 const fs = require("fs");
+const SystemSettings = require("./models/SystemSettings"); // ✅ Imported for initialization
 
 /* =========================
     MVP: GLOBAL TIME CONTROL
 ========================= */
-// This allows teleporting the server into the future for testing
 global.timeControl = {
   offsetMS: 0, 
   isMocked: false
@@ -21,6 +21,25 @@ global.timeControl = {
 // Global helper to get "Virtual Now" instead of real system time
 global.getNow = function() {
   return new Date(Date.now() + global.timeControl.offsetMS);
+};
+
+// Function to sync global variable with Database (Used at startup and on health check)
+const syncGlobalTimeWithDB = async () => {
+  try {
+    const settings = await SystemSettings.findOne();
+    if (settings && settings.mockDate) {
+      const virtualNow = new Date(settings.mockDate);
+      const realNow = Date.now();
+      global.timeControl.offsetMS = virtualNow.getTime() - realNow;
+      global.timeControl.isMocked = true;
+      console.log(`⏰ Time Warp Initialized: ${virtualNow.toLocaleString()}`);
+    } else {
+      global.timeControl.offsetMS = 0;
+      global.timeControl.isMocked = false;
+    }
+  } catch (err) {
+    console.error("❌ Failed to sync global time with DB:", err.message);
+  }
 };
 
 // ROUTES
@@ -54,11 +73,11 @@ app.use((req, res, next) => {
   res.locals.page_title = "BreedIT";
   res.locals.current_page = "";
   
-  // Create a function helper for EJS so it always gets the LATEST time
+  // Use function calls to ensure we get the CURRENT state of global.timeControl
   res.locals.getVirtualNow = () => global.getNow(); 
   res.locals.isTimeMocked = () => global.timeControl.isMocked;
   
-  // Keep these for simple variable access
+  // Update local variable for simple access
   res.locals.virtualNow = global.getNow();
   next();
 });
@@ -74,7 +93,7 @@ app.set("views", path.join(__dirname, "../frontend/views"));
 ========================= */
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:5000", "http://localhost:3000"],
+    origin: ["http://localhost:3000", "http://127.0.0.1:5000"],
     credentials: true,
   })
 );
@@ -150,8 +169,12 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 ========================= */
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
-  .then(() => {
+  .then(async () => {
     console.log("✅ MongoDB Connected");
+    
+    // ✅ NEW: Immediately sync time from DB so refreshes work from the start
+    await syncGlobalTimeWithDB();
+    
     initHeatCron();
     console.log("⏲️ Heat Observation Cron Job Initialized");
   })
@@ -194,16 +217,27 @@ app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/support", supportRoutes);
 
 /* =========================
-    HEALTH CHECK
+    HEALTH CHECK (TIME WARP SYNCED)
 ========================= */
-app.get("/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
-    service: "BreedIT Backend",
-    systemTime: new Date().toLocaleString(),
-    virtualTime: global.getNow().toLocaleString(),
-    isMocked: global.timeControl.isMocked
-  });
+app.get("/health", async (req, res) => {
+  try {
+    // Re-sync with DB to pick up any recent changes from Admin
+    await syncGlobalTimeWithDB();
+
+    res.json({ 
+      status: "ok", 
+      service: "BreedIT Backend",
+      systemTime: new Date().toISOString(),
+      virtualTime: global.getNow().toISOString(),
+      isMocked: global.timeControl.isMocked
+    });
+  } catch (err) {
+    console.error("Health check sync failed:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Time synchronization error" 
+    });
+  }
 });
 
 /* =========================
@@ -213,6 +247,9 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`⏰ Current Virtual Time: ${global.getNow().toLocaleString()}`);
+  // This will show 2024 initially then 2026 once the Mongo Promise resolves
+  setTimeout(() => {
+    console.log(`⏰ Current Virtual Time: ${global.getNow().toLocaleString()}`);
+  }, 2000);
   console.log("🔐 JWT Secret Loaded:", !!process.env.JWT_SECRET);
 });

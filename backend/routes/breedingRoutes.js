@@ -4,7 +4,8 @@ const router = express.Router();
 const SwinePerformance = require("../models/SwinePerformance");
 const AIRecord = require("../models/AIRecord");
 const Swine = require("../models/Swine");
-const Farmer = require("../models/UserFarmer"); // Add this
+const Farmer = require("../models/UserFarmer");
+const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Time Warp
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -15,6 +16,12 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
+    // ✅ Get the current "Logical Time" (2026 if warped)
+    const systemSettings = await SystemSettings.findOne();
+    const virtualNow = (systemSettings && systemSettings.mockDate) 
+                ? new Date(systemSettings.mockDate) 
+                : (global.getNow ? global.getNow() : new Date());
+
     // ----------------------
     // Fetch all swines for this manager
     // ----------------------
@@ -24,18 +31,24 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
         { farmer_id: { $in: (await Farmer.find({ registered_by: managerId })).map(f => f._id) } }
       ]
     });
-    console.log("Total swines for manager:", allSwines.length);
 
     // ----------------------
-    // Fetch performance and AI records
+    // Fetch performance and AI records (Only those that "exist" in current timeline)
     // ----------------------
-    const performance = await SwinePerformance.find({ manager_id: managerId }).populate("swine_id");
-    const ai = await AIRecord.find({ manager_id: managerId })
+    const performance = await SwinePerformance.find({ 
+        manager_id: managerId,
+        createdAt: { $lte: virtualNow } // ✅ Filter by Warp
+    }).populate("swine_id");
+
+    const ai = await AIRecord.find({ 
+        manager_id: managerId,
+        createdAt: { $lte: virtualNow } // ✅ Filter by Warp
+    })
       .populate("swine_id")
       .populate("male_swine_id");
 
     // ----------------------
-    // Performance Score
+    // Performance Score Logic (No changes needed to scoring math)
     // ----------------------
     const performanceScoresMap = {};
     performance.forEach(p => {
@@ -99,7 +112,6 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
       };
     });
 
-    // Include swines without performance records
     allSwines.forEach(s => {
       if (!performanceScoresMap[s.swine_id]) {
         performanceScoresMap[s.swine_id] = {
@@ -113,38 +125,38 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     const uniquePerf = Object.values(performanceScoresMap);
 
     // ----------------------
-    // Reproduction Score (age in months, first-year piglets)
+    // Reproduction Score (Time Warp Aware Age Calculation)
     // ----------------------
-    const now = new Date();
-    const offspringBySwine = {}; // { swineID: { total: x, firstYear: y } }
-    const swineAges = {}; // { swineID: ageInMonths }
+    const offspringBySwine = {}; 
+    const swineAges = {}; 
 
     performance.forEach(p => {
       if (!p.swine_id) return;
       const swineID = p.swine_id.swine_id;
 
-      // ✅ Use correct birth_date field
+      // ✅ Use virtualNow instead of real 'now'
       const birthDate = p.swine_id.birth_date ? new Date(p.swine_id.birth_date) : null;
-      const ageInMonths = birthDate ? (now - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
-      swineAges[swineID] = Math.min(ageInMonths, 24);
+      const ageInMonths = birthDate ? (virtualNow - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
+      swineAges[swineID] = Math.max(0, Math.min(ageInMonths, 24));
 
       const piglets = p.noOfPiglets || p.no_of_piglets || 0;
 
       if (!offspringBySwine[swineID]) offspringBySwine[swineID] = { total: 0, firstYear: 0 };
       offspringBySwine[swineID].total += piglets;
 
-      if (birthDate && ((new Date(p.recordDate || p.record_date)) - birthDate) / (1000 * 60 * 60 * 24 * 30) <= 12) {
+      const recordDate = new Date(p.recordDate || p.record_date);
+      if (birthDate && (recordDate - birthDate) / (1000 * 60 * 60 * 24 * 30) <= 12) {
         offspringBySwine[swineID].firstYear += piglets;
       }
     });
 
-    // Make sure all swines are included even without records
     allSwines.forEach(s => {
       if (!offspringBySwine[s.swine_id]) offspringBySwine[s.swine_id] = { total: 0, firstYear: 0 };
       if (!swineAges[s.swine_id]) {
         const birthDate = s.birth_date ? new Date(s.birth_date) : null;
-        const ageInMonths = birthDate ? (now - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
-        swineAges[s.swine_id] = Math.min(ageInMonths, 24);
+        // ✅ Use virtualNow here too
+        const ageInMonths = birthDate ? (virtualNow - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
+        swineAges[s.swine_id] = Math.max(0, Math.min(ageInMonths, 24));
       }
     });
 
@@ -164,7 +176,7 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     });
 
     // ----------------------
-    // Compatibility Score (by pair)
+    // Compatibility & Ranking Logic
     // ----------------------
     const compatibilityScores = [];
     ai.forEach(rec => {
@@ -184,24 +196,12 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
       });
     });
 
-    // ----------------------
-    // Ranking by Performance (individual)
-    // ----------------------
-    const performance_ranking = [...uniquePerf].sort(
-      (a, b) => b.performance_score - a.performance_score
-    );
+    const performance_ranking = [...uniquePerf].sort((a, b) => b.performance_score - a.performance_score);
+    const compatibility_ranking = [...compatibilityScores].sort((a, b) => b.compatibility_score - a.compatibility_score);
 
-    // ----------------------
-    // Ranking by Compatibility (pairs)
-    // ----------------------
-    const compatibility_ranking = [...compatibilityScores].sort(
-      (a, b) => b.compatibility_score - a.compatibility_score
-    );
-
-    // ----------------------
-    // Return report
-    // ----------------------
     res.json({
+      success: true,
+      reportDate: virtualNow.toDateString(), // ✅ Inform UI of report date
       total_swines: allSwines.length,
       performance_scores: uniquePerf,
       reproduction_scores: reproductionScores,

@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // MVP: SYNC VIRTUAL TIME
   // ============================
   // CRITICAL: We await this to ensure the offset is saved BEFORE we ask for stats
+  // This ensures the dashboard "Time Warp" is active
   await syncVirtualTime();
 
   // ============================
@@ -47,13 +48,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ============================
   // DASHBOARD STATS
   // ============================
-  // Now that time is synced, load the numbers
+  // Now that time is synced and the banner is prepared, load the numbers
   await loadDashboardStats(token);
 
   // ============================
   // CALENDAR (Single Instance)
   // ============================
   try {
+    // Pass virtual time awareness to calendar if your module supports it
     initFarmCalendar(BACKEND_URL, token);
   } catch (err) {
     console.error("Calendar init failed:", err);
@@ -72,6 +74,11 @@ async function loadDashboardStats(token) {
 
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
+
+    // If the backend sent back the virtual date it used, log it for verification
+    if (data.virtualDateUsed) {
+        console.log("📊 Stats calculated using Virtual Date:", data.virtualDateUsed);
+    }
 
     // Update the stat numbers in the UI
     Object.entries(data.stats).forEach(([key, value]) => {
@@ -96,36 +103,45 @@ async function loadDashboardStats(token) {
  */
 async function syncVirtualTime() {
   try {
+    // Calling /health (which we updated earlier to return virtualTime)
     const res = await fetch("/health");
     const data = await res.json();
     
     const timeDisplay = document.getElementById("currentVirtualTime");
-    const warpBanner = document.getElementById("timeWarpStatus"); // The banner in stats.ejs
+    const warpBanner = document.getElementById("timeWarpStatus"); 
+    const warpDateText = document.getElementById("warpDateText"); // Extra detail if you have it
     
     if (data.virtualTime) {
-      // 1. Calculate the offset
+      // 1. Calculate the offset and save it
       const serverTime = new Date(data.virtualTime).getTime();
       const localTime = Date.now();
       const offset = serverTime - localTime;
-
-      // 2. Save offset to localStorage
       localStorage.setItem('timeWarpOffset', offset.toString());
 
-      // 3. Update the UI clock
+      // 2. UI Updates
+      const vDate = new Date(data.virtualTime);
+
       if (timeDisplay) {
-        timeDisplay.textContent = new Date(data.virtualTime).toLocaleString();
-        
-        if (data.isMocked) {
-          // Show the banner we added to stats.ejs
-          if (warpBanner) {
-            warpBanner.style.setProperty('display', 'flex', 'important');
-          }
-          timeDisplay.style.color = "#d97706";
-          console.log("🚀 Time Warp Active: Dashboard synced to " + data.virtualTime);
+        timeDisplay.textContent = vDate.toLocaleString();
+      }
+      
+      if (data.isMocked) {
+        // Show the banner and update the text to show the 2026 date
+        if (warpBanner) {
+          warpBanner.style.setProperty('display', 'flex', 'important');
         }
+        if (warpDateText) {
+          warpDateText.textContent = vDate.toDateString();
+        }
+        
+        if (timeDisplay) timeDisplay.style.color = "#d97706";
+        console.log("🚀 Time Warp Active: Dashboard synced to " + data.virtualTime);
+      } else {
+        // Hide banner if not mocked
+        if (warpBanner) warpBanner.style.display = 'none';
       }
     }
   } catch (err) {
-    console.warn("Could not sync virtual time with server.");
+    console.warn("Could not sync virtual time with server. Dashboard may show real-time stats.");
   }
 }

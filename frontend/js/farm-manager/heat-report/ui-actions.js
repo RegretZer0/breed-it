@@ -1060,8 +1060,8 @@ function renderStats(reports) {
   }
 
   /* =========================
-     PROGRESS PANEL
-  ========================= */
+      PROGRESS PANEL
+    ========================= */
   async function openProgressPanel(reportId) {
     if (!progressPanel) return;
 
@@ -1185,26 +1185,34 @@ function renderStats(reports) {
       const currentStageEl = document.getElementById("currentStage");
       if (currentStageEl) currentStageEl.textContent = st.replace(/_/g, " ").toUpperCase();
 
-      // ✅ FIX: Time Remaining should use the correct date per stage
+      // ✅ UPDATED: Time Remaining now uses the Virtual Now aware backend route for Weaning
       const remainingEl = document.getElementById("remainingDays");
       if (remainingEl) {
         let label = "—";
 
         if (st === "approved") {
-          // AI due date is stored in next_heat_check on approve
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (AI Due)` : "—";
         } else if (st === "under_observation" || st === "ai_confirmed") {
-          // pregnancy check date is also next_heat_check after confirm-ai
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (Pregnancy Check)` : "—";
         } else if (st === "pregnant" || st === "farrowing_ready") {
           label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing)} (Farrowing Due)` : "—";
         } else if (st === "lactating") {
-          // optional: show weaning due (farrow date + 30 days)
-          const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
-          if (farrowDate) {
-            const weaningDue = new Date(farrowDate);
-            weaningDue.setDate(weaningDue.getDate() + 30);
-            label = `${getDaysLeft(weaningDue)} (Weaning Due)`;
+          try {
+            // Fetch synced weaning countdown from your NEW backend route
+            const weaningRes = await fetch(`${BACKEND_URL}/api/heat/weaning-date/${reportId}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const weaningData = await weaningRes.json();
+            
+            if (weaningData.success) {
+              // Uses the server-calculated daysRemaining (correctly synced to 2026)
+              label = `${weaningData.daysRemaining} (Weaning Due)`;
+            } else {
+              label = "Date Error";
+            }
+          } catch (err) {
+            console.error("Weaning sync failed:", err);
+            label = "Sync Error";
           }
         }
 

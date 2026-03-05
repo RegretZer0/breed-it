@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       
       const timeDisplay = document.getElementById("currentVirtualTime");
+      const warpBanner = document.getElementById("timeWarpStatus"); // Banner check
       
       if (data.virtualTime) {
         // 1. Calculate the offset between local system time and server virtual time
@@ -110,12 +111,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 3. Update UI display
         if (timeDisplay) {
-          timeDisplay.textContent = data.virtualTime;
+          // Use toLocaleString for a cleaner UI look
+          timeDisplay.textContent = new Date(data.virtualTime).toLocaleString();
           
           // Visual indicator that the farmer is in "Test Mode"
           if (data.isMocked) {
             timeDisplay.style.color = "#d97706";
-            console.log("🛠️ Testing Mode: Server time is being mocked. Offset saved.");
+            
+            // Show the Warp Banner if it exists in the farmer dashboard HTML
+            if (warpBanner) {
+               warpBanner.style.setProperty('display', 'flex', 'important');
+            }
+
+            console.log("🛠️ Testing Mode: Server time is being mocked (2026 Warp). Offset saved.");
+          } else {
+            if (warpBanner) warpBanner.style.display = 'none';
           }
         }
       }
@@ -141,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
-        // Note: Clear local storage but redirect to login
+        // Clear local storage and redirect
         localStorage.clear();
         window.location.href = "/login";
       }

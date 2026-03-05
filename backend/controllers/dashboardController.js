@@ -4,11 +4,11 @@ const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Tim
 
 exports.getFarmManagerStats = async (req, res) => {
   try {
-    // 1. Get the current "Logical Time" (Real or Mocked)
+    // 1. Get the current "Logical Time" (Database Priority, Global Fallback)
     const systemSettings = await SystemSettings.findOne();
     const virtualNow = (systemSettings && systemSettings.mockDate) 
                 ? new Date(systemSettings.mockDate) 
-                : new Date();
+                : (global.getNow ? global.getNow() : new Date());
 
     // ✅ SUPPORT FARM MANAGER + ENCODER
     const managerId =
@@ -53,51 +53,68 @@ exports.getFarmManagerStats = async (req, res) => {
       weaning
     ] = await Promise.all([
       Swine.countDocuments(baseQuery),
+      
       Swine.countDocuments({
         ...baseQuery,
         health_status: { $nin: ["Deceased", "Deceased (Before Weaning)"] }
       }),
+      
       Swine.countDocuments({
         ...baseQuery,
         health_status: { $in: ["Deceased", "Deceased (Before Weaning)"] }
       }),
+      
       Swine.countDocuments({
         ...baseQuery,
         current_status: "In-Heat"
       }),
-      // ✅ Updated Pregnant: Females who are pregnant but NOT ready to farrow yet
+
+      // ✅ Updated Pregnant: Count those whose expected farrowing is in the future relative to Warp
       Swine.countDocuments({
         ...baseQuery,
         sex: "Female",
         current_status: "Pregnant",
         "breeding_cycles.expected_farrowing_date": { $gt: virtualNow }
       }),
-      // ✅ Updated Farrowing: Pigs in farrowing stage OR pregnant pigs whose date has arrived in 2026
+
+      // ✅ Updated Farrowing: Pigs whose farrowing date has arrived OR passed in your 2026 Warp
       Swine.countDocuments({
         ...baseQuery,
         $or: [
-          { current_status: { $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing"] } },
+          { current_status: { $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing", "Lactating"] } },
           { 
             current_status: "Pregnant", 
             "breeding_cycles.expected_farrowing_date": { $lte: virtualNow } 
           }
         ]
       }),
+
+      // ✅ Updated Weaning: Includes pigs whose 30-day lactation is over according to the Warp
       Swine.countDocuments({
         ...baseQuery,
-        current_status: { $in: ["Weaned", "Weaning"] }
+        $or: [
+          { current_status: { $in: ["Weaned", "Weaning"] } },
+          {
+            current_status: "Lactating",
+            "breeding_cycles.actual_farrowing_date": { 
+                $lte: new Date(virtualNow.getTime() - (30 * 24 * 60 * 60 * 1000)) 
+            }
+          }
+        ]
       })
     ]);
 
     // ✅ SUCCESS RESPONSE
     res.json({
       success: true,
+      virtualDateUsed: virtualNow.toISOString(), // Sent for UI to display the current "System Year"
+      isMocked: !!(systemSettings && systemSettings.mockDate),
       stats: {
         totalPigs,
         alive,
         mortality,
         inHeat,
-        pregnant, // Fixed: removed stray 'a'
+        pregnant,
         farrowing,
         weaning
       }

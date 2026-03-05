@@ -5,6 +5,8 @@ const os = require("os");
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
+const SystemSettings = require("../models/SystemSettings"); // ✅ Added for persistence
+const { runSwineTransitions } = require("../utils/cronJobs"); // ✅ Added to trigger logic immediately
 
 router.use(adminOnly);
 
@@ -21,7 +23,6 @@ router.get("/stats", async (req, res) => {
     const systemAdmins = await User.countDocuments({ role: "system_admin" });
 
     // 2. REAL-TIME CONCURRENT USERS LOGIC (Virtual Time Sensitive)
-    // We use global.getNow() instead of Date.now() to check activity relative to mocked time
     const virtualNow = global.getNow();
     const activityWindow = new Date(virtualNow.getTime() - 5 * 60 * 1000);
     
@@ -34,7 +35,6 @@ router.get("/stats", async (req, res) => {
     const freeMem = os.freemem();
     const usedMemPercentage = (((totalMem - freeMem) / totalMem) * 100).toFixed(2);
     
-    // CPU Load (1 min avg) and Capacity Check
     const cpuLoad = os.loadavg()[0];
     const cpuCores = os.cpus().length;
     const isHandlingLoad = cpuLoad < cpuCores;
@@ -50,7 +50,6 @@ router.get("/stats", async (req, res) => {
         memoryUsage: `${usedMemPercentage}%`,
         cpuLoad: cpuLoad.toFixed(2),
         concurrentUsers: concurrentUsers || 0,
-        // Added for debugging on dashboard
         isTimeMocked: global.timeControl.isMocked,
         virtualTime: virtualNow.toLocaleString()
       }
@@ -63,44 +62,47 @@ router.get("/stats", async (req, res) => {
 
 /**
  * POST /api/admin/set-system-time
- * MVP Feature: Shift the server's perception of "Now"
- * UPDATED: Added robust parsing to prevent falling back to real-time
+ * MVP Feature: Shift the server's perception of "Now" and save to DB
  */
 router.post("/set-system-time", async (req, res) => {
   try {
     const { targetDate } = req.body;
     
-    // 1. Reset Logic: If targetDate is null/empty, go back to reality
+    // 1. Database Persistence & Global Logic
     if (!targetDate) {
+      // RESET LOGIC
+      await SystemSettings.findOneAndUpdate({}, { mockDate: null }, { upsert: true });
       global.timeControl.offsetMS = 0;
       global.timeControl.isMocked = false;
-      console.log("⏰ Time Warp: Reset to Real-Time");
-      return res.json({ success: true, message: "System time reset to real-time." });
+      
+      console.log("⏰ Time Warp: Reset to Real-Time in DB and Memory");
+    } else {
+      // TELEPORT LOGIC
+      const targetParsed = new Date(targetDate);
+      if (isNaN(targetParsed.getTime())) {
+        return res.status(400).json({ success: false, message: "Invalid date format." });
+      }
+
+      // Save to MongoDB so it persists after refresh/restart
+      await SystemSettings.findOneAndUpdate({}, { mockDate: targetParsed }, { upsert: true });
+
+      // Update Memory
+      const realNow = Date.now();
+      global.timeControl.offsetMS = targetParsed.getTime() - realNow;
+      global.timeControl.isMocked = true;
+
+      console.log(`🚀 Time Warp Saved: ${targetParsed.toLocaleString()}`);
     }
 
-    // 2. Parsing Logic: Convert the frontend string to a real timestamp
-    const realNow = Date.now();
-    const targetParsed = new Date(targetDate);
-    const virtualNow = targetParsed.getTime();
-
-    // 3. Error Handling: If the date is invalid, do NOT update the global offset
-    if (isNaN(virtualNow)) {
-      console.error("❌ Time Warp Error: Received invalid date string:", targetDate);
-      return res.status(400).json({ success: false, message: "Invalid date format. Teleport failed." });
-    }
-
-    // 4. Calculate Offset: The difference between the "fake" time and "real" time
-    global.timeControl.offsetMS = virtualNow - realNow;
-    global.timeControl.isMocked = true;
-
-    console.log(`🚀 Time Warp Active: Offset is ${global.timeControl.offsetMS}ms`);
-    console.log(`📅 New Virtual Time: ${global.getNow().toLocaleString()}`);
+    // 2. IMMEDIATE ACTION: Run transitions now so user doesn't wait for cron
+    // This makes the dashboard update instantly after warping
+    await runSwineTransitions();
 
     res.json({ 
       success: true, 
-      message: "Time warp successful!",
+      message: targetDate ? "Time warp successful!" : "System time reset.",
       virtualTime: global.getNow().toLocaleString(),
-      offsetHours: (global.timeControl.offsetMS / 3600000).toFixed(2)
+      isMocked: global.timeControl.isMocked
     });
   } catch (err) {
     console.error("Time Warp Route Error:", err);
