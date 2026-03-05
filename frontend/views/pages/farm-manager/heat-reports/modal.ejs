@@ -166,7 +166,44 @@
         </div>
       </div>
 
-    </div>
+      <!-- ================= WEANING (MVP) ================= -->
+      <!-- Required by JS IDs: weaning_date_input, weaning_weight_input, weaning_remarks_input -->
+      <!-- <div id="weaningFieldsWrap" class="rd-card rd-section-card mt-3" style="display:none;">
+        <div class="rd-section-head">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-clipboard-check"></i>
+            <h6 class="mb-0">Weaning Details</h6>
+          </div>
+          <div class="text-muted small">Required to complete lactation</div>
+        </div>
+
+        <div class="rd-section-body">
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-bold">Weaning Date</label>
+              <input type="date" id="weaning_date_input" class="form-control" />
+              <div class="form-text small text-muted">Leave blank to use today.</div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-bold">Weaning Weight (kg)</label>
+              <input type="number" id="weaning_weight_input" class="form-control" min="0" step="0.01" />
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-bold">Remarks</label>
+              <textarea
+                id="weaning_remarks_input"
+                class="form-control"
+                rows="3"
+                style="resize:none;"
+                placeholder="Optional notes (e.g. batch condition, issues, etc.)"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> -->
 
     <!-- FOOTER ACTIONS (existing IDs kept) -->
     <div class="modal-footer report-actions rd-footer">
@@ -190,6 +227,11 @@
         <button id="followUpBtn" style="display:none;" class="rd-action rd-warn" type="button">
           <i class="bi bi-arrow-repeat"></i> Cycle Failed
         </button>
+
+        <!-- Missing in your modal: JS expects this -->
+        <!-- <button id="confirmWeaningBtn" style="display:none;" class="rd-action rd-primary" type="button">
+          <i class="bi bi-check-circle"></i> Confirm Weaning
+        </button> -->
 
         <button id="closeReportModalBtn" class="rd-action rd-secondary" type="button">
           Close
@@ -432,6 +474,11 @@
         <div class="time-row">
           <span class="label">Current Stage</span>
           <strong id="currentStage">—</strong>
+        </div>
+
+        <div class="time-row">
+          <span class="label">Target Date</span>
+          <strong id="targetDate">—</strong>
         </div>
         <div class="time-row highlight">
           <span class="label">Time Remaining</span>

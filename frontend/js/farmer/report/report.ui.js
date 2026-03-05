@@ -8,7 +8,9 @@ import {
 } from "./report.utils.js";
 
 export function createReportUI({ BACKEND_URL, user, api }) {
-  // --------- DOM refs ----------
+  /* =========================================================
+     Module: DOM References
+  ========================================================= */
   const swineSelect = document.getElementById("swineSelect");
   const reportForm = document.getElementById("heatReportForm");
   const reportMessage = document.getElementById("reportMessage");
@@ -21,7 +23,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const tagSearchInput = document.getElementById("tagSearchInput");
   const statusTabs = document.querySelectorAll(".status-tab");
 
-  // --- Action Modal refs (NEW) ---
   const actionModal = document.getElementById("actionModal");
   const actionForm = document.getElementById("actionForm");
   const actionFormBody = document.getElementById("actionFormBody");
@@ -37,7 +38,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   const paginationEl = document.getElementById("reportsPagination");
 
-  // --- Archive refs (NEW) ---
   const openArchiveBtn = document.getElementById("openArchiveBtn");
   const archiveModal = document.getElementById("archiveModal");
   const archiveCloseBtn = document.getElementById("archiveCloseBtn");
@@ -48,7 +48,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const archiveApplyBtn = document.getElementById("archiveApplyBtn");
   const archiveResetBtn = document.getElementById("archiveResetBtn");
 
-  // --- Pig picker refs ---
   const openPigPickerBtn = document.getElementById("openPigPickerBtn");
   const pigPickerPanel = document.getElementById("pigPickerPanel");
   const closePigPickerBtn = document.getElementById("closePigPickerBtn");
@@ -60,33 +59,31 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const selectedPigWrap = document.getElementById("selectedPigWrap");
   const selectedSwineIdInput = document.getElementById("selectedSwineId");
 
-  // remarks
   const remarksInput = document.getElementById("remarks");
 
-  // --------- state ----------
+  /* =========================================================
+     Module: State
+  ========================================================= */
   const PAGE_SIZE = 5;
 
   let allReports = [];
   let activeReports = [];   // Logs (Pending/Approved/Ongoing/etc + Rejected (still within 24h))
   let archiveReports = [];  // Archive (Completed + Rejected after 24h)
 
-  // logs
   let filteredReports = [];
   let currentPage = 1;
 
-  // archive
   let filteredArchive = [];
   let archivePage = 1;
 
-  // --- Pig picker state ---
   let allOpenSows = [];
   let filteredOpenSows = [];
   let pigPickerPage = 1;
   const PIGS_PER_PAGE = 5;
 
-  // =========================================================
-  // Helpers: modal-open state
-  // =========================================================
+  /* =========================================================
+     Module: Modal Open State Helpers
+  ========================================================= */
   function isElementVisible(el) {
     return !!el && !el.classList.contains("hidden");
   }
@@ -110,30 +107,29 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     document.body.classList.toggle("modal-open", anyOpen);
   }
 
-  // Handle Action Form Submission
-  // Replace the existing actionForm submit listener in report.ui.js (around line 123)
+  /* =========================================================
+     Module: Action Form Submission (Manager/Tech actions)
+  ========================================================= */
   actionForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(actionForm);
     let data = Object.fromEntries(formData.entries());
     const { reportId, actionType } = actionForm.dataset;
 
-    // 1. UPDATE: Correct the endpoints to match aiRoutes.js
     const routeMap = {
-      confirm_ai: `${BACKEND_URL}/api/ai/add`, // Changed from /api/reports/...
-      confirm_pregnancy: `${BACKEND_URL}/api/ai/confirm-pregnancy/${reportId}`, // Changed from /api/reports/...
-      confirm_farrowing: `${BACKEND_URL}/api/farrowing/add` // Future endpoint for farrowing
+      confirm_ai: `${BACKEND_URL}/api/ai/add`,
+      confirm_pregnancy: `${BACKEND_URL}/api/ai/confirm-pregnancy/${reportId}`,
+      confirm_farrowing: `${BACKEND_URL}/api/farrowing/add`
     };
 
-    // 2. NEW: Map frontend field 'sire_id' to backend field 'maleSwineId' for AI
     if (actionType === "confirm_ai") {
-      const report = activeReports.find(r => r._id === reportId);
+      const report = activeReports.find((r) => r._id === reportId);
       data = {
         ...data,
         heatReportId: reportId,
-        swineId: report?.swine_id?.swine_id || "", // Send the tag/ID
-        maleSwineId: data.sire_id || "Unknown",    // Map sire_id to maleSwineId
-        farmerId: user.id // Ensure the current user is recorded as the operator
+        swineId: report?.swine_id?.swine_id || "",
+        maleSwineId: data.sire_id || "Unknown",
+        farmerId: user.id
       };
     }
 
@@ -141,32 +137,25 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const res = await api.post(routeMap[actionType], data);
       if (res.success) {
         uiAlert("Success!", { variant: "success" });
-        location.reload(); 
+        location.reload();
       }
     } catch (err) {
       uiAlert(err.message || "Failed to save", { variant: "danger" });
     }
   });
 
-  // =========================================================
-  // ✅ Themed Alerts / Confirms (NO native alert/confirm)
-  //   FIXES:
-  //   - Center the modal (no more flex-start + marginTop)
-  //   - Remove duplicate open/close/uiAlert/uiConfirm definitions
-  //   - Keep body modal-open state consistent
-  // =========================================================
+  /* =========================================================
+     Module: Themed Alerts and Confirms
+  ========================================================= */
   function ensureFeedbackModal() {
     let modal = document.getElementById("feedbackModal");
     if (modal) return modal;
 
     const wrap = document.createElement("div");
     wrap.id = "feedbackModal";
-    wrap.className = "modal-shell hidden"; // keep your theme
+    wrap.className = "modal-shell hidden";
     wrap.setAttribute("aria-hidden", "true");
 
-    // IMPORTANT:
-    // - DO NOT use "modal-backdrop" class (Bootstrap conflicts)
-    // - Force z-index so backdrop never blocks the card/buttons
     wrap.innerHTML = `
       <div class="fb-backdrop" data-close="1"></div>
       <div class="modal-card fb-card" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
@@ -193,12 +182,10 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     document.body.appendChild(wrap);
 
-    // Layering: ensure this modal always sits above your other modals/lightboxes
     wrap.style.position = "fixed";
     wrap.style.inset = "0";
     wrap.style.zIndex = "3000";
 
-    // ✅ center the card (this was the "positioned on top" bug)
     wrap.style.display = "flex";
     wrap.style.alignItems = "center";
     wrap.style.justifyContent = "center";
@@ -218,20 +205,18 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     if (card) {
       card.style.position = "relative";
-      card.style.zIndex = "1"; // above backdrop (clickable)
-      card.style.marginTop = "0"; // ✅ remove forced top offset
+      card.style.zIndex = "1";
+      card.style.marginTop = "0";
       card.style.maxWidth = "560px";
       card.style.width = "100%";
     }
 
-    // close handlers
     const close = () => closeFeedbackModal();
     wrap.addEventListener("click", (e) => {
       const t = e.target;
       if (t?.dataset?.close === "1" || t?.closest?.("[data-close='1']")) close();
     });
 
-    // escape close
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !wrap.classList.contains("hidden")) close();
     });
@@ -345,9 +330,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     });
   }
 
-  // =========================================================
-  // ✅ NEW: Source of truth helpers (REPORT STATUS, not swine status)
-  // =========================================================
+  /* =========================================================
+     Module: Report Status Helpers (Report status, not swine status)
+  ========================================================= */
   function normStatus(v) {
     return String(v || "").toLowerCase().trim().replace(/\s+/g, "_");
   }
@@ -371,15 +356,25 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return map[s] || "Pending Review";
   }
 
+  /* =========================================================
+   Module: Report Status Helpers (Time Warp aware)
+  ========================================================= */
   function isDue(dateVal) {
     if (!dateVal) return false;
+
     const d = new Date(dateVal);
     if (Number.isNaN(d.getTime())) return false;
 
-    const today = new Date();
+    const offset = parseInt(localStorage.getItem("timeWarpOffset") || "0", 10);
+    const virtualNow = new Date(Date.now() + (Number.isFinite(offset) ? offset : 0));
+
+    const today = new Date(virtualNow);
     today.setHours(0, 0, 0, 0);
-    d.setHours(0, 0, 0, 0);
-    return today.getTime() >= d.getTime();
+
+    const target = new Date(d);
+    target.setHours(0, 0, 0, 0);
+
+    return today.getTime() >= target.getTime();
   }
 
   function canShowBackInHeat(report) {
@@ -394,9 +389,14 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return isDue(report?.next_heat_check);
   }
 
+  /* =========================================================
+   Module: Report Status Helpers
+  ========================================================= */
   function canShowConfirmWeaning(report) {
     const st = normStatus(report?.status);
     if (st !== "lactating") return false;
+
+    if (report?.weaning_date) return false;
 
     const farrowBase = report?.actual_farrowing_date || report?.expected_farrowing;
     if (!farrowBase) return false;
@@ -428,9 +428,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return "";
   }
 
-  // =========================================================
-  // Pig Picker (unchanged logic)
-  // =========================================================
+  /* =========================================================
+     Module: Pig Picker
+  ========================================================= */
   function openPigPicker() {
     if (!pigPickerPanel) return;
     pigPickerPanel.classList.remove("hidden");
@@ -476,14 +476,15 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     const start = (pigPickerPage - 1) * PIGS_PER_PAGE;
     const pageItems = filteredOpenSows.slice(start, start + PIGS_PER_PAGE);
 
-    pigPickerList.innerHTML = pageItems.map((sw) => {
-      const tag = sw?.swine_id || "Unknown";
-      const breed = sw?.breed || "—";
-      const status = String(sw?.current_status || "Open").replace(/_/g, " ");
-      const w = pickWeight(sw);
-      const cycles = calcCycleCount(sw);
+    pigPickerList.innerHTML = pageItems
+      .map((sw) => {
+        const tag = sw?.swine_id || "Unknown";
+        const breed = sw?.breed || "—";
+        const status = String(sw?.current_status || "Open").replace(/_/g, " ");
+        const w = pickWeight(sw);
+        const cycles = calcCycleCount(sw);
 
-      return `
+        return `
         <div class="pig-card" data-id="${tag}">
           <div class="pig-avatar">
             ${safePigImg(sw)}
@@ -507,7 +508,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           </div>
         </div>
       `;
-    }).join("");
+      })
+      .join("");
 
     pigPickerList.querySelectorAll("[data-action='select']").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -579,9 +581,13 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   openPigPickerBtn?.addEventListener("click", () => openPigPicker());
   closePigPickerBtn?.addEventListener("click", () => closePigPicker());
-  pigPickerPanel?.addEventListener("click", (e) => { if (e.target?.id === "pigPickerPanel") closePigPicker(); });
+  pigPickerPanel?.addEventListener("click", (e) => {
+    if (e.target?.id === "pigPickerPanel") closePigPicker();
+  });
   pigPickerSearchBtn?.addEventListener("click", applyPigSearch);
-  pigPickerSearchInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") applyPigSearch(); });
+  pigPickerSearchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyPigSearch();
+  });
 
   function selectPig(sw) {
     const id = sw?.swine_id;
@@ -638,9 +644,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     closePigPicker();
   }
 
-  // =========================================================
-  // Title / tabs
-  // =========================================================
+  /* =========================================================
+     Module: Title and Tabs
+  ========================================================= */
   function setModuleTitle(mode) {
     if (!moduleTitleMain || !moduleTitleSub) return;
     if (mode === "create") {
@@ -688,9 +694,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     });
   });
 
-  // =========================================================
-  // Logs filtering
-  // =========================================================
+  /* =========================================================
+     Module: Logs Filtering
+  ========================================================= */
   function normalizeStage(raw) {
     const s = String(raw || "").toLowerCase().trim().replace(/\s+/g, "_");
 
@@ -746,7 +752,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   }
 
   function passesFilters(report) {
-    const swineDisplay = (report.swine_id?.swine_id || "Unknown");
+    const swineDisplay = report.swine_id?.swine_id || "Unknown";
 
     const tagVal = (tagSearchInput?.value || "").trim().toLowerCase();
     if (tagVal && !swineDisplay.toLowerCase().includes(tagVal)) return false;
@@ -824,6 +830,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     });
   }
 
+  /* =========================================================
+     Module: Reports List Rendering and Event Wiring
+  ========================================================= */
   function renderReportsPage() {
     if (!reportsTableBody) return;
 
@@ -841,26 +850,29 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     reportsTableBody.querySelectorAll("[data-action='view']").forEach((btn) => {
       btn.addEventListener("click", () => viewEvidence(btn.dataset.id));
     });
+
     reportsTableBody.querySelectorAll("[data-action='track']").forEach((btn) => {
       btn.addEventListener("click", () => openTrackProgress(btn.dataset.id, btn.dataset.swine));
     });
 
-    // --- ADD THESE NEW LISTENERS ---
     reportsTableBody.querySelectorAll("[data-action='confirm-preg']").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const report = activeReports.find(r => r._id === btn.dataset.id);
+        const report = activeReports.find((r) => r._id === btn.dataset.id);
         openActionConfirmation(report, "confirm_pregnancy");
       });
     });
 
     reportsTableBody.querySelectorAll("[data-action='confirm-farrow']").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const report = activeReports.find(r => r._id === btn.dataset.id);
+        const report = activeReports.find((r) => r._id === btn.dataset.id);
         openActionConfirmation(report, "confirm_farrowing");
       });
     });
   }
 
+  /* =========================================================
+     Module: Report Card Renderer
+  ========================================================= */
   function renderReportCard(r) {
     const swineDisplay = r.swine_id?.swine_id || "Unknown";
 
@@ -887,6 +899,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (approvalRaw === "rejected") approvalIcon = "bi-x-circle";
     if (approvalRaw === "ongoing") approvalIcon = "bi-arrow-repeat";
     if (approvalRaw === "completed") approvalIcon = "bi-flag-fill";
+
 
     return `
       <div class="report-item" data-status="${approvalRaw}" data-swine="${swineDisplay}">
@@ -948,12 +961,30 @@ export function createReportUI({ BACKEND_URL, user, api }) {
             <div class="report-actions">
               <button class="btn-soft btn-sm" type="button" data-action="view" data-id="${r._id}">
                 <i class="bi bi-eye"></i> View Details
-              </button>              
-              ${canShowConfirmPregnant(r) ? 
-                `<button class="btn-primary btn-sm" data-action="confirm-preg" data-id="${r._id}"><i class="bi bi-patch-check"></i> Confirm Preg</button>` : ''}
+              </button>
 
-              ${(normStatus(r.status) === 'pregnant' && isDue(r.expected_farrowing)) ? 
-                `<button class="btn-primary btn-sm" data-action="confirm-farrow" data-id="${r._id}"><i class="bi bi-calendar2-heart"></i> Confirm Farrow</button>` : ''}
+              <button
+                class="btn-primary btn-sm"
+                type="button"
+                data-action="track"
+                data-id="${r._id}"
+                data-swine="${swineDisplay}"
+                title="Track progress"
+              >
+                <i class="bi bi-graph-up-arrow"></i> Track Progress
+              </button>
+
+              ${canShowConfirmPregnant(r)
+                ? `<button class="btn-primary btn-sm" type="button" data-action="confirm-preg" data-id="${r._id}">
+                    <i class="bi bi-patch-check"></i> Confirm Preg
+                  </button>`
+                : ""}
+
+              ${(normStatus(r.status) === "pregnant" && isDue(r.expected_farrowing))
+                ? `<button class="btn-primary btn-sm" type="button" data-action="confirm-farrow" data-id="${r._id}">
+                    <i class="bi bi-calendar2-heart"></i> Confirm Farrow
+                  </button>`
+                : ""}
             </div>
 
           </div>
@@ -962,9 +993,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     `;
   }
 
-  // =========================================================
-  // Archive modal
-  // =========================================================
+  /* =========================================================
+     Module: Archive Modal
+  ========================================================= */
   function openArchiveModal() {
     if (!archiveModal) return;
     archiveModal.classList.remove("hidden");
@@ -982,14 +1013,14 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     ensureBodyModalState();
   }
 
-  // =========================================================
-  // ✅ NEW: Time Warp Action Renderer
-  // =========================================================
+  /* =========================================================
+     Module: Time Warp Action Renderer
+  ========================================================= */
   function openActionConfirmation(report, type) {
     if (!actionModal || !actionFormBody) return;
 
     let html = "";
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     if (type === "confirm_ai") {
       actionModalTitle.textContent = "Confirm AI Service";
@@ -1003,16 +1034,14 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           <label class="form-label">Boar/Sire ID (Optional)</label>
           <input type="text" name="sire_id" class="form-control" placeholder="Enter Boar ID">
         </div>`;
-    } 
-    else if (type === "confirm_pregnancy") {
+    } else if (type === "confirm_pregnancy") {
       actionModalTitle.textContent = "Confirm Pregnancy";
       html = `
         <div class="form-group mb-3">
           <label class="form-label">Check Date</label>
           <input type="date" name="event_date" class="form-control" value="${today}" required>
         </div>`;
-    }
-    else if (type === "confirm_farrowing") {
+    } else if (type === "confirm_farrowing") {
       actionModalTitle.textContent = "Confirm Farrowing";
       html = `
         <div class="form-group mb-3">
@@ -1034,7 +1063,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     actionFormBody.innerHTML = html;
     actionForm.dataset.reportId = report._id;
     actionForm.dataset.actionType = type;
-    
+
     actionModal.classList.remove("hidden");
     ensureBodyModalState();
   }
@@ -1055,7 +1084,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   });
 
   function archivePassesFilters(report) {
-    const swineDisplay = (report.swine_id?.swine_id || "Unknown");
+    const swineDisplay = report.swine_id?.swine_id || "Unknown";
     const approvalRaw = normalizeApprovalStatus(report.status);
 
     if (!(approvalRaw === "completed" || approvalRaw === "rejected")) return false;
@@ -1172,9 +1201,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     modalEl.style.zIndex = "1060";
   }
 
-  // =========================================================
-  // Evidence modal + lightbox
-  // =========================================================
+  /* =========================================================
+     Module: Evidence Modal and Lightbox
+  ========================================================= */
   function openReportModal() {
     const modal = document.getElementById("reportModal");
     if (!modal) return;
@@ -1217,18 +1246,20 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     return `
       <div class="evidence-grid">
-        ${evidenceUrls.map((url) => {
-          const src = (url.startsWith("data:") || url.startsWith("http")) ? url : `${BACKEND_URL}${url}`;
-          const isVideo = /\.(mp4|mov|webm)$/i.test(url);
+        ${evidenceUrls
+          .map((url) => {
+            const src = url.startsWith("data:") || url.startsWith("http") ? url : `${BACKEND_URL}${url}`;
+            const isVideo = /\.(mp4|mov|webm)$/i.test(url);
 
-          return isVideo
-            ? `<div class="evidence-item" data-type="video" data-src="${src}" role="button" tabindex="0">
+            return isVideo
+              ? `<div class="evidence-item" data-type="video" data-src="${src}" role="button" tabindex="0">
                 <video src="${src}" muted></video>
               </div>`
-            : `<div class="evidence-item" data-type="image" data-src="${src}" role="button" tabindex="0">
+              : `<div class="evidence-item" data-type="image" data-src="${src}" role="button" tabindex="0">
                 <img src="${src}" alt="Evidence" loading="lazy" />
               </div>`;
-        }).join("")}
+          })
+          .join("")}
       </div>
     `;
   }
@@ -1237,7 +1268,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const evidenceLightboxBody = document.getElementById("evidenceLightboxBody");
   const evidenceLightboxClose = document.getElementById("evidenceLightboxClose");
 
-  // --- Zoom state ---
+  /* =========================================================
+     Module: Evidence Lightbox Zoom and Pan
+  ========================================================= */
   let lbScale = 1;
   let lbMinScale = 1;
   let lbMaxScale = 4;
@@ -1278,8 +1311,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const cy = originEvent.clientY - rect.top - rect.height / 2;
 
       const k = lbScale / prevScale;
-      lbTx = (lbTx * k) + cx * (k - 1);
-      lbTy = (lbTy * k) + cy * (k - 1);
+      lbTx = lbTx * k + cx * (k - 1);
+      lbTy = lbTy * k + cy * (k - 1);
     }
 
     applyTransform(targetEl);
@@ -1357,9 +1390,10 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     };
 
     evidenceLightboxBody.onmousedown = (e) => {
-      if ((e.target && e.target.closest && e.target.closest(".lb-zoom-controls"))) return;
+      if (e.target && e.target.closest && e.target.closest(".lb-zoom-controls")) return;
       onDown(e.clientX, e.clientY);
     };
+
     window.addEventListener("mousemove", (e) => onMove(e.clientX, e.clientY));
     window.addEventListener("mouseup", onUp);
 
@@ -1453,7 +1487,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (e.key === "Escape" && evidenceLightbox?.classList.contains("show")) closeEvidenceLightbox();
   });
 
-  // (kept for compatibility; not used anymore)
+  /* =========================================================
+     Module: Legacy Compatibility (Not used)
+  ========================================================= */
   function shouldShowBackInHeat(swineStatus, approvalStatus) {
     const s = (swineStatus || "").toLowerCase();
     if (approvalStatus === "rejected") return false;
@@ -1472,6 +1508,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return s.includes("lact");
   }
 
+  /* =========================================================
+     Module: Report Details Viewer
+  ========================================================= */
   async function viewEvidence(reportId) {
     try {
       const modalBody = document.getElementById("modalBody");
@@ -1514,10 +1553,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
       const evidenceHtml = buildEvidenceGallery(report.evidence_url || []);
 
-      const remarksText =
-        (report?.remarks ?? report?.remark ?? report?.notes ?? report?.note ?? "")
-          .toString()
-          .trim();
+      const remarksText = (report?.remarks ?? report?.remark ?? report?.notes ?? report?.note ?? "")
+        .toString()
+        .trim();
 
       const remarksHtml = remarksText
         ? `<div class="remarks-box">${remarksText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
@@ -1542,7 +1580,17 @@ export function createReportUI({ BACKEND_URL, user, api }) {
                 </h4>
 
                 <span class="status-pill ${approvalRaw}">
-                  <i class="bi ${approvalRaw === "approved" ? "bi-check2-circle" : approvalRaw === "rejected" ? "bi-x-circle" : approvalRaw === "ongoing" ? "bi-arrow-repeat" : approvalRaw === "completed" ? "bi-flag-fill" : "bi-hourglass-split"}"></i>
+                  <i class="bi ${
+                    approvalRaw === "approved"
+                      ? "bi-check2-circle"
+                      : approvalRaw === "rejected"
+                        ? "bi-x-circle"
+                        : approvalRaw === "ongoing"
+                          ? "bi-arrow-repeat"
+                          : approvalRaw === "completed"
+                            ? "bi-flag-fill"
+                            : "bi-hourglass-split"
+                  }"></i>
                   ${approvalLabel}
                 </span>
               </div>
@@ -1598,26 +1646,38 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           </div>
 
           <div class="details-actions">
-            ${showBackInHeat ? `
+            ${
+              showBackInHeat
+                ? `
               <button class="btn-soft" type="button" id="btnBackInHeat">
                 <i class="bi bi-arrow-counterclockwise"></i>
                 Back in Heat
               </button>
-            ` : ``}
+            `
+                : ``
+            }
 
-            ${showConfirmPreg ? `
+            ${
+              showConfirmPreg
+                ? `
               <button class="btn-primary" type="button" id="btnConfirmPreg">
                 <i class="bi bi-patch-check"></i>
                 Confirm Pregnant
               </button>
-            ` : ``}
+            `
+                : ``
+            }
 
-            ${showConfirmWean ? `
+            ${
+              showConfirmWean
+                ? `
               <button class="btn-primary" type="button" id="btnConfirmWean">
                 <i class="bi bi-scissors"></i>
                 Confirm Weaning
               </button>
-            ` : ``}
+            `
+                : ``
+            }
 
             <button class="btn-soft" type="button" id="btnCloseDetails">
               <i class="bi bi-x-circle"></i>
@@ -1635,7 +1695,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           if (src) openEvidenceLightbox({ src, type });
         };
         item.addEventListener("click", open);
-        item.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") open(); });
+        item.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") open();
+        });
       });
 
       modalBody.querySelector("#btnCloseDetails")?.addEventListener("click", closeReportModal);
@@ -1643,17 +1705,29 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       modalBody.querySelector("#btnBackInHeat")?.addEventListener("click", async () => {
         const ok = await uiConfirm(`Is ${swineTag} in heat again?`, { title: "Confirm action", variant: "warning" });
         if (!ok) return;
+
         const res = await api.stillHeat(report._id);
+
         if (res?.ok) {
           uiAlert("Cycle reset for re-insemination.", { title: "Success", variant: "success" });
-          await api.sendAdminNotification("Sow Back in Heat", `Farmer ${user.first_name} reported ${swineTag} back in heat.`, "warning");
+          await api.sendAdminNotification(
+            "Sow Back in Heat",
+            `Farmer ${user.first_name} reported ${swineTag} back in heat.`,
+            "warning"
+          );
           await reloadAll();
           await viewEvidence(reportId);
         } else if (res) {
           let msg = "Failed to update cycle.";
           try {
-            const errData = await res.json();
-            msg = errData?.message || msg;
+            const ct = res.headers.get("content-type") || "";
+            if (ct.includes("application/json")) {
+              const errData = await res.json();
+              msg = errData?.message || msg;
+            } else {
+              await res.text();
+              msg = "Failed to update cycle (server returned non-JSON response).";
+            }
           } catch (_) {}
           uiAlert(msg, { title: "Error", variant: "danger" });
         }
@@ -1662,20 +1736,39 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       modalBody.querySelector("#btnConfirmPreg")?.addEventListener("click", async () => {
         const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, { title: "Confirm action", variant: "warning" });
         if (!ok) return;
+
         const res = await api.confirmPregnancy(report._id);
+
         if (res?.ok) {
           uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
-          await api.sendAdminNotification("Pregnancy Confirmed", `${swineTag} confirmed pregnant by ${user.first_name}.`, "success");
+          await api.sendAdminNotification(
+            "Pregnancy Confirmed",
+            `${swineTag} confirmed pregnant by ${user.first_name}.`,
+            "success"
+          );
           await reloadAll();
           await viewEvidence(reportId);
         } else if (res) {
-          const errData = await res.json();
-          uiAlert("Failed to confirm: " + (errData.message || "Unknown error"), { title: "Error", variant: "danger" });
+          let msg = "Failed to confirm pregnancy.";
+          try {
+            const ct = res.headers.get("content-type") || "";
+            if (ct.includes("application/json")) {
+              const errData = await res.json();
+              msg = errData?.message || msg;
+            } else {
+              await res.text();
+              msg = "Failed to confirm pregnancy (server returned non-JSON response).";
+            }
+          } catch (_) {}
+          uiAlert(msg, { title: "Error", variant: "danger" });
         }
       });
 
       modalBody.querySelector("#btnConfirmWean")?.addEventListener("click", async () => {
-        const ok = await uiConfirm(`Confirm weaning for ${swineTag}? This will move the sow back to "Open".`, { title: "Confirm action", variant: "warning" });
+        const ok = await uiConfirm(
+          `Confirm weaning for ${swineTag}? This will move the sow back to "Open".`,
+          { title: "Confirm action", variant: "warning" }
+        );
         if (!ok) return;
 
         const res = await api.confirmWeaning(report._id);
@@ -1686,8 +1779,18 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           await reloadAll();
           await viewEvidence(reportId);
         } else if (res) {
-          const errData = await res.json();
-          uiAlert("Failed to wean: " + (errData.message || "Unknown error"), { title: "Error", variant: "danger" });
+          let msg = "Failed to wean.";
+          try {
+            const ct = res.headers.get("content-type") || "";
+            if (ct.includes("application/json")) {
+              const errData = await res.json();
+              msg = errData?.message || msg;
+            } else {
+              await res.text();
+              msg = "Failed to wean (server returned non-JSON response).";
+            }
+          } catch (_) {}
+          uiAlert(msg, { title: "Error", variant: "danger" });
         }
       });
     } catch (err) {
@@ -1698,9 +1801,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     }
   }
 
-  // =========================================================
-  // Track progress
-  // =========================================================
+  /* =========================================================
+     Module: Track Progress
+  ========================================================= */
   async function openTrackProgress(reportId, swineId) {
     const trackModal = document.getElementById("trackModal");
     const trackBody = document.getElementById("trackBody");
@@ -1742,7 +1845,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const steps = buildTimelineSteps(report);
 
       trackBody.innerHTML = steps.length
-        ? steps.map((s, idx) => `
+        ? steps
+            .map(
+              (s, idx) => `
             <div class="tl-row">
               <div class="tl-icon"><i class="bi ${s.icon}"></i></div>
               ${idx < steps.length - 1 ? `<div class="tl-line"></div>` : ``}
@@ -1758,7 +1863,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
                 </div>
               </div>
             </div>
-          `).join("")
+          `
+            )
+            .join("")
         : `<div class="empty-state">No progress records yet.</div>`;
     } catch (err) {
       console.error(err);
@@ -1767,9 +1874,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     }
   }
 
-  // =========================================================
-  // Upload UI
-  // =========================================================
+  /* =========================================================
+     Module: Upload UI
+  ========================================================= */
   let selectedFiles = [];
   const uploadBtn = document.getElementById("uploadBtn");
   const evidenceInput = document.getElementById("evidence");
@@ -1843,9 +1950,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     syncFileInput();
   }
 
-  // =========================================================
-  // Data loaders
-  // =========================================================
+  /* =========================================================
+     Module: Data Loaders
+  ========================================================= */
   async function refreshSwineData() {
     const data = await api.fetchFarmerSwine();
     const swineList = data?.swine || [];
@@ -1926,9 +2033,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     await Promise.all([refreshSwineData(), loadReports()]);
   }
 
-  // =========================================================
-  // Form submit
-  // =========================================================
+  /* =========================================================
+     Module: Report Form Submit
+  ========================================================= */
   reportForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -1996,9 +2103,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     }
   });
 
-  // =========================================================
-  // Logs filter buttons
-  // =========================================================
+  /* =========================================================
+     Module: Logs Filter Buttons
+  ========================================================= */
   searchBtn?.addEventListener("click", () => {
     if (!isLogsActive()) return;
     currentPage = 1;
@@ -2037,6 +2144,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     window.location.href = "login.html";
   });
 
+  /* =========================================================
+     Module: Public API
+  ========================================================= */
   return {
     reloadAll,
     tickCountdowns: () => updateCountdowns(),

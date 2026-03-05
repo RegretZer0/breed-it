@@ -774,8 +774,7 @@ router.get("/weaning-date/:reportId", async (req, res) => {
 /* ======================================================
     CONFIRM WEANING (Closing the Breeding Cycle)
 ====================================================== */
-router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
-  const session = await mongoose.startSession();
+router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {  const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { weaning_date, remarks, weight } = req.body;
