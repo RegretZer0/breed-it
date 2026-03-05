@@ -5,31 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BREED-IT — <%= page_title %></title>
 
-  <!-- Bootstrap -->
-
   <link
-  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
-  rel="stylesheet">
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    rel="stylesheet">
 
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
     rel="stylesheet"/>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
-
-
-  <!-- Font Awesome -->
   <link
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     rel="stylesheet"/>
 
-  <!-- FullCalendar -->
   <link
-  href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css"
-  rel="stylesheet"/>
+    href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css"
+    rel="stylesheet"/>
 
-  
-  <!-- Farm Manager Base CSS (always loaded) -->
   <link rel="stylesheet" href="../../../css/farm-manager/sub_modules.css">
 
   <% if (page_title === "Farm Manager Dashboard") { %>
@@ -39,7 +30,6 @@
     <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/panel.css">
     <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/overview.css">
     <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/table.css">
-
 
   <% } else if (page_title === "Register Pig") { %>
     <link rel="stylesheet" href="../../../css/farm-manager/pig-managment/panel.css">
@@ -53,7 +43,6 @@
     <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
     <link rel="stylesheet" href="../../../css/farm-manager/reproduction-monitoring/reproduction_monitoring.css">
 
-
   <% } else if (page_title === "Swine Analysis") { %>
     <link rel="stylesheet" href="../../../css/farm-manager/breed-quality-analytics/panel.css">
     <link rel="stylesheet" href="../../../css/farm-manager/breed-quality-analytics/swine_analysis.css">
@@ -64,10 +53,7 @@
 
   <% } else if (page_title === "Reports") { %>
     <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
-    <!-- <link rel="stylesheet" href="../../../css/farm-manager/heat-reports/reports.css">
-    <link rel="stylesheet" href="../../../css/farm-manager/heat-reports/table.css"> -->
     <link rel="stylesheet" href="../../../css/farm-manager/heat-reports/heat-reports.css">
-   
 
   <% } else if (page_title === "Farmers Report") { %>
     <link rel="stylesheet" href="../../../css/farm-manager/user-managment/panel.css">
@@ -85,5 +71,67 @@
     <link rel="stylesheet" href="/css/default.css">
   <% } %>
 
+  <script>
+    /**
+     * Synchronizes the UI with the Virtual Time Warp offset
+     */
+    function initVirtualClock() {
+      const clockEl = document.getElementById('globalVirtualClock');
+      const containerEl = document.getElementById('virtualClockContainer');
+      if (!clockEl) return;
+
+      function updateClock() {
+        // Read offset set by Admin Teleport tool
+        const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
+        
+        // Calculate Virtual "Now"
+        const virtualNow = new Date(Date.now() + offset);
+
+        const options = { 
+          year: 'numeric', 
+          month: 'short', 
+          day: '2-digit',
+          hour: '2-digit', 
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: true 
+        };
+
+        clockEl.textContent = virtualNow.toLocaleString('en-US', options);
+
+        // Visual feedback if time is warped
+        if (offset !== 0) {
+          clockEl.style.color = "#dc3545"; // Bootstrap Danger Red
+          containerEl.style.borderColor = "#dc3545";
+          containerEl.style.background = "#fff5f5";
+        } else {
+          clockEl.style.color = "#212529";
+          containerEl.style.borderColor = "#e2e8f0";
+          containerEl.style.background = "#f8fafc";
+        }
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    }
+
+    document.addEventListener('DOMContentLoaded', initVirtualClock);
+  </script>
 </head>
 <body>
+
+  <div class="container-fluid py-2 border-bottom" style="background-color: #f8fafc;">
+    <div class="d-flex justify-content-end">
+      <div id="virtualClockContainer" class="d-flex align-items-center gap-2 px-3 py-1 rounded border shadow-sm transition-all" 
+           style="background: #f8fafc; border: 1px solid #e2e8f0;">
+        <div class="d-flex flex-column text-end">
+          <span class="text-uppercase fw-bold text-muted" style="font-size: 0.6rem; letter-spacing: 0.05rem;">
+            <i class="bi bi-clock-history"></i> Virtual Server Time
+          </span>
+          <span id="globalVirtualClock" class="fw-bold" style="font-size: 0.9rem; font-family: 'Courier New', monospace;">
+            Loading...
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>

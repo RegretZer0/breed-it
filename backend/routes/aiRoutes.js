@@ -12,7 +12,7 @@ const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
 /* ======================================================
-   HELPERS
+    HELPERS
 ====================================================== */
 function isObjectIdLike(v) {
   return mongoose.Types.ObjectId.isValid(String(v || ""));
@@ -42,11 +42,10 @@ async function resolveFarmerById(value, session) {
 }
 
 /* ======================================================
-   POST /api/ai/add
-   Add new AI Record (Confirms the Insemination)
-   - Keeps AIRecord.male_swine_id as String (per your model)
-   - Stores boar tag if possible; supports external boar code
-   - Updates HeatReport and Swine breeding cycle safely
+    POST /api/ai/add
+    Add new AI Record (Confirms the Insemination)
+    - Supports "Time Warp" via event_date
+    - Updates HeatReport and Swine breeding cycle safely
 ====================================================== */
 router.post(
   "/add",
@@ -56,7 +55,7 @@ router.post(
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      const { swineId, maleSwineId, heatReportId, farmerId } = req.body;
+      const { swineId, maleSwineId, heatReportId, farmerId, event_date } = req.body;
       const user = req.user;
 
       if (!swineId || !maleSwineId || !heatReportId || !farmerId) {
@@ -84,22 +83,23 @@ router.post(
       const maleSwineDoc = await resolveSwineByTagOrId(maleSwineId, session);
       const boarTag = maleSwineDoc ? maleSwineDoc.swine_id : String(maleSwineId).trim();
 
-      const now = new Date();
+      // ✅ TIME WARP: Use manual event_date if provided, otherwise default to now
+      const actualInseminationDate = event_date ? new Date(event_date) : new Date();
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
 
-      // 1) Create AI Record (male_swine_id is String in your model)
+      // 1) Create AI Record
       const newAI = new AIRecord({
         insemination_id: `AI-${Date.now()}`,
         swine_id: swine._id,
-        male_swine_id: boarTag, // ✅ string for internal tag OR external code
+        male_swine_id: boarTag, 
         manager_id: managerId,
         farmer_id: farmer._id,
         heat_report_id: heatReport._id,
         swine_code: swine.swine_id,
         farmer_name: `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim(),
-        insemination_date: now,
+        insemination_date: actualInseminationDate, // ✅ Set to manual date
         ai_confirmed: true,
-        ai_confirmed_at: now,
+        ai_confirmed_at: new Date(), // Timestamp of when the record was saved
         status: "Ongoing"
       });
 
@@ -107,29 +107,29 @@ router.post(
 
       // 2) Update Heat Report -> under_observation + 23-day recheck
       heatReport.status = "under_observation";
-      heatReport.ai_confirmed_at = now;
+      heatReport.ai_confirmed_at = actualInseminationDate; // ✅ Sync with manual date
 
-      const heatCheckDate = new Date(now);
+      // ✅ Recalculate recheck based on the manual date
+      const heatCheckDate = new Date(actualInseminationDate);
       heatCheckDate.setDate(heatCheckDate.getDate() + 23);
       heatReport.next_heat_check = heatCheckDate;
 
       await heatReport.save({ session });
 
-      // 3) Sync with Swine Breeding Cycle (only if cycle exists)
+      // 3) Sync with Swine Breeding Cycle
       const cycleUpdate = await Swine.updateOne(
         { _id: swine._id, "breeding_cycles.heat_report_id": heatReport._id },
         {
           $set: {
-            "breeding_cycles.$.ai_service_date": now,
+            "breeding_cycles.$.ai_service_date": actualInseminationDate, // ✅ Sync manual date
             "breeding_cycles.$.ai_record_id": newAI._id,
-            "breeding_cycles.$.cycle_sire_id": boarTag, // store tag/code
+            "breeding_cycles.$.cycle_sire_id": boarTag,
             current_status: "Under Observation"
           }
         },
         { session }
       );
 
-      // If cycle not found, we still succeed but warn (prevents breaking flow)
       const cycleLinked = cycleUpdate && (cycleUpdate.modifiedCount > 0 || cycleUpdate.nModified > 0);
 
       await session.commitTransaction();
@@ -137,14 +137,12 @@ router.post(
       return res.status(201).json({
         success: true,
         message: cycleLinked
-          ? "AI record created and Swine cycle updated. 23-day countdown started."
-          : "AI record created. 23-day countdown started. (Warning: breeding cycle not linked to this heat report.)",
+          ? "AI record created and Swine cycle updated. Re-check scheduled based on service date."
+          : "AI record created. (Warning: breeding cycle not linked.)",
         aiRecord: newAI
       });
     } catch (err) {
-      try {
-        await session.abortTransaction();
-      } catch (_) {}
+      try { await session.abortTransaction(); } catch (_) {}
       console.error("AI Record Error:", err);
       return res.status(500).json({ success: false, message: "Server error", error: err.message });
     } finally {
@@ -154,10 +152,7 @@ router.post(
 );
 
 /* ======================================================
-   GET /api/ai/all
-   Get AI records for manager
-   - male_swine_id is String → cannot populate
-   - we "enrich" boar info by looking up Swine by tag when possible
+    GET /api/ai/all
 ====================================================== */
 router.get(
   "/all",
@@ -175,7 +170,6 @@ router.get(
         .sort({ createdAt: -1 })
         .lean();
 
-      // Enrich boar details (optional, safe)
       const boarTags = [
         ...new Set(
           records
@@ -194,9 +188,7 @@ router.get(
         const tag = r.male_swine_id ? String(r.male_swine_id).trim() : "";
         return {
           ...r,
-          // keep original field
           male_swine_id: tag || r.male_swine_id,
-          // add a safe helper object for frontend rendering
           male_swine: boarMap.get(tag) || null
         };
       });
@@ -209,8 +201,7 @@ router.get(
 );
 
 /* ======================================================
-   POST /api/ai/still-in-heat/:heatReportId
-   Confirm Swine Still in Heat (Re-breed / Cycle Reset)
+    POST /api/ai/still-in-heat/:heatReportId
 ====================================================== */
 router.post(
   "/still-in-heat/:heatReportId",
@@ -231,7 +222,6 @@ router.post(
       report.expected_farrowing = null;
       await report.save();
 
-      // Update Swine Status back to In-Heat (if swine_id exists)
       if (report.swine_id) {
         await Swine.findByIdAndUpdate(report.swine_id, { current_status: "In-Heat" });
       }
@@ -244,8 +234,8 @@ router.post(
 );
 
 /* ======================================================
-   POST /api/ai/confirm-pregnancy/:heatReportId
-   Confirm Pregnancy (Moves Swine to 114-day countdown)
+    POST /api/ai/confirm-pregnancy/:heatReportId
+    - Supports "Time Warp" via event_date
 ====================================================== */
 router.post(
   "/confirm-pregnancy/:heatReportId",
@@ -253,19 +243,26 @@ router.post(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
+      const { event_date } = req.body; 
       const report = await HeatReport.findById(req.params.heatReportId);
       if (!report) return res.status(404).json({ success: false, message: "Heat report not found" });
 
       const gestationDays = 114;
-      const baseDate = report.ai_confirmed_at ? new Date(report.ai_confirmed_at) : new Date();
+      
+      // ✅ Date when the pregnancy check was actually performed
+      const actualCheckDate = event_date ? new Date(event_date) : new Date();
+
+      // ✅ Base the 114 days on the AI service date, not today's date
+      // Fallback to actualCheckDate if ai_confirmed_at is somehow missing
+      const baseDate = report.ai_confirmed_at ? new Date(report.ai_confirmed_at) : actualCheckDate;
       const farrowingDate = new Date(baseDate);
       farrowingDate.setDate(farrowingDate.getDate() + gestationDays);
 
       // 1) Update Heat Report
       report.status = "pregnant";
-      report.pregnancy_confirmed = true; // if field exists in schema, ok; if not, mongoose ignores unless strict=false
+      report.pregnancy_confirmed = true; 
       report.expected_farrowing = farrowingDate;
-      report.pregnancy_confirmed_at = new Date();
+      report.pregnancy_confirmed_at = actualCheckDate; // ✅ Manual check date
       await report.save();
 
       // 2) Update AIRecord
@@ -274,14 +271,14 @@ router.post(
         { pregnancy_confirmed: true, status: "Success", farrowing_date: farrowingDate }
       );
 
-      // 3) Update Swine Cycle (only if it exists)
+      // 3) Update Swine Cycle
       if (report.swine_id) {
         await Swine.updateOne(
           { _id: report.swine_id, "breeding_cycles.heat_report_id": report._id },
           {
             $set: {
               "breeding_cycles.$.is_pregnant": true,
-              "breeding_cycles.$.pregnancy_check_date": new Date(),
+              "breeding_cycles.$.pregnancy_check_date": actualCheckDate, // ✅ Sync manual date
               "breeding_cycles.$.expected_farrowing_date": farrowingDate,
               current_status: "Pregnant"
             }
@@ -291,7 +288,7 @@ router.post(
 
       res.json({
         success: true,
-        message: "Pregnancy confirmed. Expected farrowing date set in all records."
+        message: "Pregnancy confirmed. Expected farrowing date calculated from insemination date."
       });
     } catch (err) {
       res.status(500).json({ success: false, message: "Server error", error: err.message });

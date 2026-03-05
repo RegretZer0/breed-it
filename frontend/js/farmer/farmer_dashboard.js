@@ -10,8 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // INITIALIZE DATA FETCHING
   // =========================
+  syncVirtualTime(); // UPDATED: Now calculates and saves offset
   loadGlobalAlerts(); // Fetches Maintenance broadcasts
-  // You can also call your private user notifications here if needed
 
   // =========================
   // DASHBOARD NAVIGATION
@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadGlobalAlerts() {
     try {
-      // Fetch alerts where ends_at is still in the future
       const response = await fetch("/api/notifications/global");
       const data = await response.json();
 
@@ -60,10 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function displayMaintenanceBanner(alert) {
-    // Check if banner already exists to prevent duplicates
     if (document.getElementById(`banner-${alert._id}`)) return;
 
-    const header = document.querySelector("header") || document.body;
     const banner = document.createElement("div");
     
     banner.id = `banner-${alert._id}`;
@@ -85,12 +82,46 @@ document.addEventListener("DOMContentLoaded", () => {
     banner.innerHTML = `
       <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
         <span>🚧 <strong>${alert.title}:</strong> ${alert.message} 
-        <small>(Scheduled: ${start} to ${end})</small></span>
+        <br><small>(Scheduled Server Time: ${start} to ${end})</small></span>
       </div>
     `;
 
-    // Insert at the very top of the page
     document.body.prepend(banner);
+  }
+
+  // ==========================================
+  // UPDATED: SYNC VIRTUAL TIME & SAVE OFFSET
+  // ==========================================
+  async function syncVirtualTime() {
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      
+      const timeDisplay = document.getElementById("currentVirtualTime");
+      
+      if (data.virtualTime) {
+        // 1. Calculate the offset between local system time and server virtual time
+        const serverTime = new Date(data.virtualTime).getTime();
+        const localTime = Date.now();
+        const offset = serverTime - localTime;
+
+        // 2. Save offset to localStorage so MyPigs/Reports can use it for countdowns
+        localStorage.setItem('timeWarpOffset', offset.toString());
+
+        // 3. Update UI display
+        if (timeDisplay) {
+          timeDisplay.textContent = data.virtualTime;
+          
+          // Visual indicator that the farmer is in "Test Mode"
+          if (data.isMocked) {
+            timeDisplay.style.color = "#d97706";
+            console.log("🛠️ Testing Mode: Server time is being mocked. Offset saved.");
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync virtual time. Using local system time.");
+    }
   }
 
   // =========================
@@ -110,6 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (err) {
         console.error("Logout error:", err);
       } finally {
+        // Note: Clear local storage but redirect to login
         localStorage.clear();
         window.location.href = "/login";
       }
