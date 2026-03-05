@@ -837,7 +837,6 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
       { 
         $set: { 
           current_status: "Weaning", 
-          age_stage: "growing" 
         },
         $push: {
           performance_records: {

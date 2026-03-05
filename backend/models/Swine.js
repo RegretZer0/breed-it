@@ -42,7 +42,6 @@ const swineSchema = new mongoose.Schema({
     type: String, 
     enum: [
       "piglet", 
-      "growing", 
       "adult"
     ], 
     required: true, 
