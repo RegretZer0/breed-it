@@ -10,7 +10,7 @@ router.use(adminOnly);
 
 /**
  * GET /api/admin/stats
- * Updated to calculate real-time concurrent users based on activity
+ * Updated to use Global Virtual Time for concurrent user calculation
  */
 router.get("/stats", async (req, res) => {
   try {
@@ -20,9 +20,11 @@ router.get("/stats", async (req, res) => {
     const farmers = await Farmer.countDocuments();
     const systemAdmins = await User.countDocuments({ role: "system_admin" });
 
-    // 2. REAL-TIME CONCURRENT USERS LOGIC
-    // Define activity window (e.g., users active in the last 5 minutes)
-    const activityWindow = new Date(Date.now() - 5 * 60 * 1000);
+    // 2. REAL-TIME CONCURRENT USERS LOGIC (Virtual Time Sensitive)
+    // We use global.getNow() instead of Date.now() to check activity relative to mocked time
+    const virtualNow = global.getNow();
+    const activityWindow = new Date(virtualNow.getTime() - 5 * 60 * 1000);
+    
     const concurrentUsers = await User.countDocuments({
       lastActive: { $gte: activityWindow }
     });
@@ -47,13 +49,62 @@ router.get("/stats", async (req, res) => {
         serverStatus: isHandlingLoad ? "Stable" : "Strained",
         memoryUsage: `${usedMemPercentage}%`,
         cpuLoad: cpuLoad.toFixed(2),
-        // Now returns the actual count from the database
-        concurrentUsers: concurrentUsers || 1 
+        concurrentUsers: concurrentUsers || 0,
+        // Added for debugging on dashboard
+        isTimeMocked: global.timeControl.isMocked,
+        virtualTime: virtualNow.toLocaleString()
       }
     });
   } catch (err) {
     console.error("Stats Error:", err);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+/**
+ * POST /api/admin/set-system-time
+ * MVP Feature: Shift the server's perception of "Now"
+ * UPDATED: Added robust parsing to prevent falling back to real-time
+ */
+router.post("/set-system-time", async (req, res) => {
+  try {
+    const { targetDate } = req.body;
+    
+    // 1. Reset Logic: If targetDate is null/empty, go back to reality
+    if (!targetDate) {
+      global.timeControl.offsetMS = 0;
+      global.timeControl.isMocked = false;
+      console.log("⏰ Time Warp: Reset to Real-Time");
+      return res.json({ success: true, message: "System time reset to real-time." });
+    }
+
+    // 2. Parsing Logic: Convert the frontend string to a real timestamp
+    const realNow = Date.now();
+    const targetParsed = new Date(targetDate);
+    const virtualNow = targetParsed.getTime();
+
+    // 3. Error Handling: If the date is invalid, do NOT update the global offset
+    if (isNaN(virtualNow)) {
+      console.error("❌ Time Warp Error: Received invalid date string:", targetDate);
+      return res.status(400).json({ success: false, message: "Invalid date format. Teleport failed." });
+    }
+
+    // 4. Calculate Offset: The difference between the "fake" time and "real" time
+    global.timeControl.offsetMS = virtualNow - realNow;
+    global.timeControl.isMocked = true;
+
+    console.log(`🚀 Time Warp Active: Offset is ${global.timeControl.offsetMS}ms`);
+    console.log(`📅 New Virtual Time: ${global.getNow().toLocaleString()}`);
+
+    res.json({ 
+      success: true, 
+      message: "Time warp successful!",
+      virtualTime: global.getNow().toLocaleString(),
+      offsetHours: (global.timeControl.offsetMS / 3600000).toFixed(2)
+    });
+  } catch (err) {
+    console.error("Time Warp Route Error:", err);
+    res.status(500).json({ success: false, message: "Failed to warp time." });
   }
 });
 

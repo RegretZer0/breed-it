@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    /* ... (Keeping all your existing styles exactly as they were) ... */
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -54,7 +55,7 @@
       width: 240px;
       background: #111827;
       color: white;
-      padding-top: 20px;
+      padding: 20px;
     }
 
     nav a {
@@ -102,6 +103,54 @@
       font-size: 28px;
       margin-top: 10px;
       font-weight: bold;
+    }
+
+    /* Time Warp Widget Styles */
+    .timewarp-widget {
+      border: 2px dashed #f59e0b;
+      background: #fffbeb;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      color: #92400e;
+    }
+
+    .timewarp-widget h3 {
+      font-size: 12px;
+      margin: 0 0 10px 0;
+      text-transform: uppercase;
+    }
+
+    .timewarp-widget input {
+      width: 100%;
+      padding: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #f59e0b;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .warp-btn {
+      background: #f59e0b;
+      color: white;
+      border: none;
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .reset-time-btn {
+      background: transparent;
+      color: #b45309;
+      border: 1px solid #b45309;
+      width: 100%;
+      padding: 5px;
+      margin-top: 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
     }
 
     /* Maintenance Section Styling */
@@ -271,6 +320,21 @@
 <div class="container">
 
   <nav>
+    <div class="timewarp-widget">
+        <h3>⏳ Time Warp (Dev Mode)</h3>
+        <p style="font-size: 10px; margin-bottom: 8px;">
+            Current Virtual Time:<br>
+            <strong id="virtualTimeDisplay" data-mocked="<%= isTimeMocked %>">
+              <%= virtualNow.toLocaleString() %>
+            </strong>
+        </p>
+        <input type="datetime-local" id="systemTimeInput">
+        <button class="warp-btn" id="teleportBtn">Teleport Server</button>
+        <button class="reset-time-btn" id="resetTimeBtn">Reset to Reality</button>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #374151; margin: 10px 0;">
+
     <a href="#">📊 System Health</a>
     <a href="#maintenance">🚧 Scheduling</a>
     <a href="#user-control">👤 User Control</a>
@@ -279,7 +343,6 @@
   </nav>
 
   <main>
-
     <h2>System Performance</h2>
     <div class="cards">
       <div class="card">
@@ -427,6 +490,6 @@
   </main>
 </div>
 
-<script src="../../../js/system-admin/dashboard.js"></script>
+<script src="/js/system-admin/dashboard.js"></script>
 </body>
 </html>

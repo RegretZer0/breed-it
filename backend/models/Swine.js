@@ -30,7 +30,7 @@ const swineSchema = new mongoose.Schema({
     type: String,
     enum: [
       "Monitoring (Day 1-30)", "Weaning", "3-Month Monitoring", "Final Selection", 
-      "Open", "In-Heat", "Under Observation", "Bred", "Pregnant",
+      "Open", "In-Heat", "Under Observation", "Bred", "Pregnant", "awaiting_farrowing", "farrowing_ready",
       "Farrowing", "Lactating", "Market-Ready", "Weight Limit (15-25kg)", "Culled/Sold",
       "Active", "Inactive", "Under Monitoring", "Routine Monitoring", "Completed",
       "To be Culled/Sold (Deformity)"
@@ -59,10 +59,11 @@ const swineSchema = new mongoose.Schema({
   sire_id: { type: String }, 
   dam_id: { type: String },
 
-  // --- Main Schema ---
+  // --- Main Schema: First Success Basis (For Auto-Culling) ---
   first_success_basis: {
     signs: [String],
-    established_date: { type: Date }
+    established_date: { type: Date },
+    report_id: { type: mongoose.Schema.Types.ObjectId, ref: "HeatReport" }
   },
 
   // ------------------- Reproductive Cycles (For Females) -------------------
@@ -80,7 +81,7 @@ const swineSchema = new mongoose.Schema({
     farrowed: { type: Boolean, default: false }, 
     expected_farrowing_date: { type: Date },
     actual_farrowing_date: { type: Date },
-    weaning_date: { type: Date }, 
+    weaning_date: { type: Date }, // Starts the 7-day Heat Return Window
     
     cycle_sire_id: { type: String },
 
@@ -157,15 +158,15 @@ const swineSchema = new mongoose.Schema({
 
 // ------------------- Logic / Helpers -------------------
 
-// 1. Lifecycle Phase Calculator (New)
+// 1. Lifecycle Phase Calculator (UPDATED: Uses birth_date for Time Warp accuracy)
 swineSchema.virtual('lifecycle_phase').get(function() {
   if (this.age_stage !== 'piglet') return null;
 
   const now = new Date();
-  const regDate = this.date_registered || this.createdAt;
-  const daysDiff = Math.floor((now - regDate) / (1000 * 60 * 60 * 24));
+  // We prioritize birth_date for piglets to ensure "Time Warp" works correctly
+  const startDate = this.birth_date || this.date_registered || this.createdAt;
+  const daysDiff = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
 
-  // Deformity check
   const latestPerf = this.performance_records?.[this.performance_records.length - 1];
   const hasDeformity = latestPerf?.deformities?.some(d => d !== "None" && d !== "");
 
@@ -175,14 +176,13 @@ swineSchema.virtual('lifecycle_phase').get(function() {
     return { phase: "Monitoring (Day 1-30)", daysLeft: 30 - daysDiff, status: 'info' };
   } else if (daysDiff <= 31) {
     return { phase: "Weaning", daysLeft: 0, status: 'warning' };
-  } else if (daysDiff <= 121) { // 30 days + 3 months (90 days)
+  } else if (daysDiff <= 121) {
     return { phase: "3-Month Monitoring", daysLeft: 121 - daysDiff, status: 'primary' };
   } else {
     return { phase: "Final Selection", daysLeft: 0, status: 'success' };
   }
 });
 
-// Virtual to find all offspring
 swineSchema.virtual('offspring', {
   ref: 'Swine',
   localField: 'swine_id',
@@ -195,17 +195,19 @@ swineSchema.virtual('heat_sign_basis').get(function() {
     : ["No successful cycle recorded yet"];
 });
 
-// Virtual for Average Daily Gain (ADG)
 swineSchema.virtual('current_adg').get(function() {
   if (!this.performance_records || this.performance_records.length < 2) return 0;
   const current = this.performance_records[this.performance_records.length - 1];
   const previous = this.performance_records[this.performance_records.length - 2];
+  
+  // Added safety check for weight
+  if (current.weight === undefined || previous.weight === undefined) return 0;
+
   const weightDiff = current.weight - previous.weight;
   const daysDiff = (new Date(current.record_date) - new Date(previous.record_date)) / (1000 * 60 * 60 * 24);
   return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
 });
 
-// Virtual to calculate total mortality count
 swineSchema.virtual('total_mortality_count').get(function() {
   if (!this.breeding_cycles) return 0;
   return this.breeding_cycles.reduce((acc, cycle) => {
@@ -228,12 +230,12 @@ swineSchema.virtual('selection_suggestion').get(function() {
   return "Monitoring";
 });
 
-// Pre-save hook for gestation calculation
+// Pre-save hook for gestation & success basis calculation
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
     
-    // Gestation Calculation
+    // Gestation Calculation (Respects Time Warp by checking if date already exists)
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
       const gestationDays = 114; 
       const farrowDate = new Date(latestCycle.ai_service_date);
@@ -241,16 +243,14 @@ swineSchema.pre("save", function(next) {
       latestCycle.expected_farrowing_date = farrowDate;
     }
 
-    // Logic for First Successful Pregnancy Basis
-    // Only sets if first_success_basis.signs is empty
-    if (
-      latestCycle.is_pregnant && 
-      (!this.first_success_basis || !this.first_success_basis.signs || this.first_success_basis.signs.length === 0) &&
-      latestCycle.observed_signs?.length > 0
-    ) {
+    // Capture First Successful Pregnancy Basis
+    const noBasisSet = !this.first_success_basis || !this.first_success_basis.signs || this.first_success_basis.signs.length === 0;
+    
+    if (latestCycle.is_pregnant && noBasisSet && latestCycle.observed_signs?.length > 0) {
       this.first_success_basis = {
         signs: latestCycle.observed_signs,
-        established_date: new Date()
+        established_date: new Date(),
+        report_id: latestCycle.heat_report_id
       };
     }
   }

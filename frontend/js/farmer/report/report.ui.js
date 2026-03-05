@@ -21,6 +21,13 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const tagSearchInput = document.getElementById("tagSearchInput");
   const statusTabs = document.querySelectorAll(".status-tab");
 
+  // --- Action Modal refs (NEW) ---
+  const actionModal = document.getElementById("actionModal");
+  const actionForm = document.getElementById("actionForm");
+  const actionFormBody = document.getElementById("actionFormBody");
+  const actionModalTitle = document.getElementById("actionModalTitle");
+  const actionCloseBtn = document.getElementById("actionCloseBtn");
+
   const moduleTitleMain = document.getElementById("moduleTitleMain");
   const moduleTitleSub = document.getElementById("moduleTitleSub");
   const logsTabBtn = document.getElementById("logsTab");
@@ -102,6 +109,44 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     document.body.classList.toggle("modal-open", anyOpen);
   }
+
+  // Handle Action Form Submission
+  // Replace the existing actionForm submit listener in report.ui.js (around line 123)
+  actionForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(actionForm);
+    let data = Object.fromEntries(formData.entries());
+    const { reportId, actionType } = actionForm.dataset;
+
+    // 1. UPDATE: Correct the endpoints to match aiRoutes.js
+    const routeMap = {
+      confirm_ai: `${BACKEND_URL}/api/ai/add`, // Changed from /api/reports/...
+      confirm_pregnancy: `${BACKEND_URL}/api/ai/confirm-pregnancy/${reportId}`, // Changed from /api/reports/...
+      confirm_farrowing: `${BACKEND_URL}/api/farrowing/add` // Future endpoint for farrowing
+    };
+
+    // 2. NEW: Map frontend field 'sire_id' to backend field 'maleSwineId' for AI
+    if (actionType === "confirm_ai") {
+      const report = activeReports.find(r => r._id === reportId);
+      data = {
+        ...data,
+        heatReportId: reportId,
+        swineId: report?.swine_id?.swine_id || "", // Send the tag/ID
+        maleSwineId: data.sire_id || "Unknown",    // Map sire_id to maleSwineId
+        farmerId: user.id // Ensure the current user is recorded as the operator
+      };
+    }
+
+    try {
+      const res = await api.post(routeMap[actionType], data);
+      if (res.success) {
+        uiAlert("Success!", { variant: "success" });
+        location.reload(); 
+      }
+    } catch (err) {
+      uiAlert(err.message || "Failed to save", { variant: "danger" });
+    }
+  });
 
   // =========================================================
   // ✅ Themed Alerts / Confirms (NO native alert/confirm)
@@ -799,6 +844,21 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     reportsTableBody.querySelectorAll("[data-action='track']").forEach((btn) => {
       btn.addEventListener("click", () => openTrackProgress(btn.dataset.id, btn.dataset.swine));
     });
+
+    // --- ADD THESE NEW LISTENERS ---
+    reportsTableBody.querySelectorAll("[data-action='confirm-preg']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const report = activeReports.find(r => r._id === btn.dataset.id);
+        openActionConfirmation(report, "confirm_pregnancy");
+      });
+    });
+
+    reportsTableBody.querySelectorAll("[data-action='confirm-farrow']").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const report = activeReports.find(r => r._id === btn.dataset.id);
+        openActionConfirmation(report, "confirm_farrowing");
+      });
+    });
   }
 
   function renderReportCard(r) {
@@ -887,14 +947,13 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
             <div class="report-actions">
               <button class="btn-soft btn-sm" type="button" data-action="view" data-id="${r._id}">
-                <i class="bi bi-eye"></i>
-                View Details
-              </button>
+                <i class="bi bi-eye"></i> View Details
+              </button>              
+              ${canShowConfirmPregnant(r) ? 
+                `<button class="btn-primary btn-sm" data-action="confirm-preg" data-id="${r._id}"><i class="bi bi-patch-check"></i> Confirm Preg</button>` : ''}
 
-              <button class="btn-primary btn-sm" type="button" data-action="track" data-id="${r._id}" data-swine="${swineDisplay}">
-                <i class="bi bi-graph-up-arrow"></i>
-                Track Progress
-              </button>
+              ${(normStatus(r.status) === 'pregnant' && isDue(r.expected_farrowing)) ? 
+                `<button class="btn-primary btn-sm" data-action="confirm-farrow" data-id="${r._id}"><i class="bi bi-calendar2-heart"></i> Confirm Farrow</button>` : ''}
             </div>
 
           </div>
@@ -920,6 +979,63 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!archiveModal) return;
     archiveModal.classList.add("hidden");
     archiveModal.setAttribute("aria-hidden", "true");
+    ensureBodyModalState();
+  }
+
+  // =========================================================
+  // ✅ NEW: Time Warp Action Renderer
+  // =========================================================
+  function openActionConfirmation(report, type) {
+    if (!actionModal || !actionFormBody) return;
+
+    let html = "";
+    const today = new Date().toISOString().split('T')[0];
+
+    if (type === "confirm_ai") {
+      actionModalTitle.textContent = "Confirm AI Service";
+      html = `
+        <div class="form-group mb-3">
+          <label class="form-label">Service Date (Time Warp)</label>
+          <input type="date" name="event_date" class="form-control" value="${today}" required>
+          <small class="text-muted">When did the AI actually happen?</small>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Boar/Sire ID (Optional)</label>
+          <input type="text" name="sire_id" class="form-control" placeholder="Enter Boar ID">
+        </div>`;
+    } 
+    else if (type === "confirm_pregnancy") {
+      actionModalTitle.textContent = "Confirm Pregnancy";
+      html = `
+        <div class="form-group mb-3">
+          <label class="form-label">Check Date</label>
+          <input type="date" name="event_date" class="form-control" value="${today}" required>
+        </div>`;
+    }
+    else if (type === "confirm_farrowing") {
+      actionModalTitle.textContent = "Confirm Farrowing";
+      html = `
+        <div class="form-group mb-3">
+          <label class="form-label">Farrowing Date</label>
+          <input type="date" name="event_date" class="form-control" value="${today}" required>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+           <div class="form-group">
+            <label class="form-label">Live Piglets</label>
+            <input type="number" name="total_live" class="form-control" min="1" value="1" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mortality</label>
+            <input type="number" name="mortality" class="form-control" min="0" value="0">
+          </div>
+        </div>`;
+    }
+
+    actionFormBody.innerHTML = html;
+    actionForm.dataset.reportId = report._id;
+    actionForm.dataset.actionType = type;
+    
+    actionModal.classList.remove("hidden");
     ensureBodyModalState();
   }
 

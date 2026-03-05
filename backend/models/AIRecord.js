@@ -37,10 +37,25 @@ const aiRecordSchema = new mongoose.Schema(
     swine_code: { type: String },
     farmer_name: { type: String },
 
+    // --- TIME PORTAL FIELDS ---
     insemination_date: {
       type: Date,
       default: Date.now
     },
+    // When the pregnancy check actually occurred (Farmer observation)
+    pregnancy_check_date: {
+      type: Date
+    },
+    // When the weaning actually occurred (Manager action)
+    weaning_date: {
+      type: Date
+    },
+    // Captured during weaning to calculate growth performance
+    weaning_weight: {
+      type: Number,
+      default: 0
+    },
+
     ai_confirmed: {
       type: Boolean,
       default: false
@@ -74,7 +89,24 @@ const aiRecordSchema = new mongoose.Schema(
       default: "Ongoing"
     }
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    // Allows virtuals to be included when sending data to the frontend
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+/**
+ * VIRTUAL: Expected Farrowing Date
+ * Automatically calculates 114 days from the insemination_date.
+ * This is the heart of the "Time Portal" logic.
+ */
+aiRecordSchema.virtual('expected_farrowing_date').get(function() {
+  if (!this.insemination_date) return null;
+  const date = new Date(this.insemination_date);
+  date.setDate(date.getDate() + 114);
+  return date;
+});
 
 module.exports = mongoose.model("AIRecord", aiRecordSchema);

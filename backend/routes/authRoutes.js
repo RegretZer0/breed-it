@@ -171,7 +171,7 @@ async function verifyOTPInternal(email, userOtp) {
 }
 
 /* ======================
-    LOGIN (FIXED FOR REFRESH BUG)
+    LOGIN (FIXED FOR IAT & TIME WARP)
 ====================== */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -225,15 +225,35 @@ router.post("/login", async (req, res) => {
           return res.status(500).json({ success: false, message: "Session save failed" });
         }
 
-        // ✅ Audit Log: Login
+        // ✅ Audit Log: Login (Using virtual time for the log entry)
         await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
+
+        /**
+         * ✅ VIRTUAL TIME FIX: 
+         * We calculate the virtual timestamp in seconds.
+         * To avoid the "iat is not allowed in options" error, 
+         * we put it directly in the payload.
+         */
+        const virtualTimestamp = Math.floor(global.getNow().getTime() / 1000);
+        
+        const payload = { 
+          id: user._id, 
+          role: role || user.role,
+          iat: virtualTimestamp // Moving iat here fixes the crash
+        };
+
+        const token = jwt.sign(
+          payload,
+          process.env.JWT_SECRET || "fallback_secret",
+          { expiresIn: "1d" } 
+        );
 
         res.json({
           success: true,
           message: "Login successful",
           user: req.session.user,
           role: role || user.role,
-          token: generateToken(user),
+          token: token, // Using the time-synced token
         });
       });
     });

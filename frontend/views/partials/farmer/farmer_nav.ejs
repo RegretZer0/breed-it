@@ -4,14 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-  <!-- Font Awesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
-  
-  <!-- Global Farmer Nav CSS -->
+
   <link rel="stylesheet" href="../../../css/farmer/globalNav.css">
 
   <% if (page_title === "Farmer Dashboard") { %>
@@ -28,7 +25,6 @@
 
   <% } else if (page_title === "Profile") { %>
     <link rel="stylesheet" href="../../../css/farmer/profile.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
 
   <% } else if (page_title === "Your Schedule") { %>
     <link rel="stylesheet" href="../../../css/farmer/calendar.css">
@@ -41,24 +37,61 @@
 
   <% } else if (page_title === "Help") { %>
     <link rel="stylesheet" href="../../../css/farmer/help.css">
-    
   <% } %>
+
+  <script>
+    /**
+     * Synchronizes the UI with the Virtual Time Warp offset (Farmer Nav)
+     * Offset is saved by dashboard sync (/health) or other pages that call syncVirtualTime.
+     */
+    function initVirtualClock() {
+      const clockEl = document.getElementById("globalVirtualClock");
+      const containerEl = document.getElementById("virtualClockContainer");
+      if (!clockEl || !containerEl) return;
+
+      function updateClock() {
+        const offsetRaw = localStorage.getItem("timeWarpOffset");
+        const offset = Number.parseInt(offsetRaw || "0", 10) || 0;
+
+        const virtualNow = new Date(Date.now() + offset);
+
+        const options = {
+          month: "short",
+          day: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        };
+
+        clockEl.textContent = virtualNow.toLocaleString("en-US", options);
+
+        if (offset !== 0) {
+          containerEl.style.color = "#dc3545";
+          containerEl.style.fontWeight = "bold";
+        } else {
+          containerEl.style.color = "inherit";
+          containerEl.style.fontWeight = "normal";
+        }
+      }
+
+      updateClock();
+      setInterval(updateClock, 1000);
+    }
+
+    document.addEventListener("DOMContentLoaded", initVirtualClock);
+  </script>
 </head>
 
 <body>
 
-<!-- =========================
-     MOBILE MENU
-========================= -->
 <div class="mobile-menu" id="mobileMenu">
   <div class="menu-list">
 
-    <!-- Close Button -->
     <button class="close-btn" id="closeMenu" aria-label="Close menu">
       <i class="bi bi-x-lg"></i>
     </button>
 
-    <!-- Menu Items -->
     <ul class="menu-items">
       <li data-action="settings">
         <i class="bi bi-gear"></i>
@@ -74,10 +107,6 @@
   </div>
 </div>
 
-
-<!-- =========================
-     HEADER
-========================= -->
 <header class="page-header">
   <div class="nav-left">
     <% if (current_page !== "farmer_dashboard") { %>
@@ -89,10 +118,13 @@
     <% } %>
   </div>
 
-  <!-- RIGHT SIDE ICONS -->
+  <div class="nav-center" id="virtualClockContainer" style="font-size: 0.8rem; display: flex; align-items: center; gap: 4px; opacity: 0.9;">
+    <i class="bi bi-clock-history" style="font-size: 0.7rem;"></i>
+    <span id="globalVirtualClock">Loading...</span>
+  </div>
+
   <div class="nav-right">
 
-    <!-- Notifications -->
     <button class="icon-btn" id="openNotifications" aria-label="Notifications">
       <i class="bi bi-bell"></i>
       <span id="notificationBadge"
@@ -101,14 +133,12 @@
       </span>
     </button>
 
-    <!-- Burger Menu -->
     <button class="menu-btn" id="openMenu" aria-label="Menu">
       <i class="bi bi-list"></i>
     </button>
 
   </div>
 </header>
-
 
 <div class="side-panel" id="settingsPanel">
   <div class="panel-header">
@@ -146,114 +176,72 @@
   </div>
 </div>
 
-<!-- =========================
-     NOTIFICATIONS PANEL (REDESIGNED) — SINGLE INSTANCE ONLY ✅
-     (Removed duplicate notificationsPanel/notificationsList/viewAllNotificationsBtn)
-========================= -->
 <div class="side-panel notifications-panel" id="notificationsPanel">
   <div class="panel-hero">
-    <div class="d-flex flex-column">
-      <h3 class="mb-0">Notifications</h3>
-      <small class="opacity-75">Latest updates</small>
-    </div>
-
-    <div class="d-flex align-items-center gap-2">
-      <!-- ✅ Mark all read -->
-      <button type="button"
-              class="btn btn-light btn-sm notif-hero-btn"
-              id="markAllNotificationsReadBtn">
-        <i class="bi bi-check2-all me-1"></i> Mark all
-      </button>
-
-      <button class="close-panel"
-              data-close="notificationsPanel"
-              aria-label="Close">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+    <h3>Notifications</h3>
+    <button class="close-panel"
+            data-close="notificationsPanel"
+            aria-label="Close">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
 
   <div class="panel-body">
-    <div id="notificationsList" class="notification-list">
-      <!-- Dynamic -->
-    </div>
+    <div id="notificationsList" class="notification-list"></div>
 
-    <button id="viewAllNotificationsBtn" class="view-all-btn">
+    <button id="viewAllNotificationsBtn"
+            class="view-all-btn">
       View All Notifications
     </button>
   </div>
 </div>
 
-<!-- =========================
-     NOTIFICATION HISTORY PANEL (REDESIGNED)
-========================= -->
 <div class="side-panel notifications-panel history-panel"
      id="notificationHistoryModal">
 
   <div class="panel-hero">
-    <div class="d-flex flex-column">
-      <h3 class="mb-0">Notification History</h3>
-      <small class="opacity-75">All notifications</small>
-    </div>
-
-    <div class="d-flex align-items-center gap-2">
-      <!-- ✅ Mark all read (history) -->
-      <button type="button"
-              class="btn btn-light btn-sm notif-hero-btn"
-              id="markAllNotificationsReadBtnModal">
-        <i class="bi bi-check2-all me-1"></i> Mark all
-      </button>
-
-      <button class="close-panel"
-              data-close="notificationHistoryModal"
-              aria-label="Close">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+    <h3>Notification History</h3>
+    <button class="close-panel"
+            data-close="notificationHistoryModal"
+            aria-label="Close">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
 
   <div class="panel-body">
-    <!-- Filters -->
-    <div class="notif-filters">
-      <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-6">
-          <label class="form-label notif-filter-label">Type</label>
-          <select class="form-select form-select-sm" id="notifFilterType">
-            <option value="">All Types</option>
-            <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
-          </select>
-        </div>
-
-        <div class="col-12 col-md-6">
-          <label class="form-label notif-filter-label">Time</label>
-          <select class="form-select form-select-sm" id="notifFilterTime">
-            <option value="">Any time</option>
-            <option value="today">Today</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- History list -->
-    <div id="notificationHistoryList" class="notification-list">
-      <!-- Dynamic -->
-    </div>
-
-    <!-- Pagination -->
-    <div class="notif-pager">
-      <button type="button" class="btn btn-outline-secondary btn-sm" id="notifPrevPageBtn">
-        <i class="bi bi-chevron-left"></i>
-      </button>
-
-      <div class="notif-page-label" id="notifPageLabel">Page 1 / 1</div>
-
-      <button type="button" class="btn btn-outline-secondary btn-sm" id="notifNextPageBtn">
-        <i class="bi bi-chevron-right"></i>
-      </button>
-    </div>
+    <div id="notificationHistoryList" class="notification-list"></div>
   </div>
 </div>
+
+<!-- GLOBAL SCRIPTS (control-70) -->
+<script type="module" src="/js/farmer/farmer_main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+<% if (page_title === "Farmer Dashboard") { %>
+  <script type="module" src="/js/farmer/farmer_dashboard.js"></script>
+
+<% } else if (page_title === "MyPigs") { %>
+  <script type="module" src="/js/farmer/mypigs.js"></script>
+
+<% } else if (page_title === "Report") { %>
+  <script type="module" src="/js/farmer/report/report.js"></script>
+
+<% } else if (page_title === "Profile") { %>
+  <script type="module" src="/js/farmer/profile.js"></script>
+  <script src="/js/auth/change_password.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+
+<% } else if (page_title === "Your Schedule") { %>
+  <script type="module" src="/js/farmer/calendar.js"></script>
+
+<% } else if (page_title === "Reproduction Growth") { %>
+  <script type="module" src="/js/farmer/reproduction/reproduction.ui.js"></script>
+
+<% } else if (page_title === "Breeding Analytics") { %>
+  <script type="module" src="/js/farmer/breeding_analytics.js"></script>
+
+<% } else if (page_title === "Help") { %>
+  <script src="/js/farmer/help.js"></script>
+<% } %>

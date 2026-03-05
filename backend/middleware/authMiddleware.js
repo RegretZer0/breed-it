@@ -28,7 +28,24 @@ async function requireSessionAndToken(req, res, next) {
     // 3) Process Token if present, otherwise use Session
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret");
+        /**
+         * FIXED: Time Warp Resilience
+         * We check if the virtual time is significantly different from real time.
+         * If it is, we ignore the expiration check so users don't get kicked out 
+         * when teleporting into the future.
+         */
+        const realNow = new Date().getTime();
+        const virtualNow = global.getNow().getTime();
+        const clockTimestamp = Math.floor(virtualNow / 1000);
+        
+        // If offset is greater than 1 minute, consider it a "Warp"
+        const isTimeWarped = Math.abs(virtualNow - realNow) > 60000;
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback_secret", {
+          clockTimestamp: clockTimestamp,
+          ignoreExpiration: isTimeWarped // ✅ Bypass expiration ONLY during time warps
+        });
+
         userId = decoded.id;
         
         // Safety check: If session exists, ensure it matches the token
@@ -39,10 +56,14 @@ async function requireSessionAndToken(req, res, next) {
           });
         }
       } catch (jwtErr) {
-        console.error("JWT verification failed:", jwtErr.message);
+        console.error(`❌ JWT Verification Failed [${jwtErr.name}]:`, jwtErr.message);
+        
         // If token is invalid but session is valid, we can still proceed
         if (!hasSession) {
-          return res.status(401).json({ success: false, message: "Invalid token." });
+          const msg = jwtErr.name === "TokenExpiredError" 
+            ? "Your session has expired in this timeline. Please log in again." 
+            : "Invalid token.";
+          return res.status(401).json({ success: false, message: msg });
         }
         userId = req.session.user.id;
       }
@@ -52,13 +73,11 @@ async function requireSessionAndToken(req, res, next) {
     }
 
     // 4) LOAD FULL USER FROM DATABASE & UPDATE LAST ACTIVE
-    // Removed .lean() so we can use .save() or update fields easily
     let user = await User.findById(userId);
     
-    // UPDATED: Heartbeat Logic
-    // If user exists, update their lastActive timestamp for the Admin Dashboard
+    // Heartbeat Logic using Global Virtual Time
     if (user) {
-      user.lastActive = new Date();
+      user.lastActive = global.getNow(); // Use virtual time for the heartbeat
       await user.save();
     }
 
@@ -66,7 +85,6 @@ async function requireSessionAndToken(req, res, next) {
     if (!user) {
         const directFarmer = await Farmer.findById(userId).lean();
         if (directFarmer) {
-            // Reconstruct a user-like object from the farmer profile if needed
             user = {
                 _id: directFarmer.user_id || directFarmer._id,
                 role: "farmer",
@@ -75,9 +93,8 @@ async function requireSessionAndToken(req, res, next) {
                 managerId: directFarmer.registered_by
             };
             
-            // Optional: If they are a direct farmer, update their base User account heartbeat too
             if (directFarmer.user_id) {
-              await User.findByIdAndUpdate(directFarmer.user_id, { lastActive: new Date() });
+              await User.findByIdAndUpdate(directFarmer.user_id, { lastActive: global.getNow() });
             }
         }
     }
@@ -89,10 +106,8 @@ async function requireSessionAndToken(req, res, next) {
     // 5) Attach farmerProfileId if user is a farmer
     let farmerProfileId = null;
     if (user.role === "farmer") {
-      // Look for the profile linked to this user account
       let farmerProfile = await Farmer.findOne({ user_id: user._id }).lean();
       
-      // Fallback: check if the userId itself is the Farmer Profile entry
       if (!farmerProfile) {
           farmerProfile = await Farmer.findById(userId).lean();
       }
