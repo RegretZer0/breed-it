@@ -6,10 +6,38 @@ export function initPigsModule(ctx, breedingModule) {
   // ✅ Always resolve token fresh (prevents stale token issues)
   const getToken = () => ctx.token || localStorage.getItem("token") || "";
 
+  /* =======================================================
+     SAFE FALLBACKS (prevents broken calls)
+  ======================================================= */
+  function isDeadStatusFallback(hs) {
+    const s = (hs ?? "").toString().trim().toLowerCase();
+    return s === "deceased" || s.includes("deceased") || s.includes("dead") || s.includes("died");
+  }
+  const isDeadStatus = (hs) =>
+    typeof ctx.isDeadStatus === "function" ? !!ctx.isDeadStatus(hs) : isDeadStatusFallback(hs);
+
   /* ================= LOAD RESEARCH DATA ================= */
-  async function loadResearchData() {
+  async function loadResearchData({ force = false } = {}) {
     try {
       const headers = { Authorization: `Bearer ${getToken()}` };
+
+      // ✅ Ensure base objects exist (prevents "Cannot set properties of undefined")
+      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
+      state.rawAiData = state.rawAiData || [];
+      state.rawSelectionData = state.rawSelectionData || [];
+      state.allSwineData = state.allSwineData || [];
+
+      // ✅ If force refresh, always hit endpoints again (avoid stale manager view)
+      if (!force) {
+        const hasSwine = Array.isArray(state.allSwineData) && state.allSwineData.length > 0;
+        const hasSel = Array.isArray(state.rawSelectionData) && state.rawSelectionData.length > 0;
+        const hasAi = Array.isArray(state.rawAiData) && state.rawAiData.length > 0;
+        const hasPerf =
+          state.rawPerformanceData &&
+          (Array.isArray(state.rawPerformanceData.morphology) || Array.isArray(state.rawPerformanceData.deformities));
+
+        if (hasSwine && hasSel && hasAi && hasPerf) return;
+      }
 
       const [perfRes, aiRes, selRes, swineRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/reproduction/performance-analytics`, { headers }),
@@ -46,13 +74,11 @@ export function initPigsModule(ctx, breedingModule) {
 
   /* =======================================================
      FLOATING PANEL OVERLAY HELPERS
-     - overlay id: #farmerPanelOverlay (from table.ejs)
-     - panel id:   #farmerPanel (existing)
   ======================================================= */
   function openFarmerPanelOverlay() {
     document.getElementById("farmerPanelOverlay")?.classList.remove("d-none");
     document.getElementById("farmerPanel")?.classList.remove("d-none");
-    document.body.classList.add("panel-open"); // optional (CSS can lock scroll)
+    document.body.classList.add("panel-open");
   }
 
   function closeFarmerPanelOverlay() {
@@ -65,16 +91,88 @@ export function initPigsModule(ctx, breedingModule) {
   function showFarmerPanel() {
     dom.farmerPanelEmpty?.classList.add("d-none");
     dom.farmerPanel?.classList.remove("d-none");
-    openFarmerPanelOverlay(); // ✅ ensures overlay + panel are visible
+    openFarmerPanelOverlay();
   }
 
+  /* ================= MANAGER: scrub selection artifacts ONLY in Growth tab ================= */
+  function scrubSelectionArtifactsInGrowthTab() {
+    // Only scrub inside Growth tab content (NOT selection tab)
+    const growthTab = document.getElementById("cycleGrowthTab");
+    if (!growthTab) return;
+    if (growthTab.classList.contains("d-none")) return;
+
+    // 1) Remove any "System Suggestion" blocks inside Growth tab
+    growthTab.querySelectorAll("*").forEach((el) => {
+      if (!el || !el.textContent) return;
+      const t = el.textContent.trim();
+      if (!t) return;
+
+      if (t.includes("System Suggestion:") || t.includes("System Suggestion")) {
+        const kill =
+          el.closest(".rounded-3.border") ||
+          el.closest(".alert") ||
+          el.closest(".px-3.py-2.rounded-3") ||
+          el;
+        if (kill && kill.parentNode) kill.parentNode.removeChild(kill);
+      }
+    });
+
+    // 2) Remove selection-status pills inside Growth tab only (more strict so we don't kill legit "Status:" badges)
+    growthTab.querySelectorAll(".badge").forEach((b) => {
+      const raw = (b.textContent || "").trim();
+      if (!raw) return;
+
+      const tx = raw.toLowerCase();
+
+      // ✅ only remove badges that are clearly selection-related
+      const isSelectionBadge =
+        tx.startsWith("selection:") ||
+        tx.includes("system suggestion") ||
+        tx === "retain for breeding" ||
+        tx === "mark for sale" ||
+        tx === "pending" ||
+        tx === "selection";
+
+      if (isSelectionBadge) b.remove();
+    });
+  }
+
+  // ✅ Compatibility shim: file previously called scrubSystemSuggestionUI(), but it didn't exist
+  // Keep it safe + focused: scrub only the Growth tab artifacts.
+  function scrubSystemSuggestionUI() {
+    scrubSelectionArtifactsInGrowthTab();
+  }
+
+  /* ================= PANEL TAB SWITCH (single, fixed) ================= */
   function activateFarmerPanelTab(targetId) {
     document.querySelectorAll("#farmerPanelTabs .nav-link").forEach((b) => b.classList.remove("active"));
     document.querySelectorAll(".farmer-panel-tab").forEach((t) => t.classList.add("d-none"));
 
     document.querySelector(`#farmerPanelTabs .nav-link[data-target="${targetId}"]`)?.classList.add("active");
     document.getElementById(targetId)?.classList.remove("d-none");
+
+    // ✅ scrub ONLY if growth tab is visible
+    scrubSelectionArtifactsInGrowthTab();
   }
+
+  /* ================= Keep scrubbing ONLY when panel DOM changes =================
+     IMPORTANT FIX:
+     - before: observed childList only (tab switching toggles class => NOT detected)
+     - now: also observe class attribute changes so switching to Growth triggers scrub
+  ================= */
+  (function wireSuggestionScrubberOnce() {
+    const overlay = document.getElementById("farmerPanelOverlay");
+    if (!overlay || overlay.dataset.sugScrubBound === "1") return;
+    overlay.dataset.sugScrubBound = "1";
+
+    const obs = new MutationObserver(() => scrubSelectionArtifactsInGrowthTab());
+    obs.observe(overlay, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class"]
+    });
+  })();
 
   /* ================= VIEW FARMER (opens floating panel) ================= */
   async function handleViewFarmer(id) {
@@ -126,12 +224,16 @@ export function initPigsModule(ctx, breedingModule) {
       }`;
     }
 
+    // ✅ IMPORTANT: force refresh research data so sell/retain reflects latest persisted swine status
+    await loadResearchData({ force: true });
+
     await loadLinkedPigs(id);
 
     wireReproSowFilters();
 
     hideGlobalLoader();
 
+    scrubSystemSuggestionUI();
     document.querySelector("#farmerPanelOverlay .panel-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -149,12 +251,9 @@ export function initPigsModule(ctx, breedingModule) {
     }
 
     try {
-      if (!Array.isArray(state.allSwineData) || state.allSwineData.length === 0) {
-        await loadResearchData();
-      }
-
       const res = await fetch(`${BACKEND_URL}/api/farmer/${farmerId}/pigs`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
+        headers: { Authorization: `Bearer ${getToken()}` },
+        cache: "no-store"
       });
 
       if (!res.ok) throw new Error("Failed request");
@@ -165,6 +264,9 @@ export function initPigsModule(ctx, breedingModule) {
       updateReproSnapshotStats();
 
       breedingModule?.renderBreedingPerformance?.();
+
+      // ✅ manager: remove suggestion UI if it was rendered by shared view
+      scrubSystemSuggestionUI();
     } catch (err) {
       console.error("Load pigs error:", err);
     }
@@ -209,7 +311,7 @@ export function initPigsModule(ctx, breedingModule) {
       });
     });
 
-    // ✅ FIXED: born piglets should be counted by dam_id matching sows (robust swine_id/swine_tag)
+    // ✅ born piglets should be counted by dam_id matching sows (robust swine_id/swine_tag)
     const sowTags = adultSows
       .map((s) => (s.swine_id || s.swine_tag || "").toString().trim())
       .filter(Boolean);
@@ -222,7 +324,7 @@ export function initPigsModule(ctx, breedingModule) {
       : [];
 
     const totalBorn = bornPiglets.length;
-    const totalDead = bornPiglets.filter((x) => ctx.isDeadStatus(x.health_status)).length;
+    const totalDead = bornPiglets.filter((x) => isDeadStatus(x.health_status)).length;
     const mortalityPct = totalBorn > 0 ? ((totalDead / totalBorn) * 100).toFixed(1) : "0.0";
 
     setText("statTotalPigs", totalPigs);
@@ -248,6 +350,7 @@ export function initPigsModule(ctx, breedingModule) {
       e.preventDefault();
       state.breedingSowPage = 1;
       breedingModule?.renderBreedingPerformance?.();
+      scrubSystemSuggestionUI();
     });
 
     document.getElementById("reproSowReset")?.addEventListener("click", () => {
@@ -257,14 +360,12 @@ export function initPigsModule(ctx, breedingModule) {
       if (h) h.value = "";
       state.breedingSowPage = 1;
       breedingModule?.renderBreedingPerformance?.();
+      scrubSystemSuggestionUI();
     });
   }
 
   /* =======================================================
      OVERLAY CLOSE WIRING (once)
-     - Close button
-     - Click outside
-     - ESC (guarded to avoid duplicate behavior)
   ======================================================= */
   (function wireOverlayCloseOnce() {
     const overlay = document.getElementById("farmerPanelOverlay");
@@ -281,7 +382,6 @@ export function initPigsModule(ctx, breedingModule) {
       closeFarmerPanelOverlay();
     });
 
-    // ✅ Only close if overlay is open (prevents annoying ESC close calls)
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       const ov = document.getElementById("farmerPanelOverlay");
@@ -300,6 +400,7 @@ export function initPigsModule(ctx, breedingModule) {
     const sowBtn = e.target.closest(".view-sow-cycles-btn");
     if (sowBtn) {
       breedingModule?.openSowCycles?.(sowBtn.dataset.id);
+      scrubSystemSuggestionUI();
       return;
     }
 
@@ -311,7 +412,17 @@ export function initPigsModule(ctx, breedingModule) {
 
       if (breedingModule && typeof breedingModule.openCycleDetail === "function") {
         breedingModule.openCycleDetail(cycleId, sowId);
+
+        // ✅ openCycleDetail is async; scrub after DOM paints
+        setTimeout(() => scrubSystemSuggestionUI(), 80);
       }
+      return;
+    }
+
+    // ✅ IMPORTANT: scrub when switching internal cycle tabs to Growth (class toggle isn't childList)
+    const growthTabBtn = e.target.closest('#cycleDetailTabs .nav-link[data-target="cycleGrowthTab"]');
+    if (growthTabBtn) {
+      setTimeout(() => scrubSelectionArtifactsInGrowthTab(), 60);
       return;
     }
   });
@@ -328,6 +439,7 @@ export function initPigsModule(ctx, breedingModule) {
     if (target === "farmerPanelReproTab") {
       wireReproSowFilters();
       breedingModule?.renderBreedingPerformance?.();
+      scrubSystemSuggestionUI();
     }
   });
 

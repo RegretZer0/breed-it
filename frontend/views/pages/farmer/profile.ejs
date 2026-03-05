@@ -1,177 +1,250 @@
 <%- include("../../partials/farmer/farmer_nav") %>
 
-<div class="app-root">
-  <main class="profile-container">
-
-  <!-- PROFILE HEADER -->
-  <section class="profile-header-card">
-    <div class="profile-avatar">
-      <img 
-        id="profileAvatarImg" 
-        src="/images/default-avatar.png" 
-        alt="Profile Picture"
-      />
-    </div>
-
-    <div class="profile-header-info">
-      <h2 id="profileName">Loading...</h2>
-      <p class="role">Pig Farmer</p>
-    </div>
-  </section>
-
-
-  <!-- VIEW PROFILE CARD -->
-  <section id="viewProfile" class="profile-card modern-card">
-
-    <div class="info-grid">
-      <div class="info-item">
-        <label>Farmer ID</label>
-        <span id="farmer_id">-</span>
-      </div>
-
-      <div class="info-item">
-        <label>Email</label>
-        <span id="email">-</span>
-      </div>
-
-      <div class="info-item">
-        <label>Contact Number</label>
-        <span id="contact_no">-</span>
-      </div>
-
-      <div class="info-item">
-        <label>Address</label>
-        <span id="address">-</span>
-      </div>
-
-      <div class="info-item">
-        <label>Number of Pens</label>
-        <span id="num_of_pens">0</span>
-      </div>
-
-      <div class="info-item">
-        <label>Pen Capacity</label>
-        <span id="pen_capacity">0</span>
-      </div>
-    </div>
-
-    <button class="primary-btn edit-profile-btn" id="editProfileBtn">
-      <i class="bi bi-pencil"></i>
-      Edit Profile
-    </button>
-
-  </section>
-
-
-  <!-- EDIT PROFILE -->
-  <section id="editProfile" class="profile-card modern-card hidden">
-
-    <h3 class="section-title">Edit Profile</h3>
+<div class="app-root profile-page">
+  <main class="container-xxl px-3 px-md-4 profile-container">
 
     <!-- =========================
-         AVATAR UPLOAD SECTION
+         PROFILE HERO (HEADER)
     ========================== -->
-    <div class="avatar-upload">
+    <section class="profile-hero-card mb-4 position-relative overflow-hidden">
+  <!-- Decorative layers (no JS) -->
+  <div class="hero-decor hero-grid"></div>
+  <div class="hero-decor hero-blob hero-blob-1"></div>
+  <div class="hero-decor hero-blob hero-blob-2"></div>
 
-      <div class="avatar-preview">
-        <img 
-          id="editAvatarImg" 
-          src="/images/default-avatar.png" 
-          alt="Edit Avatar"
+  <div class="row align-items-center g-3 position-relative hero-content">
+    <div class="col-12 col-md-auto">
+      <div class="profile-avatar-wrap">
+        <img
+          id="profileAvatarImg"
+          src="/images/default-avatar.png"
+          alt="Profile Picture"
+          class="profile-avatar-img"
         />
       </div>
-
-      <button type="button" id="changeAvatarBtn">Change Photo</button>
-
-      <input
-        type="file"
-        id="avatarInput"
-        accept="image/*"
-        hidden
-      />
     </div>
 
+    <div class="col-12 col-md">
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div class="min-w-0">
+          <h2 id="profileName" class="profile-hero-name mb-2 text-truncate">Loading...</h2>
+
+          <div class="profile-hero-sub d-flex flex-wrap gap-2 align-items-center">
+            <span class="badge profile-pill">
+              <i class="bi bi-person-badge me-1"></i> Pig Farmer
+            </span>
+            <span class="badge profile-pill profile-pill-soft">
+              <i class="bi bi-shield-check me-1"></i> Account Profile
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- =========================
-         FORM GRID
+         VIEW PROFILE (CARD)
     ========================== -->
-    <div class="form-grid">
+    <section id="viewProfile" class="card profile-card border-0 shadow-sm mb-4">
+      <div class="card-body p-3 p-md-4">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+          <div>
+            <h5 class="mb-1 profile-section-title">
+              <i class="bi bi-card-checklist me-2"></i>Profile Details
+            </h5>
+            <div class="text-muted small">Review your account information.</div>
+          </div>
+        </div>
 
-      <div class="form-group">
-        <label>Name</label>
-        <input type="text" id="editName" disabled />
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Farmer ID</div>
+              <div class="info-value" id="farmer_id">-</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Email</div>
+              <div class="info-value" id="email">-</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Contact Number</div>
+              <div class="info-value" id="contact_no">-</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Address</div>
+              <div class="info-value" id="address">-</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Number of Pens</div>
+              <div class="info-value" id="num_of_pens">0</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="info-tile">
+              <div class="info-label">Pen Capacity</div>
+              <div class="info-value" id="pen_capacity">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4">
+          <!-- Keep class edit-profile-btn for your styling hooks -->
+          <button class="btn btn-success btn-lg edit-profile-btn primary-btn" type="button" id="editProfileBtn">
+            <i class="bi bi-pencil me-2"></i>
+            Edit Profile
+          </button>
+        </div>
       </div>
+    </section>
 
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="editEmail" disabled />
+    <!-- =========================
+         EDIT PROFILE (CARD)
+    ========================== -->
+    <section id="editProfile" class="card profile-card border-0 shadow-sm mb-4 hidden">
+      <div class="card-body p-3 p-md-4">
+
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
+          <div>
+            <h5 class="mb-1 profile-section-title">
+              <i class="bi bi-sliders2 me-2"></i>Edit Profile
+            </h5>
+            <div class="text-muted small">Update contact details and farm capacity.</div>
+          </div>
+        </div>
+
+        <!-- Avatar Upload -->
+        <div class="profile-edit-avatar mb-3">
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="avatar-preview">
+              <img
+                id="editAvatarImg"
+                src="/images/default-avatar.png"
+                alt="Edit Avatar"
+              />
+            </div>
+
+            <div class="d-flex flex-column gap-2">
+              <button type="button" class="btn btn-outline-success rounded-pill px-3" id="changeAvatarBtn">
+                <i class="bi bi-image me-2"></i>Change Photo
+              </button>
+
+              <div class="text-muted small">JPG/PNG recommended. Square images look best.</div>
+            </div>
+
+            <input
+              type="file"
+              id="avatarInput"
+              accept="image/*"
+              hidden
+            />
+          </div>
+        </div>
+
+        <!-- Form -->
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Name</label>
+            <input type="text" id="editName" class="form-control form-control-lg" disabled />
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Email</label>
+            <input type="email" id="editEmail" class="form-control form-control-lg" disabled />
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Contact Number</label>
+            <input type="tel" id="editContact_no" class="form-control form-control-lg" required />
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Address</label>
+            <input type="text" id="editAddress" class="form-control form-control-lg" required />
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Number of Pens</label>
+            <input type="number" id="editNumPens" class="form-control form-control-lg" min="0" required />
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label class="form-label small text-muted mb-1">Pen Capacity</label>
+            <input type="number" id="editPenCapacity" class="form-control form-control-lg" min="0" required />
+          </div>
+        </div>
+
+        <div class="d-grid d-md-flex justify-content-md-between align-items-md-center gap-2 mt-4">
+          <button class="btn btn-outline-success btn-lg rounded-pill secondary-btn" type="button" id="openChangePassword">
+            <i class="bi bi-key me-2"></i>Change Password
+          </button>
+
+          <div class="d-grid d-md-flex gap-2 ms-md-auto">
+            <button class="btn btn-outline-danger btn-lg rounded-pill cancel-btn" type="button" id="cancelEdit">
+              Cancel
+            </button>
+            <!-- Keep .save-btn for JS selector -->
+            <button class="btn btn-success btn-lg rounded-pill save-btn primary-btn" type="button">
+              Save
+            </button>
+          </div>
+        </div>
+
       </div>
-
-      <div class="form-group">
-        <label>Contact Number</label>
-        <input type="tel" id="editContact_no" required />
-      </div>
-
-      <div class="form-group">
-        <label>Address</label>
-        <input type="text" id="editAddress" required />
-      </div>
-
-      <div class="form-group">
-        <label>Number of Pens</label>
-        <input type="number" id="editNumPens" min="0" required />
-      </div>
-
-      <div class="form-group">
-        <label>Pen Capacity</label>
-        <input type="number" id="editPenCapacity" min="0" required />
-      </div>
-
-    </div>
-
-    <button class="secondary-btn mt-3" id="openChangePassword">
-      Change Password
-    </button>
-
-    <div class="actions modern-actions">
-      <button class="cancel-btn" id="cancelEdit">Cancel</button>
-      <button class="primary-btn save-btn">Save</button>
-    </div>
-
-  </section>
+    </section>
 
   </main>
 </div>
 
-
 <!-- =========================
-     PREVIEW MODAL
+     PREVIEW MODAL (keep hidden logic)
 ========================= -->
-<div id="previewModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Confirm Profile Changes</h3>
-
-    <div class="modal-preview">
-      <p><strong>Name:</strong> <span id="previewName"></span></p>
-      <p><strong>Email:</strong> <span id="previewEmail"></span></p>
-      <p><strong>Contact:</strong> <span id="previewContact"></span></p>
-      <p><strong>Address:</strong> <span id="previewAddress"></span></p>
-      <p><strong>Number of Pens:</strong> <span id="previewNumPens"></span></p>
-      <p><strong>Pen Capacity:</strong> <span id="previewPenCapacity"></span></p>
+<div id="previewModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content profile-modal-box">
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+      <div>
+        <h3 class="mb-1">Confirm Profile Changes</h3>
+        <div class="text-muted small">Please review before confirming.</div>
+      </div>
+      <button type="button" class="btn btn-sm btn-light rounded-circle" id="previewCancel" aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
     </div>
 
-    <div class="modal-actions">
-      <button id="previewCancel" class="cancel-btn">CANCEL</button>
-      <button id="previewConfirm" class="save-btn">CONFIRM</button>
+    <div class="modal-preview mt-3">
+      <div class="preview-row"><span class="preview-k">Name</span><span id="previewName" class="preview-v"></span></div>
+      <div class="preview-row"><span class="preview-k">Email</span><span id="previewEmail" class="preview-v"></span></div>
+      <div class="preview-row"><span class="preview-k">Contact</span><span id="previewContact" class="preview-v"></span></div>
+      <div class="preview-row"><span class="preview-k">Address</span><span id="previewAddress" class="preview-v"></span></div>
+      <div class="preview-row"><span class="preview-k">Number of Pens</span><span id="previewNumPens" class="preview-v"></span></div>
+      <div class="preview-row"><span class="preview-k">Pen Capacity</span><span id="previewPenCapacity" class="preview-v"></span></div>
+    </div>
+
+    <div class="modal-actions mt-4">
+      <!-- keep original IDs for JS -->
+      <button id="previewCancel" class="btn btn-outline-danger rounded-pill cancel-btn" type="button">CANCEL</button>
+      <button id="previewConfirm" class="btn btn-success rounded-pill save-btn" type="button">CONFIRM</button>
     </div>
   </div>
 </div>
 
-
 <!-- =========================
      SUCCESS MODAL
 ========================= -->
-<div id="successModal" class="success-overlay hidden">
+<div id="successModal" class="success-overlay hidden" role="dialog" aria-modal="true">
   <div class="success-modal">
     <div class="success-icon">
       <i class="bi bi-check-lg"></i>
@@ -180,17 +253,16 @@
     <h3>Profile Updated</h3>
     <p>Your profile changes have been saved successfully.</p>
 
-    <button id="closeSuccessModal" class="primary-btn w-100">
+    <button id="closeSuccessModal" class="btn btn-success btn-lg rounded-pill w-100 primary-btn" type="button">
       Continue
     </button>
   </div>
 </div>
 
-
 <!-- =========================
      ERROR MODAL
 ========================= -->
-<div id="errorModal" class="error-overlay hidden">
+<div id="errorModal" class="error-overlay hidden" role="dialog" aria-modal="true">
   <div class="error-modal">
     <div class="error-icon">
       <i class="bi bi-x-lg"></i>
@@ -199,65 +271,102 @@
     <h3>Update Failed</h3>
     <p>Something went wrong while saving your profile.</p>
 
-    <button id="closeErrorModal" class="error-btn w-100">
+    <button id="closeErrorModal" class="btn btn-danger btn-lg rounded-pill w-100 error-btn" type="button">
       Try Again
     </button>
   </div>
 </div>
 
-
 <!-- =========================
      CHANGE PASSWORD MODAL
 ========================= -->
-<div id="changePasswordModal" class="modal hidden">
+<div id="changePasswordModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-content change-password-modal">
 
-    <h3 class="modal-title">Change Password</h3>
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+      <div>
+        <h3 class="modal-title mb-1">Change Password</h3>
+        <div class="text-muted small">Send OTP and set a new password.</div>
+      </div>
+      <button type="button" class="btn btn-sm btn-light rounded-circle" id="closeChangePassword" aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
 
-    <button
-      class="btn-otp w-100"
-      id="requestChangeOtpBtn"
-      type="button"
-    >
-      Send OTP to Email
+    <button class="btn btn-success btn-lg rounded-pill w-100 btn-otp" id="requestChangeOtpBtn" type="button">
+      <i class="bi bi-send me-2"></i>Send OTP to Email
     </button>
 
     <form id="changePasswordForm" class="mt-3">
-
       <div class="form-group">
         <label for="changeOtp">OTP</label>
-        <input
-          type="text"
-          id="changeOtp"
-          class="form-control otp-input"
-          required
-        />
+        <input type="text" id="changeOtp" class="form-control otp-input" required />
       </div>
 
       <div class="form-group">
         <label for="changeNewPassword">New Password</label>
-        <input
-          type="password"
-          id="changeNewPassword"
-          class="form-control"
-          required
-        />
+        <input type="password" id="changeNewPassword" class="form-control" required />
       </div>
 
       <p id="changePasswordMessage" class="modal-message"></p>
 
       <div class="change-password-actions">
-        <button type="button" class="btn-cancel" id="closeChangePassword">
+        <!-- keep ID used in JS -->
+        <button type="button" class="btn btn-outline-danger rounded-pill btn-cancel" id="closeChangePassword">
           Cancel
         </button>
 
-        <button type="submit" class="btn-primary">
+        <button type="submit" class="btn btn-success rounded-pill btn-primary">
           Confirm
         </button>
       </div>
-
     </form>
 
+  </div>
+</div>
+
+<!-- =========================
+     CROP AVATAR MODAL
+========================= -->
+<div id="cropAvatarModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content crop-modal">
+    <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+      <div>
+        <h3 class="mb-1">Crop Profile Photo</h3>
+        <div class="text-muted small">Adjust and crop your photo before saving.</div>
+      </div>
+      <button type="button" class="btn btn-sm btn-light rounded-circle" id="closeCropAvatar" aria-label="Close">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="crop-stage mt-3">
+      <img id="cropAvatarImg" alt="Crop preview" />
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-3 justify-content-between align-items-center">
+      <div class="btn-group" role="group" aria-label="Crop controls">
+        <button type="button" class="btn btn-outline-secondary" id="cropZoomIn">
+          <i class="bi bi-zoom-in"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="cropZoomOut">
+          <i class="bi bi-zoom-out"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="cropRotate">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="cropReset">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+      </div>
+
+      <div class="d-flex gap-2 ms-auto">
+        <button type="button" class="btn btn-outline-danger rounded-pill" id="cancelCropAvatar">Cancel</button>
+        <button type="button" class="btn btn-success rounded-pill" id="applyCropAvatar">
+          <i class="bi bi-check2 me-1"></i> Use Photo
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 

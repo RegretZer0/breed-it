@@ -22,8 +22,11 @@ export function createReproductionStore({ user, token, baseUrl }) {
     pigletsBySow: new Map(),
     cyclesBySow: new Map(),
 
-    // ✅ NEW: tag/swine_id -> Mongo _id (ObjectId string)
+    // tag/swine_id -> Mongo _id (ObjectId string)
     swineMongoIdByTag: new Map(),
+
+    // tag/swine_id set for "belongs to this farmer" matching in other datasets
+    mySwineKeys: new Set(),
 
     loaded: {
       monitoring: false,
@@ -34,6 +37,9 @@ export function createReproductionStore({ user, token, baseUrl }) {
     },
   };
 
+  // =========================================================
+  // Small helpers
+  // =========================================================
   const sortByDateDesc = (a, b) => new Date(b || 0) - new Date(a || 0);
   const toKey = (v) => (v == null ? "" : String(v).trim());
 
@@ -90,7 +96,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
     map.get(k).push(item);
   }
 
-  // ✅ NEW: prevents duplicate cycles per sow key
+  // prevents duplicate cycles per sow key
   function addToGroupMapUnique(map, key, item, getIdFn) {
     const k = toKey(key);
     if (!k) return;
@@ -107,7 +113,9 @@ export function createReproductionStore({ user, token, baseUrl }) {
     list.push(item);
   }
 
-  // ✅ NEW: build quick map swine_id/tag -> Mongo _id
+  // =========================================================
+  // Ownership / "belongs-to-me" matching for non-swine datasets
+  // =========================================================
   function rebuildSwineMongoMap() {
     const m = new Map();
     for (const s of store.allSwineData || []) {
@@ -125,16 +133,74 @@ export function createReproductionStore({ user, token, baseUrl }) {
     store.swineMongoIdByTag = m;
   }
 
-  // ✅ NEW: public helper used by views when selection records have no Mongo _id
+  function rebuildMySwineKeys() {
+    const keys = new Set();
+    for (const s of store.allSwineData || []) {
+      const swineId = toKey(s?.swine_id);
+      const swineTag = toKey(s?.swine_tag);
+      const tag = toKey(s?.tag);
+
+      if (swineId) keys.add(swineId);
+      if (swineTag) keys.add(swineTag);
+      if (tag) keys.add(tag);
+      const mongoId = toKey(s?._id);
+      if (mongoId) keys.add(mongoId);
+    }
+    store.mySwineKeys = keys;
+  }
+
+  // Used by views when selection records have no Mongo _id
   function getMongoIdForSwineTag(swineTagOrId) {
     const k = toKey(swineTagOrId);
     if (!k) return "";
     return store.swineMongoIdByTag.get(k) || "";
   }
 
-  // --------------------------
-  // Cycle field normalization (IMPORTANT)
-  // --------------------------
+  // Determine if a record references any of my swine tags/ids
+  function recordMatchesMySwineKeys(row, keyFields) {
+    if (!row || !store.mySwineKeys || store.mySwineKeys.size === 0) return false;
+
+    for (const f of keyFields) {
+      const v = toKey(row?.[f]);
+      if (v && store.mySwineKeys.has(v)) return true;
+    }
+    return false;
+  }
+
+  // Filter helper: keep items if they are mine by owner OR by tag/id reference
+  function filterMineWithFallback(list, opts) {
+    const arr = Array.isArray(list) ? list : [];
+    if (!arr.length) return [];
+
+    const { label, keyFields = [] } = opts || {};
+
+    const mine = arr.filter((row) => {
+      if (isMySwine(row)) return true;
+      if (keyFields.length && recordMatchesMySwineKeys(row, keyFields)) return true;
+      return false;
+    });
+
+    // If nothing matched but we have no keys yet, log it (helps debug load order issues)
+    if (mine.length === 0 && arr.length > 0) {
+      debugLog(
+        "OWNER_FILTER_EMPTY",
+        {
+          label,
+          total: arr.length,
+          mySwineKeysSize: store.mySwineKeys?.size || 0,
+          hint:
+            "If this is AI/performance/selection, the record may not carry owner fields. Ensure swine loaded first so mySwineKeys exists.",
+        },
+        true
+      );
+    }
+
+    return mine;
+  }
+
+  // =========================================================
+  // Cycle field normalization
+  // =========================================================
   function pickFirst(obj, keys) {
     for (const k of keys) {
       const v = obj?.[k];
@@ -195,14 +261,15 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return sum;
   }
 
-  // ✅ NEW: offspring detection (matches your OLD JS behavior)
-  // We consider a swine an "offspring record" if it has any dam/mother fields populated.
-  // This prevents "retain -> age_stage adult" from removing it from the sow's offspring list.
+  // Offspring detection: has dam/mother fields
   function isOffspringRecord(sw) {
     const cands = getPigletDamKeyCandidates(sw);
     return cands && cands.length > 0;
   }
 
+  // =========================================================
+  // Derived builder
+  // =========================================================
   function buildDerived() {
     // 1) Sows (female breeders)
     const femaleBreeders = store.allSwineData.filter(isBreederSow);
@@ -211,12 +278,8 @@ export function createReproductionStore({ user, token, baseUrl }) {
 
     store.sowMap = buildSowAliasMap(store.sows);
 
-    // 2) Offspring grouping (IMPORTANT FIX)
-    // OLD BEHAVIOR: offspring counted by dam_id/mother_id regardless of age_stage
-    // NEW BUG: you filtered by piglet/weaning/day1-30, so "retain" (adult) disappeared.
-    // ✅ FIX: group ALL offspring records (dam/mother fields present), regardless of stage.
+    // 2) Offspring grouping (group ALL offspring records regardless of stage)
     const offspring = store.allSwineData.filter((s) => isOffspringRecord(s));
-
     const pigletsBySow = new Map();
 
     for (const p of offspring) {
@@ -238,7 +301,6 @@ export function createReproductionStore({ user, token, baseUrl }) {
         addToGroupMap(pigletsBySow, sowId, p);
         addToGroupMap(pigletsBySow, sowTag, p);
       } else {
-        // fallback: group by raw candidate key if sow isn't in sowMap yet
         for (const c of damCandidates) addToGroupMap(pigletsBySow, c, p);
       }
     }
@@ -263,10 +325,8 @@ export function createReproductionStore({ user, token, baseUrl }) {
         raw: r,
       };
 
-      // ✅ Always add under sowCode
       addToGroupMapUnique(cyclesBySow, sowCode, cycle, cycleKey);
 
-      // ✅ Add aliases only if they are DIFFERENT keys (prevents duplicates)
       const sow = store.sowMap.get(sowCode);
       if (sow) {
         const idKey = getSowId(sow);
@@ -283,7 +343,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
     }
     store.cyclesBySow = cyclesBySow;
 
-    // 4) selection summary derived too (farmer UI uses it)
+    // 4) selection summary
     store.selectionSummary = computeSelectionSummary(store.rawSelectionData || []);
 
     debugLog("DERIVED_BUILT", {
@@ -292,7 +352,52 @@ export function createReproductionStore({ user, token, baseUrl }) {
       cyclesGroups: store.cyclesBySow.size,
       selectionSummary: store.selectionSummary,
       mongoMapSize: store.swineMongoIdByTag.size,
+      mySwineKeysSize: store.mySwineKeys.size,
+      aiCount: store.rawAiData.length,
     });
+  }
+
+  // =========================================================
+  // Loaders
+  // =========================================================
+  async function loadSwine() {
+    const data = await authFetch({ endpoint: "/api/swine/all", token, baseUrl });
+    if (data?.authError) return data;
+
+    if (data?.success) {
+      const swineList = data.swine || data.data || data.swines || [];
+
+      // strict filter
+      let mine = Array.isArray(swineList) ? swineList.filter(isMySwine) : [];
+
+      // fallback: keep backend list if filter removed everything
+      if (mine.length === 0 && Array.isArray(swineList) && swineList.length > 0) {
+        debugLog(
+          "SWINE_OWNER_FILTER_FALLBACK",
+          {
+            reason: "isMySwine filtered all rows (likely user id mismatch or populated owner fields)",
+            userKeys: {
+              id: user?.id,
+              _id: user?._id,
+              farmerProfileId: user?.farmerProfileId,
+              farmer_id: user?.farmer_id,
+              farmer: user?.farmer,
+            },
+            backendCount: swineList.length,
+          },
+          true
+        );
+        mine = swineList;
+      }
+
+      store.allSwineData = mine;
+      store.loaded.swine = true;
+
+      rebuildSwineMongoMap();
+      rebuildMySwineKeys();
+    }
+
+    return data;
   }
 
   async function loadPigletMonitoring() {
@@ -300,7 +405,14 @@ export function createReproductionStore({ user, token, baseUrl }) {
     if (data?.authError) return data;
 
     if (data?.success) {
-      store.rawMonitoringData = data.data || [];
+      const raw = data.data || [];
+
+      // monitoring may reference swine_tag / swine_id
+      store.rawMonitoringData = filterMineWithFallback(raw, {
+        label: "piglet-monitoring",
+        keyFields: ["swine_tag", "swine_id", "tag", "piglet_tag"],
+      });
+
       store.loaded.monitoring = true;
     }
     return data;
@@ -312,9 +424,14 @@ export function createReproductionStore({ user, token, baseUrl }) {
 
     if (data?.success) {
       const rawList = data.data || data.records || [];
-      let list = rawList.filter(isMySwine);
 
-      // ✅ De-dupe by record id if backend returns duplicates
+      // AI rows often do NOT contain farmer_id, so match by sow tag/code too
+      let list = filterMineWithFallback(rawList, {
+        label: "ai-history",
+        keyFields: ["swine_code", "sow_tag", "sow_code", "swine_tag", "swine_id", "sow_id"],
+      });
+
+      // de-dupe by record id
       const seen = new Set();
       list = list.filter((r) => {
         const id = toKey(r?._id || r?.id || r?.record_id || r?.ai_record_id);
@@ -341,8 +458,16 @@ export function createReproductionStore({ user, token, baseUrl }) {
     if (data?.authError) return data;
 
     if (data?.success) {
-      store.rawPerformanceData.morphology = (data.morphology || []).filter(isMySwine);
-      store.rawPerformanceData.deformities = (data.deformities || []).filter(isMySwine);
+      // performance rows usually have swine_tag
+      store.rawPerformanceData.morphology = filterMineWithFallback(data.morphology || [], {
+        label: "performance-morphology",
+        keyFields: ["swine_tag", "swine_id", "tag"],
+      });
+
+      store.rawPerformanceData.deformities = filterMineWithFallback(data.deformities || [], {
+        label: "performance-deformities",
+        keyFields: ["swine_tag", "swine_id", "tag"],
+      });
 
       store.rawPerformanceData.morphology.sort(
         (a, b) =>
@@ -362,14 +487,18 @@ export function createReproductionStore({ user, token, baseUrl }) {
     if (data?.authError) return data;
 
     if (data?.success) {
-      store.rawSelectionData = (data.data || []).filter(isMySwine);
+      const raw = data.data || [];
+
+      store.rawSelectionData = filterMineWithFallback(raw, {
+        label: "selection-candidates",
+        keyFields: ["swine_tag", "swine_id", "tag"],
+      });
+
       store.rawSelectionData.sort(
         (a, b) =>
-          new Date(b?.updatedAt || b?.date || b?.createdAt || 0) -
-          new Date(a?.updatedAt || a?.date || a?.createdAt || 0)
+          new Date(b?.updatedAt || b?.date || b?.createdAt || 0) - new Date(a?.updatedAt || a?.date || a?.createdAt || 0)
       );
 
-      // backend summary if present
       const s = data.summary || {};
       const derived = computeSelectionSummary(store.rawSelectionData);
 
@@ -385,23 +514,12 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return data;
   }
 
-  async function loadSwine() {
-    const data = await authFetch({ endpoint: "/api/swine/all", token, baseUrl });
-    if (data?.authError) return data;
-
-    if (data?.success) {
-      const swineList = data.swine || data.data || [];
-      store.allSwineData = swineList.filter(isMySwine);
-      store.loaded.swine = true;
-
-      // ✅ NEW: build lookup for Mongo _id resolving
-      rebuildSwineMongoMap();
-    }
-    return data;
-  }
-
+  // =========================================================
+  // Load All (IMPORTANT: swine first)
+  // =========================================================
   async function loadAll() {
-    const steps = [loadPigletMonitoring, loadAIRecords, loadPerformance, loadSelection, loadSwine];
+    // swine first so mySwineKeys exists for AI/performance/selection filters
+    const steps = [loadSwine, loadPigletMonitoring, loadAIRecords, loadPerformance, loadSelection];
 
     for (const step of steps) {
       const res = await step();
@@ -412,7 +530,9 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return store;
   }
 
-  // selectors
+  // =========================================================
+  // Selectors
+  // =========================================================
   function getPigletsForSow(sowId) {
     return store.pigletsBySow.get(toKey(sowId)) || [];
   }
@@ -489,7 +609,6 @@ export function createReproductionStore({ user, token, baseUrl }) {
     getDeformitiesForPiglet,
     getSelectionForPiglet,
 
-    // NEW (used by reproduction.views.js action buttons)
     getMongoIdForSwineTag,
 
     computeBreedingStatsForSow,

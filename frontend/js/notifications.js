@@ -13,8 +13,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   // Buttons
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
-  const markAllBtn = document.getElementById("markAllNotificationsReadBtn"); // offcanvas
-  const markAllBtnModal = document.getElementById("markAllNotificationsReadBtnModal"); // modal
+  const markAllBtn = document.getElementById("markAllNotificationsReadBtn"); // offcanvas / panel
+  const markAllBtnModal = document.getElementById("markAllNotificationsReadBtnModal"); // modal / panel
 
   // Pagination UI
   const prevBtn = document.getElementById("notifPrevPageBtn");
@@ -125,6 +125,49 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function setMarkAllButtonsDisabled(disabled) {
     if (markAllBtn) markAllBtn.disabled = disabled;
     if (markAllBtnModal) markAllBtnModal.disabled = disabled;
+  }
+
+  function isBootstrapModalEl(el) {
+    return Boolean(el && el.classList && el.classList.contains("modal") && window.bootstrap?.Modal);
+  }
+
+  function isBootstrapOffcanvasEl(el) {
+    return Boolean(el && el.classList && el.classList.contains("offcanvas") && window.bootstrap?.Offcanvas);
+  }
+
+  function openHistoryUI() {
+    const historyEl = document.getElementById("notificationHistoryModal");
+    if (!historyEl) return;
+
+    // reset paging so open always starts at page 1
+    historyPage = 1;
+
+    // ✅ FARM MANAGER: Bootstrap modal
+    if (isBootstrapModalEl(historyEl)) {
+      const inst = window.bootstrap.Modal.getOrCreateInstance(historyEl);
+      inst.show();
+      return;
+    }
+
+    // ✅ FARMER: custom side-panel
+    historyEl.classList.add("active");
+    document.body.style.overflow = "hidden";
+    renderHistory();
+  }
+
+  function closeRecentUIIfNeeded() {
+    const recentPanel = document.getElementById("notificationsPanel");
+    if (!recentPanel) return;
+
+    // FARM MANAGER: bootstrap offcanvas
+    if (isBootstrapOffcanvasEl(recentPanel)) {
+      const inst = window.bootstrap.Offcanvas.getInstance(recentPanel) || window.bootstrap.Offcanvas.getOrCreateInstance(recentPanel);
+      inst.hide();
+      return;
+    }
+
+    // FARMER: custom side-panel
+    recentPanel.classList.remove("active");
   }
 
   /* =========================
@@ -319,6 +362,12 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   }
 
   /* =========================
+    PUBLIC HOOK (so navbar.js can call the real implementation)
+  ========================= */
+  window.__notificationsApi = window.__notificationsApi || {};
+  window.__notificationsApi.markAllRead = markAllRead;
+
+  /* =========================
       LOAD
   ========================= */
   async function load() {
@@ -351,22 +400,31 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     renderHistory();
   });
 
-  // View all -> open modal
-  viewAllBtn?.addEventListener("click", () => {
-    const modalEl = document.getElementById("notificationHistoryModal");
-    if (!modalEl || !window.bootstrap?.Modal) return;
-    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  // View all -> works for BOTH:
+  // - Farm manager (bootstrap offcanvas + bootstrap modal)
+  // - Farmer (custom side-panels)
+  viewAllBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeRecentUIIfNeeded();
+    openHistoryUI();
   });
 
   // ✅ MARK ALL (offcanvas + modal)
   markAllBtn?.addEventListener("click", markAllRead);
   markAllBtnModal?.addEventListener("click", markAllRead);
 
-  // When modal opens, reset page to 1
-  const modalEl = document.getElementById("notificationHistoryModal");
-  modalEl?.addEventListener("shown.bs.modal", () => {
-    historyPage = 1;
-    renderHistory();
+  // ✅ If using bootstrap modal (farm manager), refresh history when it opens
+  const historyEl = document.getElementById("notificationHistoryModal");
+  if (historyEl && isBootstrapModalEl(historyEl)) {
+    historyEl.addEventListener("shown.bs.modal", () => {
+      historyPage = 1;
+      renderHistory();
+    });
+  }
+
+  // ✅ Allow other modules (like navbar.js) to force refresh
+  window.addEventListener("notifications:refresh", () => {
+    load();
   });
 
   /* =========================

@@ -1,4 +1,10 @@
 // heat-report/ui-actions.js
+// Merged: control-70 (design/overlay/archiving + lifecycle normalization) + mvp (Time Warp-aware stats + AI/Preg/Weaning date support)
+// Notes:
+// - Keeps control-70’s normalizeLifecycleStatus() so UI matches HeatReport.status lifecycle.
+// - Adds MVP’s Time Warp-aware renderStats() and lactating weaning countdown fetch.
+// - Keeps control-70’s action() pipeline and modal UX (no native alert/confirm except where legacy remained; cleaned here).
+// - Keeps MVP extra fields (ai_date_input, confirmWeaningBtn, weaning inputs) but routes them through action() to avoid duplicate handlers.
 
 export function initHeatReportUI({ user, token, BACKEND_URL }) {
   /* =========================
@@ -35,11 +41,11 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const farrowingModal = document.getElementById("farrowingModal");
   const farrowingForm = document.getElementById("farrowingForm");
 
-  // Farrowing modal controls (must exist in your updated HTML)
+  // Farrowing modal controls
   const closeFarrowingModal = document.getElementById("closeFarrowingModal");
   const cancelFarrowingBtn = document.getElementById("cancelFarrowingBtn");
 
-  // Farrowing inputs (must exist in your updated HTML)
+  // Farrowing inputs
   const maleCountInput = document.getElementById("maleCount");
   const femaleCountInput = document.getElementById("femaleCount");
   const totalLiveLabel = document.getElementById("totalLiveLabel");
@@ -59,7 +65,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const boarSelect = document.getElementById("boarSelect");
   const submitAIBtn = document.getElementById("submitAI");
 
-  const aiDateInput = document.getElementById("ai_date_input"); 
+  // MVP: optional date inputs / weaning
+  const aiDateInput = document.getElementById("ai_date_input");
   const confirmWeaningBtn = document.getElementById("confirmWeaningBtn");
   const weaningDateInput = document.getElementById("weaning_date_input");
   const weaningWeightInput = document.getElementById("weaning_weight_input");
@@ -94,7 +101,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const showArchivedBtn = document.getElementById("showArchivedBtn");
   const backToActiveBtn = document.getElementById("backToActiveBtn");
 
-  // Archive filters (IDs must exist in modal HTML)
+  // Archive filters
   const archiveFilterForm = document.getElementById("archiveFilterForm");
   const archiveStatusFilter = document.getElementById("archiveStatusFilter");
   const archiveFarmerSearch = document.getElementById("archiveFarmerSearch");
@@ -107,8 +114,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const archivePageIndicator = document.getElementById("archivePageIndicator");
 
   /* =========================
-     FEEDBACK + CONFIRM MODALS (REPLACE alert/confirm)
-     (IDs must exist in modal.ejs)
+     FEEDBACK + CONFIRM MODALS
   ========================= */
   const appFeedbackModal = document.getElementById("appFeedbackModal");
   const appFeedbackTitle = document.getElementById("appFeedbackTitle");
@@ -136,6 +142,28 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   let urlAutoOpened = false;
 
+  const filterState = {
+    selectedStatus: "",
+    selectedFarmerId: null,
+    selectedReportStatus: ""
+  };
+
+  let currentPage = 1;
+  const ROWS_PER_PAGE = 5;
+
+  let archivePage = 1;
+  const ARCHIVE_ROWS_PER_PAGE = 5;
+
+  const SHOW_REJECTED_IN_LIST = true;
+  const EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST = true;
+  const ARCHIVE_STATUSES = ["completed", "rejected"];
+
+  let archivedAll = [];
+  let archivedFiltered = [];
+
+  /* =========================
+     URL HELPERS
+  ========================= */
   function getUrlReportId() {
     const sp = new URLSearchParams(window.location.search);
     return sp.get("reportId");
@@ -148,40 +176,47 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (!rid) return;
 
     urlAutoOpened = true;
-
-    // open Report Details modal directly
     await viewReport(rid);
-
-    // optional: remove reportId from URL after opening (prevents reopening on refresh)
-    // const url = new URL(window.location.href);
-    // url.searchParams.delete("reportId");
-    // window.history.replaceState({}, "", url.toString());
   }
 
-  const filterState = {
-    selectedStatus: "", // cycle tabs
-    selectedFarmerId: null, // farmer dropdown
-    selectedReportStatus: "" // workflow status dropdown
-  };
+  /* =========================
+     LIFE CYCLE NORMALIZATION
+  ========================= */
+  function safeLower(s) {
+    return `${s || ""}`.toLowerCase();
+  }
 
-  // Main pagination
-  let currentPage = 1;
-  const ROWS_PER_PAGE = 5;
+  function normalizeLifecycleStatus(r) {
+    const raw =
+      r?.status ??
+      r?.cycle_status ??
+      r?.heat_cycle_status ??
+      r?.cycleStage ??
+      r?.cycleStatus ??
+      "";
 
-  // Archive pagination (limit to 5)
-  let archivePage = 1;
-  const ARCHIVE_ROWS_PER_PAGE = 5;
+    const s = safeLower(raw).replace(/\s+/g, "_");
 
-  // Keep rejected available (for Archive)
-  const SHOW_REJECTED_IN_LIST = true;
+    const map = {
+      awaiting_farrowing: "farrowing_ready",
+      awaiting_farrow: "farrowing_ready",
+      farrowing: "farrowing_ready",
+      farrowing_due: "farrowing_ready"
+    };
 
-  // Default: hide archived from active list
-  const EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST = true;
-  const ARCHIVE_STATUSES = ["completed", "rejected"];
+    return map[s] || s;
+  }
 
-  // Cache archive derived lists
-  let archivedAll = [];
-  let archivedFiltered = [];
+  function getExpectedFarrowingDate(r) {
+    return (
+      r?.expected_farrowing ||
+      r?.expected_farrowing_date ||
+      r?.expectedFarrowing ||
+      r?.farrowing_due ||
+      r?.farrowing_due_date ||
+      null
+    );
+  }
 
   /* =========================
      STATUS RESOLUTION
@@ -198,12 +233,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   function getReportStatus(r) {
-    const candidate =
-      r?.report_status ||
-      r?.workflow_status ||
-      r?.review_status ||
-      r?.reportStatus;
-
+    const candidate = r?.report_status || r?.workflow_status || r?.review_status || r?.reportStatus;
     if (candidate != null && `${candidate}`.trim() !== "") return candidate;
     return r?.status || "";
   }
@@ -217,17 +247,19 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     return `${status || ""}`.replace(/_/g, " ").trim() || "—";
   }
 
-  function safeLower(s) {
-    return `${s || ""}`.toLowerCase();
-  }
-
   /* =========================
      HELPERS
   ========================= */
-  function getDaysLeft(targetDate) {
+  function getVirtualNow() {
+    const offset = parseInt(localStorage.getItem("timeWarpOffset") || "0", 10);
+    return new Date(Date.now() + (isNaN(offset) ? 0 : offset));
+  }
+
+  function getDaysLeft(targetDate, baseNow = null) {
     if (!targetDate) return "-";
-    const today = new Date();
+    const today = baseNow ? new Date(baseNow) : new Date();
     today.setHours(0, 0, 0, 0);
+
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
 
@@ -247,19 +279,17 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     return d;
   }
 
-  // =========================
-  // SCROLL/OVERLAY HELPERS (centralized)
-  // =========================
+  /* =========================
+     SCROLL / OVERLAY HELPERS
+  ========================= */
   function lockScroll() {
     document.body.style.overflow = "hidden";
   }
 
   function unlockScrollIfNoOverlayOpen() {
-    // If report details is open, keep locked
     const rdOpen = reportDetailsModal && reportDetailsModal.style.display === "flex";
     if (rdOpen) return;
 
-    // Any overlay still open?
     const anyOverlayOpen = Array.from(document.querySelectorAll(".modal-overlay")).some(
       (m) => m && m.style.display === "flex"
     );
@@ -279,6 +309,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     unlockScrollIfNoOverlayOpen();
   }
 
+  /* =========================
+     FEEDBACK MODAL HELPERS
+  ========================= */
   function setFeedbackVariant(variant) {
     if (!appFeedbackIconWrap || !appFeedbackIcon) return;
 
@@ -386,23 +419,18 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     FARROWING MODAL STACK FIX + CONTROLS
+     FARROWING MODAL CONTROLS
   ========================= */
   function openFarrowingModal() {
     if (!farrowingModal) return;
-
-    // ensure it sits above report details
     farrowingModal.style.zIndex = "2600";
     farrowingModal.style.display = "flex";
-
-    // keep scroll locked
     lockScroll();
   }
 
   function closeFarrowingModalFn() {
     if (!farrowingModal) return;
     farrowingModal.style.display = "none";
-    // do NOT unlock if report modal is still open
     unlockScrollIfNoOverlayOpen();
   }
 
@@ -425,17 +453,13 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   maleCountInput?.addEventListener("input", syncTotalLive);
   femaleCountInput?.addEventListener("input", syncTotalLive);
 
-  // =========================
-  // URL + CHIP HELPERS
-  // =========================
+  /* =========================
+     URL + CHIP HELPERS
+  ========================= */
   function toPublicUrl(path) {
     if (!path) return "";
     if (/^https?:\/\//i.test(path)) return path;
-
-    // backend-served uploads
     if (path.startsWith("/uploads")) return `${BACKEND_URL}${path}`;
-
-    // keep public assets (/images/...)
     return path;
   }
 
@@ -447,7 +471,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     MODAL HELPERS
+     REPORT DETAILS MODAL HELPERS
   ========================= */
   function closeReportDetails() {
     if (!reportDetailsModal) return;
@@ -470,10 +494,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (e.target === reportDetailsModal) closeReportDetails();
   });
 
-  // =========================
-  // REJECT MODAL (themed) close wiring
-  // (IDs must exist: closeRejectModal, cancelRejectModalBtn)
-  // =========================
+  /* =========================
+     REJECT MODAL CONTROLS
+  ========================= */
   const closeRejectModal = document.getElementById("closeRejectModal");
   const cancelRejectModalBtn = document.getElementById("cancelRejectModalBtn");
 
@@ -489,86 +512,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (e.target === rejectReasonModal) closeRejectModalFn();
   });
 
-  /* ======================================================
-    MANAGER ACTIONS (Time Warp & Schema Compatible)
-====================================================== */
-
-// 1. Confirm Artificial Insemination (AI)
-async function handleConfirmAI(reportId) {
-    // These IDs must exist in your Manager Action Modal HTML
-    const maleSwineId = document.getElementById(`male_swine_id_${reportId}`)?.value;
-    const aiDate = document.getElementById(`ai_date_${reportId}`)?.value; // Time Warp date picker
-
-    if (!maleSwineId) {
-        await showFeedback({
-            title: "Data Required",
-            body: "Please provide a Boar ID for the AI record.",
-            variant: "warn"
-        });
-        return;
-    }
-
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/confirm-ai`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-                maleSwineId, 
-                ai_date: aiDate // Sends selected date to backend
-            })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-            await showFeedback({ title: "Success", body: "AI Procedure recorded successfully.", variant: "success" });
-            location.reload();
-        } else {
-            await showFeedback({ title: "Error", body: data.message, variant: "danger" });
-        }
-    } catch (err) {
-        console.error("AI Error:", err);
-    }
-}
-
-  // 2. Confirm Weaning (Graduates piglets to 'growing' stage)
-  async function handleConfirmWeaning(reportId) {
-      const weaningDate = document.getElementById(`weaning_date_${reportId}`)?.value;
-      const weight = document.getElementById(`weaning_weight_${reportId}`)?.value;
-      const remarks = document.getElementById(`weaning_remarks_${reportId}`)?.value;
-
-      try {
-          const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/confirm-weaning`, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${token}`
-              },
-              body: JSON.stringify({ 
-                  weaning_date: weaningDate, // Time Warp
-                  weight: weight,            // Required for ADG in Swine.js
-                  remarks: remarks 
-              })
-          });
-
-          const data = await res.json();
-          if (data.success) {
-              await showFeedback({ title: "Graduated", body: "Weaning confirmed. Piglets are now in Growing stage.", variant: "success" });
-              location.reload();
-          } else {
-              await showFeedback({ title: "Error", body: data.message, variant: "danger" });
-          }
-      } catch (err) {
-          console.error("Weaning Error:", err);
-      }
-  }
-
-  // =========================
-  // AI CONFIRM MODAL (themed) close wiring
-  // (IDs must exist: closeAIConfirmModal, cancelAIConfirmModal)
-  // =========================
+  /* =========================
+     AI CONFIRM MODAL CONTROLS
+  ========================= */
   const closeAIConfirmModal = document.getElementById("closeAIConfirmModal");
   const cancelAIConfirmModal = document.getElementById("cancelAIConfirmModal");
 
@@ -584,10 +530,12 @@ async function handleConfirmAI(reportId) {
     if (e.target === aiConfirmModal) closeAIConfirmModalFn();
   });
 
+  /* =========================
+     ARCHIVE MODAL CONTROLS
+  ========================= */
   function openArchiveModal() {
     if (!archiveModal) return;
 
-    // Build archive lists fresh
     archivedAll = allReports.filter(isArchivedReport);
     archivedFiltered = [...archivedAll];
     archivePage = 1;
@@ -605,7 +553,6 @@ async function handleConfirmAI(reportId) {
   }
 
   function closeArchiveAndThen(fn) {
-    // Track progress / view details must not go under the archive modal
     if (archiveModal && archiveModal.style.display === "flex") {
       closeArchive();
       setTimeout(fn, 0);
@@ -646,24 +593,17 @@ async function handleConfirmAI(reportId) {
     archivedFiltered = archivedAll.filter((r) => {
       const rs = safeLower(getReportStatus(r));
       const farmerName = safeLower(
-        r?.farmer_id
-          ? `${r.farmer_id.first_name || ""} ${r.farmer_id.last_name || ""}`.trim()
-          : ""
+        r?.farmer_id ? `${r.farmer_id.first_name || ""} ${r.farmer_id.last_name || ""}`.trim() : ""
       );
       const created = r?.createdAt ? new Date(r.createdAt) : null;
 
-      // status
       const statusMatch = !statusVal || rs === statusVal;
-
-      // farmer search
       const farmerMatch = !farmerTerm || farmerName.includes(farmerTerm);
 
-      // tag/signs search
       const signs = Array.isArray(r?.signs) ? r.signs : [];
       const signsText = safeLower(signs.join(" | "));
       const tagMatch = !tagTerm || signsText.includes(tagTerm);
 
-      // date range
       let dateMatch = true;
       if (fromD || toD) {
         if (!created || isNaN(created.getTime())) dateMatch = false;
@@ -738,29 +678,23 @@ async function handleConfirmAI(reportId) {
       }
 
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error("Failed to load reports");
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed to load reports");
 
       const raw = data.reports || [];
-      allReports = SHOW_REJECTED_IN_LIST
-        ? raw
-        : raw.filter((r) => safeLower(getReportStatus(r)) !== "rejected");
+      allReports = SHOW_REJECTED_IN_LIST ? raw : raw.filter((r) => safeLower(getReportStatus(r)) !== "rejected");
 
       renderStats(allReports);
 
-      // active list excludes archive by default
-      if (EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST) {
-        filteredReports = allReports.filter((r) => !isArchivedReport(r));
-      } else {
-        filteredReports = [...allReports];
-      }
+      filteredReports = EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST
+        ? allReports.filter((r) => !isArchivedReport(r))
+        : [...allReports];
 
       currentPage = 1;
       renderCards(filteredReports);
       await autoOpenReportFromUrl();
 
-      // If archive modal open, keep it updated
       if (archiveModal && archiveModal.style.display === "flex") {
-        applyArchiveFilters(); // respects current archive filter inputs
+        applyArchiveFilters();
       }
     } catch (err) {
       console.error("Reports load error:", err);
@@ -774,70 +708,66 @@ async function handleConfirmAI(reportId) {
   }
 
   /* =========================
-      STATS (MAIN)
-   ========================= */
-function renderStats(reports) {
-  // ✅ NEW: Get Virtual Time to calculate "Ready" status correctly
-  const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
-  const virtualNow = new Date(Date.now() + offset);
+     STATS (MAIN) - Time Warp aware
+  ========================= */
+  function renderStats(reports) {
+    const virtualNow = getVirtualNow();
+    const cycle = (r) => safeLower(getCycleStatus(r));
 
-  const cycle = (r) => safeLower(getCycleStatus(r));
+    if (countInHeat) {
+      countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
+    }
 
-  if (countInHeat) 
-    countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
-  
-  if (countAwaitingRecheck)
-    countAwaitingRecheck.textContent = reports.filter((r) => ["under_observation", "waiting_heat_check"].includes(cycle(r))).length;
+    if (countAwaitingRecheck) {
+      countAwaitingRecheck.textContent = reports.filter((r) =>
+        ["under_observation", "waiting_heat_check"].includes(cycle(r))
+      ).length;
+    }
 
-  // ✅ UPDATED: Split "Pregnant" and "Farrowing Ready" based on Virtual Time
-  if (countPregnant || countFarrowingReady) {
-    let pregnantCount = 0;
-    let farrowingReadyCount = 0;
+    // Split "Pregnant" vs "Farrowing Ready" based on virtualNow
+    if (countPregnant || countFarrowingReady) {
+      let pregnantCount = 0;
+      let farrowingReadyCount = 0;
 
-    reports.forEach((r) => {
-      const st = cycle(r);
-      // Include the new awaiting_farrowing status from the Cron Job
-      if (["pregnant", "farrowing_ready", "awaiting_farrowing"].includes(st)) {
-        if (!r.expected_farrowing) {
-          pregnantCount++;
-          return;
+      reports.forEach((r) => {
+        const st = cycle(r);
+        if (["pregnant", "farrowing_ready", "awaiting_farrowing"].includes(st)) {
+          const expected = getExpectedFarrowingDate(r) || r.expected_farrowing || null;
+
+          if (!expected) {
+            pregnantCount++;
+            return;
+          }
+
+          const farrowDate = new Date(expected);
+          farrowDate.setHours(0, 0, 0, 0);
+
+          const checkDate = new Date(virtualNow);
+          checkDate.setHours(0, 0, 0, 0);
+
+          const diffDays = Math.ceil((farrowDate - checkDate) / (1000 * 60 * 60 * 24));
+
+          if (diffDays <= 7) farrowingReadyCount++;
+          else pregnantCount++;
         }
+      });
 
-        const farrowDate = new Date(r.expected_farrowing);
-        // Set to midnight for consistent "Day" comparison
-        farrowDate.setHours(0, 0, 0, 0);
-        const checkDate = new Date(virtualNow);
-        checkDate.setHours(0, 0, 0, 0);
+      if (countPregnant) countPregnant.textContent = pregnantCount;
+      if (countFarrowingReady) countFarrowingReady.textContent = farrowingReadyCount;
+    }
 
-        // Calculate difference in days using virtual time
-        const diffTime = farrowDate - checkDate;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (countLactating) {
+      countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
+    }
 
-        // Logic: Ready if Overdue, Today, or within 7 days (as per your original feature)
-        if (diffDays <= 7) {
-          farrowingReadyCount++;
-        } else {
-          pregnantCount++;
-        }
-      }
-    });
-
-    if (countPregnant) countPregnant.textContent = pregnantCount;
-    if (countFarrowingReady) countFarrowingReady.textContent = farrowingReadyCount;
-  }
-
-  if (countLactating) {
-    countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
-  }
-
-  if (archiveBtn) {
-    const archivedCount = reports.filter(isArchivedReport).length;
-    archiveBtn.innerHTML = `
+    if (archiveBtn) {
+      const archivedCount = reports.filter(isArchivedReport).length;
+      archiveBtn.innerHTML = `
         <i class="bi bi-archive me-1"></i>
         Archive${archivedCount ? ` <span class="ms-1">(${archivedCount})</span>` : ""}
       `;
+    }
   }
-}
 
   /* =========================
      CARDS (MAIN)
@@ -957,7 +887,7 @@ function renderStats(reports) {
   });
 
   /* =========================
-     CARDS (ARCHIVE MODAL) + PAGINATION 5
+     CARDS (ARCHIVE MODAL)
   ========================= */
   function renderArchiveCards(reports) {
     if (!archiveCardList) return;
@@ -983,7 +913,6 @@ function renderStats(reports) {
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
 
-      // smaller card: add class hook "is-archive"
       const card = document.createElement("div");
       card.className = "report-card is-archive";
 
@@ -1044,12 +973,10 @@ function renderStats(reports) {
       archiveCardList.appendChild(card);
     });
 
-    // Pagination UI
     if (archivePageIndicator) archivePageIndicator.textContent = `Page ${archivePage} of ${totalPages || 1}`;
     if (archivePrevBtn) archivePrevBtn.disabled = archivePage === 1;
     if (archiveNextBtn) archiveNextBtn.disabled = archivePage === totalPages || totalPages === 0;
 
-    // Important fix: close archive before opening overlays/panels
     archiveCardList.querySelectorAll(".btn-view").forEach((btn) => {
       btn.onclick = () => closeArchiveAndThen(() => viewReport(btn.dataset.id));
     });
@@ -1060,12 +987,11 @@ function renderStats(reports) {
   }
 
   /* =========================
-      PROGRESS PANEL
-    ========================= */
+     PROGRESS PANEL
+  ========================= */
   async function openProgressPanel(reportId) {
     if (!progressPanel) return;
 
-    // ensure it’s above other overlays (CSS ideally, but this helps)
     progressPanel.style.zIndex = "2000";
 
     const closeBtn = document.getElementById("closeProgressPanel");
@@ -1099,9 +1025,10 @@ function renderStats(reports) {
       timelineContainer.innerHTML = "";
 
       const events = [];
-      const st = safeLower(getCycleStatus(r));
 
-      // Prefer correct backend fields
+      // Use HeatReport.status as lifecycle truth
+      const st = normalizeLifecycleStatus(r);
+
       const aiDate = r.ai_confirmed_at || r.ai_date || null;
 
       if (st === "lactating") {
@@ -1111,9 +1038,7 @@ function renderStats(reports) {
           icon: "bi-heart-pulse-fill",
           date: "Currently Active"
         });
-      }
 
-      if (["farrowing_ready", "lactating"].includes(st)) {
         events.push({
           title: "Farrowing Confirmed",
           desc: "Birth process recorded successfully.",
@@ -1122,28 +1047,26 @@ function renderStats(reports) {
         });
       }
 
-      if (["pregnant", "farrowing_ready", "lactating"].includes(st)) {
+      if (st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
         events.push({
-          title: "Pregnant & Under 115 Days Monitoring",
+          title: "Pregnant Monitoring",
           desc: "Pregnancy confirmed. Monitoring gestation period.",
           icon: "bi-person-hearts",
           date: r.expected_farrowing ? `Due: ${new Date(r.expected_farrowing).toLocaleDateString()}` : "Ongoing"
         });
       }
 
-      if (["under_observation", "pregnant", "farrowing_ready", "lactating"].includes(st)) {
+      if (st === "under_observation" || st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
         events.push({
-          title: "Under 30 Days Monitoring",
-          desc: "Monitoring for 'return to heat' signs post-AI.",
+          title: "Under Observation",
+          desc: "Monitoring for return to heat signs post-AI.",
           icon: "bi-eye",
           date: aiDate ? `Started: ${new Date(aiDate).toLocaleDateString()}` : "Ongoing"
         });
-      }
 
-      if (["ai_confirmed", "under_observation", "pregnant", "farrowing_ready", "lactating"].includes(st)) {
         events.push({
           title: "Artificial Insemination Performed",
-          desc: "Farm Manager/Encoder confirmed Artificial Insemination procedure.",
+          desc: "Farm Manager confirmed Artificial Insemination procedure.",
           icon: "bi-droplet-half",
           date: aiDate ? new Date(aiDate).toLocaleDateString() : "Date N/A"
         });
@@ -1185,34 +1108,45 @@ function renderStats(reports) {
       const currentStageEl = document.getElementById("currentStage");
       if (currentStageEl) currentStageEl.textContent = st.replace(/_/g, " ").toUpperCase();
 
-      // ✅ UPDATED: Time Remaining now uses the Virtual Now aware backend route for Weaning
+      // Time Remaining (Time Warp aware)
       const remainingEl = document.getElementById("remainingDays");
       if (remainingEl) {
         let label = "—";
 
         if (st === "approved") {
-          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (AI Due)` : "—";
+          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check, getVirtualNow())} (AI Due)` : "—";
         } else if (st === "under_observation" || st === "ai_confirmed") {
-          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check)} (Pregnancy Check)` : "—";
+          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check, getVirtualNow())} (Pregnancy Check)` : "—";
         } else if (st === "pregnant" || st === "farrowing_ready") {
-          label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing)} (Farrowing Due)` : "—";
+          label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing, getVirtualNow())} (Farrowing Due)` : "—";
         } else if (st === "lactating") {
+          // Prefer backend-calculated countdown if available (MVP route)
           try {
-            // Fetch synced weaning countdown from your NEW backend route
             const weaningRes = await fetch(`${BACKEND_URL}/api/heat/weaning-date/${reportId}`, {
               headers: { Authorization: `Bearer ${token}` }
             });
             const weaningData = await weaningRes.json();
-            
             if (weaningData.success) {
-              // Uses the server-calculated daysRemaining (correctly synced to 2026)
               label = `${weaningData.daysRemaining} (Weaning Due)`;
             } else {
-              label = "Date Error";
+              // fallback compute from farrow date using virtualNow
+              const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
+              if (farrowDate) {
+                const weaningDue = new Date(farrowDate);
+                weaningDue.setDate(weaningDue.getDate() + 30);
+                label = `${getDaysLeft(weaningDue, getVirtualNow())} (Weaning Due)`;
+              }
             }
           } catch (err) {
             console.error("Weaning sync failed:", err);
-            label = "Sync Error";
+            const farrowDate = r.actual_farrowing_date || r.expected_farrowing;
+            if (farrowDate) {
+              const weaningDue = new Date(farrowDate);
+              weaningDue.setDate(weaningDue.getDate() + 30);
+              label = `${getDaysLeft(weaningDue, getVirtualNow())} (Weaning Due)`;
+            } else {
+              label = "Sync Error";
+            }
           }
         }
 
@@ -1228,79 +1162,74 @@ function renderStats(reports) {
       });
     }
   }
-  
+
   /* =========================
-      VIEW DETAILS
-   ========================= */
-async function viewReport(id) {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include"
-    });
+     VIEW DETAILS
+  ========================= */
+  async function viewReport(id) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat/${id}/detail`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include"
+      });
 
-    const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || "Could not load report details");
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Could not load report details");
 
-    const r = data.report;
-    currentReportId = id;
+      const r = data.report;
+      currentReportId = id;
 
-    // ✅ NEW: Support for Time Warp in UI
-    // Decides "Now" based on the stored offset if it exists
-    const offset = parseInt(localStorage.getItem('timeWarpOffset') || "0");
-    const virtualNow = new Date(Date.now() + offset);
+      const virtualNow = getVirtualNow();
 
-    // =========================
-    // Pig profile photo (default pig profile)
-    // =========================
-    if (reportSwinePhoto) {
-      const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
-      reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
-      reportSwinePhoto.onerror = () => {
-        reportSwinePhoto.onerror = null;
-        reportSwinePhoto.src = "/images/default-pig-profile.png";
-      };
-    }
+      // Pig profile photo
+      if (reportSwinePhoto) {
+        const pigPhoto = toPublicUrl(r?.swine_id?.profile_photo);
+        reportSwinePhoto.src = pigPhoto || "/images/default-pig-profile.png";
+        reportSwinePhoto.onerror = () => {
+          reportSwinePhoto.onerror = null;
+          reportSwinePhoto.src = "/images/default-pig-profile.png";
+        };
+      }
 
-    // Health status chip text
-    const hs = r?.swine_id?.health_status || "—";
-    setChipText("reportHealthStatus", hs);
+      // Health chip
+      const hs = r?.swine_id?.health_status || "—";
+      setChipText("reportHealthStatus", hs);
+      const hsEl = document.getElementById("reportHealthStatus");
+      if (hsEl) hsEl.dataset.health = hs;
 
-    const hsEl = document.getElementById("reportHealthStatus");
-    if (hsEl) hsEl.dataset.health = hs;
+      if (reportSwine) reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
 
-    reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+      const rs = safeLower(getReportStatus(r));
+      const rsLabel = statusLabelOf(rs);
+      if (reportStatus) {
+        reportStatus.textContent = rsLabel;
+        reportStatus.setAttribute("data-status", rs);
+      }
 
-    const rs = safeLower(getReportStatus(r));
-    const rsLabel = statusLabelOf(rs);
-    reportStatus.textContent = rsLabel;
-    reportStatus.setAttribute("data-status", rs);
+      if (reportFarmer) {
+        reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
+      }
 
-    reportFarmer.innerHTML = `<strong>Farmer:</strong> ${r.farmer_id?.first_name} ${r.farmer_id?.last_name}`;
+      // Farmer mini card
+      (function setupFarmerMiniCard() {
+        if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
 
-    // =========================
-    // Farmer mini card (View/Hide) — UPDATED default avatar
-    // =========================
-    (function setupFarmerMiniCard() {
-      if (!toggleFarmerCardBtn || !farmerMiniCardWrap || !farmerMiniCard) return;
+        farmerMiniCardWrap.style.display = "none";
+        toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
+        toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
 
-      // reset default state every time modal opens
-      farmerMiniCardWrap.style.display = "none";
-      toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
-      toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
+        const f = r?.farmer_id && typeof r.farmer_id === "object" ? r.farmer_id : null;
 
-      const f = r?.farmer_id && typeof r.farmer_id === "object" ? r.farmer_id : null;
+        const fullName = f ? `${f.first_name || ""} ${f.last_name || ""}`.trim() : "Unknown Farmer";
+        const farmerCode = f?.farmer_id || "—";
+        const address = f?.address || "—";
+        const phone = f?.contact_no || "—";
+        const pens = f?.num_of_pens ?? "—";
+        const cap = f?.pen_capacity ?? "—";
 
-      const fullName = f ? `${f.first_name || ""} ${f.last_name || ""}`.trim() : "Unknown Farmer";
-      const farmerCode = f?.farmer_id || "—";
-      const address = f?.address || "—";
-      const phone = f?.contact_no || "—";
-      const pens = f?.num_of_pens ?? "—";
-      const cap = f?.pen_capacity ?? "—";
+        const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
 
-      const imgUrl = toPublicUrl(f?.profile_picture) || "/images/default-avatar.png";
-
-      farmerMiniCard.innerHTML = `
+        farmerMiniCard.innerHTML = `
           <div class="rd-farmer-row">
             <div class="rd-avatar">
               <img
@@ -1324,94 +1253,88 @@ async function viewReport(id) {
           </div>
         `;
 
-      // Bind once (avoid stacking handlers)
-      if (!toggleFarmerCardBtn.dataset.bound) {
-        toggleFarmerCardBtn.dataset.bound = "true";
-        toggleFarmerCardBtn.addEventListener("click", () => {
-          const isOpen = farmerMiniCardWrap.style.display !== "none";
+        if (!toggleFarmerCardBtn.dataset.bound) {
+          toggleFarmerCardBtn.dataset.bound = "true";
+          toggleFarmerCardBtn.addEventListener("click", () => {
+            const isOpen = farmerMiniCardWrap.style.display !== "none";
+            if (isOpen) {
+              farmerMiniCardWrap.style.display = "none";
+              toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
+              toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
+            } else {
+              farmerMiniCardWrap.style.display = "block";
+              toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye-slash me-1"></i> Hide`;
+              toggleFarmerCardBtn.setAttribute("aria-expanded", "true");
+            }
+          });
+        }
+      })();
 
-          if (isOpen) {
-            farmerMiniCardWrap.style.display = "none";
-            toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye me-1"></i> View`;
-            toggleFarmerCardBtn.setAttribute("aria-expanded", "false");
-          } else {
-            farmerMiniCardWrap.style.display = "block";
-            toggleFarmerCardBtn.innerHTML = `<i class="bi bi-eye-slash me-1"></i> Hide`;
-            toggleFarmerCardBtn.setAttribute("aria-expanded", "true");
-          }
-        });
+      if (reportProbability) {
+        reportProbability.innerHTML = `
+          <strong>Probability:</strong>
+          ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}
+        `;
       }
-    })();
 
-    reportProbability.innerHTML = `
-        <strong>Probability:</strong>
-        ${r.heat_probability != null ? r.heat_probability + "%" : "N/A"}
-      `;
+      if (reportSigns) {
+        if (Array.isArray(r.signs) && r.signs.length) {
+          reportSigns.innerHTML = r.signs.map((sign) => `<span class="sign-chip">${sign}</span>`).join("");
+        } else {
+          reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
+        }
+      }
 
-    if (Array.isArray(r.signs) && r.signs.length) {
-      reportSigns.innerHTML = r.signs.map((sign) => `<span class="sign-chip">${sign}</span>`).join("");
-    } else {
-      reportSigns.innerHTML = `<span class="text-muted">No signs recorded.</span>`;
-    }
+      // Notes / remarks
+      const notesEl = document.getElementById("reportNotes");
+      if (notesEl) {
+        const notes =
+          (r?.remarks ?? "") ||
+          (r?.notes ?? "") ||
+          (r?.remark ?? "") ||
+          (r?.farmer_notes ?? "") ||
+          (r?.farmer_note ?? "") ||
+          (r?.comment ?? "") ||
+          "";
 
-    // Notes / remarks (FIXED: prioritize schema field "remarks" and trim)
-    const notesEl = document.getElementById("reportNotes");
-    if (notesEl) {
-      const notes =
-        (r?.remarks ?? "") ||
-        (r?.notes ?? "") ||
-        (r?.remark ?? "") ||
-        (r?.farmer_notes ?? "") ||
-        (r?.farmer_note ?? "") ||
-        (r?.comment ?? "") ||
-        "";
+        const safe = String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
 
-      const safe = String(notes).replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+        notesEl.innerHTML = safe ? `<span>${safe}</span>` : `<em class="text-muted">No remarks provided.</em>`;
+      }
 
-      notesEl.innerHTML = safe
-        ? `<span>${safe}</span>`
-        : `<em class="text-muted">No remarks provided.</em>`;
-    }
+      // Created at chip
+      const d = r.createdAt ? new Date(r.createdAt) : null;
+      const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
+      setChipText("reportCreatedAt", createdText);
 
-    // Created at + cycle stage chips
-    const d = r.createdAt ? new Date(r.createdAt) : null;
-    const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
-    setChipText("reportCreatedAt", createdText);
+      // Cycle stage chip
+      const stageEl = document.getElementById("reportCycleStage");
+      if (stageEl) {
+        const stRaw = getCycleStatus(r) || "—";
+        const label = String(stRaw || "—").replace(/_/g, " ");
+        const span = stageEl.querySelector(".rd-chip-text");
+        if (span) span.textContent = label;
+      }
 
-    const stageEl = document.getElementById("reportCycleStage");
-    if (stageEl) {
-      const st = r.cycle_status || r.heat_cycle_status || r.cycleStage || r.cycleStatus || r.status || "—";
-      const label = String(st || "—").replace(/_/g, " ");
-      const span = stageEl.querySelector(".rd-chip-text");
-      if (span) span.textContent = label;
-    }
+      // Media
+      if (evidenceGallery) evidenceGallery.innerHTML = "";
+      const evidences = Array.isArray(r.evidence_url) ? r.evidence_url : r.evidence_url ? [r.evidence_url] : [];
 
-    // Media
-    if (evidenceGallery) evidenceGallery.innerHTML = "";
-    const evidences = Array.isArray(r.evidence_url)
-      ? r.evidence_url
-      : r.evidence_url
-      ? [r.evidence_url]
-      : [];
+      if (!evidences.length) {
+        if (evidenceGallery) evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
+      } else {
+        evidences.forEach((path) => {
+          if (!path || !evidenceGallery) return;
 
-    if (!evidences.length) {
-      if (evidenceGallery)
-        evidenceGallery.innerHTML = "<p class='text-muted'><em>No media evidence provided.</em></p>";
-    } else {
-      evidences.forEach((path) => {
-        if (!path || !evidenceGallery) return;
+          const cleanPath = String(path).replace(/\\/g, "/");
+          const fullUrl = cleanPath.startsWith("http") ? cleanPath : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
 
-        const cleanPath = String(path).replace(/\\/g, "/");
-        const fullUrl = cleanPath.startsWith("http")
-          ? cleanPath
-          : `${BACKEND_URL}/${cleanPath.replace(/^\/+/, "")}`;
+          const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
+          const wrapper = document.createElement("div");
+          wrapper.className = "dynamic-media";
 
-        const isVideo = /\.(mp4|mov|webm)$/i.test(fullUrl);
-        const wrapper = document.createElement("div");
-        wrapper.className = "dynamic-media";
-
-        if (isVideo) {
-          wrapper.innerHTML = `
+          if (isVideo) {
+            wrapper.innerHTML = `
               <div class="rd-media-box">
                 <div class="d-flex align-items-center justify-content-center" style="width:100%;height:100%;">
                   <i class="bi bi-play-circle" style="font-size:42px;color:#fff;"></i>
@@ -1426,8 +1349,8 @@ async function viewReport(id) {
                 </a>
               </small>
             `;
-        } else {
-          wrapper.innerHTML = `
+          } else {
+            wrapper.innerHTML = `
               <div class="rd-media-box">
                 <img
                   src="${fullUrl}"
@@ -1438,77 +1361,66 @@ async function viewReport(id) {
               </div>
               <small>Tap / click to view</small>
             `;
-        }
+          }
 
-        evidenceGallery.appendChild(wrapper);
-      });
-    }
+          evidenceGallery.appendChild(wrapper);
+        });
+      }
 
-    // Action buttons - Hidden by default
-    if (approveBtn) approveBtn.style.display = "none";
-    if (rejectBtn) rejectBtn.style.display = "none";
-    if (confirmAIBtn) confirmAIBtn.style.display = "none";
-    if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
-    if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
-    if (followUpBtn) followUpBtn.style.display = "none";
+      /* =========================
+         ACTION BUTTONS
+      ========================= */
+      if (approveBtn) approveBtn.style.display = "none";
+      if (rejectBtn) rejectBtn.style.display = "none";
+      if (confirmAIBtn) confirmAIBtn.style.display = "none";
+      if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "none";
+      if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "none";
+      if (followUpBtn) followUpBtn.style.display = "none";
+      if (confirmWeaningBtn) confirmWeaningBtn.style.display = "none";
 
-    // ✅ UPDATED Action Button Logic
-    const reportStatusValue = safeLower(r.status);
+      const st = normalizeLifecycleStatus(r);
 
-    switch (reportStatusValue) {
-      case "pending":
-        if (approveBtn) approveBtn.style.display = "inline-block";
-        if (rejectBtn) rejectBtn.style.display = "inline-block";
-        break;
+      if (st === "pending") {
+        if (approveBtn) approveBtn.style.display = "inline-flex";
+        if (rejectBtn) rejectBtn.style.display = "inline-flex";
+      } else if (st === "approved") {
+        if (confirmAIBtn) confirmAIBtn.style.display = "inline-flex";
+      } else if (st === "under_observation" || st === "ai_confirmed") {
+        if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-flex";
+        if (followUpBtn) followUpBtn.style.display = "inline-flex";
+      } else if (st === "pregnant" || st === "farrowing_ready") {
+        const expected = getExpectedFarrowingDate(r);
+        if (expected) {
+          const farrowDate = new Date(expected);
+          farrowDate.setHours(0, 0, 0, 0);
 
-      case "approved":
-        if (confirmAIBtn) confirmAIBtn.style.display = "inline-block";
-        break;
+          const checkTime = new Date(virtualNow);
+          checkTime.setHours(0, 0, 0, 0);
 
-      case "ai_confirmed":
-      case "under_observation":
-        if (confirmPregnancyBtn) confirmPregnancyBtn.style.display = "inline-block";
-        if (followUpBtn) followUpBtn.style.display = "inline-block";
-        break;
+          const diffDays = Math.ceil((farrowDate - checkTime) / (1000 * 60 * 60 * 24));
+          const isReadyWindow = diffDays <= 7;
 
-      // ✅ FIXED: Added awaiting_farrowing and used Virtual Time
-      case "pregnant":
-      case "farrowing_ready":
-      case "awaiting_farrowing": {
-        if (!r.expected_farrowing) break;
-
-        const farrowDate = new Date(r.expected_farrowing);
-        farrowDate.setHours(0, 0, 0, 0);
-        
-        // Use virtualNow instead of 'new Date()' to respect the warp
-        const checkTime = new Date(virtualNow);
-        checkTime.setHours(0, 0, 0, 0);
-
-        if (checkTime >= farrowDate) {
-          if (confirmFarrowingBtn) {
-            confirmFarrowingBtn.style.display = "inline-block";
-            // Ensure click actually triggers the modal
-            confirmFarrowingBtn.onclick = () => {
-              if (typeof openFarrowingModal === 'function') openFarrowingModal();
-            };
+          if (isReadyWindow) {
+            if (confirmFarrowingBtn) confirmFarrowingBtn.style.display = "inline-flex";
           }
         }
-        break;
+      } else if (st === "lactating") {
+        // If your UI has weaning action, expose it here
+        if (confirmWeaningBtn) confirmWeaningBtn.style.display = "inline-flex";
       }
-    }
 
-    if (reportDetailsModal) reportDetailsModal.style.display = "flex";
-    lockScroll();
-  } catch (err) {
-    console.error(err);
-    await showFeedback({
-      title: "Unable to load report",
-      sub: "Please try again.",
-      body: "We couldn’t load the report details.",
-      variant: "danger"
-    });
+      if (reportDetailsModal) reportDetailsModal.style.display = "flex";
+      lockScroll();
+    } catch (err) {
+      console.error(err);
+      await showFeedback({
+        title: "Unable to load report",
+        sub: "Please try again.",
+        body: err?.message || "We couldn’t load the report details.",
+        variant: "danger"
+      });
+    }
   }
-}
 
   /* =========================
      ACTION HANDLER
@@ -1550,6 +1462,9 @@ async function viewReport(id) {
     }
   }
 
+  /* =========================
+     BUTTON WIRING
+  ========================= */
   if (approveBtn) approveBtn.onclick = () => action("approve", "Report approved. AI is now scheduled.");
 
   if (rejectBtn) {
@@ -1610,46 +1525,25 @@ async function viewReport(id) {
 
   if (submitAIBtn) {
     submitAIBtn.onclick = async () => {
-      // 1. Get the Boar ID
       const maleSwineId = boarSelect?.value;
+      const aiDate = aiDateInput?.value || null;
 
-      // 2. TIME WARP: Capture the specific date
-      const aiDate = document.getElementById("ai_date_input")?.value;
-
-      // 3. Keep your existing validation feature
       if (!maleSwineId) {
-        // If showFeedback is a custom function in your UI
-        if (typeof showFeedback === "function") {
-          await showFeedback({
-            title: "Select a boar",
-            sub: "Required field",
-            body: "Please select a boar before confirming.",
-            variant: "warn"
-          });
-        } else {
-          alert("Please select a boar.");
-        }
+        await showFeedback({
+          title: "Select a boar",
+          sub: "Required field",
+          body: "Please select a boar.",
+          variant: "warn"
+        });
         return;
       }
 
-      // 4. Trigger the action with the Time Warp payload
-      // We send 'ai_date' so the backend can set the insemination_date in AIRecord.js
-      await action(
-        "confirm-ai", 
-        "AI Confirmed! Swine moved to Under Observation.", 
-        { 
-          maleSwineId,
-          ai_date: aiDate || null, // Sends null if empty, letting backend use Date.now()
-          reportId: currentReportId // Ensuring the ID is explicitly linked
-        }
-      );
+      await action("confirm-ai", "AI Confirmed! Swine moved to Under Observation.", {
+        maleSwineId,
+        ai_date: aiDate
+      });
 
-      // 5. Keep your existing feature to close the modal
-      if (typeof closeAIConfirmModalFn === "function") {
-        closeAIConfirmModalFn();
-      } else if (aiConfirmModal) {
-        aiConfirmModal.style.display = "none";
-      }
+      closeAIConfirmModalFn();
     };
   }
 
@@ -1673,17 +1567,11 @@ async function viewReport(id) {
     };
   }
 
-  /* ======================================================
-     UPDATE: CONFIRM PREGNANCY (With Time Warp)
-  ====================================================== */
   if (confirmPregnancyBtn) {
     confirmPregnancyBtn.onclick = async () => {
-      // 1. TIME WARP: Capture the specific date from the UI
-      // Ensure you have an <input type="date" id="preg_date_input"> in your HTML/Modal
       const pregDateInput = document.getElementById("preg_date_input");
       const checkDate = pregDateInput ? pregDateInput.value : null;
 
-      // 2. Keep your existing confirmation feature
       const ok = await showConfirm({
         title: "Confirm pregnancy",
         sub: "This will update the swine’s cycle stage.",
@@ -1691,52 +1579,12 @@ async function viewReport(id) {
       });
       if (!ok) return;
 
-      // 3. Trigger the action, passing the check_date to the backend
-      // This matches the 'const { check_date } = req.body' in heatReportRoutes.js
-      await action(
-        "confirm-pregnancy", 
-        "Pregnancy confirmed. Expected farrowing date calculated.",
-        {
-          check_date: checkDate // Sends the warped date or null to use current time
-        }
-      );
-    };
-  }
-
-  /* ======================================================
-     CONFIRM WEANING (Integrated with Time Portal)
-  ====================================================== */
-  if (confirmWeaningBtn) {
-    confirmWeaningBtn.onclick = async () => {
-      // 1. Capture the data from the modal
-      const weaningDate = weaningDateInput?.value;
-      const weaningWeight = weaningWeightInput?.value;
-      const remarks = weaningRemarksInput?.value || "Standard weaning";
-
-      // 2. Validation
-      if (!weaningWeight || weaningWeight <= 0) {
-        alert("Please enter a valid weaning weight.");
-        return;
-      }
-
-      // 3. User Confirmation
-      const ok = await showConfirm({
-        title: "Confirm Weaning",
-        sub: "This will move piglets to 'Growing' and reset the Sow to 'Open'.",
-        body: "Are you sure you want to finalize weaning for this batch?"
-      });
-      if (!ok) return;
-
-      // 4. Send to Backend (Matches the route we updated earlier)
-      await action("confirm-weaning", "Weaning confirmed and cycle completed!", {
-        weaning_date: weaningDate,
-        weight: weaningWeight,
-        remarks: remarks
+      await action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.", {
+        check_date: checkDate
       });
     };
   }
 
-  // ✅ Fix: backend route is /still-heat (not /cycle-failed)
   if (followUpBtn) {
     followUpBtn.onclick = async () => {
       const ok = await showConfirm({
@@ -1750,7 +1598,6 @@ async function viewReport(id) {
     };
   }
 
-  // ✅ Fix: Open farrowing modal ABOVE report details + reset values + calc total live
   if (confirmFarrowingBtn) {
     confirmFarrowingBtn.onclick = () => {
       if (!farrowingModal) return;
@@ -1768,6 +1615,37 @@ async function viewReport(id) {
     };
   }
 
+  if (confirmWeaningBtn) {
+    confirmWeaningBtn.onclick = async () => {
+      const weaningDate = weaningDateInput?.value || null;
+      const weaningWeight = Number(weaningWeightInput?.value || 0);
+      const remarks = (weaningRemarksInput?.value || "").trim() || "Standard weaning";
+
+      if (!weaningWeight || weaningWeight <= 0) {
+        await showFeedback({
+          title: "Validation error",
+          sub: "Weaning weight required",
+          body: "Please enter a valid weaning weight.",
+          variant: "warn"
+        });
+        return;
+      }
+
+      const ok = await showConfirm({
+        title: "Confirm Weaning",
+        sub: "This will move piglets to Growing and reset the sow.",
+        body: "Finalize weaning for this batch?"
+      });
+      if (!ok) return;
+
+      await action("confirm-weaning", "Weaning confirmed and cycle completed!", {
+        weaning_date: weaningDate,
+        weight: weaningWeight,
+        remarks
+      });
+    };
+  }
+
   if (farrowingForm) {
     farrowingForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1779,7 +1657,8 @@ async function viewReport(id) {
       if (submitBtn) {
         submitBtn.disabled = true;
         originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
+        submitBtn.innerHTML =
+          `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...`;
       }
 
       const farrowingDateInput = document.getElementById("farrowingDateInput");
@@ -1819,7 +1698,6 @@ async function viewReport(id) {
         closeFarrowingModalFn();
         farrowingForm.reset();
 
-        // reset derived label/hidden after reset()
         if (maleCountInput) maleCountInput.value = "0";
         if (femaleCountInput) femaleCountInput.value = "0";
         const liveHidden = document.getElementById("liveCount");
@@ -1827,12 +1705,6 @@ async function viewReport(id) {
         if (totalLiveLabel) totalLiveLabel.textContent = "0";
       } catch (err) {
         console.error("Farrowing registration failed:", err);
-        await showFeedback({
-          title: "Farrowing failed",
-          sub: "Please try again",
-          body: err?.message || "Action failed",
-          variant: "danger"
-        });
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -1843,14 +1715,14 @@ async function viewReport(id) {
   }
 
   /* =========================
-     EVIDENCE VIEWER (IMAGE/VIDEO)
+     EVIDENCE VIEWER
   ========================= */
   let evScale = 1;
   let isDragging = false;
-  let startX = 0,
-    startY = 0;
-  let imgX = 0,
-    imgY = 0;
+  let startX = 0;
+  let startY = 0;
+  let imgX = 0;
+  let imgY = 0;
 
   function setZoomLabel() {
     if (evZoomLabel) evZoomLabel.textContent = `${Math.round(evScale * 100)}%`;
@@ -1872,18 +1744,15 @@ async function viewReport(id) {
   function openEvidenceViewer({ type, src }) {
     if (!evidenceViewerModal) return;
 
-    // reset
     if (evImageWrap) evImageWrap.style.display = "none";
     if (evVideoWrap) evVideoWrap.style.display = "none";
 
-    // stop video if open
     if (evVideo) {
       evVideo.pause();
       evVideo.removeAttribute("src");
       evVideo.load();
     }
 
-    // open modal
     evidenceViewerModal.style.display = "flex";
     lockScroll();
 
@@ -1905,7 +1774,6 @@ async function viewReport(id) {
   function closeEvidenceViewerModal() {
     if (!evidenceViewerModal) return;
 
-    // stop video
     if (evVideo) {
       evVideo.pause();
       evVideo.removeAttribute("src");
@@ -1926,7 +1794,6 @@ async function viewReport(id) {
     }
   });
 
-  /* Zoom buttons */
   evZoomIn?.addEventListener("click", () => {
     evScale = Math.min(evScale + 0.2, 4);
     applyImageTransform();
@@ -1937,13 +1804,11 @@ async function viewReport(id) {
   });
   evZoomReset?.addEventListener("click", resetImageView);
 
-  /* Wheel zoom */
   evStage?.addEventListener(
     "wheel",
     (e) => {
       if (evImageWrap?.style.display !== "block") return;
       e.preventDefault();
-
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
       evScale = Math.min(Math.max(evScale + delta, 0.4), 4);
       applyImageTransform();
@@ -1951,7 +1816,6 @@ async function viewReport(id) {
     { passive: false }
   );
 
-  /* Drag to pan (image) */
   evStage?.addEventListener("mousedown", (e) => {
     if (evImageWrap?.style.display !== "block") return;
     isDragging = true;
@@ -1974,7 +1838,6 @@ async function viewReport(id) {
     isDragging = false;
   });
 
-  /* Click handler on evidence items (delegated) */
   evidenceGallery?.addEventListener("click", (e) => {
     const t = e.target.closest("[data-ev-type][data-ev-src]");
     if (!t) return;
@@ -2014,7 +1877,6 @@ async function viewReport(id) {
       let farmerMatch = true;
       if (filterState.selectedFarmerId) {
         const farmerId = typeof r.farmer_id === "object" ? r.farmer_id._id : r.farmer_id;
-
         farmerMatch = farmerId && farmerId.toString() === filterState.selectedFarmerId.toString();
       }
 
@@ -2026,7 +1888,9 @@ async function viewReport(id) {
   }
 
   function resetToAllAndRender() {
-    filteredReports = EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST ? allReports.filter((r) => !isArchivedReport(r)) : [...allReports];
+    filteredReports = EXCLUDE_ARCHIVED_FROM_ACTIVE_LIST
+      ? allReports.filter((r) => !isArchivedReport(r))
+      : [...allReports];
 
     currentPage = 1;
     renderCards(filteredReports);

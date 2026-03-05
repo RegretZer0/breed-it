@@ -3,15 +3,24 @@ import { authGuard } from "/js/authGuard.js";
 import { initNotifications } from "/js/notifications.js";
 import { initFarmCalendar } from "/js/farm-manager/calendar_module.js";
 
+console.log("[dashboard] file loaded");
+
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log("[dashboard] DOMContentLoaded");
+
   // ============================
   // AUTH CHECK
   // ============================
   const user = await authGuard(["farm_manager", "encoder"]);
-  if (!user) return;
+  console.log("[dashboard] authGuard result:", user);
+  if (!user) {
+    console.warn("[dashboard] No user returned from authGuard");
+    return;
+  }
 
   const BACKEND_URL = "http://localhost:5000";
   const token = localStorage.getItem("token");
+  console.log("[dashboard] token exists?", !!token);
 
   if (!token) {
     alert("Session expired. Please log in again.");
@@ -19,10 +28,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // ============================
-  // MVP: SYNC VIRTUAL TIME
+  // TIME WARP: SYNC VIRTUAL TIME
   // ============================
-  // CRITICAL: We await this to ensure the offset is saved BEFORE we ask for stats
-  // This ensures the dashboard "Time Warp" is active
+  // Must run before loading stats so local offset + banner are ready.
   await syncVirtualTime();
 
   // ============================
@@ -48,98 +56,121 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ============================
   // DASHBOARD STATS
   // ============================
-  // Now that time is synced and the banner is prepared, load the numbers
+  console.log("[dashboard] calling loadDashboardStats...");
   await loadDashboardStats(token);
 
   // ============================
   // CALENDAR (Single Instance)
   // ============================
   try {
-    // Pass virtual time awareness to calendar if your module supports it
     initFarmCalendar(BACKEND_URL, token);
   } catch (err) {
     console.error("Calendar init failed:", err);
   }
 });
 
-
 // ============================
 // DASHBOARD STATS
 // ============================
 async function loadDashboardStats(token) {
   try {
+    console.log("[dashboard] fetching /api/dashboard/farm-manager/stats");
+
     const res = await fetch("/api/dashboard/farm-manager/stats", {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${token}` },
     });
 
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
+    console.log("[dashboard] response status:", res.status);
 
-    // If the backend sent back the virtual date it used, log it for verification
-    if (data.virtualDateUsed) {
-        console.log("📊 Stats calculated using Virtual Date:", data.virtualDateUsed);
+    // Keep control-70's robust parsing so you can see non-JSON backend errors
+    const text = await res.text();
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error("[dashboard] JSON parse error:", parseErr);
+      throw new Error(`Non-JSON response (${res.status}): ${text.slice(0, 120)}`);
     }
 
-    // Update the stat numbers in the UI
-    Object.entries(data.stats).forEach(([key, value]) => {
+    console.log("[dashboard] response payload:", data);
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || `Request failed (${res.status})`);
+    }
+
+    // If backend reports the virtual date used, log it for verification
+    if (data.virtualDateUsed) {
+      console.log("[dashboard] stats calculated using virtual date:", data.virtualDateUsed);
+    }
+
+    Object.entries(data.stats || {}).forEach(([key, value]) => {
+      console.log(`[dashboard] updating stat: ${key} =`, value);
+
       const el = document.querySelector(`[data-stat="${key}"]`);
-      if (el) {
-          el.textContent = value;
-          // Add a small animation effect so you see the numbers change
-          el.style.animation = 'none';
-          el.offsetHeight; 
-          el.style.animation = 'fadeIn 0.5s forwards';
+      if (!el) {
+        console.warn(`[dashboard] element not found for key: ${key}`);
+        return;
+      }
+
+      el.textContent = value ?? 0;
+
+      // Keep MVP's small "update" effect without depending on a specific animation name existing
+      try {
+        el.style.animation = "none";
+        // force reflow
+        void el.offsetHeight;
+        el.style.animation = "fadeIn 0.5s forwards";
+      } catch (e) {
+        // ignore if style/animation isn't supported
       }
     });
-
   } catch (err) {
     console.error("Dashboard stats error:", err);
   }
 }
 
 /**
- * MVP FEATURE: SYNC VIRTUAL TIME (UPDATED)
- * Fetches server's perception of "Now" and saves the offset locally.
+ * Time Warp: Sync Virtual Time
+ * Fetches server's perception of "now" and saves the offset locally for any UI helpers that use it.
+ * Also updates any optional banner/labels if present in the DOM.
  */
 async function syncVirtualTime() {
   try {
-    // Calling /health (which we updated earlier to return virtualTime)
     const res = await fetch("/health");
     const data = await res.json();
-    
+
     const timeDisplay = document.getElementById("currentVirtualTime");
-    const warpBanner = document.getElementById("timeWarpStatus"); 
-    const warpDateText = document.getElementById("warpDateText"); // Extra detail if you have it
-    
-    if (data.virtualTime) {
-      // 1. Calculate the offset and save it
-      const serverTime = new Date(data.virtualTime).getTime();
-      const localTime = Date.now();
-      const offset = serverTime - localTime;
-      localStorage.setItem('timeWarpOffset', offset.toString());
+    const warpBanner = document.getElementById("timeWarpStatus");
+    const warpDateText = document.getElementById("warpDateText");
 
-      // 2. UI Updates
-      const vDate = new Date(data.virtualTime);
+    if (!data || !data.virtualTime) return;
 
-      if (timeDisplay) {
-        timeDisplay.textContent = vDate.toLocaleString();
+    // 1) Calculate and persist offset for frontend helpers (if your UI uses it elsewhere)
+    const serverTime = new Date(data.virtualTime).getTime();
+    const localTime = Date.now();
+    const offset = serverTime - localTime;
+    localStorage.setItem("timeWarpOffset", String(offset));
+
+    // 2) UI updates (optional elements)
+    const vDate = new Date(data.virtualTime);
+
+    if (timeDisplay) {
+      timeDisplay.textContent = vDate.toLocaleString();
+    }
+
+    if (data.isMocked) {
+      if (warpBanner) {
+        warpBanner.style.setProperty("display", "flex", "important");
       }
-      
-      if (data.isMocked) {
-        // Show the banner and update the text to show the 2026 date
-        if (warpBanner) {
-          warpBanner.style.setProperty('display', 'flex', 'important');
-        }
-        if (warpDateText) {
-          warpDateText.textContent = vDate.toDateString();
-        }
-        
-        if (timeDisplay) timeDisplay.style.color = "#d97706";
-        console.log("🚀 Time Warp Active: Dashboard synced to " + data.virtualTime);
-      } else {
-        // Hide banner if not mocked
-        if (warpBanner) warpBanner.style.display = 'none';
+      if (warpDateText) {
+        warpDateText.textContent = vDate.toDateString();
       }
+      if (timeDisplay) timeDisplay.style.color = "#d97706";
+
+      console.log("[dashboard] time warp active:", data.virtualTime);
+    } else {
+      if (warpBanner) warpBanner.style.display = "none";
     }
   } catch (err) {
     console.warn("Could not sync virtual time with server. Dashboard may show real-time stats.");

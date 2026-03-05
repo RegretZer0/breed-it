@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
+
 :root{
   --shell-bg:#f6f7fb;
   --card-bg:#fff;
@@ -1679,5 +1681,30 @@ html, body{
   #rejectReasonModal .rd-action{
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Report Details header actions (Confirm Farrowing + Close X) */
+.rd-header-actions{
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+/* Keep the header button compact and avoid wrapping */
+#confirmFarrowingBtn{
+  white-space: nowrap;
+}
+
+/* Optional: tighten on very small screens */
+@media (max-width: 420px){
+  .rd-header-actions{
+    gap: 8px;
+  }
+  #confirmFarrowingBtn{
+    padding: 7px 10px;
+    font-size: 12px;
   }
 }

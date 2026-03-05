@@ -73,12 +73,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // cycles pagination (cards list)
     breedingCyclePage: 1,
-    CYCLES_PER_PAGE: 5
+    CYCLES_PER_PAGE: 5,
+
+    // ✅ UI view state helpers used by breeding module (safe defaults)
+    __reproView: "SOWS"
   };
 
   /* ================= RESOLVE MANAGER ================= */
   try {
-    state.managerId = role === "farm_manager" ? user.id : user.managerId;
+    // ✅ keep backward-compat: accept id/_id for farm_manager, managerId for encoder
+    const uid = user?.id || user?._id || null;
+    state.managerId = role === "farm_manager" ? uid : user.managerId || uid;
   } catch (err) {
     console.error("Manager resolution failed", err);
     hideGlobalLoader();
@@ -173,13 +178,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ================= OPTIONAL: GLOBAL CLOSE HANDLERS FOR FLOATING PANEL ================= */
   function closeFarmerPanel() {
+    // ✅ close overlay too, if present
+    document.getElementById("farmerPanelOverlay")?.classList.add("d-none");
     dom.farmerPanel?.classList.add("d-none");
+    document.body.classList.remove("panel-open");
 
     // ✅ FIXED: only call functions that actually exist in breeding module
     breeding?.closeSowDetailView?.();
-    // NOTE: your current breeding module does not expose closeCycleDetailView()
-    // If you later add it, you can safely call:
-    // breeding?.closeCycleDetailView?.();
   }
 
   dom.farmerPanelCloseBtn?.addEventListener("click", closeFarmerPanel);
@@ -190,6 +195,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  // ✅ close when clicking outside (overlay style)
   dom.farmerPanel?.addEventListener("click", (e) => {
     if (e.target === dom.farmerPanel && dom.farmerPanel.classList.contains("panel-overlay")) {
       closeFarmerPanel();

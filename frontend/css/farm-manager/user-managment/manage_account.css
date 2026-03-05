@@ -772,10 +772,10 @@ html, body{
   display: flex;
   align-items: end;
   gap: 12px;
-  flex-wrap: nowrap;             /* 1 row only */
-  overflow-x: auto;              /* scroll instead of wrap */
+  flex-wrap: nowrap;          
+  overflow: visible !important; 
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;           /* room for scrollbar */
+  padding-bottom: 4px; 
 }
 
 .filters-inline::-webkit-scrollbar{
@@ -837,7 +837,8 @@ html, body{
 @media (max-width: 576px){
   .filters-inline{
     flex-wrap: wrap !important;
-    overflow: visible !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
   }
 
   .filters-inline .filter-item,

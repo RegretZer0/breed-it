@@ -1016,3 +1016,45 @@ body{
   margin-top: 6px;
   white-space: pre-wrap;
 }
+
+/* =========================
+   FARM MANAGER — PHOTO CROP (CLEAN)
+   Fixes "double image" by NOT styling all img inside cropper DOM
+========================= */
+#accountPhotoCropModal .fm-crop-stage{
+  width: 100%;
+  height: min(62vh, 520px);
+  background: rgba(25,135,84,.06);
+  border: 1px dashed rgba(25,135,84,.30);
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  padding: 0;              /* important: no padding */
+}
+
+/* Only style the RAW image element before Cropper takes over */
+#accountPhotoCropModal .fm-crop-stage > img#accountCropImg{
+  width: 100%;
+  height: auto;
+  max-width: none;
+  display: block;
+}
+
+/* Cropper should fully own the layout */
+#accountPhotoCropModal .fm-crop-stage .cropper-container{
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Circle crop UI */
+#accountPhotoCropModal .cropper-view-box,
+#accountPhotoCropModal .cropper-face{
+  border-radius: 50%;
+}
+
+/* Hide the RAW img only AFTER cropper is ready (prevents overlay) */
+#accountPhotoCropModal .fm-crop-stage.is-cropper-ready > img#accountCropImg{
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}

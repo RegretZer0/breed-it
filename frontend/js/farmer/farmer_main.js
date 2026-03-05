@@ -62,8 +62,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* =========================
-     SIDE PANELS
+     SIDE PANELS (FIXED)
+     - cleans leftover bootstrap backdrops
+     - restores body scroll only if no overlays remain
   ========================= */
+  function hasAnyOpenOverlay() {
+    return (
+      document.querySelector(".side-panel.active") ||
+      document.querySelector(".mobile-menu.active")
+    );
+  }
+
+  function cleanupBootstrapBackdrops() {
+    // remove any leftover Bootstrap backdrops (from old code/tests)
+    document.querySelectorAll(".modal-backdrop, .offcanvas-backdrop").forEach(el => el.remove());
+
+    // remove bootstrap body lock flags
+    document.body.classList.remove("modal-open", "offcanvas-backdrop");
+    document.body.style.removeProperty("padding-right");
+  }
+
   function openPanel(id) {
     document.getElementById(id)?.classList.add("active");
     document.body.style.overflow = "hidden";
@@ -71,7 +89,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function closePanel(id) {
     document.getElementById(id)?.classList.remove("active");
-    document.body.style.overflow = "";
+
+    cleanupBootstrapBackdrops();
+
+    // only unlock scroll if nothing else is open
+    if (!hasAnyOpenOverlay()) {
+      document.body.style.overflow = "";
+    }
   }
 
   document.querySelectorAll(".close-panel").forEach(btn => {
@@ -83,7 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!item) return;
 
     mobileMenu.classList.remove("active");
-    document.body.style.overflow = "";
+    cleanupBootstrapBackdrops();
+
+    if (!hasAnyOpenOverlay()) document.body.style.overflow = "";
 
     if (item.dataset.action === "notifications") openPanel("notificationsPanel");
     if (item.dataset.action === "settings") openPanel("settingsPanel");
@@ -98,21 +124,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const openNotificationsBtn = document.getElementById("openNotifications");
 
   openNotificationsBtn?.addEventListener("click", () => {
-    document.getElementById("notificationsPanel")?.classList.add("active");
-    document.body.style.overflow = "hidden";
+    openPanel("notificationsPanel");
   });
 
   /* =========================
-   VIEW ALL NOTIFICATIONS (FARMER)
+   VIEW ALL NOTIFICATIONS (FARMER) - FIXED
+   - closes notifications panel first
+   - opens history panel as side-panel (NOT bootstrap modal)
   ========================= */
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
 
   viewAllBtn?.addEventListener("click", () => {
-    const modal = document.getElementById("notificationHistoryModal");
-    if (!modal) return;
+    // close recent notifications panel (avoid stacking)
+    document.getElementById("notificationsPanel")?.classList.remove("active");
 
-    modal.classList.add("active");
-    document.body.style.overflow = "hidden";
+    // open history panel
+    openPanel("notificationHistoryModal");
   });
 
 
@@ -190,23 +217,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-/* PROFILE EDIT */
-const editBtn = document.getElementById("editProfileBtn");
-const cancelEdit = document.getElementById("cancelEdit");
-const viewProfile = document.getElementById("viewProfile");
-const editProfile = document.getElementById("editProfile");
+  /* PROFILE EDIT */
+  const editBtn = document.getElementById("editProfileBtn");
+  const cancelEdit = document.getElementById("cancelEdit");
+  const viewProfile = document.getElementById("viewProfile");
+  const editProfile = document.getElementById("editProfile");
 
-if (editBtn && cancelEdit) {
-  editBtn.addEventListener("click", () => {
-    viewProfile.classList.add("hidden");
-    editProfile.classList.remove("hidden");
-  });
+  if (editBtn && cancelEdit) {
+    editBtn.addEventListener("click", () => {
+      viewProfile.classList.add("hidden");
+      editProfile.classList.remove("hidden");
+    });
 
-  cancelEdit.addEventListener("click", () => {
-    editProfile.classList.add("hidden");
-    viewProfile.classList.remove("hidden");
-  });
-}
+    cancelEdit.addEventListener("click", () => {
+      editProfile.classList.add("hidden");
+      viewProfile.classList.remove("hidden");
+    });
+  }
   
   /* =========================
      TRANSLATIONS
@@ -250,10 +277,9 @@ if (editBtn && cancelEdit) {
     localStorage.setItem("lang", lang);
   }
 
- /* =========================
-   SETTINGS (LANGUAGE ONLY)
+  /* =========================
+     SETTINGS (LANGUAGE ONLY)
   ========================= */
-
   const languageSelect = document.getElementById("languageSelect");
   const saveSettings = document.getElementById("saveSettings");
   const resetSettings = document.getElementById("resetSettings");
@@ -280,16 +306,16 @@ if (editBtn && cancelEdit) {
 
   loadSettings();
 
-    /* =========================
+  /* =========================
      NOTIFICATIONS (GLOBAL)
-    ========================= */
-    (async () => {
-      if (!document.getElementById("notificationsPanel")) return;
+  ========================= */
+  (async () => {
+    if (!document.getElementById("notificationsPanel")) return;
 
-      const user = await authGuard("farmer");
-      if (!user) return;
+    const user = await authGuard("farmer");
+    if (!user) return;
 
-      initNotifications(user.id);
-    })();
+    initNotifications(user.id);
+  })();
 
 });

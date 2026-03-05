@@ -1,20 +1,27 @@
+// backend/controllers/dashboardController.js
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
-const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Time Warp
+const HeatReport = require("../models/HeatReports");
+const SystemSettings = require("../models/SystemSettings"); // Time Warp support
 
-exports.getFarmManagerStats = async (req, res) => {
+/**
+ * Dashboard stats for Farm Manager (and Encoder under a manager).
+ * Merged: control-70 (manager_id scope + lactating via HeatReport) + mvp (Time Warp virtualNow).
+ */
+async function getFarmManagerStats(req, res) {
   try {
-    // 1. Get the current "Logical Time" (Database Priority, Global Fallback)
+    // 1) Resolve "Logical Time" (Time Warp)
     const systemSettings = await SystemSettings.findOne();
-    const virtualNow = (systemSettings && systemSettings.mockDate) 
-                ? new Date(systemSettings.mockDate) 
-                : (global.getNow ? global.getNow() : new Date());
+    const virtualNow =
+      systemSettings && systemSettings.mockDate
+        ? new Date(systemSettings.mockDate)
+        : global.getNow
+          ? global.getNow()
+          : new Date();
 
-    // ✅ SUPPORT FARM MANAGER + ENCODER
+    // 2) Support farm_manager and encoder (encoder has managerId)
     const managerId =
-      req.user.role === "farm_manager"
-        ? req.user.id
-        : req.user.managerId;
+      req.user.role === "farm_manager" ? req.user.id : req.user.managerId;
 
     if (!managerId) {
       return res.status(403).json({
@@ -23,26 +30,30 @@ exports.getFarmManagerStats = async (req, res) => {
       });
     }
 
-    // 🔍 Get all farmers under this manager
+    // 3) Find all farmers under this manager (including those registered by manager)
     const farmers = await Farmer.find({
-      $or: [
-        { managerId },
-        { registered_by: managerId }
-      ]
+      $or: [{ managerId }, { registered_by: managerId }],
     }).select("_id");
 
-    const farmerIds = farmers.map(f => f._id);
+    const farmerIds = farmers.map((f) => f._id);
 
-    // 🔎 Base query used by all stats
+    // 4) Base scope query for Swine stats
+    //    Includes manager_id (control-70) + Time Warp stats behavior (mvp)
     const baseQuery = {
       $or: [
         { registered_by: managerId },
-        { farmer_id: { $in: farmerIds } }
+        { manager_id: managerId }, // include manager_id scope
+        { farmer_id: { $in: farmerIds } },
       ],
-      current_status: { $ne: "Culled/Sold" }
+      current_status: { $ne: "Culled/Sold" },
     };
 
-    // 📊 Aggregate stats using virtualNow for time-sensitive logic
+    // 5) Heat workflow scope (for lactating count via HeatReport)
+    const heatScopeQuery = {
+      $or: [{ manager_id: managerId }, { farmer_id: { $in: farmerIds } }],
+    };
+
+    // 6) Compute stats (Time Warp-aware where relevant)
     const [
       totalPigs,
       alive,
@@ -50,64 +61,74 @@ exports.getFarmManagerStats = async (req, res) => {
       inHeat,
       pregnant,
       farrowing,
-      weaning
+      weaning,
+      lactating,
     ] = await Promise.all([
       Swine.countDocuments(baseQuery),
-      
+
       Swine.countDocuments({
         ...baseQuery,
-        health_status: { $nin: ["Deceased", "Deceased (Before Weaning)"] }
-      }),
-      
-      Swine.countDocuments({
-        ...baseQuery,
-        health_status: { $in: ["Deceased", "Deceased (Before Weaning)"] }
-      }),
-      
-      Swine.countDocuments({
-        ...baseQuery,
-        current_status: "In-Heat"
+        health_status: { $nin: ["Deceased", "Deceased (Before Weaning)"] },
       }),
 
-      // ✅ Updated Pregnant: Count those whose expected farrowing is in the future relative to Warp
+      Swine.countDocuments({
+        ...baseQuery,
+        health_status: { $in: ["Deceased", "Deceased (Before Weaning)"] },
+      }),
+
+      Swine.countDocuments({
+        ...baseQuery,
+        current_status: "In-Heat",
+      }),
+
+      // Pregnant: expected farrowing is still in the future relative to virtualNow
       Swine.countDocuments({
         ...baseQuery,
         sex: "Female",
         current_status: "Pregnant",
-        "breeding_cycles.expected_farrowing_date": { $gt: virtualNow }
+        "breeding_cycles.expected_farrowing_date": { $gt: virtualNow },
       }),
 
-      // ✅ Updated Farrowing: Pigs whose farrowing date has arrived OR passed in your 2026 Warp
+      // Farrowing: farrowing-related statuses OR pregnant whose farrowing date is due/past in virtualNow
       Swine.countDocuments({
         ...baseQuery,
         $or: [
-          { current_status: { $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing", "Lactating"] } },
-          { 
-            current_status: "Pregnant", 
-            "breeding_cycles.expected_farrowing_date": { $lte: virtualNow } 
-          }
-        ]
+          {
+            current_status: {
+              $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing", "Lactating"],
+            },
+          },
+          {
+            current_status: "Pregnant",
+            "breeding_cycles.expected_farrowing_date": { $lte: virtualNow },
+          },
+        ],
       }),
 
-      // ✅ Updated Weaning: Includes pigs whose 30-day lactation is over according to the Warp
+      // Weaning: already weaned/weaning OR lactating past 30 days since actual farrowing in virtualNow
       Swine.countDocuments({
         ...baseQuery,
         $or: [
           { current_status: { $in: ["Weaned", "Weaning"] } },
           {
             current_status: "Lactating",
-            "breeding_cycles.actual_farrowing_date": { 
-                $lte: new Date(virtualNow.getTime() - (30 * 24 * 60 * 60 * 1000)) 
-            }
-          }
-        ]
-      })
+            "breeding_cycles.actual_farrowing_date": {
+              $lte: new Date(virtualNow.getTime() - 30 * 24 * 60 * 60 * 1000),
+            },
+          },
+        ],
+      }),
+
+      // Lactating: source of truth from heat workflow (control-70 behavior)
+      HeatReport.countDocuments({
+        ...heatScopeQuery,
+        status: "lactating",
+      }),
     ]);
 
-    // ✅ SUCCESS RESPONSE
-    res.json({
+    return res.json({
       success: true,
-      virtualDateUsed: virtualNow.toISOString(), // Sent for UI to display the current "System Year"
+      virtualDateUsed: virtualNow.toISOString(),
       isMocked: !!(systemSettings && systemSettings.mockDate),
       stats: {
         totalPigs,
@@ -116,15 +137,17 @@ exports.getFarmManagerStats = async (req, res) => {
         inHeat,
         pregnant,
         farrowing,
-        weaning
-      }
+        weaning,
+        lactating,
+      },
     });
-
   } catch (err) {
     console.error("[DASHBOARD STATS ERROR]:", err);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Server error"
+      message: "Server error",
     });
   }
-};
+}
+
+module.exports = { getFarmManagerStats };

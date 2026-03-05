@@ -1,4 +1,6 @@
 // overview.breeding.js
+import { PerformanceHelper } from "/js/performance_helper.js";
+
 export function initBreedingModule(ctx) {
   const { state } = ctx;
 
@@ -9,78 +11,45 @@ export function initBreedingModule(ctx) {
   const getToken = () => ctx.token || localStorage.getItem("token") || "";
 
   async function apiJson(path, opts = {}) {
-    const url = path.startsWith("http") ? path : `${API_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
+    const base = (API_BASE || "").replace(/\/$/, "");
+    const rel = String(path || "");
 
-    // IMPORTANT: don't force JSON content-type on GET without body
+    // If BACKEND_URL already contains "/api", don't double it.
+    const baseHasApi = /\/api\/?$/i.test(base) || /\/api\//i.test(base);
+    const pathHasApi = /^\/?api\//i.test(rel);
+
+    let url = "";
+    if (rel.startsWith("http")) {
+      url = rel;
+    } else {
+      let p = rel.startsWith("/") ? rel : `/${rel}`;
+      if (baseHasApi && pathHasApi) p = p.replace(/^\/api/i, "");
+      url = `${base}${p}`;
+    }
+
     const headers = {
       ...(opts.headers || {}),
       ...(opts.body ? { "Content-Type": "application/json" } : {}),
       Authorization: `Bearer ${getToken()}`
     };
 
-    const res = await fetch(url, { ...opts, headers });
+    const res = await fetch(url, {
+      ...opts,
+      headers,
+      credentials: opts.credentials || "include" // ✅ ADD THIS
+    });
+
     let data = null;
     try {
       data = await res.json();
-    } catch (_) {
-      // ignore non-json
-    }
+    } catch (_) {}
+
     if (!res.ok) {
       const msg = data?.message || data?.error || `Request failed (${res.status})`;
+      console.warn("API ERROR:", res.status, url, msg);
       throw new Error(msg);
     }
     return data;
-  }
-
-  /* =========================================================
-     COMPAT / FALLBACK HELPERS (fix "dead/broken" funcs)
-  ========================================================= */
-  function isDeadStatusFallback(hs) {
-    const s = (hs ?? "").toString().trim().toLowerCase();
-    // Match your old working logic
-    return s === "deceased" || s === "deceased (before weaning)" || s.includes("deceased") || s.includes("dead");
-  }
-
-  // Use ctx.isDeadStatus if available; otherwise fallback
-  const isDeadStatus = (hs) =>
-    typeof ctx.isDeadStatus === "function" ? !!ctx.isDeadStatus(hs) : isDeadStatusFallback(hs);
-
-  // Ensure state.allSwineData exists (your new module relies on this for cycle counts + fallbacks)
-  async function ensureAllSwineDataLoaded() {
-    if (Array.isArray(state.allSwineData) && state.allSwineData.length) return true;
-
-    // Try the same endpoint used in the old working module
-    try {
-      const resp = await apiJson(`/api/swine/all`, { method: "GET" });
-      const list = resp?.swine || resp?.data || [];
-      if (Array.isArray(list)) state.allSwineData = list;
-      return Array.isArray(state.allSwineData) && state.allSwineData.length > 0;
-    } catch (e) {
-      console.warn("ensureAllSwineDataLoaded failed:", e?.message || e);
-      return false;
-    }
-  }
-
-  // Ensure performance analytics data exists for charts/deformities
-  async function ensurePerformanceAnalyticsLoaded() {
-    const hasMorph = Array.isArray(state.rawPerformanceData?.morphology) && state.rawPerformanceData.morphology.length;
-    const hasDefs = Array.isArray(state.rawPerformanceData?.deformities) && state.rawPerformanceData.deformities.length;
-    if (hasMorph || hasDefs) return true;
-
-    try {
-      const resp = await apiJson(`/api/reproduction/performance-analytics`, { method: "GET" });
-      // old: { success, morphology, deformities } — but be flexible
-      const morphology = resp?.morphology || resp?.data?.morphology || [];
-      const deformities = resp?.deformities || resp?.data?.deformities || [];
-      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
-      if (Array.isArray(morphology)) state.rawPerformanceData.morphology = morphology;
-      if (Array.isArray(deformities)) state.rawPerformanceData.deformities = deformities;
-      return true;
-    } catch (e) {
-      console.warn("ensurePerformanceAnalyticsLoaded failed:", e?.message || e);
-      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
-      return false;
-    }
   }
 
   /* =========================================================
@@ -98,6 +67,330 @@ export function initBreedingModule(ctx) {
   }
   function normLower(v) {
     return normStr(v).toLowerCase();
+  }
+
+  // ✅ FIX: missing esc() was breaking some renders
+  function esc(str) {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  /* =========================================================
+     SELECTION HELPERS (suggestion detection + status + UI rules)
+  ========================================================= */
+
+  function findSelectionCandidateByTag(tag) {
+    const t = normStr(tag);
+    if (!t) return null;
+
+    const list = Array.isArray(state.rawSelectionData) ? state.rawSelectionData : [];
+
+    return (
+      list.find((x) => {
+        const a = normStr(x?.swine_id || x?.swine_tag || x?.tag);
+        const b = normStr(x?.swine?.swine_id || x?.swine?.swine_tag || x?.swine?.tag);
+        const c = normStr(x?.piglet?.swine_id || x?.piglet?.swine_tag || x?.piglet?.tag);
+        const d = normStr(x?.piglet_id || x?.swineId || x?.swineID);
+        return a === t || b === t || c === t || d === t;
+      }) || null
+    );
+  }
+
+  function normalizeSuggestionValue(v) {
+    const s = normStr(v);
+    if (!s) return "";
+    const l = s.toLowerCase();
+
+    // Normalize to the two farmer actions where possible
+    if (l === "retain" || l.includes("retain") || l.includes("breeding") || l.includes("keep"))
+      return "Retain for Breeding";
+
+    if (
+      l === "sale" ||
+      l.includes("sale") ||
+      l.includes("sell") ||
+      l.includes("market") ||
+      l.includes("cull") ||
+      l.includes("culled") ||
+      l.includes("culling")
+    )
+      return "Mark for Sale";
+
+    if (l === "pending") return "Pending";
+
+    return s;
+  }
+
+  function getCandidateSuggestion(cand) {
+    if (!cand) return "";
+
+    const raw =
+      cand?.system_suggestion ||
+      cand?.ai_suggestion ||
+      cand?.suggestion ||
+      cand?.recommendation ||
+      cand?.recommended_action ||
+      cand?.recommendedAction ||
+      cand?.systemSuggestion ||
+      cand?.aiSuggestion ||
+      cand?.recommend ||
+      cand?.prediction ||
+      cand?.predicted_action ||
+      cand?.meta?.system_suggestion ||
+      cand?.meta?.suggestion ||
+      cand?.ai?.suggestion ||
+      cand?.ai?.recommendation ||
+      cand?.model_output?.suggestion ||
+      cand?.model_output?.recommendation ||
+      cand?.result?.suggestion ||
+      cand?.result?.recommendation ||
+      cand?.selection?.suggestion ||
+      "";
+
+    return normalizeSuggestionValue(raw);
+  }
+
+  function getCandidateStatus(cand) {
+    if (!cand) return "";
+    const raw =
+      cand?.selection_status ||
+      cand?.final_decision ||
+      cand?.decision ||
+      cand?.status ||
+      cand?.selectionStatus ||
+      cand?.finalDecision ||
+      cand?.selection?.status ||
+      cand?.selection?.decision ||
+      "";
+
+    // Some backends return "approved/rejected"
+    const r = normLower(raw);
+    if (r === "approved") return "Retain for Breeding";
+    if (r === "rejected") return "Mark for Sale";
+
+    return normalizeSuggestionValue(raw);
+  }
+
+  function normalizeSelection(v) {
+    const s = normalizeSuggestionValue(v);
+    return s || "Pending";
+  }
+
+  function classifySelection(rowOrStatus) {
+    const row = rowOrStatus && typeof rowOrStatus === "object" ? rowOrStatus : null;
+
+    const raw =
+      (row
+        ? (row.selection_status ??
+            row.recommendation ??
+            row.decision ??
+            row.status ??
+            row.action ??
+            row.result ??
+            "")
+        : rowOrStatus ?? "") || "";
+
+    const s = String(raw).trim().toLowerCase();
+
+    if (!s) return "pending";
+
+    // ✅ RETAIN keywords (match your other module)
+    if (
+      s.includes("retain") ||
+      s.includes("breeding") ||
+      s.includes("keep") ||
+      s.includes("selected") ||
+      s.includes("for breeding") ||
+      s.includes("active") // ✅ counts Active as retain
+    ) {
+      return "retain";
+    }
+
+    // ✅ SALE keywords
+    if (
+      s.includes("sell") ||
+      s.includes("sale") ||
+      s.includes("market") ||
+      s.includes("culled") ||
+      s.includes("cull") ||
+      s.includes("sold")
+    ) {
+      return "sale";
+    }
+
+    // ✅ PENDING keywords (explicit)
+    if (s.includes("pending") || s.includes("undecided") || s.includes("no decision")) {
+      return "pending";
+    }
+
+    // fallback
+    return "pending";
+  }
+
+  function isLockedSelection(v) {
+    const cls = classifySelection(v);
+    return cls === "retain" || cls === "sale";
+  }
+
+  /* =========================================================
+     PERFORMANCE HELPER FALLBACK (CLIENT-SIDE SYSTEM SUGGESTION)
+  ========================================================= */
+  function computeHelperSuggestionForPiglet(piglet) {
+    if (!PerformanceHelper || typeof PerformanceHelper.getSelectionStatus !== "function") return "";
+
+    const tag = normStr(piglet?.swine_id || piglet?.swine_tag || piglet?.tag);
+    if (!tag) return "";
+
+    // Use analytics morphology as "performance_records"
+    const records = getGrowthRecordsForPiglet(piglet);
+    const defs = getDeformitiesForPiglet(piglet);
+
+    const perfRecords = records.map((r) => ({
+      date: r.date,
+      weight: Number.isFinite(r.weight) ? r.weight : 0,
+      deformities: defs.length ? defs : ["None"]
+    }));
+
+    const swine = {
+      swine_id: tag,
+      swine_tag: tag,
+      sex: normStr(piglet?.sex || "").toLowerCase() === "female" ? "Female" : "Male",
+      current_status: piglet?.current_status || piglet?.age_stage,
+      age_stage: piglet?.age_stage || piglet?.current_status,
+      performance_records: perfRecords
+    };
+
+    // PerformanceHelper also checks global deformity list by swine_tag
+    const deformitiesAnalytics = Array.isArray(state.rawPerformanceData?.deformities)
+      ? state.rawPerformanceData.deformities
+      : [];
+
+    const out = PerformanceHelper.getSelectionStatus(swine, deformitiesAnalytics);
+
+    const raw = normStr(out?.suggestion);
+    if (!raw) return "";
+
+    // Map common helper outputs into the two-action labels where possible,
+    // otherwise keep the helper text (but we still normalize if it resembles retain/sale).
+    const normalized = normalizeSuggestionValue(raw);
+
+    // If helper returns "✅ Ready for ..." etc, keep it (not a final action)
+    if (normalized === raw && !/retain|sale|sell|market|cull/i.test(raw)) return raw;
+
+    return normalized || raw;
+  }
+
+  function enrichPigletsWithSelectionMeta(piglets) {
+    const out = Array.isArray(piglets) ? piglets : [];
+
+    out.forEach((p) => {
+      const tag = normStr(p?.swine_id || p?.swine_tag || p?.tag);
+      const cand = findSelectionCandidateByTag(tag || p?.swine_id);
+
+      // 1) status (persisted decision)
+      const st = getCandidateStatus(cand);
+      if (st && (!normStr(p?.selection_status) || normLower(p.selection_status) === "pending")) {
+        p.selection_status = st;
+      }
+
+      // 2) suggestion (prefer backend candidate suggestion)
+      const sugFromCand = getCandidateSuggestion(cand);
+
+      // 3) fallback: compute via PerformanceHelper if none found
+      const sugFromHelper = sugFromCand ? "" : computeHelperSuggestionForPiglet(p);
+
+      const finalSug = sugFromCand || sugFromHelper || "";
+
+      if (!normStr(p?.system_suggestion) && finalSug) p.system_suggestion = finalSug;
+    });
+
+    return out;
+  }
+
+  /* =========================================================
+     COMPAT / FALLBACK HELPERS
+  ========================================================= */
+  function isDeadStatusFallback(hs) {
+    const s = (hs ?? "").toString().trim().toLowerCase();
+    return s === "deceased" || s === "deceased (before weaning)" || s.includes("deceased") || s.includes("dead");
+  }
+
+  const isDeadStatus = (hs) =>
+    typeof ctx.isDeadStatus === "function" ? !!ctx.isDeadStatus(hs) : isDeadStatusFallback(hs);
+
+  async function ensureAllSwineDataLoaded() {
+    if (Array.isArray(state.allSwineData) && state.allSwineData.length) return true;
+
+    try {
+      const resp = await apiJson(`/api/swine/all`, { method: "GET" });
+      const list = resp?.swine || resp?.data || [];
+      if (Array.isArray(list)) state.allSwineData = list;
+      return Array.isArray(state.allSwineData) && state.allSwineData.length > 0;
+    } catch (e) {
+      console.warn("ensureAllSwineDataLoaded failed:", e?.message || e);
+      return false;
+    }
+  }
+
+  async function ensurePerformanceAnalyticsLoaded() {
+    const hasMorph = Array.isArray(state.rawPerformanceData?.morphology) && state.rawPerformanceData.morphology.length;
+    const hasDefs = Array.isArray(state.rawPerformanceData?.deformities) && state.rawPerformanceData.deformities.length;
+    if (hasMorph || hasDefs) return true;
+
+    try {
+      const resp = await apiJson(`/api/reproduction/performance-analytics`, { method: "GET" });
+      const morphology = resp?.morphology || resp?.data?.morphology || [];
+      const deformities = resp?.deformities || resp?.data?.deformities || [];
+      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
+      if (Array.isArray(morphology)) state.rawPerformanceData.morphology = morphology;
+      if (Array.isArray(deformities)) state.rawPerformanceData.deformities = deformities;
+      return true;
+    } catch (e) {
+      console.warn("ensurePerformanceAnalyticsLoaded failed:", e?.message || e);
+      state.rawPerformanceData = state.rawPerformanceData || { morphology: [], deformities: [] };
+      return false;
+    }
+  }
+
+  async function ensureSelectionCandidatesLoaded() {
+    if (Array.isArray(state.rawSelectionData) && state.rawSelectionData.length) return true;
+
+    const tryPaths = [
+      "/api/reproduction/selection-candidates",
+      "/api/reproduction/selectionCandidates",
+      "/api/reproduction/selection/candidates",
+      "/api/reproduction/get-selection-candidates",
+      "/api/selection/candidates",
+      "/api/swine/selection-candidates"
+    ];
+
+    for (const p of tryPaths) {
+      try {
+        const resp = await apiJson(p, { method: "GET" });
+        const list =
+          (Array.isArray(resp?.data) && resp.data) ||
+          (Array.isArray(resp?.candidates) && resp.candidates) ||
+          (Array.isArray(resp?.selectionCandidates) && resp.selectionCandidates) ||
+          (Array.isArray(resp?.items) && resp.items) ||
+          (Array.isArray(resp) && resp) ||
+          [];
+
+        if (Array.isArray(list)) {
+          state.rawSelectionData = list;
+          return list.length > 0;
+        }
+      } catch (e) {
+        // keep trying
+      }
+    }
+
+    console.warn("No selection candidates endpoint matched. state.rawSelectionData remains empty.");
+    state.rawSelectionData = [];
+    return false;
   }
 
   function isFemaleAdult(p) {
@@ -128,7 +421,6 @@ export function initBreedingModule(ctx) {
     return { status, statusClass };
   }
 
-  // Fallback grouping (used only if farrowing_results is missing)
   function groupPigletsByCycleFromCache(sow) {
     const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
     const piglets = (Array.isArray(state.allSwineData) ? state.allSwineData : []).filter(
@@ -157,7 +449,6 @@ export function initBreedingModule(ctx) {
       return { born: total, dead: d, mortality };
     }
 
-    // Fallback: count from cached swine list (requires state.allSwineData)
     const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
     const cycleNumber = cycle?.cycle_number ?? "—";
 
@@ -176,6 +467,44 @@ export function initBreedingModule(ctx) {
   /* =========================================================
      PIGLETS FETCH (ROBUST + BACKEND COMPAT)
   ========================================================= */
+  function deriveSelectionStatusFromSwine(p) {
+    const direct =
+      p?.selection_status ||
+      p?.selectionStatus ||
+      p?.selection_decision ||
+      p?.selectionDecision ||
+      p?.final_selection ||
+      p?.finalSelection;
+
+    if (direct) return normStr(direct);
+
+    const st = normLower(p?.current_status || p?.currentStatus || "");
+      if (!st) return "Pending";
+
+      // ✅ Treat Active as retained/breeder (common backend value after "breeding" action)
+      if (
+        st.includes("retain") ||
+        st.includes("breeding") ||
+        st.includes("breeder") ||
+        st === "active" ||
+        st.includes("active")
+      ) {
+        return "Retain for Breeding";
+      }
+
+      if (
+        st.includes("sale") ||
+        st.includes("sold") ||
+        st.includes("market") ||
+        st.includes("cull") ||
+        st.includes("culled")
+      ) {
+        return "Mark for Sale";
+      }
+
+      return "Pending";
+    }
+
   function normalizePigletFromApi(p) {
     const id = p?._id || p?.id || p?.piglet_id || null;
     const tag = p?.swine_tag || p?.swine_id || p?.tag || p?.pig_id || "—";
@@ -183,20 +512,29 @@ export function initBreedingModule(ctx) {
     return {
       _id: id || tag,
       swine_id: tag,
+
       sex: p?.sex || p?.swine_sex,
       breed: p?.breed,
       profile_photo: p?.profile_photo,
+
       birth_date: p?.birth_date,
       dam_id: p?.dam_id || p?.mother_id,
       sire_id: p?.sire_id || p?.father_id,
+
       birth_cycle_number: p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? null,
+
       health_status: p?.health_status,
-      current_status: p?.current_status || p?.current_stage,
+      current_status: p?.current_status || p?.current_stage || p?.currentStatus,
       age_stage: p?.age_stage || p?.current_stage,
+
       deformities: p?.deformities || [],
       last_medical: p?.last_medical || null,
       latest_growth: p?.latest_growth || null,
-      selection_status: p?.selection_status || "Pending"
+
+      selection_status: deriveSelectionStatusFromSwine(p),
+
+      // may be empty; will be filled by enrich() using candidates or PerformanceHelper
+      system_suggestion: normStr(p?.system_suggestion || p?.suggestion || p?.ai_suggestion || p?.recommendation || "")
     };
   }
 
@@ -204,38 +542,43 @@ export function initBreedingModule(ctx) {
     const dam = normStr(damTag);
     const cyc = normStr(cycleNumber);
 
-    async function tryFetch(path) {
-      const resp = await apiJson(path, { method: "GET" });
+    async function normalizeList(resp) {
       const raw =
         (Array.isArray(resp?.data) && resp.data) ||
         (Array.isArray(resp?.piglets) && resp.piglets) ||
         (Array.isArray(resp?.swine) && resp.swine) ||
+        (Array.isArray(resp?.items) && resp.items) ||
         (Array.isArray(resp) && resp) ||
         [];
       return raw.map(normalizePigletFromApi);
     }
 
-    // 1) Try your new endpoint first
-    try {
-      const q = `dam_id=${encodeURIComponent(dam)}&cycle_number=${encodeURIComponent(cyc)}`;
-      let list = await tryFetch(`/api/reproduction/piglets/by-cycle?${q}`);
+    const q = `dam_id=${encodeURIComponent(dam)}&cycle_number=${encodeURIComponent(cyc)}`;
 
-      // 2) lenient variant
-      if (Array.isArray(list) && list.length === 0) {
-        list = await tryFetch(`/api/reproduction/piglets/by-cycle?${q}&include_all=1`);
-      }
+    const tryPaths = [
+      `/api/reproduction/piglets/by-cycle?${q}`,
+      `/api/reproduction/piglets-by-cycle?${q}`,
+      `/api/reproduction/piglets/cycle?${q}`,
+      `/api/reproduction/piglets?${q}`,
+      `/api/swine/piglets/by-cycle?${q}`,
+      `/api/swine/piglets?${q}`
+    ];
 
-      if (Array.isArray(list) && list.length) return list;
-    } catch (e) {
-      console.warn("fetchPigletsByCycle (by-cycle) failed:", e?.message || e);
+    for (const p of tryPaths) {
+      try {
+        const resp = await apiJson(p, { method: "GET" });
+        const list = await normalizeList(resp);
+        if (Array.isArray(list)) return list;
+      } catch (e) {}
     }
 
-    // 3) Old-working style fallback: load all swine then filter client-side
+    console.warn("fetchPigletsByCycle: all endpoints failed, falling back to local cache.");
+
     await ensureAllSwineDataLoaded();
     const all = Array.isArray(state.allSwineData) ? state.allSwineData : [];
     const filtered = all.filter((p) => {
       const damId = normStr(p?.dam_id || p?.mother_id);
-      const cno = normStr(p?.birth_cycle_number ?? p?.cycle_number);
+      const cno = normStr(p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? p?.batch_no);
       return damId === dam && cno === cyc;
     });
 
@@ -245,14 +588,8 @@ export function initBreedingModule(ctx) {
   /* =========================================================
      VIEW HELPERS (HIDE/SHOW UNRELATED FILTERS + PANELS)
   ========================================================= */
-
-  // Hide/show the SOW filter row (Search Sow Tag / Health Status / Apply / Reset)
-  // We DO NOT require an explicit #reproSowFilterCard; we find it safely even if
-  // the EJS didn't wrap it with that ID.
   function toggleSowFilter(shouldShow) {
     const explicit = document.getElementById("reproSowFilterCard");
-
-    // fallback: find the card that contains #reproSowFilterForm
     const form = document.getElementById("reproSowFilterForm");
     const fallbackCard = form?.closest(".card") || form?.closest(".page-card") || null;
 
@@ -262,14 +599,12 @@ export function initBreedingModule(ctx) {
     el.classList.toggle("d-none", !shouldShow);
   }
 
-  // In growth/selection piglet "detail", replace content by hiding list/pagination/search controls
   function toggleGrowthDetailMode(isDetail) {
     document.getElementById("growthDetailPanel")?.classList.toggle("d-none", !isDetail);
     document.getElementById("growthList")?.classList.toggle("d-none", isDetail);
     document.getElementById("growthPagination")?.classList.toggle("d-none", isDetail);
     document.getElementById("growthSearchInput")?.classList.toggle("d-none", isDetail);
 
-    // header controls: sex filter buttons live inside cycleGrowthTab; hide them when in detail mode
     const tab = document.getElementById("cycleGrowthTab");
     tab?.querySelectorAll("[data-growth-sex]")?.forEach((b) => b.classList.toggle("d-none", isDetail));
     tab?.querySelector(".btn-group[aria-label='Growth sex filter']")?.classList.toggle("d-none", isDetail);
@@ -281,12 +616,9 @@ export function initBreedingModule(ctx) {
     document.getElementById("selectionPagination")?.classList.toggle("d-none", isDetail);
     document.getElementById("selectionSearchInput")?.classList.toggle("d-none", isDetail);
 
-    // KPIs are useful on list view only
     const tab = document.getElementById("cycleSelectionTab");
-    tab?.querySelectorAll("#selTotalInSelection, #selRetainForBreeding, #selMarkForSale")?.forEach((_) => {});
     tab?.querySelectorAll(".row.g-3.mb-3")?.forEach((row) => row.classList.toggle("d-none", isDetail));
 
-    // sex filter buttons hide in detail
     tab?.querySelectorAll("[data-selection-sex]")?.forEach((b) => b.classList.toggle("d-none", isDetail));
     tab?.querySelector(".btn-group[aria-label='Selection sex filter']")?.classList.toggle("d-none", isDetail);
   }
@@ -311,8 +643,6 @@ export function initBreedingModule(ctx) {
 
     const cycleFilterCard = document.getElementById("cycleFilterCard");
 
-    // ✅ SOW FILTER visibility:
-    // Show only on SOWS view, hide on CYCLES and DETAIL
     toggleSowFilter(mode === "SOWS");
 
     if (mode === "SOWS") {
@@ -356,7 +686,7 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     SHARED: piglet list rendering (1 row = 1 card)
+     SHARED: piglet list rendering
   ========================================================= */
   function buildPigletCardRow(p, opts = {}) {
     const tag = p?.swine_id || "—";
@@ -367,6 +697,8 @@ export function initBreedingModule(ctx) {
     const aliveBadge = isDeadStatus(hs)
       ? `<span class="badge bg-danger-subtle text-danger">Deceased</span>`
       : `<span class="badge bg-success-subtle text-success">Alive</span>`;
+
+    const extraBadges = opts.badgesHtml || "";
 
     const btnHtml = opts.button
       ? `<button type="button" class="btn btn-success btn-sm ${opts.button.className || ""}" data-piglet-id="${normStr(
@@ -385,6 +717,7 @@ export function initBreedingModule(ctx) {
             <div class="mt-2 d-flex flex-wrap gap-2">
               ${aliveBadge}
               <span class="badge bg-light text-dark border">Status: ${hs}</span>
+              ${extraBadges}
             </div>
           </div>
 
@@ -405,7 +738,7 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     GROWTH DATA + CHART
+     GROWTH DATA + CHART (also used by PerformanceHelper fallback)
   ========================================================= */
   function getGrowthRecordsForPiglet(piglet) {
     const tag = normStr(piglet?.swine_id);
@@ -413,9 +746,7 @@ export function initBreedingModule(ctx) {
     const records = Array.isArray(state.rawPerformanceData?.morphology) ? state.rawPerformanceData.morphology : [];
 
     const filtered = records.filter((r) => {
-      // old backend uses swine_tag inside morphology payloads sometimes
       const rTag = normStr(r?.swine_id || r?.swine_tag || r?.tag || r?.pig_id);
-      // some payloads nest morphology
       const nestedTag = normStr(r?.swine_tag || r?.morphology?.swine_tag || r?.morphology?.swine_id);
       return (rTag && rTag === tag) || (nestedTag && nestedTag === tag);
     });
@@ -503,44 +834,79 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     SELECTION UPDATE (FIXED: supports OLD endpoint too)
+     SELECTION UPDATE (supports OLD endpoint too)
   ========================================================= */
-  async function updateSelectionStatus({ swine_id, selection_status }) {
-    // 1) Try new endpoint (your redesigned module)
+  async function updateSelectionStatus({ swine_id, swine_db_id, selection_status }) {
+    const tag = normStr(swine_id);
+    const mongoId = normStr(swine_db_id);
+
+    // Determine action from label
+    const s = normLower(selection_status);
+    const act = s.includes("retain") || s.includes("breeding") ? "breeding" : "sell";
+
+    const isObjectId = /^[a-f\d]{24}$/i.test(mongoId);
+    if (!isObjectId) {
+      throw new Error(
+        "Missing valid Mongo ObjectId for selection action. " +
+          "Pass the piglet Mongo _id (not the tag)."
+      );
+    }
+
+    // 1) Try piglet-action first (this is what your working module uses)
     try {
-      return await apiJson(`/api/reproduction/selection-status`, {
-        method: "PATCH",
-        body: JSON.stringify({ swine_id, selection_status })
+      return await apiJson(`/api/reproduction/piglet-action`, {
+        method: "POST",
+        body: JSON.stringify({ swineId: mongoId, action: act })
       });
     } catch (e1) {
-      // 2) Backward compatible with old working core:
-      // PUT /api/reproduction/process-selection  { swineId, isApproved }
-      try {
-        const s = normLower(selection_status);
-        const isApproved = s.includes("retain") || s.includes("breeding");
-        return await apiJson(`/api/reproduction/process-selection`, {
-          method: "PUT",
-          body: JSON.stringify({ swineId: swine_id, isApproved })
-        });
-      } catch (e2) {
-        // 3) Last-resort guess (some APIs use /api/swine/selection-status)
-        return apiJson(`/api/swine/selection-status`, {
-          method: "PATCH",
-          body: JSON.stringify({ swine_id, selection_status })
-        });
+      const msg = String(e1?.message || "");
+      const isEnumError =
+        /not a valid enum value/i.test(msg) ||
+        /validation failed/i.test(msg) ||
+        /current_status/i.test(msg);
+
+      if (!isEnumError) throw e1;
+
+      // 2) Fallback: update swine via valid enums (same pattern as your working module)
+      const fallbackStatus = act === "breeding" ? "Active" : "Culled/Sold";
+      const fallbackAgeStage = act === "breeding" ? "adult" : undefined;
+
+      // 2a) Resolve swine_id from mongo id
+      const lookup = await apiJson(`/api/swine/by-mongo-id/${encodeURIComponent(mongoId)}`, { method: "GET" });
+      const swineCode = normStr(lookup?.swine?.swine_id);
+
+      if (!swineCode) {
+        throw new Error(
+          "Selection action hit invalid enum, and fallback lookup failed to resolve swine_id."
+        );
       }
+
+      // 2b) Update swine using your swine update route
+      const update = await apiJson(`/api/swine/update/${encodeURIComponent(swineCode)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          current_status: fallbackStatus,
+          ...(fallbackAgeStage ? { age_stage: fallbackAgeStage } : {})
+        })
+      });
+
+      return {
+        success: true,
+        message: `Fallback applied: ${swineCode} → "${fallbackStatus}"`,
+        fallbackUsed: true,
+        raw: { lookup, update }
+      };
     }
   }
 
   /* =========================================================
-     SOW LIST (main reproduction tab list)
+     SOW LIST
   ========================================================= */
   async function renderBreedingPerformance() {
     const wrap = document.getElementById("breedingSowList");
     const kpiWrap = document.getElementById("breedingKpiSection");
     if (!wrap || !kpiWrap) return;
 
-    // Ensure fallback cache is available for counts/piglets if backend lacks farrowing_results
     await ensureAllSwineDataLoaded();
 
     state.BREEDING_SOWS_PER_PAGE = Number(state.BREEDING_SOWS_PER_PAGE || 6);
@@ -794,7 +1160,6 @@ export function initBreedingModule(ctx) {
       <div id="cycleDetailPanel" class="mt-3 d-none"></div>
     `;
 
-    // ✅ Ensure unrelated SOW filter is hidden as soon as cycles view opens
     setReproView("CYCLES");
 
     document.getElementById("breedingBackBtn")?.addEventListener("click", () => {
@@ -830,8 +1195,7 @@ export function initBreedingModule(ctx) {
 
     const unique = Array.from(new Set(cycles));
     sel.innerHTML =
-      `<option value="">All Cycles</option>` +
-      unique.map((c) => `<option value="${c}">Cycle / Batch ${c}</option>`).join("");
+      `<option value="">All Cycles</option>` + unique.map((c) => `<option value="${c}">Cycle / Batch ${c}</option>`).join("");
   }
 
   function renderCycleCards(sow) {
@@ -839,7 +1203,6 @@ export function initBreedingModule(ctx) {
     const pagWrap = document.getElementById("cyclePaginationWrap");
     if (!wrap || !pagWrap) return;
 
-    // ✅ Always hide sow filter in cycles view
     setReproView("CYCLES");
 
     const selectedCycle = (document.getElementById("cycleFilterSelect")?.value || "").trim();
@@ -934,7 +1297,7 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     CYCLE DETAIL (tabs: overview, AI, performance, growth, selection)
+     CYCLE DETAIL
   ========================================================= */
   async function openCycleDetail(cycleId, sowId) {
     const sow =
@@ -953,14 +1316,14 @@ export function initBreedingModule(ctx) {
     const sowTag = normStr(sow?.swine_id || sow?.swine_tag);
     const cycleKey = normStr(cycleId);
 
-    // Make sure caches exist for robust fallbacks
     await ensureAllSwineDataLoaded();
     await ensurePerformanceAnalyticsLoaded();
 
-    // --- Fetch piglets (API first; then robust fallback) ---
+    // ✅ CRITICAL FIX: load selection candidates BEFORE enrich()
+    await ensureSelectionCandidatesLoaded();
+
     let piglets = await fetchPigletsByCycle({ damTag: sowTag, cycleNumber: cycleKey });
 
-    // If API failed, or returns empty, fallback to cache lists
     if (!Array.isArray(piglets) || piglets.length === 0) {
       const cacheA = Array.isArray(state.allSwineData) ? state.allSwineData : [];
       const cacheB = Array.isArray(state.currentFarmerPigs) ? state.currentFarmerPigs : [];
@@ -969,7 +1332,6 @@ export function initBreedingModule(ctx) {
       const sowId2 = normStr(sow?._id);
       const sowTag2 = normStr(sow?.swine_id);
 
-      // 1) strict: dam match + cycle match (try multiple keys)
       let fromCache = combined.filter((p) => {
         const dam = normStr(p?.dam_id || p?.mother_id);
         const cyc = normStr(p?.birth_cycle_number ?? p?.cycle_number ?? p?.cycle ?? p?.batch_no);
@@ -978,7 +1340,6 @@ export function initBreedingModule(ctx) {
         return damMatch && cycleMatch;
       });
 
-      // 2) relaxed: dam match only
       if (!fromCache.length) {
         fromCache = combined.filter((p) => {
           const dam = normStr(p?.dam_id || p?.mother_id);
@@ -993,6 +1354,9 @@ export function initBreedingModule(ctx) {
 
       piglets = fromCache.map(normalizePigletFromApi);
     }
+
+    // ✅ FIX: ensure selection meta (suggestion/status) is applied before tabs render
+    piglets = enrichPigletsWithSelectionMeta(piglets);
 
     const born = piglets.length;
     const dead = piglets.filter((p) => isDeadStatus(p?.health_status)).length;
@@ -1025,7 +1389,6 @@ export function initBreedingModule(ctx) {
       ${titleBlock}
 
       <div class="tabs-scroll mb-3">
-        <!-- ✅ one-row tabs: flex-nowrap + horizontal scroll if needed -->
         <ul class="nav nav-pills nav-sm flex-nowrap gap-2" id="cycleDetailTabs" role="tablist" aria-label="Cycle detail tabs">
           <li class="nav-item"><button type="button" class="nav-link active" data-target="cycleOverviewTab">
             <i class="bi bi-info-circle me-1"></i> Overview
@@ -1056,7 +1419,6 @@ export function initBreedingModule(ctx) {
       <div id="cycleSelectionTab" class="cycle-tab d-none">${buildSelectionTabHtml({ piglets })}</div>
     `;
 
-    // ✅ Hide unrelated sow filter in detail view
     setReproView("DETAIL");
 
     document.getElementById("cycleDetailTabs")?.addEventListener("click", (e) => {
@@ -1070,7 +1432,6 @@ export function initBreedingModule(ctx) {
       const target = btn.dataset.target;
       document.getElementById(target)?.classList.remove("d-none");
 
-      // reset detail modes when switching tabs
       if (target !== "cycleGrowthTab") toggleGrowthDetailMode(false);
       if (target !== "cycleSelectionTab") toggleSelectionDetailMode(false);
 
@@ -1187,7 +1548,6 @@ export function initBreedingModule(ctx) {
     `;
   }
 
-  /* ================= PERFORMANCE TAB (list + pagination) ================= */
   function buildPerformanceTabHtml() {
     return `
       <div class="card border-0 shadow-sm">
@@ -1222,10 +1582,12 @@ export function initBreedingModule(ctx) {
       if (!items.length) {
         listEl.innerHTML = `<div class="text-muted">No piglets found in this cycle.</div>`;
       } else {
+        // ✅ DO NOT show suggestion/selection pills here
         listEl.innerHTML = items
           .map((p) =>
             buildPigletCardRow(p, {
-              button: { className: "btn-view-perf-piglet", icon: "bi-eye", label: "View" }
+              badgesHtml: ``,
+              button: { className: "btn-view-perf-piglet", icon: "bi-chevron-right", label: "Open" }
             })
           )
           .join("");
@@ -1262,7 +1624,6 @@ export function initBreedingModule(ctx) {
       const btn = e.target.closest(".btn-view-perf-piglet");
       if (!btn) return;
 
-      // ✅ switch tab then open growth detail
       document.querySelector('#cycleDetailTabs [data-target="cycleGrowthTab"]')?.click();
 
       const pid = btn.dataset.pigletId;
@@ -1277,7 +1638,6 @@ export function initBreedingModule(ctx) {
     render();
   }
 
-  /* ================= GROWTH TAB (list + details + chart) ================= */
   function buildGrowthTabHtml() {
     return `
       <div class="card border-0 shadow-sm">
@@ -1318,7 +1678,6 @@ export function initBreedingModule(ctx) {
     const panel = document.getElementById("growthDetailPanel");
     if (!panel) return;
 
-    // ✅ hide unrelated sow filter + replace view (hide list/search/pagination)
     toggleSowFilter(false);
     toggleGrowthDetailMode(true);
 
@@ -1388,7 +1747,7 @@ export function initBreedingModule(ctx) {
             ${
               defs.length
                 ? `<div class="d-flex flex-wrap gap-2">${defs
-                    .map((d) => `<span class="badge bg-warning-subtle text-warning border">${d}</span>`)
+                    .map((d) => `<span class="badge bg-warning-subtle text-warning border">${esc(d)}</span>`)
                     .join("")}</div>`
                 : `<div class="text-muted small">No deformities recorded.</div>`
             }
@@ -1400,8 +1759,6 @@ export function initBreedingModule(ctx) {
     document.getElementById("closeGrowthDetailBtn")?.addEventListener("click", () => {
       destroyChartIfExists(`growth:${tag}`);
       toggleGrowthDetailMode(false);
-
-      // return to current repro view’s sow filter rule
       toggleSowFilter(state.__reproView === "SOWS");
     });
 
@@ -1448,7 +1805,6 @@ export function initBreedingModule(ctx) {
     }
 
     function render() {
-      // ✅ ensure list mode visible when rendering list
       toggleGrowthDetailMode(false);
 
       const filtered = applyFilters(list);
@@ -1458,9 +1814,11 @@ export function initBreedingModule(ctx) {
       if (!items.length) {
         listEl.innerHTML = `<div class="text-muted">No piglets match your filters.</div>`;
       } else {
+        // ✅ Growth tab: no suggestion/status pills
         listEl.innerHTML = items
           .map((p) =>
             buildPigletCardRow(p, {
+              badgesHtml: ``,
               button: { className: "btn-growth-open", icon: "bi-graph-up", label: "View Growth" }
             })
           )
@@ -1572,7 +1930,7 @@ export function initBreedingModule(ctx) {
           </div>
 
           <div class="row g-3 mb-3">
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
               <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                   <div class="text-muted small">Total in Selection</div>
@@ -1581,7 +1939,16 @@ export function initBreedingModule(ctx) {
               </div>
             </div>
 
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                  <div class="text-muted small">Pending</div>
+                  <div class="fs-4 fw-bold" id="selPending">0</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-3">
               <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                   <div class="text-muted small">Retain for Breeding</div>
@@ -1590,7 +1957,7 @@ export function initBreedingModule(ctx) {
               </div>
             </div>
 
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-md-3">
               <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
                   <div class="text-muted small">Mark for Sale</div>
@@ -1615,26 +1982,10 @@ export function initBreedingModule(ctx) {
     `;
   }
 
-  function normalizeSelection(v) {
-    const s = normLower(v);
-    if (!s) return "Pending";
-    return normStr(v);
-  }
-
-  function classifySelection(v) {
-    const s = normLower(v);
-    if (!s || s === "pending") return "in";
-    if (s.includes("retain") || s.includes("breeding")) return "retain";
-    if (s.includes("sale") || s.includes("cull")) return "sale";
-    if (s.includes("selection")) return "in";
-    return "in";
-  }
-
   function renderSelectionDetail(piglet) {
     const panel = document.getElementById("selectionDetailPanel");
     if (!panel) return;
 
-    // ✅ hide unrelated sow filter + replace view (hide list/search/pagination/kpis)
     toggleSowFilter(false);
     toggleSelectionDetailMode(true);
 
@@ -1643,7 +1994,37 @@ export function initBreedingModule(ctx) {
     const stage = piglet?.age_stage || piglet?.current_status || "—";
     const selection = normalizeSelection(piglet?.selection_status);
 
+    const cand = findSelectionCandidateByTag(tag);
+    const suggestion =
+      normStr(piglet?.system_suggestion) ||
+      getCandidateSuggestion(cand) ||
+      computeHelperSuggestionForPiglet(piglet) ||
+      "";
+
+    const locked = isLockedSelection(selection);
+
     panel.innerHTML = `
+      <div class="modal fade" id="selectionOverrideModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Override selection?</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              This piglet already has a saved decision (<b>${esc(selection)}</b>).
+              <div class="text-muted small mt-2">Only override if you really need to change the decision.</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-danger" id="confirmOverrideBtn">
+                Yes, override
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm">
         <div class="card-body">
           <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
@@ -1663,30 +2044,62 @@ export function initBreedingModule(ctx) {
 
           <div class="d-flex flex-wrap gap-2 mb-3">
             <span class="badge bg-light text-dark border">
-              Current: <span class="fw-semibold">${selection}</span>
+              Current: <span class="fw-semibold">${esc(selection)}</span>
             </span>
+            ${
+              suggestion
+                ? `<span class="badge bg-info-subtle text-info border">
+                    <i class="bi bi-cpu me-1"></i> System Suggestion: <span class="fw-semibold">${esc(suggestion)}</span>
+                  </span>`
+                : `<span class="badge bg-secondary-subtle text-secondary border">
+                    <i class="bi bi-info-circle me-1"></i> No system suggestion found
+                  </span>`
+            }
           </div>
 
-          <div class="row g-2">
-            <div class="col-12 col-md-4">
-              <button type="button" class="btn btn-success w-100" data-action="retain">
+          ${
+            locked
+              ? `
+                <div class="alert alert-success d-flex align-items-start gap-2" role="alert">
+                  <i class="bi bi-shield-check mt-1"></i>
+                  <div class="min-w-0">
+                    <div class="fw-semibold">Decision already saved.</div>
+                    <div class="small">To change this decision, click <b>Override Decision</b>.</div>
+                  </div>
+                </div>
+              `
+              : `
+                <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
+                  <i class="bi bi-info-circle mt-1"></i>
+                  <div class="min-w-0">
+                    <div class="fw-semibold">No decision yet.</div>
+                    <div class="small">Choose one action below to save the selection decision.</div>
+                  </div>
+                </div>
+              `
+          }
+
+          <div class="d-flex flex-column flex-md-row gap-2">
+            <div class="flex-grow-1">
+              <button type="button" class="btn btn-success w-100" data-action="retain" id="btnSelRetain">
                 <i class="bi bi-check-circle me-1"></i> Retain for Breeding
               </button>
             </div>
-            <div class="col-12 col-md-4">
-              <button type="button" class="btn btn-outline-success w-100" data-action="pending">
-                <i class="bi bi-hourglass-split me-1"></i> Set Pending
-              </button>
-            </div>
-            <div class="col-12 col-md-4">
-              <button type="button" class="btn btn-outline-danger w-100" data-action="sale">
+            <div class="flex-grow-1">
+              <button type="button" class="btn btn-outline-danger w-100" data-action="sale" id="btnSelSale">
                 <i class="bi bi-tag-fill me-1"></i> Mark for Sale
               </button>
             </div>
           </div>
 
+          <div class="d-flex justify-content-end mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm ${locked ? "" : "d-none"}" id="btnOverrideDecision">
+              <i class="bi bi-exclamation-triangle me-1"></i> Override Decision
+            </button>
+          </div>
+
           <div class="text-muted small mt-3" id="selectionActionHint">
-            Actions update selection status for this piglet.
+            ${locked ? `Selection is locked to prevent double changes.` : `Actions update selection status for this piglet.`}
           </div>
         </div>
       </div>
@@ -1697,24 +2110,115 @@ export function initBreedingModule(ctx) {
       toggleSowFilter(state.__reproView === "SOWS");
     });
 
+    const hint = document.getElementById("selectionActionHint");
+    const btnRetain = document.getElementById("btnSelRetain");
+    const btnSale = document.getElementById("btnSelSale");
+    const btnOverride = document.getElementById("btnOverrideDecision");
+
+    if (locked) {
+      if (btnRetain) btnRetain.disabled = true;
+      if (btnSale) btnSale.disabled = true;
+    }
+
+    function setButtonsEnabled(enabled) {
+      if (btnRetain) btnRetain.disabled = !enabled;
+      if (btnSale) btnSale.disabled = !enabled;
+    }
+
+    btnOverride?.addEventListener("click", () => {
+      if (!window.bootstrap) return;
+      const modalEl = document.getElementById("selectionOverrideModal");
+      if (!modalEl) return;
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+    });
+
+    document.getElementById("confirmOverrideBtn")?.addEventListener("click", () => {
+      setButtonsEnabled(true);
+      if (hint) hint.textContent = "Override enabled. Choose a new decision.";
+      btnOverride?.classList.add("d-none");
+
+      const modalEl = document.getElementById("selectionOverrideModal");
+      if (modalEl && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    });
+
+    // Action buttons (ONLY retain/sale)
     panel.querySelectorAll("[data-action]")?.forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const hint = document.getElementById("selectionActionHint");
         const action = btn.getAttribute("data-action");
+        if (!action) return;
 
-        const nextStatus =
-          action === "retain" ? "Retain for Breeding" : action === "sale" ? "Mark for Sale" : "Pending";
+        const nextStatus = action === "retain" ? "Retain for Breeding" : "Mark for Sale";
+
+        // If still locked (safety), do nothing
+        if (isLockedSelection(piglet?.selection_status) && (btnRetain?.disabled || btnSale?.disabled)) return;
+
+        // ✅ Resolve a REAL Mongo ObjectId:
+        // - prefer piglet._id if it's ObjectId
+        // - otherwise pull it from selection-candidates record
+        const isObjectId = (v) => /^[a-f\d]{24}$/i.test(String(v || "").trim());
+
+        const cand = findSelectionCandidateByTag(tag);
+
+        const mongoId =
+          (isObjectId(piglet?._id) ? String(piglet._id).trim() : "") ||
+          (isObjectId(cand?._id) ? String(cand._id).trim() : "") ||
+          (isObjectId(cand?.piglet?._id) ? String(cand.piglet._id).trim() : "") ||
+          (isObjectId(cand?.swine?._id) ? String(cand.swine._id).trim() : "") ||
+          "";
+
+        if (!mongoId) {
+          if (hint) {
+            hint.textContent =
+              "Cannot save decision: missing Mongo _id. " +
+              "Ensure selection-candidates includes _id for this piglet (not only swine_tag).";
+          }
+          return;
+        }
 
         try {
           if (hint) hint.textContent = "Saving selection status...";
-          await updateSelectionStatus({ swine_id: tag, selection_status: nextStatus });
-          piglet.selection_status = nextStatus;
-          if (hint) hint.textContent = `Updated: ${nextStatus}`;
 
+          await updateSelectionStatus({
+            swine_id: tag,
+            swine_db_id: mongoId,
+            selection_status: nextStatus
+          });
+
+          // ✅ refresh candidates so future renders/KPIs use updated backend state
+          await ensureSelectionCandidatesLoaded();
+
+          piglet.selection_status = nextStatus;
+
+          // Update caches
+          const all = Array.isArray(state.allSwineData) ? state.allSwineData : [];
+          const hit = all.find(
+            (x) =>
+              String(x?._id || "").trim() === mongoId ||
+              normStr(x?.swine_id || x?.swine_tag) === normStr(tag)
+          );
+          if (hit) hit.selection_status = nextStatus;
+
+          const cand2 = findSelectionCandidateByTag(tag);
+          if (cand2) {
+            cand2.selection_status = nextStatus;
+            // keep id attached so next click always works
+            if (!cand2._id && mongoId) cand2._id = mongoId;
+          }
+
+          // lock again
+          setButtonsEnabled(false);
+          if (btnOverride) btnOverride.classList.remove("d-none");
+          if (hint) hint.textContent = `Saved: ${nextStatus}. Selection locked to prevent double changes.`;
+
+          // re-render list/kpis
           if (typeof state.__selectionRender === "function") state.__selectionRender(true);
+
+          // refresh detail UI
+          renderSelectionDetail(piglet);
         } catch (e) {
           console.warn("updateSelectionStatus failed:", e?.message || e);
-          if (hint) hint.textContent = `Failed to update (check your route).`;
+          if (hint) hint.textContent = `Failed to update: ${e?.message || "check your route"}`;
         }
       });
     });
@@ -1747,26 +2251,48 @@ export function initBreedingModule(ctx) {
       return out;
     }
 
-    function updateKpis(filteredItems) {
-      let totalIn = 0;
+    function updateKpis(items) {
+      // ✅ De-dupe so one piglet doesn’t get counted twice
+      // Prefer Mongo _id, fallback to swine_tag/swine_id/tag
+      const seen = new Set();
+      const unique = [];
+
+      for (const p of items || []) {
+        const key = String(p?._id || p?.id || p?.swine_tag || p?.swine_id || p?.tag || "").trim();
+        if (key && seen.has(key)) continue;
+        if (key) seen.add(key);
+        unique.push(p);
+      }
+
+      let pending = 0;
       let retain = 0;
       let sale = 0;
 
-      filteredItems.forEach((p) => {
-        const cls = classifySelection(p?.selection_status);
+      for (const p of unique) {
+        const cls = classifySelection(p); // ✅ pass the WHOLE record
         if (cls === "retain") retain++;
         else if (cls === "sale") sale++;
-        else totalIn++;
-      });
+        else pending++;
+      }
 
-      document.getElementById("selTotalInSelection")?.replaceChildren(document.createTextNode(String(totalIn)));
-      document.getElementById("selRetainForBreeding")?.replaceChildren(document.createTextNode(String(retain)));
-      document.getElementById("selMarkForSale")?.replaceChildren(document.createTextNode(String(sale)));
+      const total = unique.length;
+
+      const setKpi = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(val);
+      };
+
+      setKpi("selTotalInSelection", total);
+      setKpi("selPending", pending);            // (your new card)
+      setKpi("selRetainForBreeding", retain);
+      setKpi("selMarkForSale", sale);
     }
-
+    
     function render(forceKeepPage = false) {
-      // ✅ ensure list mode visible when rendering list
       toggleSelectionDetailMode(false);
+
+      // ✅ re-enrich here too, now with PerformanceHelper fallback
+      enrichPigletsWithSelectionMeta(list);
 
       const filtered = applyFilters(list);
       updateKpis(filtered);
@@ -1780,11 +2306,22 @@ export function initBreedingModule(ctx) {
         listEl.innerHTML = `<div class="text-muted">No piglets match your filters.</div>`;
       } else {
         listEl.innerHTML = items
-          .map((p) =>
-            buildPigletCardRow(p, {
+          .map((p) => {
+            const sug = normStr(p?.system_suggestion);
+            const sel = normalizeSelection(p?.selection_status);
+
+            const sugBadge = sug
+              ? `<span class="badge bg-info-subtle text-info border">System Suggestion: ${esc(sug)}</span>`
+              : "";
+            const selBadge = sel
+              ? `<span class="badge bg-success-subtle text-success border">Selection: ${esc(sel)}</span>`
+              : "";
+
+            return buildPigletCardRow(p, {
+              badgesHtml: `${sugBadge}${selBadge}`,
               button: { className: "btn-selection-open", icon: "bi-chevron-right", label: "Open" }
-            })
-          )
+            });
+          })
           .join("");
       }
 
@@ -1816,7 +2353,6 @@ export function initBreedingModule(ctx) {
       });
     }
 
-    // expose render so selection actions can refresh reliably
     state.__selectionRender = (keepPage) => render(!!keepPage);
 
     document.querySelectorAll("[data-selection-sex]").forEach((btn) => {
@@ -1865,6 +2401,7 @@ export function initBreedingModule(ctx) {
     render();
   }
 
+  // Return public API
   return {
     renderBreedingPerformance,
     openSowCycles,
