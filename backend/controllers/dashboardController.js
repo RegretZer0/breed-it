@@ -1,10 +1,17 @@
 // backend/controllers/dashboardController.js
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
-const HeatReport = require("../models/HeatReports");
+const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Time Warp
 
 async function getFarmManagerStats(req, res) {
   try {
+    // 1. Get the current "Logical Time" (Real or Mocked)
+    const systemSettings = await SystemSettings.findOne();
+    const virtualNow = (systemSettings && systemSettings.mockDate) 
+                ? new Date(systemSettings.mockDate) 
+                : new Date();
+
+    // ✅ SUPPORT FARM MANAGER + ENCODER
     const managerId =
       req.user.role === "farm_manager" ? req.user.id : req.user.managerId;
 
@@ -69,7 +76,7 @@ async function getFarmManagerStats(req, res) {
         alive,
         mortality,
         inHeat,
-        pregnant,
+        pregnant, // Fixed: removed stray 'a'
         farrowing,
         weaning,
         lactating
