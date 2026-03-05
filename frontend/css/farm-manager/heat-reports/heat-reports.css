@@ -325,6 +325,7 @@ html, body{
   text-transform:capitalize;
   white-space:nowrap;
   border:1px solid transparent;
+  pointer-events: none;
 }
 .status-badge.pending{ background:#fff7e0; color:#92400e; border-color:#fde68a; }
 .status-badge.approved{ background:#dcfce7; color:#166534; border-color:#bbf7d0; }
@@ -824,7 +825,7 @@ html, body{
   background:#fff;
   border-left:1px solid var(--border);
   box-shadow:-14px 0 36px rgba(0,0,0,.14);
-  z-index:2000;
+  z-index:9500;
   transition:right .28s ease;
   display:flex;
   flex-direction:column;
@@ -1529,21 +1530,29 @@ html, body{
 }
 
 /* =========================
-   MODAL STACKING (FIX)
+   MODAL AND PANEL STACKING
 ========================= */
+
+/* Base overlay is already 9999 from .modal-overlay */
+
 /* Report Details overlay */
 #reportDetailsModal.modal-overlay{
-  z-index: 2000;
+  z-index: 9999;
 }
 
-/* Farrowing modal MUST be above report details */
+/* Progress panel should appear above page chrome but below modals by default */
+.progress-panel{
+  z-index: 9500;
+}
+
+/* Farrowing modal above report details */
 #farrowingModal.modal-overlay{
-  z-index: 2600;
+  z-index: 10500;
 }
 
-/* Evidence viewer should be on top of all */
+/* Evidence viewer on top of all */
 #evidenceViewerModal.modal-overlay{
-  z-index: 3000;
+  z-index: 11000;
 }
 
 /* =========================
@@ -1708,3 +1717,20 @@ html, body{
     font-size: 12px;
   }
 }
+
+/* =========================
+   CLICK SAFETY FOR CARD BUTTONS
+   Prevent accidental overlay layers blocking Track Progress
+========================= */
+.report-card { position: relative; }
+.report-card-actions { position: relative; z-index: 2; }
+
+.report-card-actions .btn-track,
+.report-card-actions .btn-view {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
+
+/* If any parent accidentally disables pointer events, force-enable on buttons */
+.report-card-actions { pointer-events: auto; }

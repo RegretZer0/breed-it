@@ -22,7 +22,6 @@ export function initHeatReportFilters({
       state.selectedStatus = this.dataset.status || "";
 
       onSetFilterState(state);
-      onApply();
     });
   });
 
@@ -62,7 +61,6 @@ export function initHeatReportFilters({
             bootstrap.Dropdown.getInstance(dropdownBtn)?.hide();
 
             onSetFilterState(state);
-            onApply();
           });
 
           wrap.appendChild(div);
@@ -95,7 +93,7 @@ export function initHeatReportFilters({
   reportStatusFilter?.addEventListener("change", () => {
     state.selectedReportStatus = reportStatusFilter.value || "";
     onSetFilterState(state);
-    onApply();
+    // Apply is manual (button submit)
   });
 
   // Submit Apply

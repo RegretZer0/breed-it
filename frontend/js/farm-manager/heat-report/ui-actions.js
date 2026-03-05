@@ -318,6 +318,32 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     unlockScrollIfNoOverlayOpen();
   }
 
+  //Overlay Helper
+  function isOverlayOpen(el) {
+    return !!el && el.style.display === "flex";
+  }
+
+  function ensureProgressPanelAtRoot() {
+    if (!progressPanel) return;
+
+    // If the panel is nested inside a modal/overlay, move it to <body>
+    if (progressPanel.parentElement !== document.body) {
+      document.body.appendChild(progressPanel);
+    }
+  }
+
+  function closeProgressPanel() {
+    if (!progressPanel) return;
+
+    progressPanel.classList.remove("open");
+
+    // Hide after slide-out finishes so it doesn't stay "open behind"
+    setTimeout(() => {
+      progressPanel.style.display = "none";
+      unlockScrollIfNoOverlayOpen();
+    }, 300);
+  }
+
   /* =========================
      FEEDBACK MODAL HELPERS MODULE
   ========================= */
@@ -492,6 +518,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       v.currentTime = 0;
     });
 
+    closeProgressPanel();
     if (evidenceGallery) evidenceGallery.innerHTML = "";
     unlockScrollIfNoOverlayOpen();
   }
@@ -1002,14 +1029,30 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   async function openProgressPanel(reportId) {
     if (!progressPanel) return;
 
-    progressPanel.style.zIndex = "2000";
+    // ensure the drawer is not trapped inside reportDetailsModal
+    ensureProgressPanelAtRoot();
 
-    const closeBtn = document.getElementById("closeProgressPanel");
-    if (closeBtn) closeBtn.onclick = () => progressPanel.classList.remove("open");
+    // if details modal is open, close it so drawer is not hidden behind it
+    if (isOverlayOpen(reportDetailsModal)) {
+      closeReportDetails();
+    }
 
+    progressPanel.style.zIndex = "9500";
+    progressPanel.style.display = "flex";
+
+    progressPanel.classList.remove("open");
+    progressPanel.offsetHeight; // reflow
     progressPanel.classList.add("open");
 
-    try {
+    lockScroll();
+
+    const closeBtn = document.getElementById("closeProgressPanel");
+    if (closeBtn && !closeBtn.dataset.bound) {
+      closeBtn.dataset.bound = "true";
+      closeBtn.addEventListener("click", closeProgressPanel);
+    }
+    
+  try {
       const res = await fetch(`${BACKEND_URL}/api/heat/${reportId}/detail`, {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include"
