@@ -544,15 +544,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         // liveCount is your hidden input that syncTotalLive updates
         const totalLive = Number(document.getElementById("liveCount")?.value || 0);
 
-        if (!farrowingDate) {
-          await showFeedback({
-            title: "Validation error",
-            sub: "Farrowing date required",
-            body: "Please select the actual farrowing date.",
-            variant: "warn"
-          });
-          return;
-        }
+        // if (!farrowingDate) {
+        //   await showFeedback({
+        //     title: "Validation error",
+        //     sub: "Farrowing date required",
+        //     body: "Please select the actual farrowing date.",
+        //     variant: "warn"
+        //   });
+        //   return;
+        // }
 
         // OPTIONAL: basic sanity check
         if (totalLive <= 0) {

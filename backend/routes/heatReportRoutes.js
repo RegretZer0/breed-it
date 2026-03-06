@@ -549,23 +549,36 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
   session.startTransaction();
   try {
     const { total_live, mortality, farrowing_date } = req.body;
-      if (total_live == null || farrowing_date == null) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required fields",
-          received: { total_live, mortality, farrowing_date }
-        });
-      }
+    
+    // ✅ UPDATE: Removed farrowing_date from the strict null check.
+    // If it's missing or null, the logic below will apply the Virtual Date.
+    if (total_live == null) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: total_live",
+        received: { total_live, mortality }
+      });
+    }
 
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-    // ✅ TIME WARP UPDATE: Use your timeHelper utility
+    // ✅ TIME WARP UPDATE: Get the virtual "Today"
     const virtualNow = await timeHelper.getVirtualNow();
     
-    // Use the manual date if provided, otherwise default to the Virtual Now (2026)
-    const farrowDate = farrowing_date ? new Date(farrowing_date) : virtualNow;
+    // ✅ SMART DATE LOGIC:
+    // 1. If date is null/empty -> Use Virtual Now.
+    // 2. If date matches real-world 'today' -> User probably didn't change the default input, use Virtual Now.
+    // 3. Otherwise -> Use the manually selected date.
+    const realTodayStr = new Date().toISOString().split('T')[0];
+    const inputDateStr = farrowing_date ? new Date(farrowing_date).toISOString().split('T')[0] : null;
+
+    let farrowDate;
+    if (!farrowing_date || inputDateStr === realTodayStr) {
+      farrowDate = virtualNow; // Apply 2026 Warp
+    } else {
+      farrowDate = new Date(farrowing_date); // Use manual user choice
+    }
     
     const sow = await Swine.findById(report.swine_id._id);
     const aiRecord = await AIRecord.findOne({ heat_report_id: report._id });
@@ -608,11 +621,10 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     const pigletsToInsert = [];
     const generatedIds = [];
 
-    // Formatted date string for consistent ID generation (YYYYMMDD) using the Warped Date
+    // Formatted date string for consistent ID generation (YYYYMMDD) using the determined farrowDate
     const dateStr = `${farrowDate.getFullYear()}${String(farrowDate.getMonth() + 1).padStart(2, '0')}${String(farrowDate.getDate()).padStart(2, '0')}`;
 
     for (let i = 1; i <= liveCount; i++) {
-      // Swine ID generation uses farrowDate (Time Warp) for naming consistency
       const pigletId = `PIG-${sow.swine_id}-${dateStr}-${i}`;
       generatedIds.push(pigletId);
 
@@ -665,13 +677,12 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
       req
     );
 
-    await notifyBreedingTeam(
-      report.manager_id,
-      report.farmer_id.user_id,
-      "Farrowing Confirmed",
-      `Swine ${sow.swine_id} has farrowed ${liveCount} live piglets on ${farrowDate.toLocaleDateString()}.`,
-      "success"
-    );
+    await Notification.create({
+      user_id: report.farmer_id.user_id,
+      title: "Farrowing Confirmed",
+      message: `Swine ${sow.swine_id} has farrowed ${liveCount} live piglets on ${farrowDate.toLocaleDateString()}.`,
+      type: "success"
+    });
 
     await session.commitTransaction();
     res.json({ success: true, message: `Farrowing confirmed. ${liveCount} piglets registered.` });
