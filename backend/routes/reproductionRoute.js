@@ -40,12 +40,10 @@ function pickEnumValue(allowed, candidates = [], fuzzyKeywords = []) {
   const allow = Array.isArray(allowed) ? allowed : [];
   const cand = Array.isArray(candidates) ? candidates.map(String) : [];
 
-  // 1) direct match
   for (const c of cand) {
     if (allow.includes(c)) return { value: c, method: "direct" };
   }
 
-  // 2) fuzzy match (keywords must all appear in enum value)
   const keys = (Array.isArray(fuzzyKeywords) ? fuzzyKeywords : [])
     .map((k) => normLower(k))
     .filter(Boolean);
@@ -63,7 +61,6 @@ function pickEnumValue(allowed, candidates = [], fuzzyKeywords = []) {
 function setEnumSafeCurrentStatus(swineDoc, candidates, fuzzyKeywords) {
   const allowed = getEnumValues(Swine, "current_status");
 
-  // If enum not available for some reason, still set first candidate (best effort)
   if (!allowed.length) {
     const first = Array.isArray(candidates) ? candidates[0] : candidates;
     swineDoc.current_status = String(first);
@@ -86,7 +83,6 @@ const getVirtualNow = () => (typeof global.getNow === "function" ? global.getNow
 
 /* =========================================================
     Optional debug endpoint to see allowed enum values
-    GET /api/reproduction/debug/status-enum
 ========================================================= */
 router.get("/debug/status-enum", requireSessionAndToken, async (req, res) => {
   const allowed = getEnumValues(Swine, "current_status");
@@ -94,7 +90,7 @@ router.get("/debug/status-enum", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 1. FETCH AI HISTORY (FIXED FOR STRING-BASED MALE_SWINE_ID)
+// 1. FETCH AI HISTORY
 // ---------------------------------------------------------
 router.get("/ai-history", requireSessionAndToken, async (req, res) => {
   try {
@@ -132,9 +128,7 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
           name = r.farmer_name;
         }
 
-        // Since male_swine_id is a String, we check if it's an ID or a direct Tag
         let boarTag = r.male_swine_id || "N/A";
-
         if (mongoose.Types.ObjectId.isValid(r.male_swine_id)) {
           const boarSwine = await Swine.findById(r.male_swine_id).select("swine_id");
           if (boarSwine) boarTag = boarSwine.swine_id;
@@ -242,35 +236,52 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. PIGLET MONITORING & LIFECYCLE (Updated with Virtual Time)
+// 3. PIGLET MONITORING & LIFECYCLE (Updated for 3-Month Logic)
 // ---------------------------------------------------------
 router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
   try {
     const { role, farmerProfileId } = req.user;
-    let query = { age_stage: "piglet" };
+    const now = getVirtualNow(); // ✅ Get Virtual Time for Age Sync
 
+    let query = { age_stage: "piglet" };
     if (role === "farmer") {
       query.farmer_id = new mongoose.Types.ObjectId(farmerProfileId);
     }
 
     const piglets = await Swine.find(query);
-    // Note: If your Swine model uses a virtual/method for lifecycle_phase, 
-    // ensure that model logic also uses global.getNow().
     
     const data = piglets.map((p) => {
-      const phaseInfo = p.lifecycle_phase;
-      const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
+      // ✅ 3-MONTH MONITORING LOGIC
+      const birthDate = new Date(p.birth_date);
+      const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+      
+      let phase = "Suckling (Day 1-30)";
+      let color = "blue";
+      let canAction = false;
 
-      const canAction =
-        phaseInfo.phase === "Final Selection" && latestPerf.weight >= 15 && latestPerf.weight <= 25;
+      if (ageInDays > 30 && ageInDays <= 60) {
+        phase = "Nursery (Day 31-60)";
+        color = "orange";
+      } else if (ageInDays > 60 && ageInDays <= 90) {
+        phase = "Final Selection (Day 61-90)";
+        color = "green";
+        canAction = true; // Selection opens in the 3rd month
+      } else if (ageInDays > 90) {
+        phase = "Selection Overdue";
+        color = "red";
+        canAction = true;
+      }
+
+      const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
 
       return {
         id: p._id,
         swine_tag: p.swine_id,
         dam_id: p.dam_id || "N/A",
-        current_status: phaseInfo.phase,
-        days_remaining: phaseInfo.daysLeft,
-        status_color: phaseInfo.status,
+        current_status: phase,
+        age_days: ageInDays,
+        days_remaining: Math.max(0, 90 - ageInDays),
+        status_color: color,
         can_action: canAction,
         latest_weight: latestPerf.weight || 0,
         deformities: latestPerf.deformities || ["None"],
@@ -284,11 +295,11 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 4. PIGLET FINAL DECISION (FIXED: enum-safe current_status)
+// 4. PIGLET FINAL DECISION (Updated for Age Stage Transition)
 // ---------------------------------------------------------
 router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
   try {
-    const { swineId, action } = req.body; // action: 'breeding' | 'sell' | 'pending'
+    const { swineId, action } = req.body; 
     const swine = await Swine.findById(swineId);
 
     if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
@@ -296,28 +307,28 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     const actRaw = String(action || "").toLowerCase().trim();
     const act = actRaw === "retain" ? "breeding" : actRaw === "sale" ? "sell" : actRaw;
 
-    // ✅ Pending: DO NOT update enum field if you don't know enum values.
     if (act === "pending") {
       return res.json({
         success: true,
-        message: "Set to Pending (saved client-side).",
+        message: "Set to Pending.",
         applied: { action: "pending", changed: false, current_status: swine.current_status },
       });
     }
 
     if (act === "breeding") {
+      // ✅ TRANSITION TO ADULT: Graduation from 3-month monitoring
       swine.age_stage = "adult";
 
       const result = setEnumSafeCurrentStatus(
         swine,
-        ["Active", "Active Breeder", "Breeding", "Breeder"],
+        ["Active", "Active Breeder", "Open", "Breeder"],
         ["active"] 
       );
 
       if (!result.ok) {
         return res.status(400).json({
           success: false,
-          message: "No enum-safe status found for Retain. Check Swine.current_status enum.",
+          message: "No enum-safe status found for Retain.",
           debug: { allowed: result.allowed },
         });
       }
@@ -325,7 +336,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       await swine.save();
       return res.json({
         success: true,
-        message: `Piglet ${swine.swine_id} updated to ${swine.current_status}.`,
+        message: `Piglet ${swine.swine_id} graduated to Adult status.`,
         applied: { action: "breeding", changed: true, method: result.method, current_status: swine.current_status },
       });
     }
@@ -340,7 +351,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     if (!result.ok) {
       return res.status(400).json({
         success: false,
-        message: "No enum-safe status found for Sale. Check Swine.current_status enum.",
+        message: "No enum-safe status found for Sale.",
         debug: { allowed: result.allowed },
       });
     }
@@ -358,7 +369,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 5. SELECTION PROCESS CANDIDATES (OLD LOGIC KEPT)
+// 5. SELECTION PROCESS CANDIDATES
 // ---------------------------------------------------------
 router.get("/selection-candidates", requireSessionAndToken, async (req, res) => {
   try {
@@ -409,7 +420,7 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
 });
 
 // ---------------------------------------------------------
-// 6. PROCESS SELECTION (OLD LOGIC KEPT)
+// 6. PROCESS SELECTION
 // ---------------------------------------------------------
 router.put("/process-selection", requireSessionAndToken, async (req, res) => {
   try {
@@ -430,6 +441,9 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
       : "Marked for Sale";
 
     swine.current_status = newStatus;
+    // If approved for active breeder, ensure age stage is adult
+    if (newStatus === "Active Breeder") swine.age_stage = "adult";
+    
     await swine.save();
 
     res.json({ success: true, message: `Swine updated to ${newStatus}` });
@@ -463,8 +477,6 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
 
     const formatted = pregnantSows.map((sow) => {
       const activeCycle = sow.breeding_cycles.find((c) => c.is_pregnant && !c.farrowed) || {};
-      
-      // Virtual Time check: compare expected date to warped "now"
       const expected = activeCycle.expected_farrowing_date ? new Date(activeCycle.expected_farrowing_date) : null;
       const isOverdue = expected && expected <= now;
 
@@ -474,7 +486,7 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
         breed: sow.breed,
         parity: sow.parity,
         expected_date: activeCycle.expected_farrowing_date,
-        is_overdue: isOverdue, // Extra data for UI highlights
+        is_overdue: isOverdue,
         ai_record_id: activeCycle.ai_record_id,
         sire_id: activeCycle.cycle_sire_id || "N/A",
       };
@@ -496,13 +508,11 @@ router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
     if (!ai_record_id) return res.status(400).json({ success: false, message: "AI Record ID is required" });
 
     const aiRecord = await AIRecord.findById(ai_record_id);
-
     if (!aiRecord) {
       return res.status(404).json({ success: false, message: "No active record found." });
     }
 
     aiRecord.status = "Success";
-    // If user didn't pick a date, use the Virtual/Warped date
     aiRecord.farrowing_date = farrowing_date || getVirtualNow();
 
     await aiRecord.save();
