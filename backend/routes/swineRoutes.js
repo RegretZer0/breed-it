@@ -13,6 +13,7 @@ const HeatReport = require("../models/HeatReports");
 const AuditLog = require("../models/AuditLog");
 const Notification = require("../models/Notifications"); // ✅ Added Notification Model
 const logAction = require("../middleware/logger");
+const timeHelper = require("../utils/timeHelper");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
@@ -116,7 +117,7 @@ router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res
 });
 
 /* ======================================================
-   ADD MASTER BOAR
+    ADD MASTER BOAR
 ====================================================== */
 router.post(
   "/add-master-boar",
@@ -142,6 +143,9 @@ router.post(
       const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
       const prefix = getManagerPrefix(registeredBy);
 
+      // ✅ TIME WARP: Get the virtual "Now" for 2026 consistency
+      const virtualNow = await timeHelper.getVirtualNow();
+
       const boarCount = await Swine.countDocuments({
         registered_by: registeredBy,
         swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
@@ -159,13 +163,15 @@ router.post(
         age_stage: "adult",
         birth_date: birth_date || null,
         is_external_boar: true,
-        date_transfer: date_transfer || new Date(),
+        // ✅ UPDATE: Use virtualNow if no date_transfer is provided
+        date_transfer: date_transfer || virtualNow, 
         health_status: health_status || "Healthy",
         current_status: current_status || "Active",
         performance_records: [
           {
             stage: "Maintenance Registration",
-            record_date: new Date(),
+            // ✅ UPDATE: Use virtualNow for the record date
+            record_date: virtualNow, 
             weight: Number(weight) || 0,
             body_length: Number(bodyLength) || 0,
             heart_girth: Number(heartGirth) || 0,
@@ -198,7 +204,7 @@ router.post(
 );
 
 /* ======================================================
-   ADD NEW SWINE (UPDATED ID LOGIC + NOTIFICATION)
+    ADD NEW SWINE (UPDATED ID LOGIC + NOTIFICATION)
 ====================================================== */
 router.post(
   "/add",
@@ -234,6 +240,9 @@ router.post(
       const user = req.user;
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
       const prefix = getManagerPrefix(managerId);
+
+      // ✅ TIME WARP: Get the virtual "Now" for 2026 consistency
+      const virtualNow = await timeHelper.getVirtualNow();
 
       // 1. Resolve Auto-batch letter if empty
       if (!batch || batch.trim() === "") {
@@ -319,11 +328,13 @@ router.post(
         dam_id,
         age_stage: age_stage || "piglet",
         current_status: initialStatus,
-        date_transfer,
+        // ✅ UPDATE: Use virtualNow if no date_transfer is provided
+        date_transfer: date_transfer || virtualNow, 
         performance_records: [
           {
             stage: initialPerfStage,
-            record_date: new Date(),
+            // ✅ UPDATE: Use virtualNow for the record date
+            record_date: virtualNow,
             weight: Number(weight) || 0,
             body_length: Number(bodyLength) || 0,
             heart_girth: Number(heartGirth) || 0,
@@ -377,6 +388,9 @@ router.put(
       const swine = await Swine.findOne({ swine_id: swineId });
       if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
+      // ✅ TIME WARP: Get virtual time for logging or status logic if needed
+      const virtualNow = await timeHelper.getVirtualNow();
+
       // Farmer access control (same idea as /update)
       if (
         user.role === "farmer" &&
@@ -405,6 +419,9 @@ router.put(
       if (req.file) {
         swine.profile_photo = `/uploads/pig-profile/${req.file.filename}`;
       }
+
+      // Explicitly update the 'updatedAt' field to virtual time if your schema doesn't auto-handle it
+      swine.updatedAt = virtualNow; 
 
       await swine.save();
 
@@ -476,6 +493,9 @@ router.put(
       const swine = await Swine.findOne({ swine_id: swineId });
       if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
+      // ✅ TIME WARP: Get the virtual "Now" (July 28, 2026)
+      const virtualNow = await timeHelper.getVirtualNow();
+
       if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
         return res.status(403).json({ success: false, message: "Access denied" });
 
@@ -498,19 +518,23 @@ router.put(
       if (updates.performance_records) {
         const newPerfData = {
           ...updates.performance_records,
-          record_date: new Date(),
+          // ✅ UPDATE: Use virtual time so the chart plots on July 28
+          record_date: virtualNow,
           recorded_by: user.id
         };
 
         if (updates.overwrite_monthly) {
-          const now = new Date();
           const existingIndex = swine.performance_records.findIndex((rec) => {
             const d = new Date(rec.record_date);
-            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            // ✅ UPDATE: Compare against virtual month/year (July 2026)
+            return d.getMonth() === virtualNow.getMonth() && d.getFullYear() === virtualNow.getFullYear();
           });
 
-          if (existingIndex !== -1) swine.performance_records[existingIndex] = newPerfData;
-          else swine.performance_records.push(newPerfData);
+          if (existingIndex !== -1) {
+            swine.performance_records[existingIndex] = newPerfData;
+          } else {
+            swine.performance_records.push(newPerfData);
+          }
         } else {
           swine.performance_records.push(newPerfData);
         }
@@ -523,7 +547,10 @@ router.put(
       });
 
       await swine.save();
-      logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated ${swineId}`, req);
+      
+      // ✅ Log using the virtual date for a more accurate audit trail
+      logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated ${swineId} at virtual time ${virtualNow}`, req);
+      
       res.json({ success: true, message: "Swine updated successfully", swine });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
