@@ -466,8 +466,9 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
     // 1. Use manual check date or default to the Virtual Now (2026)
     const confirmationDate = check_date ? new Date(check_date) : virtualNow;
 
-    // 2. CALCULATION: Farrowing is always ~114 days from the AI date
-    const baseDate = report.ai_confirmed_at ? new Date(report.ai_confirmed_at) : confirmationDate;
+    // 2. UPDATED CALCULATION: Farrowing starts at the date when the pregnancy is confirmed
+    // Instead of counting from report.ai_confirmed_at, it starts at confirmationDate
+    const baseDate = confirmationDate; 
     const farrowingDate = new Date(baseDate);
     farrowingDate.setDate(farrowingDate.getDate() + 114); 
 
@@ -508,7 +509,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
       req.user.id, 
       "CONFIRM_PREGNANCY", 
       "BREEDING", 
-      `Pregnancy confirmed for Swine ${report.swine_id.swine_id}. Expected farrowing: ${farrowingDate.toDateString()}`, 
+      `Pregnancy confirmed for Swine ${report.swine_id.swine_id}. Expected farrowing (114 days from confirmation): ${farrowingDate.toDateString()}`, 
       req
     );
 

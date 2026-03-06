@@ -259,14 +259,14 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
       let color = "blue";
       let canAction = false;
 
-      if (ageInDays > 30 && ageInDays <= 60) {
+      if (ageInDays > 60 && ageInDays <= 90) {
         phase = "Nursery (Day 31-60)";
         color = "orange";
-      } else if (ageInDays > 60 && ageInDays <= 90) {
+      } else if (ageInDays > 90 && ageInDays <= 120) {
         phase = "Final Selection (Day 61-90)";
         color = "green";
         canAction = true; // Selection opens in the 3rd month
-      } else if (ageInDays > 90) {
+      } else if (ageInDays > 120) {
         phase = "Selection Overdue";
         color = "red";
         canAction = true;
@@ -280,7 +280,7 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
         dam_id: p.dam_id || "N/A",
         current_status: phase,
         age_days: ageInDays,
-        days_remaining: Math.max(0, 90 - ageInDays),
+        days_remaining: Math.max(0, 120 - ageInDays),
         status_color: color,
         can_action: canAction,
         latest_weight: latestPerf.weight || 0,
