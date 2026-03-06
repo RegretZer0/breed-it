@@ -256,4 +256,23 @@ swineSchema.pre("save", function(next) {
   next();
 });
 
+// Inside models/Swine.js
+swineSchema.virtual('lifecycle_phase').get(function() {
+  const now = global.getNow ? global.getNow() : new Date();
+  const birthDate = this.birth_date;
+  
+  // Calculate age in days
+  const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+
+  if (ageInDays <= 30) {
+    return { phase: "Suckling", daysLeft: 30 - ageInDays, status: "blue" };
+  } else if (ageInDays <= 60) {
+    return { phase: "Nursery/Growing", daysLeft: 60 - ageInDays, status: "orange" };
+  } else if (ageInDays <= 90) {
+    return { phase: "Final Selection", daysLeft: 90 - ageInDays, status: "green" };
+  } else {
+    return { phase: "Selection Overdue", daysLeft: 0, status: "red" };
+  }
+});
+
 module.exports = mongoose.model("Swine", swineSchema);
