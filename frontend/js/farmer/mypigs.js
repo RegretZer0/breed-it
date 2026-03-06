@@ -222,6 +222,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =========================================================
+     OFFSPRING: FIND PIGLETS FROM LOADED SWINE DATA
+  ========================================================= */
+  function getPigletsFromLoadedSwine(motherPig, cycle) {
+    if (!motherPig || !cycle) return [];
+
+    const motherId = String(motherPig.swine_id || "").trim();
+    const cycleNumber = Number(cycle.cycle_number || 0);
+
+    if (!motherId || !cycleNumber) return [];
+
+    return (currentSwineData || [])
+      .filter((p) => {
+        const damId = String(p.dam_id || "").trim();
+        const birthCycle = Number(p.birth_cycle_number || 0);
+
+        return damId === motherId && birthCycle === cycleNumber;
+      })
+      .sort((a, b) => {
+        const aId = String(a.swine_id || "");
+        const bId = String(b.swine_id || "");
+        return aId.localeCompare(bId, undefined, { numeric: true, sensitivity: "base" });
+      })
+      .map((p) => ({
+        ...p,
+        piglet_id: p.swine_id,
+        status: p.health_status || p.current_status || "Unknown",
+      }));
+  }
+
+  /* =========================================================
      OFFSPRING: EXTRACT PIGLETS LIST FROM CYCLE
   ========================================================= */
   function extractCyclePiglets(cycleObj) {
@@ -297,9 +327,30 @@ document.addEventListener("DOMContentLoaded", async () => {
      OFFSPRING: PIGLET BADGE MAPPER
   ========================================================= */
   function badgeForPigletStatus(piglet) {
-    const status = piglet?.status || piglet?.life_status || piglet?.health_status || "";
-    if (isAliveStatus(status)) return { text: "Alive", cls: "alive" };
+    const status =
+      piglet?.status ||
+      piglet?.life_status ||
+      piglet?.health_status ||
+      piglet?.current_status ||
+      "";
+
     if (isDeadStatus(status)) return { text: "Dead", cls: "dead" };
+
+    if (
+      isAliveStatus(status) ||
+      status === "Healthy" ||
+      status === "Monitoring (Day 1-30)" ||
+      status === "Weaning" ||
+      status === "3-Month Monitoring" ||
+      status === "Final Selection"
+    ) {
+      return { text: "Alive", cls: "alive" };
+    }
+
+    if (status === "Unrecorded") {
+      return { text: "Unrecorded", cls: "neutral" };
+    }
+
     return { text: status || "Unknown", cls: "neutral" };
   }
 
@@ -351,20 +402,227 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =========================================================
      OFFSPRING: DISPLAY PIGLETS (PLACEHOLDERS WHEN NEEDED)
   ========================================================= */
-  function getDisplayPiglets(cycle) {
-    const list = extractCyclePiglets(cycle?.raw || cycle);
-    const total = toNum(cycle?.total);
+    function getDisplayPiglets(motherPig, cycle) {
+      const embeddedList = extractCyclePiglets(cycle?.raw || cycle);
+      if (embeddedList && embeddedList.length) return embeddedList;
 
-    if ((!list || !list.length) && total > 0) {
-      return Array.from({ length: total }, (_, i) => ({
-        piglet_id: `Piglet ${i + 1}`,
-        status: "Unrecorded",
-      }));
+      const linkedPiglets = getPigletsFromLoadedSwine(motherPig, cycle);
+      if (linkedPiglets && linkedPiglets.length) return linkedPiglets;
+
+      const total = toNum(cycle?.total);
+      if (total > 0) {
+        return Array.from({ length: total }, (_, i) => ({
+          piglet_id: `Piglet ${i + 1}`,
+          status: "Unrecorded",
+        }));
+      }
+
+      return [];
     }
 
-    return list || [];
+  /* =========================================================
+     OFFSPRING: NORMALIZE PIGLET SEX LABEL
+     PURPOSE:
+       Standardize piglet sex values for filter tabs.
+  ========================================================= */
+  function normalizePigletSex(value) {
+    const v = String(value || "").trim().toLowerCase();
+    if (v === "male") return "male";
+    if (v === "female") return "female";
+    return "unknown";
   }
 
+  /* =========================================================
+     OFFSPRING: PAGINATE ARRAY
+     PURPOSE:
+       Reusable client-side pagination helper.
+  ========================================================= */
+  function paginateItems(items = [], page = 1, perPage = 5) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safePerPage = Math.max(1, Number(perPage) || 5);
+    const total = items.length;
+    const totalPages = Math.max(1, Math.ceil(total / safePerPage));
+    const currentPage = Math.min(safePage, totalPages);
+    const start = (currentPage - 1) * safePerPage;
+    const paginated = items.slice(start, start + safePerPage);
+
+    return {
+      items: paginated,
+      currentPage,
+      totalPages,
+      total,
+      perPage: safePerPage,
+    };
+  }
+
+  /* =========================================================
+     OFFSPRING: RENDER PIGLET FILTER TABS
+     PURPOSE:
+       Render All / Male / Female tabs with counts.
+  ========================================================= */
+  function renderPigletFilterTabs(piglets = [], activeFilter = "all") {
+    const maleCount = piglets.filter((p) => normalizePigletSex(p.sex) === "male").length;
+    const femaleCount = piglets.filter((p) => normalizePigletSex(p.sex) === "female").length;
+
+    const tabs = [
+      { key: "all", label: "All", count: piglets.length, icon: "bi-grid-1x2" },
+      { key: "male", label: "Male", count: maleCount, icon: "bi-gender-male" },
+      { key: "female", label: "Female", count: femaleCount, icon: "bi-gender-female" },
+    ];
+
+    return `
+      <div class="piglet-filter-tabs" role="tablist" aria-label="Piglet sex filter">
+        ${tabs
+          .map(
+            (tab) => `
+              <button
+                type="button"
+                class="piglet-filter-tab ${activeFilter === tab.key ? "active" : ""}"
+                data-piglet-filter="${tab.key}"
+                role="tab"
+                aria-selected="${activeFilter === tab.key ? "true" : "false"}"
+              >
+                <i class="bi ${tab.icon}"></i>
+                <span>${tab.label}</span>
+                <strong>${tab.count}</strong>
+              </button>
+            `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  /* =========================================================
+     OFFSPRING: RENDER PIGLET CARD
+     PURPOSE:
+       Display one piglet card with compact details and view action.
+  ========================================================= */
+  function renderPigletCard(piglet, index = 0) {
+    const badge = badgeForPigletStatus(piglet);
+    const pigletId = piglet.swine_id || piglet.piglet_id || piglet.tag_id || `Piglet ${index + 1}`;
+    const sex = piglet.sex || "Unknown";
+    const stage = formatStageDisplay(piglet.age_stage || piglet.current_status || "-");
+    const birthDate = piglet.birth_date
+      ? new Date(piglet.birth_date).toLocaleDateString()
+      : "Not recorded";
+
+    const latest = getLatestPerformance(piglet.performance_records || []);
+    const weightLabel =
+      latest && latest.weight != null && latest.weight !== ""
+        ? `${latest.weight} kg`
+        : "-";
+
+    return `
+      <article class="piglet-mini-card" data-piglet-card-id="${pigletId}">
+        <div class="piglet-mini-card-top">
+          <div class="piglet-mini-identity">
+            <div class="piglet-mini-icon">
+              <i class="bi bi-piggy-bank"></i>
+            </div>
+
+            <div class="piglet-mini-main">
+              <h5 class="piglet-mini-id mb-0">${pigletId}</h5>
+              <div class="piglet-mini-sub">
+                <span><i class="bi bi-gender-ambiguous"></i> ${sex}</span>
+                <span><i class="bi bi-calendar3"></i> ${birthDate}</span>
+              </div>
+            </div>
+          </div>
+
+          <span class="piglet-badge ${badge.cls}">${badge.text}</span>
+        </div>
+
+        <div class="piglet-mini-grid">
+          <div class="piglet-mini-stat">
+            <small>Stage</small>
+            <strong>${stage}</strong>
+          </div>
+
+          <div class="piglet-mini-stat">
+            <small>Weight</small>
+            <strong>${weightLabel}</strong>
+          </div>
+
+          <div class="piglet-mini-stat">
+            <small>Health</small>
+            <strong>${piglet.health_status || "-"}</strong>
+          </div>
+
+          <div class="piglet-mini-stat">
+            <small>Status</small>
+            <strong>${piglet.current_status || "-"}</strong>
+          </div>
+        </div>
+
+        <div class="piglet-mini-actions">
+          <button
+            type="button"
+            class="piglet-view-btn"
+            data-view-piglet-id="${piglet.swine_id || piglet.piglet_id || ""}"
+          >
+            <i class="bi bi-eye"></i>
+            <span>View</span>
+          </button>
+        </div>
+      </article>
+    `;
+  }
+
+  /* =========================================================
+     OFFSPRING: BIND PIGLET CARD ACTIONS
+     PURPOSE:
+       Open the selected piglet in the main pig detail modal.
+  ========================================================= */
+  function bindPigletCardActions() {
+    document.querySelectorAll("[data-view-piglet-id]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetId = btn.getAttribute("data-view-piglet-id");
+        if (!targetId) return;
+
+        const targetPig = (currentSwineData || []).find((p) => String(p.swine_id || "") === String(targetId));
+        if (!targetPig) {
+          alert("Piglet details could not be found.");
+          return;
+        }
+
+        const latest = getLatestPerformance(targetPig.performance_records || []);
+        const adg = calculateADG(targetPig.performance_records || []);
+        openPigDetails(targetPig, latest, adg);
+      });
+    });
+  }
+
+  /* =========================================================
+     OFFSPRING: BIND PIGLET FILTER TABS
+     PURPOSE:
+       Switch between All / Male / Female piglet views.
+  ========================================================= */
+  function bindPigletFilterTabs(onChange) {
+    document.querySelectorAll("[data-piglet-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.getAttribute("data-piglet-filter") || "all";
+        onChange(filter);
+      });
+    });
+  }
+
+  /* =========================================================
+     OFFSPRING: BIND PIGLET PAGINATION
+     PURPOSE:
+       Handle previous and next controls for the piglet card list.
+  ========================================================= */
+  function bindPigletPagination(onChange) {
+    const prevBtn = document.getElementById("pigletPrevPageBtn");
+    const nextBtn = document.getElementById("pigletNextPageBtn");
+
+    prevBtn?.addEventListener("click", () => onChange("prev"));
+    nextBtn?.addEventListener("click", () => onChange("next"));
+  }
+    
   /* =========================================================
      OFFSPRING: CYCLE DETAILS (FULL MODAL VIEW)
      Note: Kept for compatibility even if you primarily use inline details view.
@@ -480,6 +738,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           fatherEl2.textContent = v || "—";
         });
       }
+
+      renderPigletCardSection(pig, cycle, {
+        filter: "all",
+        page: 1,
+      });
 
       const backBtn = document.getElementById("backToOffspringBtn");
       backBtn?.addEventListener("click", () => {
@@ -1175,7 +1438,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================================================= */
   function renderCycleDetailsView(pig, cycle) {
     const mother = cycle.mother_id || pig?.swine_id || "—";
-    const piglets = getDisplayPiglets(cycle);
+    const allPiglets = getDisplayPiglets(pig, cycle);
 
     const dateLabel = cycle.actual_farrowing_date
       ? new Date(cycle.actual_farrowing_date).toLocaleDateString()
@@ -1183,35 +1446,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const liveRate = cycle.total ? Math.round((cycle.live / cycle.total) * 100) : 0;
 
-    const pigletListHtml = piglets.length
-      ? piglets
-          .map((p, idx) => {
-            const pid = p.swine_id || p.piglet_id || p.tag_id || `Piglet ${idx + 1}`;
-            const b = badgeForPigletStatus(p);
-            return `
-              <div class="piglet-row">
-                <div class="piglet-left">
-                  <i class="bi bi-dot"></i>
-                  <div class="piglet-id">${pid}</div>
-                </div>
-                <span class="piglet-badge ${b.cls}">${b.text}</span>
-              </div>
-            `;
-          })
-          .join("")
-      : `
-        <div class="empty-state">
-          <i class="bi bi-list-check"></i>
-          <p>No piglet list recorded for this cycle yet.</p>
-        </div>
-      `;
-
     return `
-      <div class="cycle-details-view">
-
-        <button class="back-btn" id="backToOffspringBtn" type="button">
-          <i class="bi bi-arrow-left"></i> Back to Offspring
-        </button>
+      <div class="cycle-details-view" id="cycleDetailsViewRoot">
+        <div class="cycle-back-wrap">
+          <button class="back-btn cycle-back-btn" id="backToOffspringBtn" type="button">
+            <span class="back-btn-icon">
+              <i class="bi bi-arrow-left"></i>
+            </span>
+            <span class="back-btn-text">
+              <small>Back to</small>
+              <strong>Offspring</strong>
+            </span>
+          </button>
+        </div>
 
         <div class="cycle-details-head">
           <div class="min-w-0">
@@ -1251,19 +1498,125 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </div>
 
-        <div class="piglets-card">
-          <div class="piglets-title">
-            <h4 class="mb-0">Piglets</h4>
-            <small>${piglets.length ? `${piglets.length} record(s)` : "No list recorded"}</small>
+        <div
+          class="piglets-card"
+          id="pigletsCardRoot"
+          data-cycle-number="${cycle.cycle_number}"
+          data-mother-id="${pig.swine_id || ""}"
+        >
+          <div class="piglets-title piglets-title-modern">
+            <div>
+              <h4 class="mb-0">Piglets</h4>
+              <small>${allPiglets.length ? `${allPiglets.length} record(s)` : "No list recorded"}</small>
+            </div>
+
+            <div class="piglets-title-chip">
+              <i class="bi bi-grid"></i>
+              <span>Card View</span>
+            </div>
           </div>
 
-          <div class="piglets-list">
-            ${pigletListHtml}
-          </div>
+          <div id="pigletCardsMount"></div>
         </div>
 
+        <div class="offspring-hint">
+          <i class="bi bi-info-circle"></i>
+          <span>Use the tabs to filter piglets, then click View to open a piglet record.</span>
+        </div>
       </div>
     `;
+  }
+
+  /* =========================================================
+     UI: RENDER PIGLET CARD SECTION
+     PURPOSE:
+       Render tabs, card list, and pagination for the selected cycle.
+  ========================================================= */
+  function renderPigletCardSection(motherPig, cycle, options = {}) {
+    const mount = document.getElementById("pigletCardsMount");
+    if (!mount) return;
+
+    const activeFilter = options.filter || "all";
+    const page = Number(options.page) || 1;
+
+    const allPiglets = getDisplayPiglets(motherPig, cycle);
+
+    let filteredPiglets = [...allPiglets];
+    if (activeFilter === "male") {
+      filteredPiglets = filteredPiglets.filter((p) => normalizePigletSex(p.sex) === "male");
+    } else if (activeFilter === "female") {
+      filteredPiglets = filteredPiglets.filter((p) => normalizePigletSex(p.sex) === "female");
+    }
+
+    const pager = paginateItems(filteredPiglets, page, 5);
+
+    const cardsHtml = pager.items.length
+      ? pager.items.map((piglet, idx) => renderPigletCard(piglet, idx)).join("")
+      : `
+        <div class="empty-state">
+          <i class="bi bi-grid"></i>
+          <p>No piglets found for this filter.</p>
+        </div>
+      `;
+
+    mount.innerHTML = `
+      <div class="piglet-section-shell">
+        ${renderPigletFilterTabs(allPiglets, activeFilter)}
+
+        <div class="piglet-cards-grid">
+          ${cardsHtml}
+        </div>
+
+        ${
+          filteredPiglets.length
+            ? `
+              <div class="piglet-pagination">
+                <button
+                  type="button"
+                  class="piglet-page-btn"
+                  id="pigletPrevPageBtn"
+                  ${pager.currentPage <= 1 ? "disabled" : ""}
+                >
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <div class="piglet-page-info">
+                  Page ${pager.currentPage} of ${pager.totalPages}
+                </div>
+
+                <button
+                  type="button"
+                  class="piglet-page-btn"
+                  id="pigletNextPageBtn"
+                  ${pager.currentPage >= pager.totalPages ? "disabled" : ""}
+                >
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            `
+            : ""
+        }
+      </div>
+    `;
+
+    bindPigletFilterTabs((nextFilter) => {
+      renderPigletCardSection(motherPig, cycle, {
+        filter: nextFilter,
+        page: 1,
+      });
+    });
+
+    bindPigletPagination((direction) => {
+      const nextPage =
+        direction === "prev" ? pager.currentPage - 1 : pager.currentPage + 1;
+
+      renderPigletCardSection(motherPig, cycle, {
+        filter: activeFilter,
+        page: nextPage,
+      });
+    });
+
+    bindPigletCardActions();
   }
 
   /* =========================================================
