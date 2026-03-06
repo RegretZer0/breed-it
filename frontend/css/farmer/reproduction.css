@@ -866,3 +866,204 @@ button:focus,
     gap: 6px;
   }
 }
+
+/* =========================================================
+   MODULE: Growth Monitoring Summary Card
+   PURPOSE: Dashboard-style summary card for monitoring phase,
+            age, remaining days, and selection readiness.
+========================================================= */
+.repro-monitor-shell {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 24px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  padding: 1rem;
+}
+
+.repro-monitor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.repro-monitor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.repro-monitor-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(31, 167, 116, 0.12), rgba(31, 167, 116, 0.2));
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+}
+
+.repro-monitor-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.repro-monitor-subtitle {
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.35;
+  margin-top: 0.15rem;
+}
+
+.repro-monitor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.repro-monitor-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 20px;
+  padding: 1rem;
+  min-width: 0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.repro-monitor-card-phase {
+  background: linear-gradient(180deg, #ffffff 0%, #f6fbf8 100%);
+}
+
+.repro-monitor-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.7rem;
+  min-width: 0;
+}
+
+.repro-monitor-card-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(31, 167, 116, 0.12);
+  color: #15803d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+}
+
+.repro-monitor-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #6b7280;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.repro-monitor-value {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #1f2937;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.repro-monitor-phase-wrap .badge,
+.repro-monitor-phase-wrap .repro-chip {
+  font-size: 0.92rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+}
+
+.repro-monitor-eligibility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 40px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+
+.repro-monitor-eligibility.is-yes {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.repro-monitor-eligibility.is-no {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+/* =========================================================
+   Responsive
+========================================================= */
+@media (max-width: 1199.98px) {
+  .repro-monitor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .repro-monitor-shell {
+    padding: 0.9rem;
+    border-radius: 20px;
+  }
+
+  .repro-monitor-header {
+    margin-bottom: 0.85rem;
+  }
+
+  .repro-monitor-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    font-size: 1rem;
+  }
+
+  .repro-monitor-title {
+    font-size: 0.96rem;
+  }
+
+  .repro-monitor-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .repro-monitor-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .repro-monitor-card {
+    border-radius: 18px;
+    padding: 0.9rem;
+  }
+
+  .repro-monitor-value {
+    font-size: 1.25rem;
+  }
+
+  .repro-monitor-phase-wrap .badge,
+  .repro-monitor-phase-wrap .repro-chip,
+  .repro-monitor-eligibility {
+    width: 100%;
+    justify-content: center;
+  }
+}

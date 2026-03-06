@@ -271,6 +271,169 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   /* =========================================================
+     MODULE: Piglet Monitoring Status Helpers
+  ========================================================= */
+  function getMonitoringMeta(tagOrPiglet) {
+    const tag =
+      typeof tagOrPiglet === "string"
+        ? toKey(tagOrPiglet)
+        : toKey(tagOrPiglet?.swine_tag || tagOrPiglet?.swine_id || tagOrPiglet?.tag || "");
+
+    const sw = typeof tagOrPiglet === "object" && tagOrPiglet ? tagOrPiglet : findSwineByTag(tag);
+    const mon = findMonitoringRow(tag);
+
+    const rawPhase =
+      mon?.current_status ||
+      sw?.current_status ||
+      sw?.current_stage ||
+      sw?.age_stage ||
+      "Monitoring (Day 1-30)";
+
+    const phase = String(rawPhase || "Monitoring (Day 1-30)").trim();
+    const phaseLower = phase.toLowerCase();
+
+    const ageDaysRaw = mon?.age_days;
+    const ageDays =
+      Number.isFinite(Number(ageDaysRaw)) && ageDaysRaw !== null && ageDaysRaw !== ""
+        ? Number(ageDaysRaw)
+        : null;
+
+    const daysRemainingRaw = mon?.days_remaining;
+    const daysRemaining =
+      Number.isFinite(Number(daysRemainingRaw)) && daysRemainingRaw !== null && daysRemainingRaw !== ""
+        ? Number(daysRemainingRaw)
+        : null;
+
+    const isDeceased = String(sw?.health_status || "").toLowerCase().includes("deceased") ||
+      String(sw?.health_status || "").toLowerCase().includes("dead");
+
+    const isEligible =
+      phaseLower.includes("final selection") ||
+      phaseLower.includes("selection overdue") ||
+      phaseLower.includes("3-month") ||
+      phaseLower.includes("3 month") ||
+      phaseLower.includes("day 61-90") ||
+      phaseLower.includes("day 91") ||
+      phaseLower.includes("overdue");
+
+    return {
+      tag,
+      phase,
+      ageDays,
+      daysRemaining,
+      isEligible,
+      isDeceased,
+    };
+  }
+
+  function monitoringPhaseVariant(phaseText) {
+    const s = String(phaseText || "").toLowerCase().trim();
+
+    if (s.includes("final selection") || s.includes("selection overdue")) return "success";
+    if (s.includes("3-month") || s.includes("3 month") || s.includes("day 61-90")) return "info";
+    if (s.includes("wean")) return "warning";
+    if (s.includes("monitor") || s.includes("day 1-30") || s.includes("suckling") || s.includes("nursery"))
+      return "warning";
+
+    return "light";
+  }
+
+  function monitoringPhaseChipHtml(phaseText) {
+    const label = norm(phaseText) || "Monitoring (Day 1-30)";
+    const variant = monitoringPhaseVariant(label);
+
+    if (variant === "success") {
+      return `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check2-circle me-1"></i>${esc(label)}</span>`;
+    }
+    if (variant === "info") {
+      return `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-hourglass-split me-1"></i>${esc(label)}</span>`;
+    }
+    if (variant === "warning") {
+      return `<span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock-history me-1"></i>${esc(label)}</span>`;
+    }
+    return `<span class="badge bg-light text-dark border"><i class="bi bi-info-circle me-1"></i>${esc(label)}</span>`;
+  }
+
+  /* =========================================================
+    MODULE: Monitoring Summary Card Renderer
+   PURPOSE: Render the growth monitoring summary card using
+            a clean dashboard-style layout that works on both
+            large and small screens.
+  ========================================================= */
+  function monitoringSummaryCardHtml(meta) {
+    const phaseChip = monitoringPhaseChipHtml(meta.phase);
+
+    const ageText = meta.ageDays != null ? esc(meta.ageDays) : "N/A";
+    const daysRemainingText = meta.daysRemaining != null ? esc(meta.daysRemaining) : "N/A";
+
+    const eligibilityBadge = meta.isEligible
+      ? `<span class="repro-monitor-eligibility is-yes"><i class="bi bi-check2-circle me-1"></i>Eligible</span>`
+      : `<span class="repro-monitor-eligibility is-no"><i class="bi bi-hourglass-split me-1"></i>Not Yet</span>`;
+
+    return `
+      <div class="repro-monitor-shell">
+        <div class="repro-monitor-header">
+          <div class="repro-monitor-header-left">
+            <span class="repro-monitor-icon">
+              <i class="bi bi-clipboard2-pulse"></i>
+            </span>
+            <div class="min-w-0">
+              <div class="repro-monitor-title">Monitoring Summary</div>
+              <div class="repro-monitor-subtitle">Current piglet growth phase and readiness details</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="repro-monitor-grid">
+          <div class="repro-monitor-card repro-monitor-card-phase">
+            <div class="repro-monitor-card-top">
+              <span class="repro-monitor-card-ic">
+                <i class="bi bi-tag"></i>
+              </span>
+              <span class="repro-monitor-label">Monitoring Phase</span>
+            </div>
+            <div class="repro-monitor-value repro-monitor-phase-wrap">
+              ${phaseChip}
+            </div>
+          </div>
+
+          <div class="repro-monitor-card">
+            <div class="repro-monitor-card-top">
+              <span class="repro-monitor-card-ic">
+                <i class="bi bi-calendar3"></i>
+              </span>
+              <span class="repro-monitor-label">Age in Days</span>
+            </div>
+            <div class="repro-monitor-value">${ageText}</div>
+          </div>
+
+          <div class="repro-monitor-card">
+            <div class="repro-monitor-card-top">
+              <span class="repro-monitor-card-ic">
+                <i class="bi bi-clock-history"></i>
+              </span>
+              <span class="repro-monitor-label">Days Remaining</span>
+            </div>
+            <div class="repro-monitor-value">${daysRemainingText}</div>
+          </div>
+
+          <div class="repro-monitor-card">
+            <div class="repro-monitor-card-top">
+              <span class="repro-monitor-card-ic">
+                <i class="bi bi-flag"></i>
+              </span>
+              <span class="repro-monitor-label">Selection Eligibility</span>
+            </div>
+            <div class="repro-monitor-value">
+              ${eligibilityBadge}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* =========================================================
      MODULE: Shared Small Helpers
      PURPOSE: Common utilities used across render functions.
   ========================================================= */
@@ -1289,8 +1452,9 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   /* =========================================================
-     MODULE: Piglet Cards / Pagers / Filters (Growth & Selection)
-     PURPOSE: Shared rendering utilities for piglet lists.
+    MODULE: Piglet Card Renderer
+    PURPOSE: Render growth and selection piglet cards with
+            monitoring phase, life status, and action entry.
   ========================================================= */
   function pigletCardHtml(p, ctx, maps) {
     const tag = p?.swine_id || p?.swine_tag || p?.tag || "N/A";
@@ -1300,12 +1464,16 @@ export function createReproViews({ repo, state, ui }) {
     const isDead = String(hs).toLowerCase().includes("deceased") || String(hs).toLowerCase().includes("dead");
     const btnAct = ctx === "growth" ? "openPigletGrowth" : "openPigletSelection";
 
+    const monitoringMeta = getMonitoringMeta(p);
+
     let statusChip = "";
     if (ctx === "selection") {
       const decisionKey = resolvePigletDecisionKeyFromTag(tag);
       const dec = getPigletDecision(decisionKey);
       statusChip = selectionStatusChipHtml(dec.decision);
     }
+
+    const phaseChip = ctx === "growth" ? monitoringPhaseChipHtml(monitoringMeta.phase) : "";
 
     const lifeBadge = isDead
       ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle me-1"></i>Deceased</span>`
@@ -1347,6 +1515,7 @@ export function createReproViews({ repo, state, ui }) {
 
             <div class="text-end d-flex flex-column align-items-end gap-2">
               ${statusChip}
+              ${phaseChip}
               ${lifeBadge}
             </div>
           </div>
@@ -1817,12 +1986,18 @@ export function createReproViews({ repo, state, ui }) {
     `;
   }
 
+  /* =========================================================
+     MODULE: Piglet Growth Detail Renderer
+     PURPOSE: Render growth detail view with monitoring summary,
+              trend chart, and deformity information.
+  ========================================================= */
   function renderPigletGrowthDetail(pigletTag) {
     const mount = document.getElementById("growthDetailMount");
     if (!mount) return;
 
     const history = repo.getMorphHistoryForPiglet(pigletTag);
     const deformities = repo.getDeformitiesForPiglet(pigletTag);
+    const monitoringMeta = getMonitoringMeta(pigletTag);
 
     const points = history
       .map((h) => ({ x: h.date, y: Number(h.weight || 0) }))
@@ -1852,6 +2027,10 @@ export function createReproViews({ repo, state, ui }) {
                </div>`
             : `<div class="small text-muted">No weight summary.</div>`
         }
+      </div>
+
+      <div class="mt-3">
+        ${monitoringSummaryCardHtml(monitoringMeta)}
       </div>
 
       <div class="mt-3">
