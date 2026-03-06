@@ -259,16 +259,20 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
       let color = "blue";
       let canAction = false;
 
-      if (ageInDays > 60 && ageInDays <= 90) {
-        phase = "Nursery (Day 31-60)";
+      // 1. Check age milestones
+      if (ageInDays <= 30) {
+        phase = "Suckling";
+        color = "blue";
+      } else if (ageInDays > 30 && ageInDays <= 90) {
+        phase = "Nursery";
         color = "orange";
-      } else if (ageInDays > 90 && ageInDays <= 120) {
-        phase = "Final Selection (Day 61-90)";
+      } else if (ageInDays > 90 && ageInDays < 121) {
+        phase = "3-Month Monitoring";
+        color = "orange";
+      } else if (ageInDays >= 121) {
+        // ✅ This forces the status change for 121+ days
+        phase = "Final Selection";
         color = "green";
-        canAction = true; // Selection opens in the 3rd month
-      } else if (ageInDays > 120) {
-        phase = "Selection Overdue";
-        color = "red";
         canAction = true;
       }
 
