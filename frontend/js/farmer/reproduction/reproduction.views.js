@@ -195,38 +195,30 @@ export function createReproViews({ repo, state, ui }) {
     const rawKey = toKey(pigletTagOrId);
     if (!rawKey) return { key: "", decision: "pending", locked: false, source: "default" };
 
-    const isId = isObjectId(rawKey);
+    const mongoId = isObjectId(rawKey)
+      ? rawKey
+      : toKey(repo.getMongoIdForSwineTag?.(rawKey) || "");
 
-    if (isId) {
-      const local = state.localSelectionLock?.get(rawKey) || null;
-      if (local === "breeding") return { key: rawKey, decision: "retain", locked: true, source: "local" };
-      if (local === "sell") return { key: rawKey, decision: "sell", locked: true, source: "local" };
-
-      const sw = findSwineByMongoId(rawKey);
-      const ds = sw ? decisionFromSwineStatus(sw) : "";
-      if (ds) return { key: rawKey, decision: ds, locked: true, source: "swine" };
-    }
-
-    const tag = isId ? "" : rawKey;
-    if (tag) {
-      const sel = repo.getSelectionForPiglet?.(tag) || null;
-      const d1 = sel ? decisionFromSelectionRow(sel) : "";
-      if (d1) return { key: tag, decision: d1, locked: d1 !== "pending", source: "db" };
-
-      const sw = findSwineByTag(tag);
-      const ds = sw ? decisionFromSwineStatus(sw) : "";
-      if (ds) return { key: tag, decision: ds, locked: true, source: "swine" };
-    }
-
-    const mongoId = isId ? rawKey : toKey(repo.getMongoIdForSwineTag?.(rawKey) || "");
+    // 1. Frontend lock wins first
     if (mongoId) {
       const local = state.localSelectionLock?.get(mongoId) || null;
       if (local === "breeding") return { key: mongoId, decision: "retain", locked: true, source: "local" };
       if (local === "sell") return { key: mongoId, decision: "sell", locked: true, source: "local" };
+    }
 
-      const sw = findSwineByMongoId(mongoId);
-      const ds = sw ? decisionFromSwineStatus(sw) : "";
-      if (ds) return { key: mongoId, decision: ds, locked: true, source: "swine" };
+    // 2. Swine status from backend
+    const sw =
+      (mongoId && findSwineByMongoId(mongoId)) ||
+      (!isObjectId(rawKey) ? findSwineByTag(rawKey) : null);
+
+    const ds = sw ? decisionFromSwineStatus(sw) : "";
+    if (ds) return { key: mongoId || rawKey, decision: ds, locked: true, source: "swine" };
+
+    // 3. Legacy selection row fallback only
+    if (!isObjectId(rawKey)) {
+      const sel = repo.getSelectionForPiglet?.(rawKey) || null;
+      const d1 = sel ? decisionFromSelectionRow(sel) : "";
+      if (d1) return { key: mongoId || rawKey, decision: d1, locked: d1 !== "pending", source: "db" };
     }
 
     return { key: mongoId || rawKey, decision: "pending", locked: false, source: "default" };
@@ -310,10 +302,7 @@ export function createReproViews({ repo, state, ui }) {
     const isEligible =
       phaseLower.includes("final selection") ||
       phaseLower.includes("selection overdue") ||
-      phaseLower.includes("3-month") ||
-      phaseLower.includes("3 month") ||
       phaseLower.includes("day 61-90") ||
-      phaseLower.includes("day 91") ||
       phaseLower.includes("overdue");
 
     return {
@@ -1817,7 +1806,10 @@ export function createReproViews({ repo, state, ui }) {
     const fallbackLatestPerf =
       Array.isArray(fallbackPerf) && fallbackPerf.length ? fallbackPerf[fallbackPerf.length - 1] : null;
 
+    const monitoringMeta = getMonitoringMeta(pigletTag);
+
     const stage =
+      monitoringMeta?.phase ||
       sel?.current_stage ||
       sel?.stage ||
       fallbackObj?.current_status ||
@@ -1849,14 +1841,7 @@ export function createReproViews({ repo, state, ui }) {
     const hsLower = String(fallbackObj?.health_status || "").toLowerCase();
     const isDeceased = hsLower.includes("deceased") || hsLower.includes("dead");
 
-    const stageLower = String(stage || "").toLowerCase();
-    const isEligible =
-      stageLower.includes("weaned") ||
-      stageLower.includes("weaner") ||
-      stageLower.includes("3 months") ||
-      stageLower.includes("final selection") ||
-      stageLower.includes("final");
-
+    const isEligible = Boolean(monitoringMeta?.isEligible);
     const canActBase = isObjectId(actionSwineId);
     const canAct = canActBase && isEligible && !isDeceased;
 
