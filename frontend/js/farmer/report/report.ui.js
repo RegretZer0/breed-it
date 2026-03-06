@@ -181,6 +181,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   /* =========================================================
      Module: Themed Alerts and Confirms
+     Purpose: Render responsive themed feedback modal/panel
+              for success, warning, info, and danger states.
   ========================================================= */
   function ensureFeedbackModal() {
     let modal = document.getElementById("feedbackModal");
@@ -188,26 +190,47 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     const wrap = document.createElement("div");
     wrap.id = "feedbackModal";
-    wrap.className = "modal-shell hidden";
+    wrap.className = "feedback-shell hidden";
     wrap.setAttribute("aria-hidden", "true");
 
     wrap.innerHTML = `
-      <div class="fb-backdrop" data-close="1"></div>
-      <div class="modal-card fb-card" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
-        <div class="modal-head">
-          <div class="modal-title" id="fbTitle">
-            <i class="bi bi-info-circle"></i>
-            <span id="fbTitleText">Message</span>
+      <div class="feedback-backdrop" data-close="1"></div>
+
+      <div
+        class="feedback-card feedback-info"
+        id="feedbackCard"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="fbTitleText"
+        aria-describedby="fbBody"
+      >
+        <button
+          type="button"
+          class="feedback-close"
+          data-close="1"
+          aria-label="Close feedback"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+
+        <div class="feedback-topbar"></div>
+
+        <div class="feedback-hero">
+          <div class="feedback-icon-wrap">
+            <div class="feedback-icon" id="fbIconWrap">
+              <i class="bi bi-info-circle" id="fbIcon"></i>
+            </div>
           </div>
-          <button type="button" class="btn-icon close-modal" data-close="1" aria-label="Close">
-            <i class="bi bi-x-lg"></i>
-          </button>
+
+          <div class="feedback-copy">
+            <div class="feedback-eyebrow" id="fbEyebrow">System message</div>
+            <h3 class="feedback-title" id="fbTitleText">Message</h3>
+            <div class="feedback-body" id="fbBody"></div>
+          </div>
         </div>
 
-        <div class="modal-body" id="fbBody"></div>
-
-        <div class="modal-foot" id="fbActions">
-          <button type="button" class="btn-soft" data-close="1">
+        <div class="feedback-actions" id="fbActions">
+          <button type="button" class="feedback-btn feedback-btn-soft" data-close="1">
             <i class="bi bi-x-circle"></i>
             Close
           </button>
@@ -217,83 +240,105 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     document.body.appendChild(wrap);
 
-    wrap.style.position = "fixed";
-    wrap.style.inset = "0";
-    wrap.style.zIndex = "3000";
-
-    wrap.style.display = "flex";
-    wrap.style.alignItems = "center";
-    wrap.style.justifyContent = "center";
-    wrap.style.padding = "18px";
-    wrap.style.overflow = "auto";
-
-    const backdrop = wrap.querySelector(".fb-backdrop");
-    const card = wrap.querySelector(".fb-card");
-
-    if (backdrop) {
-      backdrop.style.position = "absolute";
-      backdrop.style.inset = "0";
-      backdrop.style.zIndex = "0";
-      backdrop.style.background = "rgba(0,0,0,0.45)";
-      backdrop.style.backdropFilter = "blur(1px)";
-    }
-
-    if (card) {
-      card.style.position = "relative";
-      card.style.zIndex = "1";
-      card.style.marginTop = "0";
-      card.style.maxWidth = "560px";
-      card.style.width = "100%";
-    }
-
-    const close = () => closeFeedbackModal();
     wrap.addEventListener("click", (e) => {
-      const t = e.target;
-      if (t?.dataset?.close === "1" || t?.closest?.("[data-close='1']")) close();
+      const target = e.target;
+      if (target?.dataset?.close === "1" || target?.closest?.("[data-close='1']")) {
+        closeFeedbackModal();
+      }
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !wrap.classList.contains("hidden")) close();
+      const isOpen = !wrap.classList.contains("hidden");
+      if (isOpen && e.key === "Escape") closeFeedbackModal();
     });
 
     return wrap;
   }
 
-  function openFeedbackModal({ title = "Message", html = "", variant = "info", actions = [] } = {}) {
+  function openFeedbackModal({
+    title = "Message",
+    html = "",
+    variant = "info",
+    actions = [],
+    eyebrow = ""
+  } = {}) {
     const modal = ensureFeedbackModal();
+    const card = modal.querySelector("#feedbackCard");
     const titleEl = modal.querySelector("#fbTitleText");
     const bodyEl = modal.querySelector("#fbBody");
     const actionsEl = modal.querySelector("#fbActions");
-    const iconEl = modal.querySelector(".modal-title i");
+    const iconEl = modal.querySelector("#fbIcon");
+    const eyebrowEl = modal.querySelector("#fbEyebrow");
 
-    if (titleEl) titleEl.textContent = title;
-
-    const iconMap = {
-      info: "bi-info-circle",
-      success: "bi-check-circle",
-      warning: "bi-exclamation-triangle",
-      danger: "bi-x-circle"
+    const variantMap = {
+      info: {
+        cardClass: "feedback-info",
+        icon: "bi-info-circle",
+        eyebrow: "System message"
+      },
+      success: {
+        cardClass: "feedback-success",
+        icon: "bi-check2-circle",
+        eyebrow: "Submission successful"
+      },
+      warning: {
+        cardClass: "feedback-warning",
+        icon: "bi-exclamation-triangle",
+        eyebrow: "Please confirm"
+      },
+      danger: {
+        cardClass: "feedback-danger",
+        icon: "bi-x-octagon",
+        eyebrow: "Something went wrong"
+      }
     };
-    const iconClass = iconMap[variant] || iconMap.info;
-    if (iconEl) iconEl.className = `bi ${iconClass}`;
 
+    const activeVariant = variantMap[variant] || variantMap.info;
+
+    if (card) {
+      card.classList.remove(
+        "feedback-info",
+        "feedback-success",
+        "feedback-warning",
+        "feedback-danger"
+      );
+      card.classList.add(activeVariant.cardClass);
+    }
+
+    if (iconEl) iconEl.className = `bi ${activeVariant.icon}`;
+    if (titleEl) titleEl.textContent = title;
+    if (eyebrowEl) eyebrowEl.textContent = eyebrow || activeVariant.eyebrow;
     if (bodyEl) bodyEl.innerHTML = html;
 
     const safeActions = Array.isArray(actions) ? actions : [];
+
     if (actionsEl) {
       if (safeActions.length) {
         actionsEl.innerHTML = safeActions
           .map((a, idx) => {
-            const btnClass = a.primary ? "btn-primary" : "btn-soft";
+            const btnClass = a.primary
+              ? "feedback-btn feedback-btn-primary"
+              : "feedback-btn feedback-btn-soft";
+
             const icon = a.icon ? `<i class="bi ${a.icon}"></i>` : "";
-            return `<button type="button" class="${btnClass}" data-action-idx="${idx}">${icon}${a.label || "OK"}</button>`;
+
+            return `
+              <button
+                type="button"
+                class="${btnClass}"
+                data-action-idx="${idx}"
+              >
+                ${icon}
+                <span>${a.label || "OK"}</span>
+              </button>
+            `;
           })
           .join("");
       } else {
         actionsEl.innerHTML = `
-          <button type="button" class="btn-soft" data-close="1">
+          <button type="button" class="feedback-btn feedback-btn-soft" data-close="1">
             <i class="bi bi-x-circle"></i>
-            Close
+            <span>Close</span>
           </button>
         `;
       }
@@ -302,20 +347,22 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         btn.addEventListener("click", async () => {
           const idx = Number(btn.dataset.actionIdx);
           const act = safeActions[idx];
-          if (act?.onClick) {
-            try {
-              const ret = act.onClick();
-              if (ret && typeof ret.then === "function") await ret;
-            } catch (err) {
-              console.error(err);
+
+          try {
+            if (act?.onClick) {
+              const out = act.onClick();
+              if (out && typeof out.then === "function") await out;
             }
+          } catch (err) {
+            console.error("Feedback action failed:", err);
           }
+
           if (act?.closeOnClick !== false) closeFeedbackModal();
         });
       });
 
       actionsEl.querySelectorAll("[data-close='1']").forEach((btn) => {
-        btn.addEventListener("click", () => closeFeedbackModal());
+        btn.addEventListener("click", closeFeedbackModal);
       });
     }
 
@@ -327,6 +374,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   function closeFeedbackModal() {
     const modal = document.getElementById("feedbackModal");
     if (!modal) return;
+
     modal.classList.add("hidden");
     modal.setAttribute("aria-hidden", "true");
     ensureBodyModalState();
@@ -336,17 +384,33 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     openFeedbackModal({
       title: opts.title || "Notice",
       variant: opts.variant || "info",
-      html: `<div class="fb-text">${String(message || "")}</div>`,
-      actions: [{ label: "Close", icon: "bi-x-circle", primary: false }]
+      eyebrow: opts.eyebrow || "",
+      html: `
+        <div class="feedback-message">
+          ${String(message || "")}
+        </div>
+      `,
+      actions: opts.actions || [
+        {
+          label: "Close",
+          icon: "bi-x-circle",
+          primary: false
+        }
+      ]
     });
   }
 
   function uiConfirm(message, opts = {}) {
     return new Promise((resolve) => {
       openFeedbackModal({
-        title: opts.title || "Confirm",
+        title: opts.title || "Confirm action",
         variant: opts.variant || "warning",
-        html: `<div class="fb-text">${String(message || "")}</div>`,
+        eyebrow: opts.eyebrow || "",
+        html: `
+          <div class="feedback-message">
+            ${String(message || "")}
+          </div>
+        `,
         actions: [
           {
             label: opts.cancelText || "Cancel",
@@ -364,68 +428,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       });
     });
   }
-
-  //Pregnant Button Helper
-  function hideHeaderConfirmPreg() {
-    if (!reportConfirmPregBtn) return;
-    reportConfirmPregBtn.classList.add("hidden");
-    reportConfirmPregBtn.style.display = "none";
-    reportConfirmPregBtn.disabled = true;
-    reportConfirmPregBtn.removeAttribute("data-report-id");
-  }
-
-  function showHeaderConfirmPreg(report) {
-    if (!reportConfirmPregBtn) return;
-    reportConfirmPregBtn.classList.remove("hidden");
-    reportConfirmPregBtn.style.display = "inline-flex";
-    reportConfirmPregBtn.disabled = false;
-    reportConfirmPregBtn.setAttribute("data-report-id", report?._id || "");
-  }
-
-  hideHeaderConfirmPreg();
-
-  reportConfirmPregBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const report = currentDetailsReport;
-    if (!report?._id) return;
-
-    const swineTag = report.swine_id?.swine_id || "Unknown";
-
-    const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, {
-      title: "Confirm action",
-      variant: "warning"
-    });
-    if (!ok) return;
-
-    const res = await api.confirmPregnancy(report._id);
-
-    if (res?.ok) {
-      uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
-      await api.sendAdminNotification(
-        "Pregnancy Confirmed",
-        `${swineTag} confirmed pregnant by ${user.first_name}.`,
-        "success"
-      );
-      await reloadAll();
-      await viewEvidence(report._id); // refresh the modal content
-    } else if (res) {
-      let msg = "Failed to confirm pregnancy.";
-      try {
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const errData = await res.json();
-          msg = errData?.message || msg;
-        } else {
-          await res.text();
-          msg = "Failed to confirm pregnancy (server returned non-JSON response).";
-        }
-      } catch (_) {}
-      uiAlert(msg, { title: "Error", variant: "danger" });
-    }
-  });
-
+  
   /* =========================================================
      Module: Report Status Helpers (Report status, not swine status)
   ========================================================= */
@@ -2173,21 +2176,35 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   /* =========================================================
      Module: Report Form Submit
+     Purpose: Submit heat report, reset form state, reload data,
+              and show themed success/error feedback modal.
   ========================================================= */
   reportForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const selectedSigns = Array.from(document.querySelectorAll('input[name="signs"]:checked')).map((cb) => cb.value);
+    const selectedSigns = Array.from(
+      document.querySelectorAll('input[name="signs"]:checked')
+    ).map((cb) => cb.value);
+
     const chosenSwineId = selectedSwineIdInput?.value || "";
+
     if (!selectedSigns.length || !chosenSwineId) {
-      uiAlert("Please select a pig and signs of heat.", { title: "Missing details", variant: "warning" });
+      uiAlert("Please select a pig and signs of heat.", {
+        title: "Missing details",
+        variant: "warning",
+        eyebrow: "Required information"
+      });
       return;
     }
 
-    submitBtn && (submitBtn.disabled = true);
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.setAttribute("aria-busy", "true");
+    }
+
     if (reportMessage) {
       reportMessage.textContent = "Uploading report and media...";
-      reportMessage.style.color = "blue";
+      reportMessage.style.color = "#17a874";
     }
 
     try {
@@ -2199,45 +2216,100 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         remarks: (remarksInput?.value || "").trim()
       });
 
-      if (!res) throw new Error("No response from server");
+      if (!res) {
+        throw new Error("No response from server");
+      }
 
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
         const textError = await res.text();
         console.error("Server returned non-JSON:", textError);
-        throw new Error("Server error (Check file size or backend logs)");
+        throw new Error("Server error (check file size or backend logs)");
       }
 
       const data = await res.json();
 
-      if (res.ok) {
-        if (reportMessage) reportMessage.textContent = "Heat report submitted!";
-        await api.sendAdminNotification(
-          "New Heat Report",
-          `Farmer ${user.first_name} submitted a new report for ${chosenSwineId}.`,
-          "info"
-        );
-
-        reportForm.reset();
-        selectedFiles = [];
-        renderMediaPreview();
-
-        if (selectedSwineIdInput) selectedSwineIdInput.value = "";
-        if (selectedPigWrap) {
-          selectedPigWrap.classList.add("hidden");
-          selectedPigWrap.innerHTML = "";
-        }
-        openPigPickerBtn?.classList.remove("hidden");
-
-        await reloadAll();
-      } else {
-        uiAlert(data.message || "Error submitting report", { title: "Error", variant: "danger" });
+      if (!res.ok) {
+        uiAlert(data?.message || "Error submitting report.", {
+          title: "Submission failed",
+          variant: "danger",
+          eyebrow: "Something went wrong"
+        });
+        return;
       }
+
+      if (reportMessage) {
+        reportMessage.textContent = "";
+        reportMessage.style.color = "";
+      }
+
+      await api.sendAdminNotification(
+        "New Heat Report",
+        `Farmer ${user.first_name} submitted a new report for ${chosenSwineId}.`,
+        "info"
+      );
+
+      reportForm.reset();
+      selectedFiles = [];
+      renderMediaPreview();
+
+      if (selectedSwineIdInput) {
+        selectedSwineIdInput.value = "";
+      }
+
+      if (selectedPigWrap) {
+        selectedPigWrap.classList.add("hidden");
+        selectedPigWrap.innerHTML = "";
+      }
+
+      openPigPickerBtn?.classList.remove("hidden");
+
+      await reloadAll();
+
+      uiAlert(`Heat report for ${chosenSwineId} has been submitted successfully.`, {
+        title: "Heat Report Submitted",
+        variant: "success",
+        eyebrow: "Submission successful",
+        actions: [
+          {
+            label: "Close",
+            icon: "bi-x-circle",
+            primary: false
+          },
+          {
+            label: "View Logs",
+            icon: "bi-card-list",
+            primary: true,
+            onClick: () => {
+              setActiveTab("logs");
+              currentPage = 1;
+              applyFiltersAndRender();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          }
+        ]
+      });
     } catch (err) {
       console.error("Submission Error:", err);
-      uiAlert(err.message || "Failed to submit report. Video might be too large.", { title: "Error", variant: "danger" });
+
+      if (reportMessage) {
+        reportMessage.textContent = "";
+        reportMessage.style.color = "";
+      }
+
+      uiAlert(
+        err?.message || "Failed to submit report. Video might be too large.",
+        {
+          title: "Submission failed",
+          variant: "danger",
+          eyebrow: "Upload error"
+        }
+      );
     } finally {
-      submitBtn && (submitBtn.disabled = false);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute("aria-busy");
+      }
     }
   });
 

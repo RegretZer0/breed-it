@@ -1300,3 +1300,280 @@
   gap:10px;
   flex-wrap:wrap;
 }
+
+/* =========================================================
+   FEEDBACK MODAL / PANEL
+   Theme: soft white card, rounded corners, green accent,
+   mobile friendly, inspired by the provided UI reference
+========================================================= */
+.feedback-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.feedback-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(6px);
+}
+
+.feedback-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 460px);
+  background: #ffffff;
+  border-radius: 34px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.14),
+    0 8px 20px rgba(31, 167, 116, 0.08);
+  border: 1px solid rgba(31, 167, 116, 0.08);
+  animation: feedbackPopIn 0.24s ease;
+}
+
+@keyframes feedbackPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.feedback-topbar {
+  height: 88px;
+  background:
+    radial-gradient(circle at 82% 28%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 12px, transparent 13px),
+    radial-gradient(circle at 68% 54%, rgba(255,255,255,0.11) 0, rgba(255,255,255,0.11) 10px, transparent 11px),
+    linear-gradient(135deg, #17b57f 0%, #22c38a 55%, #14a76c 100%);
+}
+
+.feedback-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.16);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s ease;
+  z-index: 2;
+}
+
+.feedback-close:hover {
+  background: rgba(255,255,255,0.24);
+  transform: scale(1.04);
+}
+
+.feedback-hero {
+  margin-top: -34px;
+  padding: 0 24px 24px;
+}
+
+.feedback-icon-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.feedback-icon {
+  width: 76px;
+  height: 76px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #ebfff6, #f8fffb);
+  border: 1px solid rgba(31, 167, 116, 0.12);
+  box-shadow: 0 12px 26px rgba(31, 167, 116, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.feedback-copy {
+  text-align: center;
+}
+
+.feedback-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #17a874;
+  margin-bottom: 6px;
+}
+
+.feedback-title {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.feedback-body {
+  margin-top: 10px;
+}
+
+.feedback-message {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: #6b7280;
+  max-width: 32ch;
+  margin: 0 auto;
+}
+
+.feedback-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 0 24px 24px;
+}
+
+.feedback-btn {
+  appearance: none;
+  border: none;
+  min-height: 48px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  text-decoration: none;
+}
+
+.feedback-btn-primary {
+  background: linear-gradient(135deg, #19b37c, #26c98f);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(31, 167, 116, 0.2);
+}
+
+.feedback-btn-primary:hover {
+  transform: translateY(-1px);
+}
+
+.feedback-btn-soft {
+  background: #f4fbf8;
+  color: #175c46;
+  border: 1px solid rgba(31, 167, 116, 0.12);
+}
+
+.feedback-btn-soft:hover {
+  background: #eef8f4;
+}
+
+.feedback-info .feedback-icon {
+  color: #16a085;
+}
+
+.feedback-success .feedback-icon {
+  color: #17a874;
+}
+
+.feedback-warning .feedback-icon {
+  color: #f59e0b;
+}
+
+.feedback-danger .feedback-icon {
+  color: #ef4444;
+}
+
+.feedback-warning .feedback-topbar {
+  background:
+    radial-gradient(circle at 82% 28%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 12px, transparent 13px),
+    radial-gradient(circle at 68% 54%, rgba(255,255,255,0.11) 0, rgba(255,255,255,0.11) 10px, transparent 11px),
+    linear-gradient(135deg, #f4b544 0%, #f7c762 55%, #f59e0b 100%);
+}
+
+.feedback-danger .feedback-topbar {
+  background:
+    radial-gradient(circle at 82% 28%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 12px, transparent 13px),
+    radial-gradient(circle at 68% 54%, rgba(255,255,255,0.11) 0, rgba(255,255,255,0.11) 10px, transparent 11px),
+    linear-gradient(135deg, #ef4444 0%, #f87171 55%, #dc2626 100%);
+}
+
+.feedback-success .feedback-topbar,
+.feedback-info .feedback-topbar {
+  background:
+    radial-gradient(circle at 82% 28%, rgba(255,255,255,0.18) 0, rgba(255,255,255,0.18) 12px, transparent 13px),
+    radial-gradient(circle at 68% 54%, rgba(255,255,255,0.11) 0, rgba(255,255,255,0.11) 10px, transparent 11px),
+    linear-gradient(135deg, #17b57f 0%, #22c38a 55%, #14a76c 100%);
+}
+
+@media (max-width: 767px) {
+  .feedback-shell {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .feedback-card {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 28px 28px 20px 20px;
+  }
+
+  .feedback-topbar {
+    height: 78px;
+  }
+
+  .feedback-hero {
+    margin-top: -28px;
+    padding: 0 18px 18px;
+  }
+
+  .feedback-icon {
+    width: 66px;
+    height: 66px;
+    border-radius: 20px;
+    font-size: 1.7rem;
+  }
+
+  .feedback-title {
+    font-size: 1.28rem;
+  }
+
+  .feedback-message {
+    font-size: 0.94rem;
+    max-width: 100%;
+  }
+
+  .feedback-actions {
+    padding: 0 18px 18px;
+    flex-direction: column;
+  }
+
+  .feedback-btn {
+    width: 100%;
+  }
+
+  .feedback-close {
+    top: 12px;
+    right: 12px;
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (min-width: 768px) {
+  .feedback-card {
+    min-height: 0;
+  }
+}
