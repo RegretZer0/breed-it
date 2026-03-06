@@ -1273,3 +1273,30 @@
   #feedbackModal .modal-foot{ justify-content: stretch; flex-wrap: wrap; }
   #feedbackModal .modal-foot button{ width: 100%; }
 }
+
+.report-modal-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.report-modal-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  position:relative;
+  z-index:2; /* ensures buttons are above inner content */
+}
+
+.report-modal-actions .btn-sm{
+  padding:.45rem .7rem;
+}
+
+.report-modal-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}

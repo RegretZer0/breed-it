@@ -1,10 +1,27 @@
+<!-- REPORT DETAILS MODAL -->
 <div id="reportModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
   <div class="modal-content report-details-modal">
-    <button type="button" class="close-modal btn-icon" aria-label="Close">
-      <i class="bi bi-x-lg"></i>
-    </button>
 
-    <h3 id="reportModalTitle" class="modal-title">Report Details</h3>
+    <!-- Header (Title + Actions) -->
+    <div class="report-modal-head">
+      <h3 id="reportModalTitle" class="modal-title">Report Details</h3>
+
+      <div class="report-modal-actions">
+        <!-- Shown/hidden by JS -->
+        <button
+          type="button"
+          id="reportConfirmPregBtn"
+          class="btn-primary btn-sm hidden"
+          aria-label="Confirm Pregnant"
+        >
+          <i class="bi bi-patch-check"></i> Confirm Pregnant
+        </button>
+
+        <button type="button" class="close-modal btn-icon" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
 
     <div id="modalBody">
       <p>Loading...</p>
@@ -58,7 +75,6 @@
 
   </div>
 </div>
-
 
 <!-- EVIDENCE LIGHTBOX -->
 <div class="evidence-lightbox" id="evidenceLightbox" aria-hidden="true">

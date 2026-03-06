@@ -1734,3 +1734,15 @@ html, body{
 
 /* If any parent accidentally disables pointer events, force-enable on buttons */
 .report-card-actions { pointer-events: auto; }
+
+/* Report Details header right actions */
+.rd-header-actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+
+  /* make sure it doesn't stretch weirdly */
+  flex: 0 0 auto;
+  margin-left: auto;
+}

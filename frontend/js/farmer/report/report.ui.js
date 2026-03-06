@@ -61,6 +61,39 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   const remarksInput = document.getElementById("remarks");
 
+  const reportModal = document.getElementById("reportModal");
+  let reportConfirmPregBtn = document.getElementById("reportConfirmPregBtn");
+
+  // Ensure the header Confirm Pregnant button exists (fallback if modal.ejs wasn't updated)
+  (function ensureHeaderConfirmPregBtn() {
+    if (!reportModal) return;
+      const actionsWrap =
+        reportModal.querySelector(".report-modal-actions") ||
+        reportModal.querySelector(".modal-content") ||
+        reportModal;
+
+      reportConfirmPregBtn = reportModal.querySelector("#reportConfirmPregBtn");
+      if (reportConfirmPregBtn) return;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "reportConfirmPregBtn";
+      btn.className = "btn-primary btn-sm hidden";
+      btn.innerHTML = `<i class="bi bi-patch-check"></i> Confirm Pregnant`;
+
+      // ✅ Put it in the actions row (next to Close)
+      actionsWrap.appendChild(btn);
+
+    // Insert before the close button if possible
+    const closeBtn = reportModal.querySelector(".close-modal");
+    if (closeBtn?.parentElement) {
+      closeBtn.parentElement.insertBefore(btn, closeBtn);
+    } else {
+      actionsWrap.insertBefore(btn, actionsWrap.firstChild);
+    }
+
+    reportConfirmPregBtn = btn;
+  })();
   /* =========================================================
      Module: State
   ========================================================= */
@@ -80,6 +113,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   let filteredOpenSows = [];
   let pigPickerPage = 1;
   const PIGS_PER_PAGE = 5;
+
+  let currentDetailsReport = null; // report currently shown in Report Details modal
 
   /* =========================================================
      Module: Modal Open State Helpers
@@ -330,6 +365,67 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     });
   }
 
+  //Pregnant Button Helper
+  function hideHeaderConfirmPreg() {
+    if (!reportConfirmPregBtn) return;
+    reportConfirmPregBtn.classList.add("hidden");
+    reportConfirmPregBtn.style.display = "none";
+    reportConfirmPregBtn.disabled = true;
+    reportConfirmPregBtn.removeAttribute("data-report-id");
+  }
+
+  function showHeaderConfirmPreg(report) {
+    if (!reportConfirmPregBtn) return;
+    reportConfirmPregBtn.classList.remove("hidden");
+    reportConfirmPregBtn.style.display = "inline-flex";
+    reportConfirmPregBtn.disabled = false;
+    reportConfirmPregBtn.setAttribute("data-report-id", report?._id || "");
+  }
+
+  hideHeaderConfirmPreg();
+
+  reportConfirmPregBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const report = currentDetailsReport;
+    if (!report?._id) return;
+
+    const swineTag = report.swine_id?.swine_id || "Unknown";
+
+    const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, {
+      title: "Confirm action",
+      variant: "warning"
+    });
+    if (!ok) return;
+
+    const res = await api.confirmPregnancy(report._id);
+
+    if (res?.ok) {
+      uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
+      await api.sendAdminNotification(
+        "Pregnancy Confirmed",
+        `${swineTag} confirmed pregnant by ${user.first_name}.`,
+        "success"
+      );
+      await reloadAll();
+      await viewEvidence(report._id); // refresh the modal content
+    } else if (res) {
+      let msg = "Failed to confirm pregnancy.";
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const errData = await res.json();
+          msg = errData?.message || msg;
+        } else {
+          await res.text();
+          msg = "Failed to confirm pregnancy (server returned non-JSON response).";
+        }
+      } catch (_) {}
+      uiAlert(msg, { title: "Error", variant: "danger" });
+    }
+  });
+
   /* =========================================================
      Module: Report Status Helpers (Report status, not swine status)
   ========================================================= */
@@ -383,10 +479,42 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return st === "approved" || st === "under_observation";
   }
 
+  function getNextHeatCheck(report) {
+    return (
+      report?.next_heat_check ||
+      report?.nextHeatCheck ||
+      report?.next_check ||
+      report?.nextCheck ||
+      report?.swine_id?.next_heat_check ||
+      ""
+    );
+  }
+
   function canShowConfirmPregnant(report) {
-    const st = normStatus(report?.status);
-    if (st !== "under_observation") return false;
-    return isDue(report?.next_heat_check);
+    const reportSt = normStatus(report?.status);
+    const swineSt = normStatus(report?.swine_id?.current_status);
+
+    // already confirmed / already progressed
+    if (
+      report?.pregnancy_confirmed_at ||
+      report?.pregnancyConfirmedAt ||
+      reportSt === "pregnant" ||
+      reportSt === "lactating" ||
+      reportSt === "completed"
+    ) {
+      return false;
+    }
+
+    const inObservation =
+      reportSt === "under_observation" ||
+      reportSt.includes("observation") ||
+      swineSt === "under_observation" ||
+      swineSt.includes("observation");
+
+    if (!inObservation) return false;
+
+    const dueDate = getNextHeatCheck(report) || computeNextCheckDate(report);
+    return isDue(dueDate);
   }
 
   /* =========================================================
@@ -413,7 +541,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   function computeNextCheckDate(report) {
     const st = normStatus(report?.status);
 
-    if (st === "approved" || st === "under_observation") return report?.next_heat_check || "";
+    if (st === "approved" || st === "under_observation") return getNextHeatCheck(report) || "";
     if (st === "pregnant") return report?.expected_farrowing || "";
 
     if (st === "lactating") {
@@ -855,13 +983,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       btn.addEventListener("click", () => openTrackProgress(btn.dataset.id, btn.dataset.swine));
     });
 
-    reportsTableBody.querySelectorAll("[data-action='confirm-preg']").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const report = activeReports.find((r) => r._id === btn.dataset.id);
-        openActionConfirmation(report, "confirm_pregnancy");
-      });
-    });
-
     reportsTableBody.querySelectorAll("[data-action='confirm-farrow']").forEach((btn) => {
       btn.addEventListener("click", () => {
         const report = activeReports.find((r) => r._id === btn.dataset.id);
@@ -973,12 +1094,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
               >
                 <i class="bi bi-graph-up-arrow"></i> Track Progress
               </button>
-
-              ${canShowConfirmPregnant(r)
-                ? `<button class="btn-primary btn-sm" type="button" data-action="confirm-preg" data-id="${r._id}">
-                    <i class="bi bi-patch-check"></i> Confirm Preg
-                  </button>`
-                : ""}
 
               ${(normStatus(r.status) === "pregnant" && isDue(r.expected_farrowing))
                 ? `<button class="btn-primary btn-sm" type="button" data-action="confirm-farrow" data-id="${r._id}">
@@ -1230,6 +1345,9 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     const modal = document.getElementById("reportModal");
     modal?.classList.add("hidden");
     modal?.setAttribute("aria-hidden", "true");
+
+    currentDetailsReport = null;
+    hideHeaderConfirmPreg();
 
     document.removeEventListener("keydown", escCloseOnce);
     ensureBodyModalState();
@@ -1508,6 +1626,50 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     return s.includes("lact");
   }
 
+  //Handle Confirm Pregnancy
+  async function handleConfirmPregnancy(report) {
+    if (!report?._id) return;
+
+    const swineTag = report.swine_id?.swine_id || "Unknown";
+
+    const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, {
+      title: "Confirm action",
+      variant: "warning"
+    });
+    if (!ok) return;
+
+    const res = await api.confirmPregnancy(report._id);
+
+    if (res?.ok) {
+      uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
+
+      await api.sendAdminNotification(
+        "Pregnancy Confirmed",
+        `${swineTag} confirmed pregnant by ${user.first_name}.`,
+        "success"
+      );
+
+      await reloadAll();
+      await viewEvidence(report._id);
+      return;
+    }
+
+    if (res) {
+      let msg = "Failed to confirm pregnancy.";
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const errData = await res.json();
+          msg = errData?.message || msg;
+        } else {
+          await res.text();
+          msg = "Failed to confirm pregnancy (server returned non-JSON response).";
+        }
+      } catch (_) {}
+      uiAlert(msg, { title: "Error", variant: "danger" });
+    }
+  }
+
   /* =========================================================
      Module: Report Details Viewer
   ========================================================= */
@@ -1564,6 +1726,11 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const showBackInHeat = canShowBackInHeat(report);
       const showConfirmPreg = canShowConfirmPregnant(report);
       const showConfirmWean = canShowConfirmWeaning(report);
+
+      currentDetailsReport = report;
+
+      if (showConfirmPreg) showHeaderConfirmPreg(report);
+      else hideHeaderConfirmPreg();
 
       modalBody.innerHTML = `
         <div class="details-wrap">
@@ -1646,47 +1813,49 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           </div>
 
           <div class="details-actions">
-            ${
-              showBackInHeat
-                ? `
-              <button class="btn-soft" type="button" id="btnBackInHeat">
-                <i class="bi bi-arrow-counterclockwise"></i>
-                Back in Heat
-              </button>
-            `
-                : ``
-            }
-
-            ${
-              showConfirmPreg
-                ? `
-              <button class="btn-primary" type="button" id="btnConfirmPreg">
-                <i class="bi bi-patch-check"></i>
-                Confirm Pregnant
-              </button>
-            `
-                : ``
-            }
-
-            ${
-              showConfirmWean
-                ? `
-              <button class="btn-primary" type="button" id="btnConfirmWean">
-                <i class="bi bi-scissors"></i>
-                Confirm Weaning
-              </button>
-            `
-                : ``
-            }
-
-            <button class="btn-soft" type="button" id="btnCloseDetails">
-              <i class="bi bi-x-circle"></i>
-              Close
+          ${
+            showBackInHeat
+              ? `
+            <button class="btn-soft" type="button" id="btnBackInHeat">
+              <i class="bi bi-arrow-counterclockwise"></i>
+              Back in Heat
             </button>
-          </div>
+          `
+              : ``
+          }
 
+          ${
+            showConfirmPreg
+              ? `
+            <button class="btn-primary" type="button" id="btnConfirmPreg">
+              <i class="bi bi-patch-check"></i>
+              Confirm Pregnant
+            </button>
+          `
+              : ``
+          }
+
+          ${
+            showConfirmWean
+              ? `
+            <button class="btn-primary" type="button" id="btnConfirmWean">
+              <i class="bi bi-scissors"></i>
+              Confirm Weaning
+            </button>
+          `
+              : ``
+          }
+
+          <button class="btn-soft" type="button" id="btnCloseDetails">
+            <i class="bi bi-x-circle"></i>
+            Close
+          </button>
         </div>
       `;
+
+      modalBody.querySelector("#btnConfirmPreg")?.addEventListener("click", async () => {
+        await handleConfirmPregnancy(report);
+      });
 
       modalBody.querySelectorAll(".evidence-item").forEach((item) => {
         const open = () => {
@@ -1727,37 +1896,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
             } else {
               await res.text();
               msg = "Failed to update cycle (server returned non-JSON response).";
-            }
-          } catch (_) {}
-          uiAlert(msg, { title: "Error", variant: "danger" });
-        }
-      });
-
-      modalBody.querySelector("#btnConfirmPreg")?.addEventListener("click", async () => {
-        const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, { title: "Confirm action", variant: "warning" });
-        if (!ok) return;
-
-        const res = await api.confirmPregnancy(report._id);
-
-        if (res?.ok) {
-          uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
-          await api.sendAdminNotification(
-            "Pregnancy Confirmed",
-            `${swineTag} confirmed pregnant by ${user.first_name}.`,
-            "success"
-          );
-          await reloadAll();
-          await viewEvidence(reportId);
-        } else if (res) {
-          let msg = "Failed to confirm pregnancy.";
-          try {
-            const ct = res.headers.get("content-type") || "";
-            if (ct.includes("application/json")) {
-              const errData = await res.json();
-              msg = errData?.message || msg;
-            } else {
-              await res.text();
-              msg = "Failed to confirm pregnancy (server returned non-JSON response).";
             }
           } catch (_) {}
           uiAlert(msg, { title: "Error", variant: "danger" });

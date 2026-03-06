@@ -538,7 +538,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 /* ======================================================
     UPGRADED CONFIRM FARROWING (CLEANED & OPTIMIZED)
 ====================================================== */
-router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
+router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   // 1. Multi-click protection: Pre-check status before starting transaction
   const initialCheck = await HeatReport.findById(req.params.id).select("status");
   if (initialCheck && initialCheck.status === "lactating") {
@@ -549,6 +549,14 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
   session.startTransaction();
   try {
     const { total_live, mortality, farrowing_date } = req.body;
+      if (total_live == null || farrowing_date == null) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing required fields",
+          received: { total_live, mortality, farrowing_date }
+        });
+      }
+
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
 
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });

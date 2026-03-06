@@ -344,6 +344,29 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     }, 300);
   }
 
+  //Evidence Clicker Helper
+  function bindEvidenceClicks() {
+    if (!evidenceGallery) return;
+
+    // Bind only once
+    if (evidenceGallery.dataset.bound === "true") return;
+    evidenceGallery.dataset.bound = "true";
+
+    evidenceGallery.addEventListener("click", (e) => {
+      const target = e.target.closest("[data-ev-src]");
+      if (!target) return;
+
+      e.preventDefault();
+
+      const type = (target.dataset.evType || "").toLowerCase();
+      const src = target.dataset.evSrc;
+      if (!src) return;
+
+      // Open modal viewer with zoom controls
+      openEvidenceViewer({ type: type === "video" ? "video" : "image", src });
+    });
+  }
+
   /* =========================
      FEEDBACK MODAL HELPERS MODULE
   ========================= */
@@ -376,7 +399,14 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       if (appFeedbackBody) appFeedbackBody.textContent = body;
       setFeedbackVariant(variant);
 
-      openOverlay(appFeedbackModal, { zIndex: 3000 });
+      const topZ = Array.from(document.querySelectorAll(".modal-overlay"))
+        .filter((m) => m && m.style.display === "flex")
+        .reduce((maxZ, m) => {
+          const z = parseInt(getComputedStyle(m).zIndex || m.style.zIndex || "0", 10);
+          return Math.max(maxZ, isNaN(z) ? 0 : z);
+        }, 0);
+
+      openOverlay(appFeedbackModal, { zIndex: Math.max(3000, topZ + 200) });
 
       const done = () => {
         closeOverlay(appFeedbackModal);
@@ -458,7 +488,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   ========================= */
   function openFarrowingModal() {
     if (!farrowingModal) return;
-    farrowingModal.style.zIndex = "2600";
+    farrowingModal.style.zIndex = "12000";
     farrowingModal.style.display = "flex";
     lockScroll();
   }
@@ -487,6 +517,66 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   maleCountInput?.addEventListener("input", syncTotalLive);
   femaleCountInput?.addEventListener("input", syncTotalLive);
+
+  // =========================
+  // FARROWING FORM SUBMIT MODULE
+  // =========================
+  if (farrowingForm && !farrowingForm.dataset.bound) {
+    farrowingForm.dataset.bound = "true";
+
+    farrowingForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      try {
+        if (!currentReportId) {
+          await showFeedback({
+            title: "Missing report",
+            sub: "No active report selected",
+            body: "Please open a report first before confirming farrowing.",
+            variant: "warn"
+          });
+          return;
+        }
+
+        const farrowingDate = document.getElementById("farrowingDateInput")?.value || null;
+        const mortality = Number(document.getElementById("mortalityCount")?.value || 0);
+
+        // liveCount is your hidden input that syncTotalLive updates
+        const totalLive = Number(document.getElementById("liveCount")?.value || 0);
+
+        if (!farrowingDate) {
+          await showFeedback({
+            title: "Validation error",
+            sub: "Farrowing date required",
+            body: "Please select the actual farrowing date.",
+            variant: "warn"
+          });
+          return;
+        }
+
+        // OPTIONAL: basic sanity check
+        if (totalLive <= 0) {
+          const ok = await showConfirm({
+            title: "No live piglets?",
+            sub: "You entered 0 live piglets.",
+            body: "Continue confirming farrowing with 0 live piglets?"
+          });
+          if (!ok) return;
+        }
+
+        await action("confirm-farrowing", "Farrowing confirmed. Piglets were registered.", {
+          total_live: Number(document.getElementById("liveCount")?.value || 0),
+          mortality: Number(document.getElementById("mortalityCount")?.value || 0),
+          farrowing_date: document.getElementById("farrowingDateInput")?.value || null
+        });
+
+        closeFarrowingModalFn();
+      } catch (err) {
+        console.error("Farrowing submit failed:", err);
+        // action() already shows feedback, so no need to duplicate
+      }
+    });
+  }
 
   /* =========================
      URL + CHIP HELPERS MODULE
@@ -519,7 +609,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     });
 
     closeProgressPanel();
-    if (evidenceGallery) evidenceGallery.innerHTML = "";
+  if (evidenceGallery) evidenceGallery.innerHTML = "";
     unlockScrollIfNoOverlayOpen();
   }
 
@@ -529,6 +619,177 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   reportDetailsModal?.addEventListener("click", (e) => {
     if (e.target === reportDetailsModal) closeReportDetails();
   });
+
+  /* =========================
+   EVIDENCE VIEWER MODULE
+  ========================= */
+  const evState = {
+    scale: 1,
+    minScale: 1,
+    maxScale: 5,
+    x: 0,
+    y: 0,
+    dragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    startX: 0,
+    startY: 0
+  };
+
+  function setEvZoomLabel() {
+    if (!evZoomLabel) return;
+    evZoomLabel.textContent = `${Math.round(evState.scale * 100)}%`;
+  }
+
+  function applyEvTransform() {
+    if (!evImage) return;
+    evImage.style.transform = `translate(${evState.x}px, ${evState.y}px) scale(${evState.scale})`;
+    setEvZoomLabel();
+  }
+
+  function computeFitScale() {
+    if (!evStage || !evImage) return 1;
+
+    const stageRect = evStage.getBoundingClientRect();
+    const stageW = stageRect.width || 1;
+    const stageH = stageRect.height || 1;
+
+    const imgW = evImage.naturalWidth || 1;
+    const imgH = evImage.naturalHeight || 1;
+
+    // Fit inside stage (contain)
+    const fit = Math.min(stageW / imgW, stageH / imgH);
+
+    // Prevent crazy small values, and allow zoom-out below 1 when needed
+    return Math.max(0.05, fit);
+  }
+
+  function resetEvTransform() {
+    // fit-to-view becomes the minimum zoom
+    evState.minScale = computeFitScale();
+    evState.scale = evState.minScale;
+
+    evState.x = 0;
+    evState.y = 0;
+
+    applyEvTransform();
+  }
+
+  function clampEv() {
+    evState.scale = Math.min(evState.maxScale, Math.max(evState.minScale, evState.scale));
+    applyEvTransform();
+  }
+
+  function openEvidenceViewer({ type, src }) {
+    if (!evidenceViewerModal) {
+      window.open(src, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    // show correct wrapper
+    if (evImageWrap) evImageWrap.style.display = type === "image" ? "block" : "none";
+    if (evVideoWrap) evVideoWrap.style.display = type === "video" ? "block" : "none";
+
+    if (type === "image" && evImage) {
+      evImage.onload = () => {
+        resetEvTransform();
+      };
+      evImage.src = src;
+    }
+
+    if (type === "video" && evVideo) {
+      evVideo.src = src;
+      evVideo.load();
+    }
+
+    openOverlay(evidenceViewerModal, { zIndex: 11000 });
+  }
+
+  function closeEvidenceViewerFn() {
+    if (!evidenceViewerModal) return;
+    closeOverlay(evidenceViewerModal);
+
+    // cleanup media
+    if (evVideo) {
+      evVideo.pause();
+      evVideo.removeAttribute("src");
+      evVideo.load();
+    }
+    if (evImage) {
+      evImage.removeAttribute("src");
+    }
+  }
+
+  function bindEvidenceViewerControls() {
+    if (!evidenceViewerModal) return;
+    if (evidenceViewerModal.dataset.bound === "true") return;
+    evidenceViewerModal.dataset.bound = "true";
+
+    closeEvidenceViewer?.addEventListener("click", closeEvidenceViewerFn);
+
+    evidenceViewerModal.addEventListener("click", (e) => {
+      if (e.target === evidenceViewerModal) closeEvidenceViewerFn();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && evidenceViewerModal.style.display === "flex") {
+        closeEvidenceViewerFn();
+      }
+    });
+
+    evZoomIn?.addEventListener("click", () => {
+      evState.scale *= 1.15;
+      clampEv();
+    });
+
+    evZoomOut?.addEventListener("click", () => {
+      evState.scale /= 1.15;
+      clampEv();
+    });
+
+    evZoomReset?.addEventListener("click", resetEvTransform);
+
+    // wheel zoom on stage
+    evStage?.addEventListener(
+      "wheel",
+      (e) => {
+        if (!evImageWrap || evImageWrap.style.display === "none") return;
+        e.preventDefault();
+
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        evState.scale *= delta;
+        clampEv();
+      },
+      { passive: false }
+    );
+
+    // drag to pan (only when zoomed)
+    evStage?.addEventListener("mousedown", (e) => {
+      if (!evImageWrap || evImageWrap.style.display === "none") return;
+      if (evState.scale <= 1) return;
+
+      evState.dragging = true;
+      evState.dragStartX = e.clientX;
+      evState.dragStartY = e.clientY;
+      evState.startX = evState.x;
+      evState.startY = evState.y;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!evState.dragging) return;
+      evState.x = evState.startX + (e.clientX - evState.dragStartX);
+      evState.y = evState.startY + (e.clientY - evState.dragStartY);
+      applyEvTransform();
+    });
+
+    window.addEventListener("mouseup", () => {
+      evState.dragging = false;
+    });
+  }
+
+  // call once at init
+  bindEvidenceViewerControls();
+  bindEvidenceClicks();  
 
   /* =========================
      REJECT MODAL CONTROLS MODULE
@@ -1180,8 +1441,24 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           if (r.next_heat_check) targetDate = new Date(r.next_heat_check);
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check, getVirtualNow())} (Pregnancy Check)` : "—";
         } else if (st === "pregnant" || st === "farrowing_ready") {
-          if (r.expected_farrowing) targetDate = new Date(r.expected_farrowing);
-          label = r.expected_farrowing ? `${getDaysLeft(r.expected_farrowing, getVirtualNow())} (Farrowing Due)` : "—";
+          // prefer expected_farrowing; fallback compute from AI date + 114 if missing
+          if (r.expected_farrowing) {
+            targetDate = new Date(r.expected_farrowing);
+            label = `${getDaysLeft(r.expected_farrowing, getVirtualNow())} (Farrowing Due)`;
+          } else {
+            const base = r.ai_confirmed_at || r.ai_date || r.pregnancy_confirmed_at || null;
+            if (base) {
+              const computed = addDays(base, 114);
+              if (computed) {
+                targetDate = new Date(computed);
+                label = `${getDaysLeft(computed, getVirtualNow())} (Farrowing Due)`;
+              } else {
+                label = "—";
+              }
+            } else {
+              label = "—";
+            }
+          }
         } else if (st === "lactating") {
           try {
             const weaningRes = await fetch(`${BACKEND_URL}/api/heat/weaning-date/${reportId}`, {
@@ -1410,12 +1687,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
                 </div>
               </div>
               <small>
-                <a href="javascript:void(0)"
-                  data-ev-type="video"
-                  data-ev-src="${fullUrl}"
-                  class="text-decoration-none fw-bold">
-                  Open video
-                </a>
+                <a href="#" data-ev-type="video" data-ev-src="..." class="text-decoration-none fw-bold">Open video</a>
               </small>
             `;
           } else {
@@ -1642,24 +1914,6 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
       closeRejectModalFn();
       if (rejectReasonInput) rejectReasonInput.value = "";
-    };
-  }
-
-  if (confirmPregnancyBtn) {
-    confirmPregnancyBtn.onclick = async () => {
-      const pregDateInput = document.getElementById("preg_date_input");
-      const checkDate = pregDateInput ? pregDateInput.value : null;
-
-      const ok = await showConfirm({
-        title: "Confirm pregnancy",
-        sub: "This will update the swine’s cycle stage.",
-        body: "Confirm pregnancy for this sow?"
-      });
-      if (!ok) return;
-
-      await action("confirm-pregnancy", "Pregnancy confirmed. Expected farrowing date calculated.", {
-        check_date: checkDate
-      });
     };
   }
 
