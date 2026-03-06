@@ -1746,3 +1746,11 @@ html, body{
   flex: 0 0 auto;
   margin-left: auto;
 }
+
+/* Awaiting Farrowing pill */
+.status-badge.awaiting_farrowing,
+.status-badge.awaiting-farrowing {
+  background: #fff7e0;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
