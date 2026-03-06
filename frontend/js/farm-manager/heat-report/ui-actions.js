@@ -970,7 +970,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           body: "Your session has expired. You’ll be redirected to login.",
           variant: "warn"
         });
-        window.location.href = "login.html";
+        window.location.href = "/login";
         return;
       }
 
@@ -1860,7 +1860,16 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
             .join("");
         }
 
-        if (aiConfirmModal) openOverlay(aiConfirmModal, { zIndex: 2800 });
+        if (aiConfirmModal) {
+          const topZ = Array.from(document.querySelectorAll(".modal-overlay"))
+            .filter((m) => m && m.style.display === "flex")
+            .reduce((maxZ, m) => {
+              const z = parseInt(getComputedStyle(m).zIndex || m.style.zIndex || "0", 10);
+              return Math.max(maxZ, isNaN(z) ? 0 : z);
+            }, 0);
+
+          openOverlay(aiConfirmModal, { zIndex: Math.max(2800, topZ + 200) });
+        }
       } catch (err) {
         console.error(err);
         await showFeedback({
