@@ -12,21 +12,27 @@
   <header class="sa-topbar">
     <div class="container-fluid px-3 px-lg-4">
       <div class="row g-3 align-items-center">
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-7">
           <div class="d-flex align-items-center gap-2">
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
-            <div>
+            <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
-              <h1 class="sa-page-title mb-0">Support Tickets Oversight</h1>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <h1 class="sa-page-title mb-0">Support Tickets Oversight</h1>
+                <span class="sa-page-chip">
+                  <i class="bi bi-life-preserver me-1"></i>
+                  Issue Tracking
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-lg-6">
-          <div class="d-flex justify-content-lg-end gap-2">
-            <span id="ticketCountBadge" class="sa-badge-danger align-self-center">0 Open Tickets</span>
+        <div class="col-12 col-lg-5">
+          <div class="d-flex flex-column flex-sm-row justify-content-lg-end gap-2">
+            <span id="ticketCountBadge" class="sa-badge-danger align-self-sm-center">0 Open Tickets</span>
             <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
               <i class="bi bi-arrow-repeat me-2"></i>
               Refresh Data
@@ -41,9 +47,22 @@
     <div class="container-fluid px-3 px-lg-4">
       <section id="support-tickets" class="sa-panel">
         <div class="sa-panel-header">
-          <div>
-            <h2 class="sa-panel-title mb-1">Tickets</h2>
-            <p class="sa-panel-text mb-0">Track reported issues and update their resolution status.</p>
+          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div>
+              <h2 class="sa-panel-title mb-1">Tickets</h2>
+              <p class="sa-panel-text mb-0">Track reported issues and update their resolution status.</p>
+            </div>
+
+            <div class="sa-panel-chip">
+              <i class="bi bi-kanban me-1"></i>
+              Resolution Workflow
+            </div>
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar mb-3">
+          <div class="sa-table-toolbar-text">
+            Change ticket status directly from the table to keep the support queue updated.
           </div>
         </div>
 

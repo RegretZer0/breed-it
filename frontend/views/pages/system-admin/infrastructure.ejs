@@ -12,19 +12,25 @@
   <header class="sa-topbar">
     <div class="container-fluid px-3 px-lg-4">
       <div class="row g-3 align-items-center">
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-7">
           <div class="d-flex align-items-center gap-2">
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
-            <div>
+            <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
-              <h1 class="sa-page-title mb-0">Infrastructure Details</h1>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <h1 class="sa-page-title mb-0">Infrastructure Details</h1>
+                <span class="sa-page-chip">
+                  <i class="bi bi-hdd-network me-1"></i>
+                  Environment
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-5">
           <div class="d-flex justify-content-lg-end">
             <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
               <i class="bi bi-arrow-repeat me-2"></i>
@@ -50,6 +56,10 @@
         <div class="row g-3" id="systemInfoBox">
           <div class="col-12 col-md-6">
             <div class="sa-info-card">
+              <div class="sa-info-card-title">
+                <i class="bi bi-pc-display-horizontal me-2"></i>
+                Environment
+              </div>
               <p class="mb-2"><strong>OS Platform:</strong> <span id="osPlatform">--</span></p>
               <p class="mb-0"><strong>System Uptime:</strong> <span id="systemUptime">--</span></p>
             </div>
@@ -57,6 +67,10 @@
 
           <div class="col-12 col-md-6">
             <div class="sa-info-card">
+              <div class="sa-info-card-title">
+                <i class="bi bi-cpu me-2"></i>
+                Hardware
+              </div>
               <p class="mb-2"><strong>CPU Model:</strong> <span id="cpuModel">--</span></p>
               <p class="mb-0"><strong>Total Memory:</strong> <span id="totalMemory">--</span></p>
             </div>
@@ -65,10 +79,15 @@
       </section>
 
       <section class="sa-panel mb-4">
-        <div class="sa-panel-header">
+        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <h2 class="sa-panel-title mb-1">Farm Managers Oversight</h2>
             <p class="sa-panel-text mb-0">List of farm manager accounts in the system.</p>
+          </div>
+
+          <div class="sa-panel-chip">
+            <i class="bi bi-person-badge me-1"></i>
+            Manager Accounts
           </div>
         </div>
 
@@ -88,10 +107,15 @@
       </section>
 
       <section class="sa-panel">
-        <div class="sa-panel-header">
+        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <h2 class="sa-panel-title mb-1">Farmers Oversight</h2>
             <p class="sa-panel-text mb-0">List of farmers and registration information.</p>
+          </div>
+
+          <div class="sa-panel-chip">
+            <i class="bi bi-person-vcard me-1"></i>
+            Farmer Accounts
           </div>
         </div>
 

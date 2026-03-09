@@ -12,19 +12,25 @@
   <header class="sa-topbar">
     <div class="container-fluid px-3 px-lg-4">
       <div class="row g-3 align-items-center">
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-7">
           <div class="d-flex align-items-center gap-2">
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
-            <div>
+            <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
-              <h1 class="sa-page-title mb-0">Maintenance Broadcast</h1>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <h1 class="sa-page-title mb-0">Maintenance Broadcast</h1>
+                <span class="sa-page-chip">
+                  <i class="bi bi-megaphone me-1"></i>
+                  Alerts
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-lg-5">
           <div class="d-flex justify-content-lg-end">
             <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
               <i class="bi bi-arrow-repeat me-2"></i>
@@ -45,7 +51,7 @@
               <div>
                 <h2 class="sa-panel-title mb-1">Broadcast System Maintenance</h2>
                 <p class="sa-panel-text mb-0">
-                  Notify all users about upcoming downtime or system updates.
+                  Notify all users about upcoming downtime, upgrades, or service interruptions.
                 </p>
               </div>
             </div>
@@ -53,30 +59,39 @@
             <div class="row g-3 maintenance-form">
               <div class="col-12">
                 <label for="maintTitle" class="form-label sa-label">Alert Title</label>
-                <input
-                  type="text"
-                  id="maintTitle"
-                  class="form-control sa-input"
-                  placeholder="e.g., Sunday System Upgrade"
-                />
+                <div class="sa-input-group-icon">
+                  <span class="sa-input-icon"><i class="bi bi-type"></i></span>
+                  <input
+                    type="text"
+                    id="maintTitle"
+                    class="form-control sa-input with-icon"
+                    placeholder="e.g., Sunday System Upgrade"
+                  />
+                </div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="maintStart" class="form-label sa-label">Maintenance Start</label>
-                <input
-                  type="datetime-local"
-                  id="maintStart"
-                  class="form-control sa-input"
-                />
+                <div class="sa-input-group-icon">
+                  <span class="sa-input-icon"><i class="bi bi-calendar-event"></i></span>
+                  <input
+                    type="datetime-local"
+                    id="maintStart"
+                    class="form-control sa-input with-icon"
+                  />
+                </div>
               </div>
 
               <div class="col-12 col-md-6">
                 <label for="maintEnd" class="form-label sa-label">Maintenance End (Notice Removal)</label>
-                <input
-                  type="datetime-local"
-                  id="maintEnd"
-                  class="form-control sa-input"
-                />
+                <div class="sa-input-group-icon">
+                  <span class="sa-input-icon"><i class="bi bi-calendar-check"></i></span>
+                  <input
+                    type="datetime-local"
+                    id="maintEnd"
+                    class="form-control sa-input with-icon"
+                  />
+                </div>
               </div>
 
               <div class="col-12">
@@ -99,32 +114,48 @@
         </div>
 
         <div class="col-12 col-xl-4">
-          <div class="sa-panel h-100">
-            <div class="sa-panel-header">
-              <div>
-                <h2 class="sa-panel-title mb-1">Guidelines</h2>
-                <p class="sa-panel-text mb-0">
-                  Best practices before sending a maintenance notice.
-                </p>
+          <div class="row g-3">
+            <div class="col-12">
+              <div class="sa-panel h-100">
+                <div class="sa-panel-header">
+                  <div>
+                    <h2 class="sa-panel-title mb-1">Guidelines</h2>
+                    <p class="sa-panel-text mb-0">
+                      Review these reminders before sending a notice.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="sa-guideline-list">
+                  <div class="sa-guideline-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Use a concise maintenance title that users can understand quickly.</span>
+                  </div>
+                  <div class="sa-guideline-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Set accurate start and end times to avoid confusion.</span>
+                  </div>
+                  <div class="sa-guideline-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Explain what will be affected during maintenance.</span>
+                  </div>
+                  <div class="sa-guideline-item">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Double-check the schedule before broadcasting to all users.</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="sa-guideline-list">
-              <div class="sa-guideline-item">
-                <i class="bi bi-check-circle"></i>
-                <span>Use a clear and short maintenance title.</span>
-              </div>
-              <div class="sa-guideline-item">
-                <i class="bi bi-check-circle"></i>
-                <span>Set accurate start and end times.</span>
-              </div>
-              <div class="sa-guideline-item">
-                <i class="bi bi-check-circle"></i>
-                <span>Explain the expected impact to users.</span>
-              </div>
-              <div class="sa-guideline-item">
-                <i class="bi bi-check-circle"></i>
-                <span>Review the schedule before broadcasting.</span>
+            <div class="col-12">
+              <div class="sa-panel sa-highlight-panel">
+                <div class="sa-highlight-icon">
+                  <i class="bi bi-bell-fill"></i>
+                </div>
+                <h3 class="sa-highlight-title">Best Practice</h3>
+                <p class="sa-highlight-text mb-0">
+                  Send notices early enough so farm managers, encoders, and farmers can prepare before downtime begins.
+                </p>
               </div>
             </div>
           </div>

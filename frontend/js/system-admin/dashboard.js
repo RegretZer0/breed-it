@@ -31,7 +31,6 @@ const AdminDashboard = (() => {
      PURPOSE: Safe DOM selection helpers.
   ========================================================= */
   const $ = (selector, scope = document) => scope.querySelector(selector);
-  const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
 
   /* =========================================================
      MODULE: Utility Helpers
@@ -56,14 +55,25 @@ const AdminDashboard = (() => {
   }
 
   function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value ?? "--";
+    const els = document.querySelectorAll(`#${id}`);
+    els.forEach((el) => {
+      el.textContent = value ?? "--";
+    });
   }
 
   function setButtonLoading(btn, isLoading, loadingText, defaultText) {
     if (!btn) return;
     btn.disabled = isLoading;
-    btn.textContent = isLoading ? loadingText : defaultText;
+    btn.innerHTML = isLoading ? loadingText : defaultText;
+  }
+
+  function currentPage() {
+    const path = window.location.pathname || "";
+    if (path.includes("/maintenance")) return "maintenance";
+    if (path.includes("/users")) return "users";
+    if (path.includes("/tickets")) return "tickets";
+    if (path.includes("/infrastructure")) return "infrastructure";
+    return "dashboard";
   }
 
   async function fetchJson(path, options = {}) {
@@ -81,6 +91,41 @@ const AdminDashboard = (() => {
   }
 
   /* =========================================================
+     MODULE: Sidebar UI
+     PURPOSE: Handle mobile sidebar open and close behavior.
+  ========================================================= */
+  function bindSidebar() {
+    const sidebar = document.getElementById("saSidebar");
+    const backdrop = document.getElementById("saBackdrop");
+    const toggleBtn = document.getElementById("sidebarToggleBtn");
+    const closeBtn = document.getElementById("sidebarCloseBtn");
+
+    if (!sidebar || !backdrop) return;
+
+    const openSidebar = () => {
+      sidebar.classList.add("open");
+      backdrop.classList.add("show");
+      document.body.style.overflow = "hidden";
+    };
+
+    const closeSidebar = () => {
+      sidebar.classList.remove("open");
+      backdrop.classList.remove("show");
+      document.body.style.overflow = "";
+    };
+
+    toggleBtn?.addEventListener("click", openSidebar);
+    closeBtn?.addEventListener("click", closeSidebar);
+    backdrop?.addEventListener("click", closeSidebar);
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 992) {
+        closeSidebar();
+      }
+    });
+  }
+
+  /* =========================================================
      MODULE: Event Binding
      PURPOSE: Attach all event listeners in one place.
   ========================================================= */
@@ -91,17 +136,19 @@ const AdminDashboard = (() => {
     const teleportBtn = document.getElementById("teleportBtn");
     const resetTimeBtn = document.getElementById("resetTimeBtn");
     const manualRefreshBtn = document.getElementById("manualRefreshBtn");
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
+
+    bindSidebar();
 
     logoutBtn?.addEventListener("click", logout);
     searchUser?.addEventListener("input", filterUsers);
     sendMaintBtn?.addEventListener("click", broadcastMaintenance);
     teleportBtn?.addEventListener("click", () => teleportSystemTime(false));
     resetTimeBtn?.addEventListener("click", () => teleportSystemTime(true));
+    themeToggleBtn?.addEventListener("click", toggleTheme);
 
     manualRefreshBtn?.addEventListener("click", async () => {
-      await refreshDashboard();
-      await loadAdminTickets();
-      await loadUsers();
+      await refreshPageData();
     });
 
     bindUsersTableEvents();
@@ -155,23 +202,18 @@ const AdminDashboard = (() => {
 
   /* =========================================================
      MODULE: App Init
-     PURPOSE: Start all dashboard processes.
+     PURPOSE: Start all page processes.
   ========================================================= */
   async function init() {
+    initTheme();
     bindEvents();
-
-    await Promise.all([
-      refreshDashboard(),
-      loadUsers(),
-      loadAdminTickets(),
-    ]);
-
+    await refreshPageData();
     startAutoRefresh();
   }
 
   /* =========================================================
      MODULE: Auto Refresh
-     PURPOSE: Keep metrics fresh without reloading the page.
+     PURPOSE: Keep page metrics fresh without reloading.
   ========================================================= */
   function startAutoRefresh() {
     stopAutoRefresh();
@@ -195,6 +237,54 @@ const AdminDashboard = (() => {
       clearInterval(state.autoRefreshInterval);
       state.autoRefreshInterval = null;
     }
+  }
+
+  /* =========================================================
+     MODULE: Page Refresh Router
+     PURPOSE: Refresh data based on current page context.
+  ========================================================= */
+  async function refreshPageData() {
+    const page = currentPage();
+
+    if (page === "dashboard") {
+      await Promise.all([
+        refreshDashboard(),
+        loadUsers(),
+        loadAdminTickets(),
+      ]);
+      return;
+    }
+
+    if (page === "users") {
+      await Promise.all([
+        refreshDashboard(),
+        loadUsers(),
+      ]);
+      return;
+    }
+
+    if (page === "tickets") {
+      await Promise.all([
+        refreshDashboard(),
+        loadAdminTickets(),
+      ]);
+      return;
+    }
+
+    if (page === "infrastructure") {
+      await Promise.all([
+        refreshDashboard(),
+        loadDataOversight(),
+      ]);
+      return;
+    }
+
+    if (page === "maintenance") {
+      await refreshDashboard();
+      return;
+    }
+
+    await refreshDashboard();
   }
 
   /* =========================================================
@@ -241,7 +331,7 @@ const AdminDashboard = (() => {
 
   /* =========================================================
      MODULE: Maintenance Broadcast
-     PURPOSE: Send a scheduled maintenance notification to all users.
+     PURPOSE: Send a scheduled maintenance notification.
   ========================================================= */
   async function broadcastMaintenance() {
     const titleEl = document.getElementById("maintTitle");
@@ -265,7 +355,12 @@ const AdminDashboard = (() => {
       return;
     }
 
-    setButtonLoading(btn, true, "Broadcasting...", "Broadcast to All Users");
+    setButtonLoading(
+      btn,
+      true,
+      '<i class="bi bi-hourglass-split me-2"></i>Broadcasting...',
+      '<i class="bi bi-megaphone me-2"></i>Broadcast to All Users'
+    );
 
     try {
       const payload = {
@@ -295,7 +390,12 @@ const AdminDashboard = (() => {
       console.error("Maintenance Error:", err);
       alert("Error connecting to notification service.");
     } finally {
-      setButtonLoading(btn, false, "Broadcasting...", "Broadcast to All Users");
+      setButtonLoading(
+        btn,
+        false,
+        '<i class="bi bi-hourglass-split me-2"></i>Broadcasting...',
+        '<i class="bi bi-megaphone me-2"></i>Broadcast to All Users'
+      );
     }
   }
 
@@ -330,24 +430,23 @@ const AdminDashboard = (() => {
     if (!virtualTimeEl) return;
 
     virtualTimeEl.textContent = stats.virtualTime || "--";
-    virtualTimeEl.style.color = stats.isTimeMocked ? "#f59e0b" : "#10b981";
+    virtualTimeEl.style.color = stats.isTimeMocked ? "#f5c451" : "#54e08c";
   }
 
   function updateServerStatus(status) {
-    const statusEl = document.getElementById("serverStatus");
-    if (!statusEl) return;
+    const elements = document.querySelectorAll("#serverStatus");
+    elements.forEach((statusEl) => {
+      statusEl.textContent = status ?? "--";
+      statusEl.classList.remove("status-stable", "status-strained", "status-danger");
 
-    statusEl.textContent = status ?? "--";
-
-    statusEl.classList.remove("status-stable", "status-strained", "status-danger");
-
-    if (status === "Stable") {
-      statusEl.classList.add("status-stable");
-    } else if (status === "Danger" || status === "Critical") {
-      statusEl.classList.add("status-danger");
-    } else {
-      statusEl.classList.add("status-strained");
-    }
+      if (status === "Stable") {
+        statusEl.classList.add("status-stable");
+      } else if (status === "Danger" || status === "Critical") {
+        statusEl.classList.add("status-danger");
+      } else {
+        statusEl.classList.add("status-strained");
+      }
+    });
   }
 
   /* =========================================================
@@ -416,6 +515,7 @@ const AdminDashboard = (() => {
               <option value="system_admin" ${role === "system_admin" ? "selected" : ""}>System Admin</option>
               <option value="farm_manager" ${role === "farm_manager" ? "selected" : ""}>Farm Manager</option>
               <option value="farmer" ${role === "farmer" ? "selected" : ""}>Farmer</option>
+              <option value="encoder" ${role === "encoder" ? "selected" : ""}>Encoder</option>
             </select>
           </td>
           <td>
@@ -663,6 +763,50 @@ const AdminDashboard = (() => {
       console.error("Status Update Error:", err);
       alert("Error connecting to support service.");
     }
+  }
+
+  /* =========================================================
+    MODULE: Theme Init
+    PURPOSE: Restore saved theme and update toggle label.
+  ========================================================= */
+  function initTheme() {
+    const savedTheme = localStorage.getItem("sa_theme") || "dark";
+    const body = document.body;
+
+    body.classList.remove("sa-theme-dark", "sa-theme-light");
+    body.classList.add(savedTheme === "light" ? "sa-theme-light" : "sa-theme-dark");
+
+    updateThemeToggleLabel();
+  }
+
+  /* =========================================================
+     MODULE: Theme Toggle
+     PURPOSE: Switch between dark and light theme.
+  ========================================================= */
+  function toggleTheme() {
+    const body = document.body;
+    const isLight = body.classList.contains("sa-theme-light");
+
+    body.classList.remove("sa-theme-dark", "sa-theme-light");
+    body.classList.add(isLight ? "sa-theme-dark" : "sa-theme-light");
+
+    localStorage.setItem("sa_theme", isLight ? "dark" : "light");
+    updateThemeToggleLabel();
+  }
+
+  /* =========================================================
+     MODULE: Theme Toggle Label
+     PURPOSE: Keep toggle button text and icon in sync.
+  ========================================================= */
+  function updateThemeToggleLabel() {
+    const btn = document.getElementById("themeToggleBtn");
+    if (!btn) return;
+
+    const isLight = document.body.classList.contains("sa-theme-light");
+
+    btn.innerHTML = isLight
+      ? '<i class="bi bi-moon-stars-fill me-2"></i>Switch to Dark Mode'
+      : '<i class="bi bi-sun-fill me-2"></i>Switch to Light Mode';
   }
 
   return {
