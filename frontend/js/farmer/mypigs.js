@@ -191,19 +191,80 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  /* =========================================================
+   SHARED HELPERS (LATEST GROWTH + ADG)
+  ========================================================= */
   function getLatestPerformance(records = []) {
-    if (!records.length) return {};
-    return [...records].sort((a, b) => new Date(b.record_date) - new Date(a.record_date))[0];
+    if (!Array.isArray(records) || !records.length) return {};
+
+    const sorted = [...records].sort(
+      (a, b) => new Date(b.record_date || 0) - new Date(a.record_date || 0)
+    );
+
+    const latestGrowthRecord = sorted.find((r) => {
+      const weightNum = Number(r.weight);
+      const bodyLengthNum = Number(r.body_length);
+      const heartGirthNum = Number(r.heart_girth);
+
+      const hasWeight =
+        r.weight !== undefined &&
+        r.weight !== null &&
+        r.weight !== "" &&
+        !Number.isNaN(weightNum) &&
+        weightNum > 0;
+
+      const hasBodyLength =
+        r.body_length !== undefined &&
+        r.body_length !== null &&
+        r.body_length !== "" &&
+        !Number.isNaN(bodyLengthNum) &&
+        bodyLengthNum > 0;
+
+      const hasHeartGirth =
+        r.heart_girth !== undefined &&
+        r.heart_girth !== null &&
+        r.heart_girth !== "" &&
+        !Number.isNaN(heartGirthNum) &&
+        heartGirthNum > 0;
+
+      return hasWeight || hasBodyLength || hasHeartGirth;
+    });
+
+    return latestGrowthRecord || {};
   }
 
   function calculateADG(records = []) {
-    if (records.length < 2) return "N/A";
-    const last = records[records.length - 1];
-    const prev = records[records.length - 2];
+    const weightedRecords = [...(records || [])]
+      .filter((r) => {
+        const weightNum = Number(r.weight);
+        return (
+          r &&
+          r.record_date &&
+          r.weight !== undefined &&
+          r.weight !== null &&
+          r.weight !== "" &&
+          !Number.isNaN(weightNum) &&
+          weightNum > 0
+        );
+      })
+      .sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+
+    if (weightedRecords.length < 2) return "N/A";
+
+    const last = weightedRecords[weightedRecords.length - 1];
+    const prev = weightedRecords[weightedRecords.length - 2];
+
     const days =
       (new Date(last.record_date) - new Date(prev.record_date)) / (1000 * 60 * 60 * 24);
-    if (days <= 0) return "N/A";
-    return ((last.weight - prev.weight) / days).toFixed(3) + " kg/day";
+
+    if (!Number.isFinite(days) || days <= 0) return "N/A";
+
+    const lastWeight = Number(last.weight);
+    const prevWeight = Number(prev.weight);
+
+    if (!Number.isFinite(lastWeight) || !Number.isFinite(prevWeight)) return "N/A";
+
+    return ((lastWeight - prevWeight) / days).toFixed(3) + " kg/day";
   }
 
   function toNum(v) {
@@ -589,9 +650,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        const latest = getLatestPerformance(targetPig.performance_records || []);
-        const adg = calculateADG(targetPig.performance_records || []);
-        openPigDetails(targetPig, latest, adg);
+        openPigDetails(targetPig);
       });
     });
   }
@@ -980,11 +1039,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =========================================================
      UI: OPEN PIG DETAILS MODAL
   ========================================================= */
-  function openPigDetails(pig, latest = {}, adg = "N/A") {
+  function openPigDetails(pig) {
     if (!modalBody) return;
 
-    // Bootstrap-friendly layout inside your existing modal shell
-    // IDs must stay the same for linked logic
+    const latest = getLatestPerformance(pig.performance_records || []);
+    const adg = calculateADG(pig.performance_records || []);
+
+    const latestWeightText =
+      latest.weight !== undefined &&
+      latest.weight !== null &&
+      latest.weight !== "" &&
+      !Number.isNaN(Number(latest.weight))
+        ? `${Number(latest.weight)} kg`
+        : "-";
+
     modalBody.innerHTML = `
       <div class="pig-details">
 
@@ -1007,7 +1075,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           <div class="info-card">
             <small>Latest Weight</small>
-            <strong>${latest.weight ? `${latest.weight} kg` : "-"}</strong>
+            <strong>${latestWeightText}</strong>
           </div>
 
           <div class="info-card">
@@ -1035,11 +1103,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     pigModal.classList.add("show");
     document.body.style.overflow = "hidden";
   }
-
   /* =========================================================
      UI: OVERVIEW TAB CONTENT
   ========================================================= */
   function renderOverviewTab(pig, latest = {}, adg = "N/A") {
+    const weightText =
+      latest.weight !== undefined &&
+      latest.weight !== null &&
+      latest.weight !== "" &&
+      !Number.isNaN(Number(latest.weight))
+        ? `${Number(latest.weight)} kg`
+        : "-";
+
+    const bodyLengthText =
+      latest.body_length !== undefined &&
+      latest.body_length !== null &&
+      latest.body_length !== "" &&
+      !Number.isNaN(Number(latest.body_length))
+        ? `${Number(latest.body_length)} cm`
+        : "-";
+
+    const heartGirthText =
+      latest.heart_girth !== undefined &&
+      latest.heart_girth !== null &&
+      latest.heart_girth !== "" &&
+      !Number.isNaN(Number(latest.heart_girth))
+        ? `${Number(latest.heart_girth)} cm`
+        : "-";
+
     return `
       <div class="overview-section">
 
@@ -1059,10 +1150,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
 
         <div class="condition-list">
-          <div><span>Weight</span><span>${latest.weight ? `${latest.weight} kg` : "-"}</span></div>
+          <div><span>Weight</span><span>${weightText}</span></div>
           <div><span>Daily Gain (ADG)</span><span>${adg}</span></div>
-          <div><span>Body Length</span><span>${latest.body_length || "-"}</span></div>
-          <div><span>Heart Girth</span><span>${latest.heart_girth || "-"}</span></div>
+          <div><span>Body Length</span><span>${bodyLengthText}</span></div>
+          <div><span>Heart Girth</span><span>${heartGirthText}</span></div>
         </div>
 
         <div class="overview-actions mt-3">
@@ -1096,7 +1187,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================================================= */
   function renderGrowthTab(pig) {
     const records = [...(pig.performance_records || [])]
-      .filter((r) => r.weight)
+      .filter((r) => {
+        const weightNum = Number(r.weight);
+        return (
+          r &&
+          r.record_date &&
+          r.weight !== undefined &&
+          r.weight !== null &&
+          r.weight !== "" &&
+          !Number.isNaN(weightNum) &&
+          weightNum > 0
+        );
+      })
       .sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
 
     if (!records.length) {
@@ -1154,7 +1256,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================================================= */
   function initializeGrowthChart(pig) {
     const records = [...(pig.performance_records || [])]
-      .filter((r) => r.weight && r.record_date)
+      .filter((r) => {
+        const weightNum = Number(r.weight);
+        return (
+          r &&
+          r.record_date &&
+          r.weight !== undefined &&
+          r.weight !== null &&
+          r.weight !== "" &&
+          !Number.isNaN(weightNum) &&
+          weightNum > 0
+        );
+      })
       .sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
 
     const ctx = document.getElementById("weightChart");

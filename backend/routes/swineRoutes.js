@@ -734,22 +734,60 @@ router.get(
         };
       }
 
-      if (req.query.sex) query.sex = { $regex: new RegExp(`^${req.query.sex}$`, "i") };
-      if (req.query.age_stage) query.age_stage = { $regex: new RegExp(`^${req.query.age_stage}$`, "i") };
-      if (req.query.farmer_id) query.farmer_id = req.query.farmer_id;
+      if (req.query.sex) {
+        query.sex = { $regex: new RegExp(`^${req.query.sex}$`, "i") };
+      }
 
-      const swine = await Swine.find(query).populate("farmer_id", "first_name last_name").lean();
-      const swineData = swine.map((s) => ({
-        ...s,
-        farmer_name: s.farmer_id ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}` : "ADMIN/MASTER",
-        total_piglets_count: s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.total_piglets || 0), 0) || 0,
-        total_mortality_count:
-          s.breeding_cycles?.reduce((sum, c) => sum + (c.farrowing_results?.mortality_count || 0), 0) || 0,
-        latest_performance: s.performance_records?.[s.performance_records.length - 1] || {}
-      }));
+      if (req.query.age_stage) {
+        query.age_stage = { $regex: new RegExp(`^${req.query.age_stage}$`, "i") };
+      }
+
+      if (req.query.farmer_id) {
+        query.farmer_id = req.query.farmer_id;
+      }
+
+      const swine = await Swine.find(query)
+        .populate("farmer_id", "first_name last_name")
+        .lean();
+
+      const swineData = swine.map((s) => {
+        const sortedPerf = [...(s.performance_records || [])].sort(
+          (a, b) => new Date(b.record_date || 0) - new Date(a.record_date || 0)
+        );
+
+        const latestPerf = sortedPerf[0] || {};
+
+        const latestWeightRecord = sortedPerf.find(
+          (r) =>
+            r.weight !== undefined &&
+            r.weight !== null &&
+            !Number.isNaN(Number(r.weight)) &&
+            Number(r.weight) > 0
+        );
+
+        return {
+          ...s,
+          farmer_name: s.farmer_id
+            ? `${s.farmer_id.first_name} ${s.farmer_id.last_name}`
+            : "ADMIN/MASTER",
+          total_piglets_count:
+            s.breeding_cycles?.reduce(
+              (sum, c) => sum + (c.farrowing_results?.total_piglets || 0),
+              0
+            ) || 0,
+          total_mortality_count:
+            s.breeding_cycles?.reduce(
+              (sum, c) => sum + (c.farrowing_results?.mortality_count || 0),
+              0
+            ) || 0,
+          latest_performance: latestPerf,
+          latest_weight: latestWeightRecord ? Number(latestWeightRecord.weight) : 0
+        };
+      });
 
       res.json({ success: true, swine: swineData });
     } catch (err) {
+      console.error("GET /all swine error:", err);
       res.status(500).json({ success: false, message: "Server error" });
     }
   }

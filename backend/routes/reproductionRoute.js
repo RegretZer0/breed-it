@@ -253,12 +253,12 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
     }
 
     const piglets = await Swine.find(query);
-    
+
     const data = piglets.map((p) => {
       const birthDate = p.birth_date ? new Date(p.birth_date) : new Date(p.createdAt);
       const diffInMs = now.getTime() - birthDate.getTime();
       const ageInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-      
+
       let phase = "Suckling (Day 1-30)";
       let color = "blue";
       let canAction = false;
@@ -278,26 +278,50 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
         color = "blue";
       }
 
-      const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
-      const deformitiesList = latestPerf.deformities || ["None"];
-      const hasDeformity = deformitiesList.some(d => d && d !== "None" && d !== "");
-      
+      const sortedPerf = [...(p.performance_records || [])].sort(
+        (a, b) => new Date(b.record_date || 0) - new Date(a.record_date || 0)
+      );
+
+      const latestPerf = sortedPerf[0] || {};
+
+      const latestWeightRecord = sortedPerf.find(
+        (r) =>
+          r.weight !== undefined &&
+          r.weight !== null &&
+          !Number.isNaN(Number(r.weight)) &&
+          Number(r.weight) > 0
+      );
+
+      const latestWeight = latestWeightRecord ? Number(latestWeightRecord.weight) : 0;
+
+      const deformitySource =
+        Array.isArray(latestPerf.deformities) && latestPerf.deformities.length
+          ? latestPerf.deformities
+          : ["None"];
+
+      const deformitiesList = deformitySource.map((d) => String(d).trim());
+      const hasDeformity = deformitiesList.some(
+        (d) => d && d.toLowerCase() !== "none"
+      );
+
       if (hasDeformity) {
         phase = "To be Culled/Sold (Deformity)";
         color = "red";
+        canAction = false;
       }
 
       return {
         id: p._id,
         swine_tag: p.swine_id,
         dam_id: p.dam_id || "N/A",
-        current_status: phase, 
+        current_status: phase,
         age_days: isNaN(ageInDays) ? 0 : ageInDays,
         days_remaining: Math.max(0, 120 - ageInDays),
         status_color: color,
         can_action: canAction,
-        latest_weight: latestPerf.weight || 0,
+        latest_weight: latestWeight,
         deformities: deformitiesList,
+        latest_performance: latestPerf
       };
     });
 
