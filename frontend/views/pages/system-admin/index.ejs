@@ -50,204 +50,421 @@
 
   <main class="sa-content">
     <div class="container-fluid px-3 px-lg-4">
-      <section class="sa-hero-panel mb-4">
+
+      <!-- =========================================================
+           DASHBOARD HERO
+      ========================================================== -->
+      <section class="sa-hero-panel sa-dashboard-hero mb-4">
         <div class="row g-4 align-items-center">
           <div class="col-12 col-xl-8">
             <div class="sa-hero-content">
               <div class="sa-hero-kicker">Live administration workspace</div>
-              <h2 class="sa-hero-title">Monitor platform health, users, tickets, and infrastructure in one place.</h2>
+              <h2 class="sa-hero-title">
+                Monitor platform health, users, tickets, and infrastructure in one place.
+              </h2>
               <p class="sa-hero-text mb-0">
-                Use the quick actions below to manage your system efficiently across desktop, tablet, and mobile devices.
+                Review real-time platform metrics, active sessions, current server condition,
+                and support workload across desktop, tablet, and mobile devices.
               </p>
             </div>
           </div>
 
           <div class="col-12 col-xl-4">
-            <div class="sa-hero-side">
-              <div class="sa-hero-stat">
-                <span class="sa-hero-stat-label">Open Tickets</span>
-                <span id="ticketCountBadge" class="sa-badge-danger">0 Open Tickets</span>
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 col-xl-12">
+                <div class="sa-hero-stat-card">
+                  <div class="sa-hero-stat-icon">
+                    <i class="bi bi-life-preserver"></i>
+                  </div>
+                  <div class="sa-hero-stat-body">
+                    <div class="sa-hero-stat-label">Open Tickets</div>
+                    <div class="sa-hero-stat-value">
+                      <span id="ticketCountBadge" class="sa-badge-danger">0 Open Tickets</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="sa-hero-stat">
-                <span class="sa-hero-stat-label">Server State</span>
-                <span class="sa-inline-status" id="serverStatus">--</span>
+
+              <div class="col-12 col-sm-6 col-xl-12">
+                <div class="sa-hero-stat-card">
+                  <div class="sa-hero-stat-icon">
+                    <i class="bi bi-hdd-network"></i>
+                  </div>
+                  <div class="sa-hero-stat-body">
+                    <div class="sa-hero-stat-label">Server State</div>
+                    <div class="sa-hero-stat-value">
+                      <span class="sa-inline-status" id="serverStatus">--</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div class="row g-3 g-xl-4 mb-4">
-        <div class="col-12 col-sm-6 col-xl">
-          <div class="sa-metric-card">
-            <div class="sa-metric-top">
-              <div class="sa-metric-icon">
-                <i class="bi bi-activity"></i>
+      <!-- =========================================================
+           PRIMARY METRICS
+      ========================================================== -->
+      <section class="mb-4">
+        <div class="row g-3 g-xl-4">
+          <div class="col-12 col-sm-6 col-xl">
+            <div class="sa-metric-card sa-metric-card-accent">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-activity"></i>
+                </div>
+                <span class="sa-metric-trend">
+                  <i class="bi bi-waveform"></i>
+                </span>
               </div>
-              <span class="sa-metric-trend"><i class="bi bi-waveform"></i></span>
+              <div class="sa-metric-label">Server Status</div>
+              <div class="sa-metric-value" id="serverStatus">--</div>
             </div>
-            <div class="sa-metric-label">Server Status</div>
-            <div class="sa-metric-value" id="serverStatus">--</div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-cpu-fill"></i>
+                </div>
+                <span class="sa-metric-trend">
+                  <i class="bi bi-speedometer2"></i>
+                </span>
+              </div>
+              <div class="sa-metric-label">CPU Load</div>
+              <div class="sa-metric-value" id="cpuLoad">--</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-memory"></i>
+                </div>
+                <span class="sa-metric-trend">
+                  <i class="bi bi-bar-chart-line"></i>
+                </span>
+              </div>
+              <div class="sa-metric-label">Memory Usage</div>
+              <div class="sa-metric-value" id="memoryUsage">--</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-people-fill"></i>
+                </div>
+                <span class="sa-metric-trend">
+                  <i class="bi bi-person-lines-fill"></i>
+                </span>
+              </div>
+              <div class="sa-metric-label">Total Users</div>
+              <div class="sa-metric-value" id="totalUsers">--</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-broadcast-pin"></i>
+                </div>
+                <span class="sa-metric-trend">
+                  <i class="bi bi-diagram-3"></i>
+                </span>
+              </div>
+              <div class="sa-metric-label">Active Sessions</div>
+              <div class="sa-metric-value" id="concurrentUsers">--</div>
+            </div>
           </div>
         </div>
+      </section>
 
-        <div class="col-12 col-sm-6 col-xl">
-          <div class="sa-metric-card">
-            <div class="sa-metric-top">
-              <div class="sa-metric-icon">
-                <i class="bi bi-cpu-fill"></i>
+      <!-- =========================================================
+           MAIN DASHBOARD CONTENT
+      ========================================================== -->
+      <section class="sa-dashboard-grid">
+        <div class="row g-3 g-xl-4">
+
+          <!-- LEFT SIDE -->
+          <div class="col-12 col-xl-8">
+            <div class="row g-3 g-xl-4">
+
+              <!-- Activity Overview -->
+              <div class="col-12">
+                <div class="sa-panel sa-analytics-panel h-100">
+                  <div class="sa-panel-header">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                      <div>
+                        <h2 class="sa-panel-title mb-1">User Activity Overview</h2>
+                        <p class="sa-panel-text mb-0">
+                          Monitor platform activity trends across selected time ranges.
+                        </p>
+                      </div>
+
+                      <div class="sa-chart-range-group" id="activityRangeGroup">
+                        <button type="button" class="btn sa-range-btn active" data-range="24h">24H</button>
+                        <button type="button" class="btn sa-range-btn" data-range="7d">7D</button>
+                        <button type="button" class="btn sa-range-btn" data-range="30d">30D</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="sa-chart-card">
+                    <div class="sa-chart-head">
+                      <div>
+                        <div class="sa-chart-title">Activity Trend</div>
+                        <div class="sa-chart-subtitle">Logins, sessions, and usage behavior over time</div>
+                      </div>
+
+                      <div class="sa-chart-legend">
+                        <span class="sa-chart-legend-item">
+                          <span class="sa-chart-dot"></span>
+                          Platform Activity
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="sa-chart-wrap">
+                      <canvas id="adminActivityChart" aria-label="Admin activity chart"></canvas>
+
+                      <div class="sa-chart-empty" id="adminActivityChartEmpty">
+                        <div>
+                          <div class="sa-chart-empty-icon">
+                            <i class="bi bi-bar-chart-line"></i>
+                          </div>
+                          <div class="sa-chart-empty-title">Historical activity data is not available yet</div>
+                          <div class="sa-chart-empty-text">
+                            The current dashboard shows real snapshot values only. Add a backend
+                            activity logs endpoint to render accurate 24H, 7D, and 30D trends.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row g-3 mt-1">
+                    <div class="col-12 col-md-4">
+                      <div class="sa-mini-analytic-card">
+                        <div class="sa-mini-analytic-icon">
+                          <i class="bi bi-people"></i>
+                        </div>
+                        <div class="sa-mini-analytic-label">Total Users</div>
+                        <div class="sa-mini-analytic-value" id="activityTotalLogins">--</div>
+                        <div class="sa-mini-analytic-meta">Registered system users</div>
+                      </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <div class="sa-mini-analytic-card">
+                        <div class="sa-mini-analytic-icon">
+                          <i class="bi bi-broadcast"></i>
+                        </div>
+                        <div class="sa-mini-analytic-label">Active Sessions</div>
+                        <div class="sa-mini-analytic-value" id="activityPeakSessions">--</div>
+                        <div class="sa-mini-analytic-meta">Current concurrent usage</div>
+                      </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <div class="sa-mini-analytic-card">
+                        <div class="sa-mini-analytic-icon">
+                          <i class="bi bi-life-preserver"></i>
+                        </div>
+                        <div class="sa-mini-analytic-label">Open Tickets</div>
+                        <div class="sa-mini-analytic-value" id="activityActiveUsers">--</div>
+                        <div class="sa-mini-analytic-meta">Current unresolved tickets</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span class="sa-metric-trend"><i class="bi bi-speedometer2"></i></span>
-            </div>
-            <div class="sa-metric-label">CPU Load</div>
-            <div class="sa-metric-value" id="cpuLoad">--</div>
-          </div>
-        </div>
 
-        <div class="col-12 col-sm-6 col-xl">
-          <div class="sa-metric-card">
-            <div class="sa-metric-top">
-              <div class="sa-metric-icon">
-                <i class="bi bi-memory"></i>
+              <!-- Quick Overview Cards -->
+              <div class="col-12">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6 col-xxl-4">
+                    <a href="/system-admin/users" class="sa-shortcut-card text-decoration-none">
+                      <div class="sa-shortcut-icon">
+                        <i class="bi bi-people-fill"></i>
+                      </div>
+                      <div class="flex-grow-1 min-w-0">
+                        <div class="sa-shortcut-title">Manage Users</div>
+                        <div class="sa-shortcut-text">
+                          Review account roles, statuses, and access permissions.
+                        </div>
+                      </div>
+                      <div class="sa-shortcut-arrow">
+                        <i class="bi bi-arrow-right"></i>
+                      </div>
+                    </a>
+                  </div>
+
+                  <div class="col-12 col-md-6 col-xxl-4">
+                    <a href="/system-admin/tickets" class="sa-shortcut-card text-decoration-none">
+                      <div class="sa-shortcut-icon">
+                        <i class="bi bi-life-preserver"></i>
+                      </div>
+                      <div class="flex-grow-1 min-w-0">
+                        <div class="sa-shortcut-title">Support Tickets</div>
+                        <div class="sa-shortcut-text">
+                          Monitor unresolved issues and update ticket resolution status.
+                        </div>
+                      </div>
+                      <div class="sa-shortcut-arrow">
+                        <i class="bi bi-arrow-right"></i>
+                      </div>
+                    </a>
+                  </div>
+
+                  <div class="col-12 col-md-6 col-xxl-4">
+                    <a href="/system-admin/infrastructure" class="sa-shortcut-card text-decoration-none">
+                      <div class="sa-shortcut-icon">
+                        <i class="bi bi-hdd-network-fill"></i>
+                      </div>
+                      <div class="flex-grow-1 min-w-0">
+                        <div class="sa-shortcut-title">Infrastructure</div>
+                        <div class="sa-shortcut-text">
+                          View server environment, uptime, memory, and platform details.
+                        </div>
+                      </div>
+                      <div class="sa-shortcut-arrow">
+                        <i class="bi bi-arrow-right"></i>
+                      </div>
+                    </a>
+                  </div>
+                </div>
               </div>
-              <span class="sa-metric-trend"><i class="bi bi-bar-chart-line"></i></span>
-            </div>
-            <div class="sa-metric-label">Memory Usage</div>
-            <div class="sa-metric-value" id="memoryUsage">--</div>
-          </div>
-        </div>
 
-        <div class="col-12 col-sm-6 col-xl">
-          <div class="sa-metric-card">
-            <div class="sa-metric-top">
-              <div class="sa-metric-icon">
-                <i class="bi bi-people-fill"></i>
+            </div>
+          </div>
+
+          <!-- RIGHT SIDE -->
+          <div class="col-12 col-xl-4">
+            <div class="row g-3 g-xl-4 h-100">
+
+              <!-- System Snapshot -->
+              <div class="col-12">
+                <div class="sa-panel sa-side-panel">
+                  <div class="sa-panel-header">
+                    <div>
+                      <h2 class="sa-panel-title mb-1">System Snapshot</h2>
+                      <p class="sa-panel-text mb-0">
+                        Current environment overview and infrastructure status.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="sa-info-list">
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">
+                        <i class="bi bi-pc-display-horizontal me-2"></i>Platform
+                      </span>
+                      <span class="sa-info-value" id="osPlatform">--</span>
+                    </div>
+
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">
+                        <i class="bi bi-clock me-2"></i>System Uptime
+                      </span>
+                      <span class="sa-info-value" id="systemUptime">--</span>
+                    </div>
+
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">
+                        <i class="bi bi-cpu me-2"></i>CPU Model
+                      </span>
+                      <span class="sa-info-value" id="cpuModel">--</span>
+                    </div>
+
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">
+                        <i class="bi bi-memory me-2"></i>Total Memory
+                      </span>
+                      <span class="sa-info-value" id="totalMemory">--</span>
+                    </div>
+                  </div>
+
+                  <div class="mt-3">
+                    <a href="/system-admin/infrastructure" class="btn sa-btn-primary w-100">
+                      <i class="bi bi-arrow-right-circle me-2"></i>
+                      View Infrastructure
+                    </a>
+                  </div>
+                </div>
               </div>
-              <span class="sa-metric-trend"><i class="bi bi-person-lines-fill"></i></span>
-            </div>
-            <div class="sa-metric-label">Total Users</div>
-            <div class="sa-metric-value" id="totalUsers">--</div>
-          </div>
-        </div>
 
-        <div class="col-12 col-sm-6 col-xl">
-          <div class="sa-metric-card">
-            <div class="sa-metric-top">
-              <div class="sa-metric-icon">
-                <i class="bi bi-broadcast-pin"></i>
+              <!-- Time Warp -->
+              <div class="col-12">
+                <div class="sa-panel sa-timewarp-dashboard-panel">
+                  <div class="sa-panel-header">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                      <div>
+                        <h2 class="sa-panel-title mb-1">
+                          <i class="bi bi-clock-history me-2"></i>
+                          Time Warp
+                        </h2>
+                        <p class="sa-panel-text mb-0">Developer mode only.</p>
+                      </div>
+                      <span class="badge sa-soft-badge">Dev</span>
+                    </div>
+                  </div>
+
+                  <div class="sa-time-info-label">Current Virtual Time</div>
+                  <div
+                    class="sa-virtual-time mb-3"
+                    id="virtualTimeDisplay"
+                    data-mocked="<%= typeof isTimeMocked !== 'undefined' ? isTimeMocked : false %>"
+                  >
+                    <%= typeof virtualNow !== 'undefined' && virtualNow ? virtualNow.toLocaleString() : '--' %>
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="systemTimeInput" class="form-label sa-label">Set Virtual Time</label>
+                    <input
+                      type="datetime-local"
+                      id="systemTimeInput"
+                      class="form-control sa-input"
+                    />
+                  </div>
+
+                  <div class="d-grid gap-2">
+                    <button class="btn sa-btn-primary" id="teleportBtn" type="button">
+                      <i class="bi bi-send-check me-2"></i>
+                      Teleport Server
+                    </button>
+
+                    <button class="btn sa-btn-outline" id="resetTimeBtn" type="button">
+                      <i class="bi bi-arrow-counterclockwise me-2"></i>
+                      Reset to Reality
+                    </button>
+                  </div>
+                </div>
               </div>
-              <span class="sa-metric-trend"><i class="bi bi-diagram-3"></i></span>
-            </div>
-            <div class="sa-metric-label">Active Sessions</div>
-            <div class="sa-metric-value" id="concurrentUsers">--</div>
-          </div>
-        </div>
-      </div>
 
-      <div class="row g-3 g-xl-4">
-        <div class="col-12 col-xl-8">
-          <div class="sa-panel h-100">
-            <div class="sa-panel-header">
-              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <div>
-                  <h2 class="sa-panel-title mb-1">Quick Navigation</h2>
-                  <p class="sa-panel-text mb-0">
-                    Access the main system administration modules quickly.
+              <!-- Health Highlight -->
+              <div class="col-12">
+                <div class="sa-panel sa-highlight-panel sa-health-highlight">
+                  <div class="sa-highlight-icon">
+                    <i class="bi bi-shield-check"></i>
+                  </div>
+                  <h3 class="sa-highlight-title">Administration Health</h3>
+                  <p class="sa-highlight-text mb-0">
+                    Keep user access, support requests, and infrastructure visibility aligned
+                    through one responsive control dashboard.
                   </p>
                 </div>
-
-                <div class="sa-panel-chip">
-                  <i class="bi bi-lightning-charge me-1"></i>
-                  Shortcuts
-                </div>
-              </div>
-            </div>
-
-            <div class="row g-3">
-              <div class="col-12 col-md-6">
-                <a href="/system-admin/maintenance" class="sa-shortcut-card text-decoration-none">
-                  <span class="sa-shortcut-icon"><i class="bi bi-tools"></i></span>
-                  <div class="flex-grow-1">
-                    <div class="sa-shortcut-title">Maintenance</div>
-                    <div class="sa-shortcut-text">Broadcast maintenance notices and scheduled downtime alerts.</div>
-                  </div>
-                  <span class="sa-shortcut-arrow"><i class="bi bi-arrow-up-right"></i></span>
-                </a>
               </div>
 
-              <div class="col-12 col-md-6">
-                <a href="/system-admin/users" class="sa-shortcut-card text-decoration-none">
-                  <span class="sa-shortcut-icon"><i class="bi bi-people"></i></span>
-                  <div class="flex-grow-1">
-                    <div class="sa-shortcut-title">Users</div>
-                    <div class="sa-shortcut-text">Manage roles, status, and access controls across the platform.</div>
-                  </div>
-                  <span class="sa-shortcut-arrow"><i class="bi bi-arrow-up-right"></i></span>
-                </a>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <a href="/system-admin/tickets" class="sa-shortcut-card text-decoration-none">
-                  <span class="sa-shortcut-icon"><i class="bi bi-life-preserver"></i></span>
-                  <div class="flex-grow-1">
-                    <div class="sa-shortcut-title">Support Tickets</div>
-                    <div class="sa-shortcut-text">Track issue reports and update resolution workflows.</div>
-                  </div>
-                  <span class="sa-shortcut-arrow"><i class="bi bi-arrow-up-right"></i></span>
-                </a>
-              </div>
-
-              <div class="col-12 col-md-6">
-                <a href="/system-admin/infrastructure" class="sa-shortcut-card text-decoration-none">
-                  <span class="sa-shortcut-icon"><i class="bi bi-hdd-network"></i></span>
-                  <div class="flex-grow-1">
-                    <div class="sa-shortcut-title">Infrastructure</div>
-                    <div class="sa-shortcut-text">Review live environment details and account oversight tables.</div>
-                  </div>
-                  <span class="sa-shortcut-arrow"><i class="bi bi-arrow-up-right"></i></span>
-                </a>
-              </div>
             </div>
           </div>
         </div>
-
-        <div class="col-12 col-xl-4">
-          <div class="sa-panel h-100">
-            <div class="sa-panel-header">
-              <div>
-                <h2 class="sa-panel-title mb-1">System Snapshot</h2>
-                <p class="sa-panel-text mb-0">Current environment overview and infrastructure status.</p>
-              </div>
-            </div>
-
-            <div class="sa-info-list">
-              <div class="sa-info-item">
-                <span class="sa-info-label"><i class="bi bi-pc-display-horizontal me-2"></i>Platform</span>
-                <span class="sa-info-value" id="osPlatform">--</span>
-              </div>
-              <div class="sa-info-item">
-                <span class="sa-info-label"><i class="bi bi-clock me-2"></i>System Uptime</span>
-                <span class="sa-info-value" id="systemUptime">--</span>
-              </div>
-              <div class="sa-info-item">
-                <span class="sa-info-label"><i class="bi bi-cpu me-2"></i>CPU Model</span>
-                <span class="sa-info-value" id="cpuModel">--</span>
-              </div>
-              <div class="sa-info-item">
-                <span class="sa-info-label"><i class="bi bi-memory me-2"></i>Total Memory</span>
-                <span class="sa-info-value" id="totalMemory">--</span>
-              </div>
-            </div>
-
-            <div class="mt-3">
-              <a href="/system-admin/infrastructure" class="btn sa-btn-primary w-100">
-                <i class="bi bi-arrow-right-circle me-2"></i>
-                View Infrastructure
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
 
       <footer class="sa-footer">
         © 2026 BreedIT System | Infrastructure & Security Monitoring

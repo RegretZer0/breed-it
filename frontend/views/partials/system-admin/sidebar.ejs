@@ -68,53 +68,6 @@
       </nav>
     </div>
 
-    <div class="sa-sidebar-section mt-4">
-      <div class="sa-section-label">Developer Controls</div>
-
-      <div class="sa-card sa-timewarp-card">
-        <div class="d-flex align-items-start justify-content-between mb-3">
-          <div>
-            <div class="sa-mini-title">
-              <i class="bi bi-clock-history me-2"></i>
-              Time Warp
-            </div>
-            <div class="sa-mini-subtitle">Developer mode only</div>
-          </div>
-          <span class="badge sa-soft-badge">Dev</span>
-        </div>
-
-        <div class="sa-time-info-label">Current Virtual Time</div>
-        <div
-          class="sa-virtual-time mb-3"
-          id="virtualTimeDisplay"
-          data-mocked="<%= typeof isTimeMocked !== 'undefined' ? isTimeMocked : false %>"
-        >
-          <%= typeof virtualNow !== 'undefined' && virtualNow ? virtualNow.toLocaleString() : '--' %>
-        </div>
-
-        <div class="mb-2">
-          <label for="systemTimeInput" class="form-label sa-label">Set Virtual Time</label>
-          <input
-            type="datetime-local"
-            id="systemTimeInput"
-            class="form-control form-control-sm sa-input"
-          />
-        </div>
-
-        <div class="d-grid gap-2">
-          <button class="btn sa-btn-primary btn-sm" id="teleportBtn" type="button">
-            <i class="bi bi-send-check me-1"></i>
-            Teleport Server
-          </button>
-
-          <button class="btn sa-btn-outline btn-sm" id="resetTimeBtn" type="button">
-            <i class="bi bi-arrow-counterclockwise me-1"></i>
-            Reset to Reality
-          </button>
-        </div>
-      </div>
-    </div>
-
     <div class="mt-auto pt-3">
       <div class="d-grid gap-2">
         <button class="btn sa-btn-outline w-100" id="themeToggleBtn" type="button">

@@ -17,6 +17,7 @@
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
+
             <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
               <div class="d-flex flex-wrap align-items-center gap-2">
@@ -44,9 +45,58 @@
 
   <main class="sa-content">
     <div class="container-fluid px-3 px-lg-4">
-      <div class="row g-3 g-xl-4">
+
+      <!-- =========================================================
+           MAINTENANCE HERO STRIP
+      ========================================================== -->
+      <section class="sa-hero-panel sa-maint-hero mb-4">
+        <div class="row g-3 align-items-center">
+          <div class="col-12 col-xl-8">
+            <div class="sa-hero-content">
+              <div class="sa-hero-kicker">Maintenance control workspace</div>
+              <h2 class="sa-hero-title">Broadcast notices and keep track of maintenance history in one place.</h2>
+              <p class="sa-hero-text mb-0">
+                Create scheduled maintenance announcements, review previous broadcasts, and monitor notice activity across all devices.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-4">
+            <div class="row g-3">
+              <div class="col-12 col-sm-6 col-xl-12">
+                <div class="sa-hero-stat-card">
+                  <div class="sa-hero-stat-icon">
+                    <i class="bi bi-bell"></i>
+                  </div>
+                  <div class="sa-hero-stat-body">
+                    <div class="sa-hero-stat-label">Broadcast Status</div>
+                    <div class="sa-hero-stat-value">Maintenance Alerts Ready</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-sm-6 col-xl-12">
+                <div class="sa-hero-stat-card">
+                  <div class="sa-hero-stat-icon">
+                    <i class="bi bi-clock-history"></i>
+                  </div>
+                  <div class="sa-hero-stat-body">
+                    <div class="sa-hero-stat-label">History</div>
+                    <div class="sa-hero-stat-value">Recent maintenance records</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           TOP CONTENT
+      ========================================================== -->
+      <div class="row g-3 g-xl-4 mb-4">
         <div class="col-12 col-xl-8">
-          <section id="maintenance" class="sa-panel">
+          <section id="maintenance" class="sa-panel sa-maint-form-panel h-100">
             <div class="sa-panel-header">
               <div>
                 <h2 class="sa-panel-title mb-1">Broadcast System Maintenance</h2>
@@ -161,6 +211,111 @@
           </div>
         </div>
       </div>
+
+      <!-- =========================================================
+           MAINTENANCE SUMMARY
+      ========================================================== -->
+      <section class="mb-4">
+        <div class="row g-3">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-mini-analytic-card">
+              <div class="sa-mini-analytic-icon">
+                <i class="bi bi-list-task"></i>
+              </div>
+              <div class="sa-mini-analytic-label">Total Records</div>
+              <div class="sa-mini-analytic-value" id="maintenanceHistoryCount">0</div>
+              <div class="sa-mini-analytic-meta">Saved maintenance history entries</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-mini-analytic-card">
+              <div class="sa-mini-analytic-icon">
+                <i class="bi bi-hourglass-split"></i>
+              </div>
+              <div class="sa-mini-analytic-label">Scheduled</div>
+              <div class="sa-mini-analytic-value" id="maintenanceScheduledCount">0</div>
+              <div class="sa-mini-analytic-meta">Upcoming maintenance notices</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-mini-analytic-card">
+              <div class="sa-mini-analytic-icon">
+                <i class="bi bi-broadcast"></i>
+              </div>
+              <div class="sa-mini-analytic-label">Active</div>
+              <div class="sa-mini-analytic-value" id="maintenanceActiveCount">0</div>
+              <div class="sa-mini-analytic-meta">Currently active announcements</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-mini-analytic-card">
+              <div class="sa-mini-analytic-icon">
+                <i class="bi bi-check2-circle"></i>
+              </div>
+              <div class="sa-mini-analytic-label">Completed</div>
+              <div class="sa-mini-analytic-value" id="maintenanceCompletedCount">0</div>
+              <div class="sa-mini-analytic-meta">Past maintenance broadcasts</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           MAINTENANCE HISTORY
+      ========================================================== -->
+      <section class="sa-panel">
+        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+          <div>
+            <h2 class="sa-panel-title mb-1">Maintenance History</h2>
+            <p class="sa-panel-text mb-0">
+              Review previously broadcasted maintenance notices and their schedule details.
+            </p>
+          </div>
+
+          <div class="sa-panel-chip">
+            <i class="bi bi-clock-history me-1"></i>
+            Broadcast Records
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar mb-3">
+          <div class="sa-table-toolbar-text">
+            This section can later be connected to your maintenance records endpoint without changing the layout.
+          </div>
+        </div>
+
+        <div class="table-responsive sa-table-wrap">
+          <table class="table sa-table align-middle mb-0" id="maintenanceHistoryTable">
+            <thead>
+              <tr>
+                <th class="text-nowrap">Alert Title</th>
+                <th class="text-nowrap">Start</th>
+                <th class="text-nowrap">End</th>
+                <th>Status</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody id="maintenanceHistoryBody">
+              <tr>
+                <td colspan="5" class="text-center py-5">
+                  <div class="sa-empty-state">
+                    <div class="sa-empty-state-icon">
+                      <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div class="sa-empty-state-title">No maintenance history yet</div>
+                    <div class="sa-empty-state-text">
+                      Previous broadcasts will appear here once maintenance history data is connected.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <footer class="sa-footer">
         © 2026 BreedIT System | Infrastructure & Security Monitoring

@@ -280,6 +280,39 @@ router.post(
 );
 
 /*======================================================
+    ADMIN: GET MAINTENANCE HISTORY
+====================================================== */
+router.get(
+  "/maintenance-history",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "system_admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: Admins only"
+        });
+      }
+
+      const history = await Notification.find({ type: "maintenance" })
+        .sort({ scheduled_for: -1, created_at: -1 })
+        .lean();
+
+      res.json({
+        success: true,
+        history
+      });
+    } catch (err) {
+      console.error("Maintenance history fetch error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+  }
+);
+
+/*======================================================
     GET ACTIVE GLOBAL ALERTS (For all users)
 ====================================================== */
 router.get("/global", async (req, res) => {

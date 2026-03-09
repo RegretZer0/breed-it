@@ -15,8 +15,13 @@ const AdminDashboard = (() => {
     allUsers: [],
     autoRefreshInterval: null,
     isRefreshing: false,
+    activityChart: null,
+    activityRange: "24h",
+    adminStats: {},
+    systemInfo: {},
+    openTicketCount: 0,
   };
-
+  
   /* =========================================================
      MODULE: Config
      PURPOSE: Centralize API endpoints and refresh timing.
@@ -139,6 +144,7 @@ const AdminDashboard = (() => {
     const themeToggleBtn = document.getElementById("themeToggleBtn");
 
     bindSidebar();
+    bindActivityRangeEvents();
 
     logoutBtn?.addEventListener("click", logout);
     searchUser?.addEventListener("input", filterUsers);
@@ -280,7 +286,10 @@ const AdminDashboard = (() => {
     }
 
     if (page === "maintenance") {
-      await refreshDashboard();
+      await Promise.all([
+        refreshDashboard(),
+        loadMaintenanceHistory(),
+      ]);
       return;
     }
 
@@ -383,6 +392,8 @@ const AdminDashboard = (() => {
         if (messageEl) messageEl.value = "";
         if (startEl) startEl.value = "";
         if (endEl) endEl.value = "";
+
+        await loadMaintenanceHistory();
       } else {
         alert(`Broadcast failed: ${data.message || "Unknown error"}`);
       }
@@ -400,6 +411,190 @@ const AdminDashboard = (() => {
   }
 
   /* =========================================================
+    MODULE: Maintenance History Data
+    PURPOSE: Load maintenance broadcast records for the page.
+  ========================================================= */
+  async function loadMaintenanceHistory() {
+    const tbody = document.getElementById("maintenanceHistoryBody");
+    if (!tbody) return;
+
+    try {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-4">Loading maintenance history...</td>
+        </tr>
+      `;
+
+      // Change this endpoint if your backend uses a different route
+      const { data } = await fetchJson("/api/notifications/maintenance-history");
+
+      if (!data.success) {
+        renderMaintenanceHistory([]);
+        updateMaintenanceSummary([]);
+        return;
+      }
+
+      const records = Array.isArray(data.history)
+        ? data.history
+        : Array.isArray(data.notifications)
+        ? data.notifications
+        : Array.isArray(data.records)
+        ? data.records
+        : [];
+
+      renderMaintenanceHistory(records);
+      updateMaintenanceSummary(records);
+    } catch (err) {
+      console.error("Maintenance History Load Error:", err);
+
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-4 text-danger">
+              Failed to load maintenance history.
+            </td>
+          </tr>
+        `;
+      }
+
+      updateMaintenanceSummary([]);
+    }
+  }
+
+  /* =========================================================
+     MODULE: Maintenance History Render
+     PURPOSE: Render maintenance records into the history table.
+  ========================================================= */
+  function renderMaintenanceHistory(records = []) {
+    const tbody = document.getElementById("maintenanceHistoryBody");
+    if (!tbody) return;
+
+    if (!records.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-5">
+            <div class="sa-empty-state">
+              <div class="sa-empty-state-icon">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div class="sa-empty-state-title">No maintenance history yet</div>
+              <div class="sa-empty-state-text">
+                Previous broadcasts will appear here once maintenance history data is available.
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = records.map((item) => {
+      const title = escapeHtml(item.title || item.alertTitle || "Untitled Maintenance");
+      const message = escapeHtml(item.message || item.body || item.content || "-");
+      const startRaw = item.scheduled_for || item.start || item.start_time || item.createdAt;
+      const endRaw = item.ends_at || item.end || item.end_time || null;
+
+      const start = formatMaintenanceDate(startRaw);
+      const end = formatMaintenanceDate(endRaw);
+
+      const status = getMaintenanceStatus(item);
+
+      return `
+        <tr>
+          <td class="fw-semibold">${title}</td>
+          <td class="text-nowrap">${start}</td>
+          <td class="text-nowrap">${end}</td>
+          <td>${buildMaintenanceStatusBadge(status)}</td>
+          <td>
+            <div style="max-width: 420px; white-space: normal;">
+              ${message}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  /* =========================================================
+     MODULE: Maintenance Summary
+     PURPOSE: Update maintenance analytics cards.
+  ========================================================= */
+  function updateMaintenanceSummary(records = []) {
+    const now = new Date();
+
+    let total = records.length;
+    let scheduled = 0;
+    let active = 0;
+    let completed = 0;
+
+    records.forEach((item) => {
+      const start = new Date(item.scheduled_for || item.start || item.start_time || item.createdAt);
+      const end = new Date(item.ends_at || item.end || item.end_time || item.createdAt);
+
+      if (Number.isNaN(start.getTime())) return;
+
+      if (start > now) {
+        scheduled++;
+        return;
+      }
+
+      if (!Number.isNaN(end.getTime()) && start <= now && end >= now) {
+        active++;
+        return;
+      }
+
+      completed++;
+    });
+
+    setText("maintenanceHistoryCount", total);
+    setText("maintenanceScheduledCount", scheduled);
+    setText("maintenanceActiveCount", active);
+    setText("maintenanceCompletedCount", completed);
+  }
+
+  /* =========================================================
+     MODULE: Maintenance Helpers
+     PURPOSE: Shared formatting and status helpers.
+  ========================================================= */
+  function formatMaintenanceDate(value) {
+    if (!value) return "--";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "--";
+
+    return date.toLocaleString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function getMaintenanceStatus(item) {
+    const now = new Date();
+    const start = new Date(item.scheduled_for || item.start || item.start_time || item.createdAt);
+    const end = new Date(item.ends_at || item.end || item.end_time || item.createdAt);
+
+    if (Number.isNaN(start.getTime())) return "Unknown";
+    if (start > now) return "Scheduled";
+    if (!Number.isNaN(end.getTime()) && start <= now && end >= now) return "Active";
+    return "Completed";
+  }
+
+  function buildMaintenanceStatusBadge(status) {
+    const map = {
+      Scheduled: "sa-maint-badge sa-maint-badge-scheduled",
+      Active: "sa-maint-badge sa-maint-badge-active",
+      Completed: "sa-maint-badge sa-maint-badge-completed",
+      Unknown: "sa-maint-badge sa-maint-badge-unknown",
+    };
+
+    const cls = map[status] || map.Unknown;
+    return `<span class="${cls}">${escapeHtml(status)}</span>`;
+  }
+
+  /* =========================================================
      MODULE: Admin Stats
      PURPOSE: Load and render system health summary cards.
   ========================================================= */
@@ -413,10 +608,20 @@ const AdminDashboard = (() => {
       }
 
       const stats = data.stats || {};
+      state.adminStats = stats;
 
       updateVirtualTime(stats);
       updateServerStatus(stats.serverStatus);
-      setText("cpuLoad", stats.cpuLoad ? `${stats.cpuLoad} avg` : "--");
+      const rawCpuLoad = Number.parseFloat(stats.cpuLoad);
+      const platform = String(state.systemInfo.platform || "").toLowerCase();
+
+      if (platform.includes("win")) {
+        setText("cpuLoad", "N/A");
+      } else if (Number.isFinite(rawCpuLoad)) {
+        setText("cpuLoad", `${rawCpuLoad.toFixed(2)} avg`);
+      } else {
+        setText("cpuLoad", "--");
+      }
       setText("memoryUsage", stats.memoryUsage ?? "--");
       setText("totalUsers", stats.totalUsers ?? 0);
       setText("concurrentUsers", stats.concurrentUsers ?? 0);
@@ -587,7 +792,8 @@ const AdminDashboard = (() => {
       const { data: parsed } = await fetchJson("/api/admin/data");
       const data = parsed.data || parsed || {};
 
-      renderSystemInfo(data.systemInfo || {});
+      state.systemInfo = data.systemInfo || {};
+      renderSystemInfo(state.systemInfo);
       renderFarmManagersTable(Array.isArray(data.farmManagers) ? data.farmManagers : []);
       renderFarmersTable(Array.isArray(data.farmers) ? data.farmers : []);
     } catch (err) {
@@ -738,6 +944,8 @@ const AdminDashboard = (() => {
       `;
     }).join("");
 
+    state.openTicketCount = openCount;
+
     if (badge) {
       badge.textContent = `${openCount} Open Tickets`;
     }
@@ -777,6 +985,9 @@ const AdminDashboard = (() => {
     body.classList.add(savedTheme === "light" ? "sa-theme-light" : "sa-theme-dark");
 
     updateThemeToggleLabel();
+    syncActivityRangeButtons();
+    renderActivityChart();
+    renderActivitySummaryCards();
   }
 
   /* =========================================================
@@ -792,6 +1003,7 @@ const AdminDashboard = (() => {
 
     localStorage.setItem("sa_theme", isLight ? "dark" : "light");
     updateThemeToggleLabel();
+    renderActivityChart();
   }
 
   /* =========================================================
@@ -807,6 +1019,115 @@ const AdminDashboard = (() => {
     btn.innerHTML = isLight
       ? '<i class="bi bi-moon-stars-fill me-2"></i>Switch to Dark Mode'
       : '<i class="bi bi-sun-fill me-2"></i>Switch to Light Mode';
+  }
+
+    /* =========================================================
+     MODULE: Activity Range Events
+     PURPOSE: Handle chart range filter button interactions.
+  ========================================================= */
+  function bindActivityRangeEvents() {
+    const group = document.getElementById("activityRangeGroup");
+    if (!group) return;
+
+    group.addEventListener("click", (e) => {
+      const btn = e.target.closest(".sa-range-btn");
+      if (!btn) return;
+
+      const range = btn.dataset.range;
+      if (!range || range === state.activityRange) return;
+
+      state.activityRange = range;
+      syncActivityRangeButtons();
+      renderActivityChart();
+      renderActivitySummaryCards();
+    });
+  }
+
+  /* =========================================================
+     MODULE: Activity Range Buttons
+     PURPOSE: Keep active state in sync with selected range.
+  ========================================================= */
+  function syncActivityRangeButtons() {
+    const buttons = document.querySelectorAll(".sa-range-btn");
+    buttons.forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.range === state.activityRange);
+    });
+  }
+
+  /* =========================================================
+     MODULE: Activity Demo Data
+     PURPOSE: Provide admin chart demo data per selected range.
+  ========================================================= */
+  function getActivityDataset(range = "24h") {
+    if (range === "7d") {
+      return {
+        labels: ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"],
+        values: [64, 88, 57, 91, 78, 69, 96],
+        summary: {
+          totalLogins: "3,842",
+          peakSessions: "96",
+          activeUsers: "1,128",
+        },
+      };
+    }
+
+    if (range === "30d") {
+      return {
+        labels: ["W1", "W2", "W3", "W4", "W5", "W6"],
+        values: [420, 510, 468, 590, 552, 638],
+        summary: {
+          totalLogins: "14,206",
+          peakSessions: "214",
+          activeUsers: "4,386",
+        },
+      };
+    }
+
+    return {
+      labels: ["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM", "11 PM"],
+      values: [18, 10, 34, 56, 72, 61, 42],
+      summary: {
+        totalLogins: "1,284",
+        peakSessions: "96",
+        activeUsers: "342",
+      },
+    };
+  }
+
+  /* =========================================================
+    MODULE: Activity Summary Cards
+    PURPOSE: Render real dashboard snapshot metrics only.
+  ========================================================= */
+  function renderActivitySummaryCards() {
+    const totalUsers = state.adminStats.totalUsers ?? 0;
+    const activeSessions = state.adminStats.concurrentUsers ?? 0;
+    const openTickets = state.openTicketCount ?? 0;
+
+    setText("activityTotalLogins", totalUsers);
+    setText("activityPeakSessions", activeSessions);
+    setText("activityActiveUsers", openTickets);
+  }
+
+  /* =========================================================
+     MODULE: Activity Chart
+     PURPOSE: Render admin activity line chart using Chart.js.
+  ========================================================= */
+  function renderActivityChart() {
+    const canvas = document.getElementById("adminActivityChart");
+    const emptyState = document.getElementById("adminActivityChartEmpty");
+
+    if (state.activityChart) {
+      state.activityChart.destroy();
+      state.activityChart = null;
+    }
+
+    if (canvas) {
+      canvas.style.display = "none";
+    }
+
+    if (emptyState) {
+      emptyState.style.display = "grid";
+    }
   }
 
   return {
