@@ -1,0 +1,141 @@
+<%- include("../../partials/system-admin/header", { page_title: "BreedIT | System Admin Maintenance" }) %>
+
+<div class="sa-backdrop d-lg-none" id="saBackdrop"></div>
+
+<%- include("../../partials/system-admin/sidebar", {
+  current_page: "maintenance",
+  virtualNow,
+  isTimeMocked
+}) %>
+
+<div class="sa-main">
+  <header class="sa-topbar">
+    <div class="container-fluid px-3 px-lg-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-12 col-lg-6">
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
+              <i class="bi bi-list"></i>
+            </button>
+            <div>
+              <div class="sa-page-kicker">System Administration</div>
+              <h1 class="sa-page-title mb-0">Maintenance Broadcast</h1>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="d-flex justify-content-lg-end">
+            <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
+              <i class="bi bi-arrow-repeat me-2"></i>
+              Refresh Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="sa-content">
+    <div class="container-fluid px-3 px-lg-4">
+      <div class="row g-3 g-xl-4">
+        <div class="col-12 col-xl-8">
+          <section id="maintenance" class="sa-panel">
+            <div class="sa-panel-header">
+              <div>
+                <h2 class="sa-panel-title mb-1">Broadcast System Maintenance</h2>
+                <p class="sa-panel-text mb-0">
+                  Notify all users about upcoming downtime or system updates.
+                </p>
+              </div>
+            </div>
+
+            <div class="row g-3 maintenance-form">
+              <div class="col-12">
+                <label for="maintTitle" class="form-label sa-label">Alert Title</label>
+                <input
+                  type="text"
+                  id="maintTitle"
+                  class="form-control sa-input"
+                  placeholder="e.g., Sunday System Upgrade"
+                />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="maintStart" class="form-label sa-label">Maintenance Start</label>
+                <input
+                  type="datetime-local"
+                  id="maintStart"
+                  class="form-control sa-input"
+                />
+              </div>
+
+              <div class="col-12 col-md-6">
+                <label for="maintEnd" class="form-label sa-label">Maintenance End (Notice Removal)</label>
+                <input
+                  type="datetime-local"
+                  id="maintEnd"
+                  class="form-control sa-input"
+                />
+              </div>
+
+              <div class="col-12">
+                <label for="maintMessage" class="form-label sa-label">Detailed Message</label>
+                <textarea
+                  id="maintMessage"
+                  class="form-control sa-input sa-textarea"
+                  placeholder="Detailed message for all users..."
+                ></textarea>
+              </div>
+
+              <div class="col-12">
+                <button id="sendMaintBtn" class="btn sa-btn-primary w-100" type="button">
+                  <i class="bi bi-megaphone me-2"></i>
+                  Broadcast to All Users
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="col-12 col-xl-4">
+          <div class="sa-panel h-100">
+            <div class="sa-panel-header">
+              <div>
+                <h2 class="sa-panel-title mb-1">Guidelines</h2>
+                <p class="sa-panel-text mb-0">
+                  Best practices before sending a maintenance notice.
+                </p>
+              </div>
+            </div>
+
+            <div class="sa-guideline-list">
+              <div class="sa-guideline-item">
+                <i class="bi bi-check-circle"></i>
+                <span>Use a clear and short maintenance title.</span>
+              </div>
+              <div class="sa-guideline-item">
+                <i class="bi bi-check-circle"></i>
+                <span>Set accurate start and end times.</span>
+              </div>
+              <div class="sa-guideline-item">
+                <i class="bi bi-check-circle"></i>
+                <span>Explain the expected impact to users.</span>
+              </div>
+              <div class="sa-guideline-item">
+                <i class="bi bi-check-circle"></i>
+                <span>Review the schedule before broadcasting.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="sa-footer">
+        © 2026 BreedIT System | Infrastructure & Security Monitoring
+      </footer>
+    </div>
+  </main>
+</div>
+
+<%- include("../../partials/system-admin/footer") %>

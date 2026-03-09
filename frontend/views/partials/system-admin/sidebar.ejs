@@ -1,0 +1,121 @@
+<aside class="sa-sidebar" id="saSidebar">
+  <div class="sa-sidebar-inner d-flex flex-column h-100">
+
+    <div class="sa-brand-wrap d-flex align-items-center justify-content-between">
+      <a href="/system-admin/dashboard" class="sa-brand text-decoration-none">
+        <span class="sa-brand-mark">
+          <i class="bi bi-shield-lock"></i>
+        </span>
+        <span class="sa-brand-text">BreedIT Admin</span>
+      </a>
+
+      <button
+        class="btn btn-sm sa-sidebar-close d-lg-none"
+        type="button"
+        id="sidebarCloseBtn"
+        aria-label="Close sidebar"
+      >
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <div class="sa-sidebar-section mt-3">
+      <div class="sa-section-label">Navigation</div>
+
+      <nav class="nav flex-column sa-nav">
+        <a
+          href="/system-admin/dashboard"
+          class="sa-nav-link <%= current_page === 'dashboard' ? 'active' : '' %>"
+        >
+          <i class="bi bi-speedometer2"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a
+          href="/system-admin/maintenance"
+          class="sa-nav-link <%= current_page === 'maintenance' ? 'active' : '' %>"
+        >
+          <i class="bi bi-tools"></i>
+          <span>Maintenance</span>
+        </a>
+
+        <a
+          href="/system-admin/users"
+          class="sa-nav-link <%= current_page === 'users' ? 'active' : '' %>"
+        >
+          <i class="bi bi-people"></i>
+          <span>Users</span>
+        </a>
+
+        <a
+          href="/system-admin/tickets"
+          class="sa-nav-link <%= current_page === 'tickets' ? 'active' : '' %>"
+        >
+          <i class="bi bi-life-preserver"></i>
+          <span>Support Tickets</span>
+        </a>
+
+        <a
+          href="/system-admin/infrastructure"
+          class="sa-nav-link <%= current_page === 'infrastructure' ? 'active' : '' %>"
+        >
+          <i class="bi bi-hdd-network"></i>
+          <span>Infrastructure</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sa-sidebar-section mt-4">
+      <div class="sa-section-label">Developer Controls</div>
+
+      <div class="sa-card sa-timewarp-card">
+        <div class="d-flex align-items-start justify-content-between mb-2">
+          <div>
+            <div class="sa-mini-title">
+              <i class="bi bi-clock-history me-1"></i>
+              Time Warp
+            </div>
+            <div class="sa-mini-subtitle">Developer mode only</div>
+          </div>
+          <span class="badge sa-soft-badge">Dev</span>
+        </div>
+
+        <div class="small text-secondary mb-2">Current Virtual Time</div>
+        <div
+          class="sa-virtual-time mb-3"
+          id="virtualTimeDisplay"
+          data-mocked="<%= typeof isTimeMocked !== 'undefined' ? isTimeMocked : false %>"
+        >
+          <%= typeof virtualNow !== 'undefined' && virtualNow ? virtualNow.toLocaleString() : '--' %>
+        </div>
+
+        <div class="mb-2">
+          <input
+            type="datetime-local"
+            id="systemTimeInput"
+            class="form-control form-control-sm sa-input"
+          />
+        </div>
+
+        <div class="d-grid gap-2">
+          <button class="btn sa-btn-primary btn-sm" id="teleportBtn" type="button">
+            <i class="bi bi-send-check me-1"></i>
+            Teleport Server
+          </button>
+
+          <button class="btn sa-btn-outline btn-sm" id="resetTimeBtn" type="button">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>
+            Reset to Reality
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-auto pt-3">
+      <button class="btn sa-btn-danger w-100" id="logoutBtn" type="button">
+        <i class="bi bi-box-arrow-right me-2"></i>
+        Logout
+      </button>
+    </div>
+  </div>
+</aside>

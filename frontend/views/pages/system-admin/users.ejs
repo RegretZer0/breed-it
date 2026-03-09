@@ -1,0 +1,82 @@
+<%- include("../../partials/system-admin/header", { page_title: "BreedIT | System Admin Users" }) %>
+
+<div class="sa-backdrop d-lg-none" id="saBackdrop"></div>
+
+<%- include("../../partials/system-admin/sidebar", {
+  current_page: "users",
+  virtualNow,
+  isTimeMocked
+}) %>
+
+<div class="sa-main">
+  <header class="sa-topbar">
+    <div class="container-fluid px-3 px-lg-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-12 col-lg-6">
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
+              <i class="bi bi-list"></i>
+            </button>
+            <div>
+              <div class="sa-page-kicker">System Administration</div>
+              <h1 class="sa-page-title mb-0">User Access Management</h1>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="d-flex justify-content-lg-end">
+            <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
+              <i class="bi bi-arrow-repeat me-2"></i>
+              Refresh Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="sa-content">
+    <div class="container-fluid px-3 px-lg-4">
+      <section id="user-control" class="sa-panel">
+        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+          <div>
+            <h2 class="sa-panel-title mb-1">Users</h2>
+            <p class="sa-panel-text mb-0">Search and manage user roles and status.</p>
+          </div>
+
+          <div class="sa-search-wrap">
+            <i class="bi bi-search sa-search-icon"></i>
+            <input
+              type="text"
+              id="searchUser"
+              class="form-control sa-input sa-search-input"
+              placeholder="Search by name or email..."
+            />
+          </div>
+        </div>
+
+        <div class="table-responsive sa-table-wrap">
+          <table id="usersTable" class="table sa-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th class="text-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="sa-footer">
+        © 2026 BreedIT System | Infrastructure & Security Monitoring
+      </footer>
+    </div>
+  </main>
+</div>
+
+<%- include("../../partials/system-admin/footer") %>

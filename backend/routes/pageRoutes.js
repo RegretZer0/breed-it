@@ -398,11 +398,89 @@ router.get(
   requireLogin,
   requireSystemAdmin,
   (req, res) => {
-    res.render("pages/system-admin/dashboard", {
+    res.render("pages/system-admin/index", {
       page_title: "System Admin Dashboard",
       current_section: "dashboard",
       current_page: "dashboard",
       user: req.session.user,
+      virtualNow: new Date(),
+      isTimeMocked: false,
+    });
+  }
+);
+
+// ==========================
+// System Admin Maintenance
+// ==========================
+router.get(
+  "/system-admin/maintenance",
+  requireLogin,
+  requireSystemAdmin,
+  (req, res) => {
+    res.render("pages/system-admin/maintenance", {
+      page_title: "System Admin Maintenance",
+      current_section: "maintenance",
+      current_page: "maintenance",
+      user: req.session.user,
+      virtualNow: new Date(),
+      isTimeMocked: false,
+    });
+  }
+);
+
+// ==========================
+// System Admin Users
+// ==========================
+router.get(
+  "/system-admin/users",
+  requireLogin,
+  requireSystemAdmin,
+  (req, res) => {
+    res.render("pages/system-admin/users", {
+      page_title: "System Admin Users",
+      current_section: "users",
+      current_page: "users",
+      user: req.session.user,
+      virtualNow: new Date(),
+      isTimeMocked: false,
+    });
+  }
+);
+
+// ==========================
+// System Admin Tickets
+// ==========================
+router.get(
+  "/system-admin/tickets",
+  requireLogin,
+  requireSystemAdmin,
+  (req, res) => {
+    res.render("pages/system-admin/tickets", {
+      page_title: "System Admin Tickets",
+      current_section: "tickets",
+      current_page: "tickets",
+      user: req.session.user,
+      virtualNow: new Date(),
+      isTimeMocked: false,
+    });
+  }
+);
+
+// ==========================
+// System Admin Infrastructure
+// ==========================
+router.get(
+  "/system-admin/infrastructure",
+  requireLogin,
+  requireSystemAdmin,
+  (req, res) => {
+    res.render("pages/system-admin/infrastructure", {
+      page_title: "System Admin Infrastructure",
+      current_section: "infrastructure",
+      current_page: "infrastructure",
+      user: req.session.user,
+      virtualNow: new Date(),
+      isTimeMocked: false,
     });
   }
 );

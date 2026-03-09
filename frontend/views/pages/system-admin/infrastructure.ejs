@@ -1,0 +1,122 @@
+<%- include("../../partials/system-admin/header", { page_title: "BreedIT | System Admin Infrastructure" }) %>
+
+<div class="sa-backdrop d-lg-none" id="saBackdrop"></div>
+
+<%- include("../../partials/system-admin/sidebar", {
+  current_page: "infrastructure",
+  virtualNow,
+  isTimeMocked
+}) %>
+
+<div class="sa-main">
+  <header class="sa-topbar">
+    <div class="container-fluid px-3 px-lg-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-12 col-lg-6">
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
+              <i class="bi bi-list"></i>
+            </button>
+            <div>
+              <div class="sa-page-kicker">System Administration</div>
+              <h1 class="sa-page-title mb-0">Infrastructure Details</h1>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+          <div class="d-flex justify-content-lg-end">
+            <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
+              <i class="bi bi-arrow-repeat me-2"></i>
+              Refresh Data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="sa-content">
+    <div class="container-fluid px-3 px-lg-4">
+
+      <section id="infrastructure" class="sa-panel mb-4">
+        <div class="sa-panel-header">
+          <div>
+            <h2 class="sa-panel-title mb-1">System Information</h2>
+            <p class="sa-panel-text mb-0">Live environment and server details.</p>
+          </div>
+        </div>
+
+        <div class="row g-3" id="systemInfoBox">
+          <div class="col-12 col-md-6">
+            <div class="sa-info-card">
+              <p class="mb-2"><strong>OS Platform:</strong> <span id="osPlatform">--</span></p>
+              <p class="mb-0"><strong>System Uptime:</strong> <span id="systemUptime">--</span></p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="sa-info-card">
+              <p class="mb-2"><strong>CPU Model:</strong> <span id="cpuModel">--</span></p>
+              <p class="mb-0"><strong>Total Memory:</strong> <span id="totalMemory">--</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sa-panel mb-4">
+        <div class="sa-panel-header">
+          <div>
+            <h2 class="sa-panel-title mb-1">Farm Managers Oversight</h2>
+            <p class="sa-panel-text mb-0">List of farm manager accounts in the system.</p>
+          </div>
+        </div>
+
+        <div class="table-responsive sa-table-wrap">
+          <table id="farmManagersTable" class="table sa-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>User ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sa-panel">
+        <div class="sa-panel-header">
+          <div>
+            <h2 class="sa-panel-title mb-1">Farmers Oversight</h2>
+            <p class="sa-panel-text mb-0">List of farmers and registration information.</p>
+          </div>
+        </div>
+
+        <div class="table-responsive sa-table-wrap">
+          <table id="farmersTable" class="table sa-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Farmer ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Contact</th>
+                <th>Pens</th>
+                <th>Registered By</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="sa-footer">
+        © 2026 BreedIT System | Infrastructure & Security Monitoring
+      </footer>
+    </div>
+  </main>
+</div>
+
+<%- include("../../partials/system-admin/footer") %>
