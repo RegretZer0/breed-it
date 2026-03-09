@@ -1,4 +1,4 @@
-require("dotenv").config(); // ✅ MUST be first
+require("dotenv").config();
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -8,7 +8,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const { initHeatCron } = require("./utils/cronJobs");
 const fs = require("fs");
-const SystemSettings = require("./models/SystemSettings"); // ✅ Imported for initialization
+const SystemSettings = require("./models/SystemSettings");
 
 /* =========================
     MVP: GLOBAL TIME CONTROL
@@ -172,7 +172,7 @@ mongoose
   .then(async () => {
     console.log("✅ MongoDB Connected");
     
-    // ✅ NEW: Immediately sync time from DB so refreshes work from the start
+    // Immediately sync time from DB so refreshes work from the start
     await syncGlobalTimeWithDB();
     
     initHeatCron();
@@ -247,7 +247,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  // This will show 2024 initially then 2026 once the Mongo Promise resolves
   setTimeout(() => {
     console.log(`⏰ Current Virtual Time: ${global.getNow().toLocaleString()}`);
   }, 2000);

@@ -1,6 +1,6 @@
 // routes/swineProfileRoutes.js
 const router = require("express").Router();
-const upload = require("../middleware/uploadPigProfile"); // <-- use fixed middleware
+const upload = require("../middleware/uploadPigProfile");
 const Swine = require("../models/Swine");
 
 // PUT /api/swine/profile/:swineId

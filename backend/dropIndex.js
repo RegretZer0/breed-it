@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const Farmer = require("./models/UserFarmer"); // adjust path if needed
 
-// ✅ Load environment variables
+// Load environment variables
 dotenv.config();
 
 async function dropOldIndex() {
