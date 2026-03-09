@@ -8,6 +8,7 @@ const Swine = require("../models/Swine");
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
 const HeatReport = require("../models/HeatReports");
+const timeHelper = require("../utils/timeHelper"); // ✅ Integrated timeHelper
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 
@@ -75,11 +76,6 @@ function setEnumSafeCurrentStatus(swineDoc, candidates, fuzzyKeywords) {
   swineDoc.current_status = picked.value;
   return { ok: true, value: picked.value, method: picked.method, allowed };
 }
-
-/* =========================================================
-    MVP: VIRTUAL TIME HELPER
-========================================================= */
-const getVirtualNow = () => (typeof global.getNow === "function" ? global.getNow() : new Date());
 
 /* =========================================================
     Optional debug endpoint to see allowed enum values
@@ -236,12 +232,20 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. PIGLET MONITORING & LIFECYCLE (Updated for 3-Month Logic)
+// 3. PIGLET MONITORING & LIFECYCLE (Fixed Terminal Error)
 // ---------------------------------------------------------
 router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
   try {
     const { role, farmerProfileId } = req.user;
-    const now = getVirtualNow(); // ✅ Get Virtual Time for Age Sync
+
+    // ✅ FIXED: Explicitly await the timeHelper to avoid N/A issues
+    let now;
+    try {
+      now = await timeHelper.getVirtualNow();
+      if (!(now instanceof Date)) now = new Date(now);
+    } catch (e) {
+      now = new Date();
+    }
 
     let query = { age_stage: "piglet" };
     if (role === "farmer") {
@@ -251,50 +255,57 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
     const piglets = await Swine.find(query);
     
     const data = piglets.map((p) => {
-      // ✅ 3-MONTH MONITORING LOGIC
-      const birthDate = new Date(p.birth_date);
-      const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
+      const birthDate = p.birth_date ? new Date(p.birth_date) : new Date(p.createdAt);
+      const diffInMs = now.getTime() - birthDate.getTime();
+      const ageInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
       
       let phase = "Suckling (Day 1-30)";
       let color = "blue";
       let canAction = false;
 
-      // 1. Check age milestones
-      if (ageInDays <= 30) {
-        phase = "Suckling";
-        color = "blue";
-      } else if (ageInDays > 30 && ageInDays <= 90) {
-        phase = "Nursery";
-        color = "orange";
-      } else if (ageInDays > 90 && ageInDays < 121) {
-        phase = "3-Month Monitoring";
-        color = "orange";
-      } else if (ageInDays >= 121) {
-        // ✅ This forces the status change for 121+ days
+      // Milestone Logic (Day 121 triggers Final Selection)
+      if (ageInDays >= 121) {
         phase = "Final Selection";
         color = "green";
         canAction = true;
+      } else if (ageInDays > 90) {
+        phase = "3-Month Monitoring";
+        color = "orange";
+      } else if (ageInDays > 30) {
+        phase = "Nursery";
+        color = "orange";
+      } else {
+        phase = "Suckling";
+        color = "blue";
       }
 
       const latestPerf = p.performance_records?.[p.performance_records.length - 1] || {};
+      const deformitiesList = latestPerf.deformities || ["None"];
+      const hasDeformity = deformitiesList.some(d => d && d !== "None" && d !== "");
+      
+      if (hasDeformity) {
+        phase = "To be Culled/Sold (Deformity)";
+        color = "red";
+      }
 
       return {
         id: p._id,
         swine_tag: p.swine_id,
         dam_id: p.dam_id || "N/A",
-        current_status: phase,
-        age_days: ageInDays,
+        current_status: phase, 
+        age_days: isNaN(ageInDays) ? 0 : ageInDays,
         days_remaining: Math.max(0, 120 - ageInDays),
         status_color: color,
         can_action: canAction,
         latest_weight: latestPerf.weight || 0,
-        deformities: latestPerf.deformities || ["None"],
+        deformities: deformitiesList,
       };
     });
 
     res.json({ success: true, data });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error("CRITICAL ERROR in /piglet-monitoring:", err);
+    res.status(500).json({ success: false, message: "Server Error: " + err.message });
   }
 });
 
@@ -320,9 +331,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     }
 
     if (act === "breeding") {
-      // ✅ TRANSITION TO ADULT: Graduation from 3-month monitoring
       swine.age_stage = "adult";
-
       const result = setEnumSafeCurrentStatus(
         swine,
         ["Active", "Active Breeder", "Open", "Breeder"],
@@ -345,7 +354,6 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       });
     }
 
-    // sell / default
     const result = setEnumSafeCurrentStatus(
       swine,
       ["Culled/Sold", "Sold", "Marked for Sale", "Culled"],
@@ -445,7 +453,6 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
       : "Marked for Sale";
 
     swine.current_status = newStatus;
-    // If approved for active breeder, ensure age stage is adult
     if (newStatus === "Active Breeder") swine.age_stage = "adult";
     
     await swine.save();
@@ -462,7 +469,9 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
 router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
   try {
     const { id: userId, role, managerId, farmerProfileId } = req.user;
-    const now = getVirtualNow();
+    
+    // ✅ Updated to use timeHelper
+    const now = await timeHelper.getVirtualNow();
 
     let query = {
       current_status: "Pregnant",
@@ -516,8 +525,11 @@ router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
       return res.status(404).json({ success: false, message: "No active record found." });
     }
 
+    // ✅ Updated to use timeHelper
+    const virtualNow = await timeHelper.getVirtualNow();
+
     aiRecord.status = "Success";
-    aiRecord.farrowing_date = farrowing_date || getVirtualNow();
+    aiRecord.farrowing_date = farrowing_date || virtualNow;
 
     await aiRecord.save();
 
