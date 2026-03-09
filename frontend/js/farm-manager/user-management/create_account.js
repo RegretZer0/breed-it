@@ -206,9 +206,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================= */
   function toggleFarmerFields() {
     const isFarmer = accountTypeSelect?.value === "farmer";
+
     document.querySelectorAll(".farmer-only").forEach((el) => {
       el.style.display = isFarmer ? "" : "none";
     });
+
+    const productionTypeEl = document.getElementById("production_type");
+    const pensEl = document.getElementById("num_of_pens");
+    const capacityEl = document.getElementById("pen_capacity");
+    const membershipEl = document.getElementById("membership_date");
+
+    const farmerFields = [productionTypeEl, pensEl, capacityEl, membershipEl].filter(Boolean);
+
+    farmerFields.forEach((field) => {
+      if (isFarmer) {
+        field.disabled = false;
+
+        if (field === productionTypeEl || field === pensEl || field === capacityEl) {
+          field.setAttribute("required", "required");
+        }
+      } else {
+        field.disabled = true;
+        field.removeAttribute("required");
+        field.classList.remove("is-invalid", "is-valid");
+      }
+    });
+
+    if (!isFarmer) {
+      if (productionTypeEl) productionTypeEl.value = "";
+      if (pensEl) pensEl.value = "";
+      if (capacityEl) capacityEl.value = "";
+    } else {
+      setMembershipDatePH();
+    }
   }
   accountTypeSelect?.addEventListener("change", toggleFarmerFields);
   toggleFarmerFields();
