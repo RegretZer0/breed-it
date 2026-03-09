@@ -157,20 +157,32 @@ const swineSchema = new mongoose.Schema({
 
 // ------------------- Logic / Helpers -------------------
 
-// 1. Lifecycle Phase Calculator (UPDATED: Uses birth_date for Time Warp accuracy)
+// ✅ UPDATED: Ensures the weight is captured instantly from the first record
+swineSchema.virtual('latest_weight_val').get(function() {
+  if (!this.performance_records || this.performance_records.length === 0) return 0;
+  
+  // Create a sorted array of records that actually have a weight
+  const withWeight = [...this.performance_records]
+    .filter(r => r.weight !== undefined && r.weight !== null && r.weight > 0)
+    .sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
+    
+  return withWeight.length > 0 ? withWeight[0].weight : 0;
+});
+
+// 1. Lifecycle Phase Calculator
 swineSchema.virtual('lifecycle_phase').get(function() {
   if (this.age_stage !== 'piglet') return null;
-
   const now = new Date();
-  // We prioritize birth_date for piglets to ensure "Time Warp" works correctly
   const startDate = this.birth_date || this.date_registered || this.createdAt;
   const daysDiff = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
-
-  const latestPerf = this.performance_records?.[this.performance_records.length - 1];
-  const hasDeformity = latestPerf?.deformities?.some(d => d !== "None" && d !== "");
-
-  if (hasDeformity) return { phase: "To be Culled/Sold", daysLeft: 0, status: 'danger' };
   
+  // Get latest performance chronologically
+  const sortedPerf = [...(this.performance_records || [])].sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
+  const latestPerf = sortedPerf[0];
+  
+  const hasDeformity = latestPerf?.deformities?.some(d => d !== "None" && d !== "");
+  
+  if (hasDeformity) return { phase: "To be Culled/Sold", daysLeft: 0, status: 'danger' };
   if (daysDiff <= 30) {
     return { phase: "Monitoring (Day 1-30)", daysLeft: 30 - daysDiff, status: 'info' };
   } else if (daysDiff <= 31) {
@@ -194,14 +206,16 @@ swineSchema.virtual('heat_sign_basis').get(function() {
     : ["No successful cycle recorded yet"];
 });
 
+// ✅ UPDATED: Average Daily Gain (requires 2 records, but doesn't block weight display)
 swineSchema.virtual('current_adg').get(function() {
-  if (!this.performance_records || this.performance_records.length < 2) return 0;
-  const current = this.performance_records[this.performance_records.length - 1];
-  const previous = this.performance_records[this.performance_records.length - 2];
+  const sorted = [...this.performance_records]
+    .filter(r => r.weight > 0)
+    .sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
   
-  // Added safety check for weight
-  if (current.weight === undefined || previous.weight === undefined) return 0;
-
+  if (sorted.length < 2) return 0;
+  const current = sorted[0];
+  const previous = sorted[1];
+  
   const weightDiff = current.weight - previous.weight;
   const daysDiff = (new Date(current.record_date) - new Date(previous.record_date)) / (1000 * 60 * 60 * 24);
   return daysDiff > 0 ? (weightDiff / daysDiff).toFixed(3) : 0;
@@ -214,11 +228,13 @@ swineSchema.virtual('total_mortality_count').get(function() {
   }, 0);
 });
 
+// ✅ UPDATED: Selection Suggestion works even with one weight record
 swineSchema.virtual('selection_suggestion').get(function() {
-  if (!this.performance_records || this.performance_records.length === 0) return "No Growth Data";
+  const weight = this.latest_weight_val;
+  if (weight === 0) return "No Growth Data";
   
-  const latest = this.performance_records[this.performance_records.length - 1];
-  const weight = latest.weight || 0;
+  const sortedPerf = [...this.performance_records].sort((a, b) => new Date(b.record_date) - new Date(a.record_date));
+  const latest = sortedPerf[0];
   const hasDeformities = latest.deformities && latest.deformities.length > 0 && latest.deformities[0] !== "None";
 
   if (weight >= 15 && weight <= 25 && !hasDeformities) {
@@ -229,22 +245,17 @@ swineSchema.virtual('selection_suggestion').get(function() {
   return "Monitoring";
 });
 
-// Pre-save hook for gestation & success basis calculation
+// Pre-save hook
 swineSchema.pre("save", function(next) {
   if (this.breeding_cycles && this.breeding_cycles.length > 0) {
     const latestCycle = this.breeding_cycles[this.breeding_cycles.length - 1];
-    
-    // Gestation Calculation (Respects Time Warp by checking if date already exists)
     if (latestCycle.ai_service_date && !latestCycle.expected_farrowing_date) {
       const gestationDays = 114; 
       const farrowDate = new Date(latestCycle.ai_service_date);
       farrowDate.setDate(farrowDate.getDate() + gestationDays);
       latestCycle.expected_farrowing_date = farrowDate;
     }
-
-    // Capture First Successful Pregnancy Basis
     const noBasisSet = !this.first_success_basis || !this.first_success_basis.signs || this.first_success_basis.signs.length === 0;
-    
     if (latestCycle.is_pregnant && noBasisSet && latestCycle.observed_signs?.length > 0) {
       this.first_success_basis = {
         signs: latestCycle.observed_signs,
@@ -256,14 +267,11 @@ swineSchema.pre("save", function(next) {
   next();
 });
 
-// Inside models/Swine.js
-swineSchema.virtual('lifecycle_phase').get(function() {
+// Second Lifecycle phase definition (Time Warp)
+swineSchema.virtual('lifecycle_phase_warp').get(function() {
   const now = global.getNow ? global.getNow() : new Date();
-  const birthDate = this.birth_date;
-  
-  // Calculate age in days
+  const birthDate = this.birth_date || this.date_registered || this.createdAt;
   const ageInDays = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24));
-
   if (ageInDays <= 30) {
     return { phase: "Suckling", daysLeft: 30 - ageInDays, status: "blue" };
   } else if (ageInDays <= 60) {

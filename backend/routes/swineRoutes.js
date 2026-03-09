@@ -478,7 +478,7 @@ router.post(
 );
 
 /* ======================================================
-   UPDATE SWINE
+    UPDATE SWINE
 ====================================================== */
 router.put(
   "/update/:swineId",
@@ -493,7 +493,7 @@ router.put(
       const swine = await Swine.findOne({ swine_id: swineId });
       if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-      // ✅ TIME WARP: Get the virtual "Now" (July 28, 2026)
+      // ✅ TIME WARP: Get the virtual "Now" (July 2026 timeline)
       const virtualNow = await timeHelper.getVirtualNow();
 
       if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
@@ -515,31 +515,46 @@ router.put(
         "birth_cycle_number"
       ];
 
+      // Handle Performance Records Update/Overwrite
       if (updates.performance_records) {
+        const stageLabel = updates.performance_records.stage || "Monthly Update";
+        
         const newPerfData = {
           ...updates.performance_records,
-          // ✅ UPDATE: Use virtual time so the chart plots on July 28
-          record_date: virtualNow,
+          stage: stageLabel,
+          record_date: virtualNow, // ✅ Use virtual time for charts
           recorded_by: user.id
         };
 
+        // Logic for Monthly Overwrite
         if (updates.overwrite_monthly) {
           const existingIndex = swine.performance_records.findIndex((rec) => {
             const d = new Date(rec.record_date);
-            // ✅ UPDATE: Compare against virtual month/year (July 2026)
-            return d.getMonth() === virtualNow.getMonth() && d.getFullYear() === virtualNow.getFullYear();
+            // ✅ Sync with Virtual Time Warp: check if record exists for this virtual month/year
+            return (
+              d.getMonth() === virtualNow.getMonth() && 
+              d.getFullYear() === virtualNow.getFullYear() &&
+              rec.stage === stageLabel
+            );
           });
 
           if (existingIndex !== -1) {
-            swine.performance_records[existingIndex] = newPerfData;
+            // Overwrite existing record for this month
+            swine.performance_records[existingIndex] = {
+              ...swine.performance_records[existingIndex].toObject(),
+              ...newPerfData
+            };
           } else {
+            // No record found for this month yet, push new
             swine.performance_records.push(newPerfData);
           }
         } else {
+          // Standard push if overwrite is not explicitly requested
           swine.performance_records.push(newPerfData);
         }
       }
 
+      // Update basic fields
       allowedFields.forEach((field) => {
         if (updates[field] !== undefined && field !== "performance_records") {
           swine[field] = updates[field];
@@ -548,11 +563,18 @@ router.put(
 
       await swine.save();
       
-      // ✅ Log using the virtual date for a more accurate audit trail
-      logAction(user.id, "UPDATE_SWINE", "SWINE_MANAGEMENT", `Updated ${swineId} at virtual time ${virtualNow}`, req);
+      // ✅ Log using the virtual date for a more accurate audit trail in 2026
+      await logAction(
+        user.id, 
+        "UPDATE_SWINE", 
+        "SWINE_MANAGEMENT", 
+        `Updated ${swineId} at virtual time ${virtualNow.toDateString()}`, 
+        req
+      );
       
       res.json({ success: true, message: "Swine updated successfully", swine });
     } catch (error) {
+      console.error("Update Swine Error:", error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

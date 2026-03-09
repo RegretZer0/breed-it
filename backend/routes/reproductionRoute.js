@@ -8,6 +8,7 @@ const Swine = require("../models/Swine");
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
 const HeatReport = require("../models/HeatReports");
+const Notification = require("../models/Notifications"); // ✅ Added Notification Model
 const timeHelper = require("../utils/timeHelper"); // ✅ Integrated timeHelper
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
@@ -232,13 +233,12 @@ router.get("/performance-analytics", requireSessionAndToken, async (req, res) =>
 });
 
 // ---------------------------------------------------------
-// 3. PIGLET MONITORING & LIFECYCLE (Fixed Terminal Error)
+// 3. PIGLET MONITORING & LIFECYCLE
 // ---------------------------------------------------------
 router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
   try {
     const { role, farmerProfileId } = req.user;
 
-    // ✅ FIXED: Explicitly await the timeHelper to avoid N/A issues
     let now;
     try {
       now = await timeHelper.getVirtualNow();
@@ -263,7 +263,6 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
       let color = "blue";
       let canAction = false;
 
-      // Milestone Logic (Day 121 triggers Final Selection)
       if (ageInDays >= 121) {
         phase = "Final Selection";
         color = "green";
@@ -310,12 +309,12 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 4. PIGLET FINAL DECISION (Updated for Age Stage Transition)
+// 4. PIGLET FINAL DECISION (Updated with Notifications)
 // ---------------------------------------------------------
 router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
   try {
     const { swineId, action } = req.body; 
-    const swine = await Swine.findById(swineId);
+    const swine = await Swine.findById(swineId).populate("farmer_id");
 
     if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
@@ -330,23 +329,31 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       });
     }
 
+    const virtualNow = await timeHelper.getVirtualNow();
+
     if (act === "breeding") {
       swine.age_stage = "adult";
       const result = setEnumSafeCurrentStatus(
         swine,
-        ["Active", "Active Breeder", "Open", "Breeder"],
+        ["Active Breeder", "Active", "Open", "Breeder"],
         ["active"] 
       );
 
       if (!result.ok) {
-        return res.status(400).json({
-          success: false,
-          message: "No enum-safe status found for Retain.",
-          debug: { allowed: result.allowed },
-        });
+        return res.status(400).json({ success: false, message: "No enum-safe status found for Retain." });
       }
 
       await swine.save();
+
+      // ✅ NOTIFICATION: Final Selection
+      await Notification.create({
+        user_id: swine.farmer_id.user_id || swine.farmer_id,
+        title: "Final Selection Reached 🏆",
+        message: `Piglet ${swine.swine_id} has passed monitoring and is now graduated to Adult Breeder status.`,
+        type: "success",
+        createdAt: virtualNow
+      });
+
       return res.json({
         success: true,
         message: `Piglet ${swine.swine_id} graduated to Adult status.`,
@@ -354,6 +361,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       });
     }
 
+    // Handle "Sell" / Culling Action
     const result = setEnumSafeCurrentStatus(
       swine,
       ["Culled/Sold", "Sold", "Marked for Sale", "Culled"],
@@ -361,14 +369,27 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     );
 
     if (!result.ok) {
-      return res.status(400).json({
-        success: false,
-        message: "No enum-safe status found for Sale.",
-        debug: { allowed: result.allowed },
-      });
+      return res.status(400).json({ success: false, message: "No enum-safe status found for Sale." });
     }
 
+    // Check for deformities to customize message
+    const latestPerf = swine.performance_records?.[swine.performance_records.length - 1] || {};
+    const deformitiesList = latestPerf.deformities || [];
+    const hasDeformity = deformitiesList.some(d => d && d !== "None" && d !== "");
+
     await swine.save();
+
+    // ✅ NOTIFICATION: Culled/Sold Alert
+    await Notification.create({
+      user_id: swine.farmer_id.user_id || swine.farmer_id,
+      title: "Swine Culled/Sold ⚠️",
+      message: hasDeformity 
+        ? `Sow ${swine.swine_id} is culled due to detected deformity (${deformitiesList.join(", ")}).`
+        : `Swine ${swine.swine_id} has been marked for Sale/Culling.`,
+      type: "danger",
+      createdAt: virtualNow
+    });
+
     return res.json({
       success: true,
       message: `Piglet ${swine.swine_id} updated to ${swine.current_status}.`,
@@ -432,19 +453,21 @@ router.get("/selection-candidates", requireSessionAndToken, async (req, res) => 
 });
 
 // ---------------------------------------------------------
-// 6. PROCESS SELECTION
+// 6. PROCESS SELECTION (Updated with Notifications)
 // ---------------------------------------------------------
 router.put("/process-selection", requireSessionAndToken, async (req, res) => {
   try {
     const { swineId, isApproved } = req.body;
     const { role, farmerProfileId } = req.user;
 
-    const swine = await Swine.findById(swineId);
+    const swine = await Swine.findById(swineId).populate("farmer_id");
     if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-    if (role === "farmer" && swine.farmer_id.toString() !== farmerProfileId.toString()) {
+    if (role === "farmer" && swine.farmer_id._id.toString() !== farmerProfileId.toString()) {
       return res.status(403).json({ success: false, message: "Access denied: Not your swine" });
     }
+
+    const virtualNow = await timeHelper.getVirtualNow();
 
     let newStatus = isApproved
       ? swine.current_status === "1st Selection Ongoing"
@@ -457,6 +480,15 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
     
     await swine.save();
 
+    // ✅ NOTIFICATION: Selection Milestone Update
+    await Notification.create({
+      user_id: swine.farmer_id.user_id || swine.farmer_id,
+      title: "Selection Status Updated",
+      message: `Swine ${swine.swine_id} has been moved to: ${newStatus}.`,
+      type: isApproved ? "success" : "warning",
+      createdAt: virtualNow
+    });
+
     res.json({ success: true, message: `Swine updated to ${newStatus}` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -464,13 +496,11 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 7. FETCH PREGNANT SOWS (Updated with Overdue logic for Warp)
+// 7. FETCH PREGNANT SOWS
 // ---------------------------------------------------------
 router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
   try {
     const { id: userId, role, managerId, farmerProfileId } = req.user;
-    
-    // ✅ Updated to use timeHelper
     const now = await timeHelper.getVirtualNow();
 
     let query = {
@@ -512,7 +542,7 @@ router.get("/due-for-farrowing", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 8. COMPLETE BREEDING CYCLE (Updated for Virtual Time)
+// 8. COMPLETE BREEDING CYCLE
 // ---------------------------------------------------------
 router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
   const { ai_record_id, farrowing_date } = req.body;
@@ -525,7 +555,6 @@ router.post("/complete-cycle", requireSessionAndToken, async (req, res) => {
       return res.status(404).json({ success: false, message: "No active record found." });
     }
 
-    // ✅ Updated to use timeHelper
     const virtualNow = await timeHelper.getVirtualNow();
 
     aiRecord.status = "Success";

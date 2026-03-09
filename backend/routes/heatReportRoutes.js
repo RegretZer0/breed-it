@@ -1094,19 +1094,26 @@ router.get(
 router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   try {
     const { reason } = req.body;
-    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    
+    // Populate swine_id and farmer_id to get the tag and the user reference for notification
+    const report = await HeatReport.findById(req.params.id)
+      .populate("swine_id")
+      .populate("farmer_id");
 
-    // ✅ TIME WARP UPDATE: Get the virtual "Today"
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    // ✅ TIME WARP UPDATE: Get the virtual "Today" (2026 timeline)
     const virtualNow = await timeHelper.getVirtualNow();
 
+    // Update Report Status
     report.status = "rejected";
     report.rejection_message = reason;
-    
-    // ✅ UPDATE: Use virtualNow so the rejection shows up in the 2026 timeline
     report.rejected_at = virtualNow; 
     await report.save();
 
+    // Log the action for audit purposes
     await logAction(
       req.user.id, 
       "REJECT_HEAT_REPORT", 
@@ -1115,18 +1122,24 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
       req
     );
 
+    // ✅ NOTIFICATION: Notify the farmer immediately
+    // Note: We use report.farmer_id.user_id to target the specific User account
     await Notification.create({
       user_id: report.farmer_id.user_id,
-      title: "Heat Report Rejected",
-      message: `Your report for Swine ${report.swine_id.swine_id} was rejected. Reason: ${reason}`,
-      type: "danger",
-      // Optional: if your Notification model has a createdAt, 
-      // you'd ideally want to override it with virtualNow as well.
-      created_at: virtualNow 
+      title: "Heat Report Rejected ❌",
+      message: `Your heat report for Swine ${report.swine_id.swine_id} was rejected. Reason: ${reason}`,
+      type: "danger", // Red alert in UI
+      createdAt: virtualNow // Sync with 2026 timeline
     });
 
-    res.json({ success: true, message: "Report rejected." });
+    res.json({ 
+      success: true, 
+      message: "Report rejected and farmer notified.",
+      rejectedAt: virtualNow 
+    });
+
   } catch (err) {  
+    console.error("Error in Reject Heat Report:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
