@@ -11,14 +11,14 @@ const { JWT_SECRET } = require("../config/jwt");
 
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
-const AuditLog = require("../models/AuditLog"); // ✅ AuditLog Model
-const logAction = require("../middleware/logger"); // ✅ Logger utility
+const AuditLog = require("../models/AuditLog");
+const logAction = require("../middleware/logger");
 
 const attachUser = require("../middleware/attachUser");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
-// ✅ NEW: Multer middleware for user profile photos
+// NEW: Multer middleware for user profile photos
 const uploadUserProfilePhoto = require("../middleware/uploadUserProfilePhoto");
 
 const otpEmailTemplate = require("../emails/otpEmailTemplate");
@@ -32,7 +32,7 @@ const DEFAULT_AVATAR = "/images/default-avatar.png";
     HELPERS
 ====================== */
 
-// 🛡️ Password Strength: Minimum 8 characters
+// Password Strength: Minimum 8 characters
 function validatePassword(password) {
   if (!password || password.length < 8) {
     throw new Error("Password must be at least 8 characters long.");
@@ -40,7 +40,7 @@ function validatePassword(password) {
   return true;
 }
 
-// 🛡️ LEGITIMACY CHECK: Verify format and real-world domain existence
+// LEGITIMACY CHECK: Verify format and real-world domain existence
 async function validateEmailLegitimacy(email) {
   if (!validator.isEmail(email)) {
     throw new Error("Invalid email format.");
@@ -68,8 +68,6 @@ function generateToken(user) {
       last_name: user.last_name || "",
       name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
       managerId: user.managerId || null,
-
-      // ✅ NEW (safe, optional; requires schema field)
       profile_photo: user.profile_photo || DEFAULT_AVATAR,
     },
     JWT_SECRET,
@@ -77,7 +75,7 @@ function generateToken(user) {
   );
 }
 
-// 📧 Mail transporter (reuse across requests)
+// Mail transporter (reuse across requests)
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -117,7 +115,7 @@ router.post("/send-otp", async (req, res) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 🔒 Hash OTP before storing
+    // Hash OTP before storing
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     otpStore.set(email, {
@@ -125,7 +123,7 @@ router.post("/send-otp", async (req, res) => {
       expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
-    // 📧 Send branded HTML email
+    // Send branded HTML email
     await transporter.sendMail({
       from: `"breedIT" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -159,7 +157,7 @@ async function verifyOTPInternal(email, userOtp) {
     throw new Error("OTP has expired.");
   }
 
-  // 🔐 Compare hashed OTP
+  // Compare hashed OTP
   const isMatch = await bcrypt.compare(userOtp, record.otp);
   if (!isMatch) {
     throw new Error("Invalid OTP code.");
@@ -200,7 +198,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // ✅ SESSION REGENERATE: Prevents Session Fixation
+    // SESSION REGENERATE: Prevents Session Fixation
     req.session.regenerate(async (err) => {
       if (err) {
         return res.status(500).json({ success: false, message: "Session regeneration failed" });
@@ -214,22 +212,19 @@ router.post("/login", async (req, res) => {
         last_name: user.last_name || "",
         name: `${user.first_name || ""} ${user.last_name || ""}`.trim() || "User",
         managerId: user.managerId || null,
-
-        // ✅ NEW: default avatar fallback
         profile_photo: user.profile_photo || DEFAULT_AVATAR,
       };
 
-      // ✅ FIX: Force the session to save to MongoDB BEFORE responding.
       req.session.save(async (saveErr) => {
         if (saveErr) {
           return res.status(500).json({ success: false, message: "Session save failed" });
         }
 
-        // ✅ Audit Log: Login (Using virtual time for the log entry)
+        // Audit Log: Login (Using virtual time for the log entry)
         await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
 
         /**
-         * ✅ VIRTUAL TIME FIX: 
+         * VIRTUAL TIME FIX: 
          * We calculate the virtual timestamp in seconds.
          * To avoid the "iat is not allowed in options" error, 
          * we put it directly in the payload.
@@ -445,7 +440,7 @@ router.post("/change-password/confirm", requireSessionAndToken, async (req, res)
     user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
-    // ✅ Audit log
+    // Audit log
     await logAction(user._id, "CHANGE_PASSWORD", "USER_AUTH", "User changed password with OTP verification", req);
 
     res.json({
@@ -467,7 +462,7 @@ router.post("/change-password/confirm", requireSessionAndToken, async (req, res)
 router.post("/logout", async (req, res) => {
   const user = req.session?.user;
   if (user) {
-    // ✅ Audit Log: Logout
+    // Audit Log: Logout
     await logAction(user.id, "LOGOUT", "USER_AUTH", "User logged out", req);
   }
 
@@ -539,7 +534,7 @@ router.put(
 
       await user.save();
 
-      // ✅ keep EJS session updated
+      // keep EJS session updated
       if (req.session?.user) {
         req.session.user.first_name = user.first_name || "";
         req.session.user.last_name = user.last_name || "";
@@ -586,7 +581,7 @@ router.put(
       user.profile_photo = publicPath;
       await user.save();
 
-      // ✅ keep EJS session updated
+      // keep EJS session updated
       if (req.session?.user) {
         req.session.user.profile_photo = publicPath || DEFAULT_AVATAR;
         await new Promise((resolve) => req.session.save(() => resolve()));
@@ -636,7 +631,6 @@ router.post("/register", async (req, res) => {
       role: "farm_manager",
     });
 
-    // ✅ Audit Log: Self-Registration
     await logAction(user._id, "REGISTER_SELF", "USER_AUTH", "New Farm Manager account created via registration", req);
 
     res.status(201).json({
@@ -687,13 +681,12 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       });
     }
 
-    // 1️⃣ CREATE USER ACCOUNT (CRITICAL)
-    // Updated to include address and map contact_no to contact_info
+    // CREATE USER ACCOUNT (CRITICAL)
     const user = await User.create({
       first_name,
       last_name,
-      address, // Added so it saves to UserModel
-      contact_info: contact_no, // Mapped contact_no to contact_info for UserModel
+      address,
+      contact_info: contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       role: "farmer",
@@ -706,7 +699,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
 
     const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
-    // 2️⃣ CREATE FARMER PROFILE LINKED TO USER
+    // CREATE FARMER PROFILE LINKED TO USER
     const farmer = await Farmer.create({
       farmer_id: farmerId,
       first_name,
@@ -806,7 +799,6 @@ router.put("/update-farmer/:farmerId", requireSessionAndToken, allowRoles("farm_
 
     await farmer.save();
 
-    // ✅ Audit Log: Update Farmer
     await logAction(req.user.id, "UPDATE_FARMER", "ACCOUNT_MANAGEMENT", `Updated details for Farmer: ${req.params.farmerId}`, req);
 
     res.json({ success: true, farmer });
@@ -844,7 +836,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       first_name,
       last_name,
       address,
-      contact_info: contact_no, // 👈 FIXED: Maps the incoming 'contact_no' to the schema's 'contact_info'
+      contact_info: contact_no,
       email,
       password: await bcrypt.hash(password, 10),
       role: "encoder",
@@ -852,7 +844,6 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       status: "active",
     });
 
-    // ✅ Audit Log: Register Encoder
     await logAction(req.user.id, "REGISTER_ENCODER", "ACCOUNT_MANAGEMENT", `Registered new Encoder: ${first_name} ${last_name}`, req);
 
     res.status(201).json({
@@ -901,7 +892,6 @@ router.put("/update-encoder/:id", requireSessionAndToken, allowRoles("farm_manag
     Object.assign(encoder, req.body);
     await encoder.save();
 
-    // ✅ Audit Log: Update Encoder (Added)
     await logAction(req.user.id, "UPDATE_ENCODER", "ACCOUNT_MANAGEMENT", `Updated details for Encoder: ${encoder.email}`, req);
 
     res.json({
@@ -965,7 +955,6 @@ router.get("/audit-logs", requireSessionAndToken, allowRoles("farm_manager", "fa
       .skip(parseInt(skip))
       .lean();
 
-    // ✅ REFINED LOGIC: Re-check Farmer collection for any logs that didn't populate from 'User'
     for (let log of logs) {
       if (!log.user_id) {
         const rawLog = await AuditLog.findById(log._id).select("user_id").lean();

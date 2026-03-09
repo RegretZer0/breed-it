@@ -131,7 +131,7 @@ router.put(
         address,
         num_of_pens,
         pen_capacity,
-      } = req.body || {}; // ✅ SAFE destructure
+      } = req.body || {};
 
       const update = {};
 
@@ -151,7 +151,7 @@ router.put(
       if (typeof pen_capacity !== "undefined")
         update.pen_capacity = Number(pen_capacity);
 
-      // ✅ HANDLE PROFILE PICTURE
+      // HANDLE PROFILE PICTURE
       if (req.file) {
         update.profile_picture = `/uploads/profiles/${req.file.filename}`;
       }

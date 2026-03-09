@@ -5,7 +5,7 @@ const SwinePerformance = require("../models/SwinePerformance");
 const AIRecord = require("../models/AIRecord");
 const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
-const SystemSettings = require("../models/SystemSettings"); // ✅ Added for Time Warp
+const SystemSettings = require("../models/SystemSettings");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -37,12 +37,12 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
     // ----------------------
     const performance = await SwinePerformance.find({ 
         manager_id: managerId,
-        createdAt: { $lte: virtualNow } // ✅ Filter by Warp
+        createdAt: { $lte: virtualNow } // Filter by Warp
     }).populate("swine_id");
 
     const ai = await AIRecord.find({ 
         manager_id: managerId,
-        createdAt: { $lte: virtualNow } // ✅ Filter by Warp
+        createdAt: { $lte: virtualNow } // Filter by Warp
     })
       .populate("swine_id")
       .populate("male_swine_id");
@@ -134,7 +134,6 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
       if (!p.swine_id) return;
       const swineID = p.swine_id.swine_id;
 
-      // ✅ Use virtualNow instead of real 'now'
       const birthDate = p.swine_id.birth_date ? new Date(p.swine_id.birth_date) : null;
       const ageInMonths = birthDate ? (virtualNow - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
       swineAges[swineID] = Math.max(0, Math.min(ageInMonths, 24));
@@ -154,7 +153,6 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
       if (!offspringBySwine[s.swine_id]) offspringBySwine[s.swine_id] = { total: 0, firstYear: 0 };
       if (!swineAges[s.swine_id]) {
         const birthDate = s.birth_date ? new Date(s.birth_date) : null;
-        // ✅ Use virtualNow here too
         const ageInMonths = birthDate ? (virtualNow - birthDate) / (1000 * 60 * 60 * 24 * 30) : 24;
         swineAges[s.swine_id] = Math.max(0, Math.min(ageInMonths, 24));
       }
@@ -201,7 +199,7 @@ router.get("/report", requireSessionAndToken, allowRoles("farm_manager", "encode
 
     res.json({
       success: true,
-      reportDate: virtualNow.toDateString(), // ✅ Inform UI of report date
+      reportDate: virtualNow.toDateString(),
       total_swines: allSwines.length,
       performance_scores: uniquePerf,
       reproduction_scores: reproductionScores,

@@ -8,8 +8,8 @@ const Swine = require("../models/Swine");
 const User = require("../models/UserModel");
 const Farmer = require("../models/UserFarmer");
 const HeatReport = require("../models/HeatReports");
-const Notification = require("../models/Notifications"); // ✅ Added Notification Model
-const timeHelper = require("../utils/timeHelper"); // ✅ Integrated timeHelper
+const Notification = require("../models/Notifications");
+const timeHelper = require("../utils/timeHelper");
 
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 
@@ -369,7 +369,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
 
       await swine.save();
 
-      // ✅ NOTIFICATION: Final Selection
+      // NOTIFICATION: Final Selection
       await Notification.create({
         user_id: swine.farmer_id.user_id || swine.farmer_id,
         title: "Final Selection Reached 🏆",
@@ -403,7 +403,7 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
 
     await swine.save();
 
-    // ✅ NOTIFICATION: Culled/Sold Alert
+    // NOTIFICATION: Culled/Sold Alert
     await Notification.create({
       user_id: swine.farmer_id.user_id || swine.farmer_id,
       title: "Swine Culled/Sold ⚠️",
@@ -504,7 +504,7 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
     
     await swine.save();
 
-    // ✅ NOTIFICATION: Selection Milestone Update
+    // NOTIFICATION: Selection Milestone Update
     await Notification.create({
       user_id: swine.farmer_id.user_id || swine.farmer_id,
       title: "Selection Status Updated",

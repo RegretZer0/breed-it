@@ -18,14 +18,14 @@ const userSchema = new mongoose.Schema({
     default: "farmer"
   },
 
-  // 🔑 Who this user belongs to
+  // Who this user belongs to
   managerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     default: null
   },
   
-  // ⚡ Indexed for faster session counting in the Admin Dashboard
+  // Indexed for faster session counting in the Admin Dashboard
   lastActive: { 
     type: Date, 
     default: Date.now,

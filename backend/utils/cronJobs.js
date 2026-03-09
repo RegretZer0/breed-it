@@ -9,7 +9,7 @@ const Notification = require("../models/Notifications");
  * Integrated with Global Virtual Time for Time Warp support.
  */
 const initHeatCron = () => {
-  // ✅ Runs every 5 minutes
+  // Runs every 5 minutes
   cron.schedule("*/5 * * * *", async () => {
     await runSwineTransitions();
   });
@@ -19,7 +19,7 @@ const initHeatCron = () => {
  * Encapsulated logic to allow for both scheduled runs and manual triggers
  */
 async function runSwineTransitions() {
-  // ✅ Use Virtual Time for the Cron Job execution
+
   const now = global.getNow ? global.getNow() : new Date();
 
   console.log(
@@ -37,7 +37,6 @@ async function runSwineTransitions() {
     };
 
     // --- PART 1: AI REMINDERS ---
-    // ✅ FIX: Use 'now' (Virtual Time) as the base for tomorrow
     const tomorrow = new Date(now.getTime()); 
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
@@ -56,7 +55,7 @@ async function runSwineTransitions() {
       const aiDateStr = aiDate.toISOString().split("T")[0];
 
       if (aiDateStr === tomorrowStr && report.farmer_id?.user_id) {
-        // ✅ FIX: Use 'now' (Virtual Time) as the base for todayStart
+
         const todayStart = new Date(now.getTime());
         todayStart.setHours(0, 0, 0, 0);
 
@@ -80,11 +79,7 @@ async function runSwineTransitions() {
       }
     }
 
-    // --- PART 2: AUTO-CONFIRM PREGNANCY (REMOVED/DISABLED) ---
-    // This section was removed to allow for manual confirmation in heatReportRoutes.js
-    // Swine will now stay "Under Observation" until a manager clicks Confirm Pregnancy.
-
-    // --- PART 3: FARROWING, LACTATING, & OPEN TRANSITIONS ---
+    // --- PART 2: FARROWING, LACTATING, & OPEN TRANSITIONS ---
     const activePregnancies = await HeatReport.find({
       status: { $in: ["pregnant", "awaiting_farrowing"] },
       expected_farrowing: { $exists: true, $ne: null },
@@ -138,7 +133,7 @@ async function runSwineTransitions() {
       }
     }
 
-    // --- PART 4: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
+    // --- PART 3: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
     const sevenDaysAgo = new Date(now.getTime());
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 

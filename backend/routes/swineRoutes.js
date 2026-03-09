@@ -11,7 +11,7 @@ const Farmer = require("../models/UserFarmer");
 const AIRecord = require("../models/AIRecord");
 const HeatReport = require("../models/HeatReports");
 const AuditLog = require("../models/AuditLog");
-const Notification = require("../models/Notifications"); // ✅ Added Notification Model
+const Notification = require("../models/Notifications");
 const logAction = require("../middleware/logger");
 const timeHelper = require("../utils/timeHelper");
 
@@ -143,7 +143,6 @@ router.post(
       const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
       const prefix = getManagerPrefix(registeredBy);
 
-      // ✅ TIME WARP: Get the virtual "Now" for 2026 consistency
       const virtualNow = await timeHelper.getVirtualNow();
 
       const boarCount = await Swine.countDocuments({
@@ -163,14 +162,12 @@ router.post(
         age_stage: "adult",
         birth_date: birth_date || null,
         is_external_boar: true,
-        // ✅ UPDATE: Use virtualNow if no date_transfer is provided
         date_transfer: date_transfer || virtualNow, 
         health_status: health_status || "Healthy",
         current_status: current_status || "Active",
         performance_records: [
           {
             stage: "Maintenance Registration",
-            // ✅ UPDATE: Use virtualNow for the record date
             record_date: virtualNow, 
             weight: Number(weight) || 0,
             body_length: Number(bodyLength) || 0,
@@ -240,8 +237,6 @@ router.post(
       const user = req.user;
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
       const prefix = getManagerPrefix(managerId);
-
-      // ✅ TIME WARP: Get the virtual "Now" for 2026 consistency
       const virtualNow = await timeHelper.getVirtualNow();
 
       // 1. Resolve Auto-batch letter if empty
@@ -328,7 +323,6 @@ router.post(
         dam_id,
         age_stage: age_stage || "piglet",
         current_status: initialStatus,
-        // ✅ UPDATE: Use virtualNow if no date_transfer is provided
         date_transfer: date_transfer || virtualNow, 
         performance_records: [
           {
@@ -420,7 +414,6 @@ router.put(
         swine.profile_photo = `/uploads/pig-profile/${req.file.filename}`;
       }
 
-      // Explicitly update the 'updatedAt' field to virtual time if your schema doesn't auto-handle it
       swine.updatedAt = virtualNow; 
 
       await swine.save();
@@ -493,7 +486,6 @@ router.put(
       const swine = await Swine.findOne({ swine_id: swineId });
       if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
 
-      // ✅ TIME WARP: Get the virtual "Now" (July 2026 timeline)
       const virtualNow = await timeHelper.getVirtualNow();
 
       if (user.role === "farmer" && swine.farmer_id && swine.farmer_id.toString() !== user.farmerProfileId)
@@ -522,7 +514,7 @@ router.put(
         const newPerfData = {
           ...updates.performance_records,
           stage: stageLabel,
-          record_date: virtualNow, // ✅ Use virtual time for charts
+          record_date: virtualNow,
           recorded_by: user.id
         };
 

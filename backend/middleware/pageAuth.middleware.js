@@ -108,7 +108,7 @@ async function requireApiLogin(req, res, next) {
       farmerProfileId = farmer._id.toString();
     }
 
-    // 5. 🔑 Re-bind Unified User Object
+    // 5. Re-bind Unified User Object
     // This ensures that even if you refresh, req.user is always populated
     req.user = {
       id: userId,

@@ -27,7 +27,7 @@ function getLatestPerformanceAsOf(swine, virtualNow) {
     arr
       .filter((r) => {
         const d = r?.record_date || r?.date || r?.createdAt || r?._id?.getTimestamp?.();
-        if (!d) return true; // if no date field, keep it rather than dropping data
+        if (!d) return true;
         return new Date(d) <= virtualNow;
       })
       .pop() || null;

@@ -118,11 +118,10 @@ router.post(
   upload.array("evidence", 5),
   async (req, res) => {
     try {
-      // ✅ UPDATED: include remarks from multipart/form-data
       const { swineId, signs, remarks } = req.body;
       const files = req.files;
 
-      // ✅ sanitize remarks (optional field)
+      // sanitize remarks (optional field)
       const cleanRemarks = (remarks ?? "").toString().trim();
 
       // 1. Initial Validation
@@ -212,9 +211,6 @@ router.post(
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
         evidence_url: evidenceData,
         heat_probability: calculateProbability(parsedSigns, swine),
-
-        // ✅ ADDED: store farmer remarks in DB
-        // Make sure HeatReport schema has: remarks: { type: String, default: "" }
         remarks: cleanRemarks,
 
         status: "pending"
@@ -294,7 +290,6 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-    // ✅ UPDATE: Use your timeHelper instead of new Date()
     const virtualNow = await timeHelper.getVirtualNow(); 
     
     // Calculate scheduled insemination based on virtual time
@@ -302,7 +297,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     scheduledInsemination.setDate(virtualNow.getDate() + 2);
 
     report.status = "approved";
-    report.approved_at = virtualNow; // ✅ Saved as 2026 if warped
+    report.approved_at = virtualNow;
     report.approved_by = req.user.id;
     report.next_heat_check = scheduledInsemination;
     await report.save();
@@ -320,7 +315,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
         breeding_cycles: {
           cycle_number: nextCycleNumber,
           heat_report_id: report._id,
-          estrus_date: report.approved_at, // ✅ Uses 2026 date
+          estrus_date: report.approved_at,
           observed_signs: report.signs,
           is_pregnant: false
         }
@@ -364,10 +359,9 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       throw new Error("An AI record has already been submitted for this heat report.");
     }
 
-    // ✅ TIME WARP UPDATE: Use your timeHelper utility
     const virtualNow = await timeHelper.getVirtualNow();
     
-    // If ai_date is provided by user, use it; otherwise, use the Virtual "Today" (2026)
+    // If ai_date is provided by user, use it; otherwise, use the Virtual "Today"
     const finalAiDate = ai_date ? new Date(ai_date) : virtualNow;
     
     // Use actual system time for the administrative confirmation timestamp (Audit trail)
@@ -383,7 +377,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
       heat_report_id: report._id,
       
       // Data-driven fields for your updated model
-      insemination_date: finalAiDate, // ✅ Now correctly defaults to 2026
+      insemination_date: finalAiDate,
       ai_confirmed: true,
       ai_confirmed_at: actualConfirmationTime, 
       status: "Ongoing"
@@ -460,7 +454,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
-    // ✅ TIME WARP UPDATE: Use your timeHelper utility
+    // Use your timeHelper utility
     const virtualNow = await timeHelper.getVirtualNow();
 
     // 1. Use manual check date or default to the Virtual Now (2026)
@@ -551,7 +545,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
   try {
     const { total_live, mortality, farrowing_date } = req.body;
     
-    // ✅ UPDATE: Removed farrowing_date from the strict null check.
+    // UPDATE: Removed farrowing_date from the strict null check.
     // If it's missing or null, the logic below will apply the Virtual Date.
     if (total_live == null) {
       return res.status(400).json({
@@ -564,10 +558,10 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-    // ✅ TIME WARP UPDATE: Get the virtual "Today"
+    // Get the virtual "Today"
     const virtualNow = await timeHelper.getVirtualNow();
     
-    // ✅ SMART DATE LOGIC:
+    // SMART DATE LOGIC:
     // 1. If date is null/empty -> Use Virtual Now.
     // 2. If date matches real-world 'today' -> User probably didn't change the default input, use Virtual Now.
     // 3. Otherwise -> Use the manually selected date.
@@ -576,7 +570,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
 
     let farrowDate;
     if (!farrowing_date || inputDateStr === realTodayStr) {
-      farrowDate = virtualNow; // Apply 2026 Warp
+      farrowDate = virtualNow;
     } else {
       farrowDate = new Date(farrowing_date); // Use manual user choice
     }
@@ -636,7 +630,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         manager_id: report.manager_id,
         sex: i % 2 === 0 ? "Female" : "Male",
         breed: sow.breed,
-        birth_date: farrowDate, // ✅ AGE SYNC: Age is calculated from the warped farrowDate
+        birth_date: farrowDate, // AGE SYNC: Age is calculated from the warped farrowDate
         sire_id: sire_id,
         dam_id: sow.swine_id,
         birth_cycle_number: currentParity,
@@ -645,7 +639,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
         performance_records: [
           {
             stage: "Registration",
-            record_date: farrowDate, // ✅ DATE SYNC: Record is stamped in 2026
+            record_date: farrowDate, // DATE SYNC: Record is stamped in 2026
             remarks: "Auto-registered from farrowing report",
             recorded_by: req.user.id
           }
@@ -704,7 +698,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
-    // ✅ TIME WARP UPDATE: Get virtual time for consistent status logging
+    // Get virtual time for consistent status logging
     const virtualNow = await timeHelper.getVirtualNow();
 
     report.status = "approved";
@@ -807,10 +801,10 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
       return res.status(400).json({ success: false, message: "Report must be in 'lactating' status to confirm weaning." });
     }
 
-    // ✅ UPDATE: Fetch the Virtual/Mock date from your utility
+    // Fetch the Virtual/Mock date from your utility
     const virtualNow = await timeHelper.getVirtualNow();
 
-    // ✅ UPDATE: Default to virtualNow (2026) instead of new Date()
+    // Default to virtualNow instead of new Date()
     const finalWeaningDate = weaning_date ? new Date(weaning_date) : virtualNow;
     const finalWeight = Number(weight) || 0;
 
@@ -861,7 +855,7 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
         $push: {
           performance_records: {
             stage: "Weaning",
-            record_date: finalWeaningDate, // Recorded in 2026 timeline
+            record_date: finalWeaningDate,
             weight: finalWeight,
             remarks: remarks || "Auto-updated during weaning confirmation",
             recorded_by: req.user.id
@@ -923,7 +917,7 @@ router.get(
         query.manager_id = user.role === "farm_manager" ? user.id : user.managerId;
       }
 
-      // ✅ TIME WARP: Get the virtual "Today" from your helper
+      // TIME WARP: Get the virtual "Today" from your helper
       const virtualNow = await timeHelper.getVirtualNow();
 
       const reports = await HeatReport.find(query).populate("swine_id", "swine_id").lean();
@@ -1072,7 +1066,6 @@ router.get(
         }
       });
 
-      // ✅ ADDITION: Include virtualNow in response so frontend can sync its "Today" marker
       res.json({ 
         success: true, 
         events,
@@ -1104,7 +1097,6 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
-    // ✅ TIME WARP UPDATE: Get the virtual "Today" (2026 timeline)
     const virtualNow = await timeHelper.getVirtualNow();
 
     // Update Report Status
@@ -1122,14 +1114,13 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
       req
     );
 
-    // ✅ NOTIFICATION: Notify the farmer immediately
-    // Note: We use report.farmer_id.user_id to target the specific User account
+    // NOTIFICATION: Notify the farmer immediately
     await Notification.create({
       user_id: report.farmer_id.user_id,
       title: "Heat Report Rejected ❌",
       message: `Your heat report for Swine ${report.swine_id.swine_id} was rejected. Reason: ${reason}`,
       type: "danger", // Red alert in UI
-      createdAt: virtualNow // Sync with 2026 timeline
+      createdAt: virtualNow
     });
 
     res.json({ 

@@ -97,9 +97,9 @@ router.post(
         heat_report_id: heatReport._id,
         swine_code: swine.swine_id,
         farmer_name: `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim(),
-        insemination_date: actualInseminationDate, // ✅ Set to manual date
+        insemination_date: actualInseminationDate,
         ai_confirmed: true,
-        ai_confirmed_at: new Date(), // Timestamp of when the record was saved
+        ai_confirmed_at: new Date(),
         status: "Ongoing"
       });
 
@@ -107,7 +107,7 @@ router.post(
 
       // 2) Update Heat Report -> under_observation + 23-day recheck
       heatReport.status = "under_observation";
-      heatReport.ai_confirmed_at = actualInseminationDate; // ✅ Sync with manual date
+      heatReport.ai_confirmed_at = actualInseminationDate;
 
       // ✅ Recalculate recheck based on the manual date
       const heatCheckDate = new Date(actualInseminationDate);
@@ -121,7 +121,7 @@ router.post(
         { _id: swine._id, "breeding_cycles.heat_report_id": heatReport._id },
         {
           $set: {
-            "breeding_cycles.$.ai_service_date": actualInseminationDate, // ✅ Sync manual date
+            "breeding_cycles.$.ai_service_date": actualInseminationDate,
             "breeding_cycles.$.ai_record_id": newAI._id,
             "breeding_cycles.$.cycle_sire_id": boarTag,
             current_status: "Under Observation"
@@ -262,7 +262,7 @@ router.post(
       report.status = "pregnant";
       report.pregnancy_confirmed = true; 
       report.expected_farrowing = farrowingDate;
-      report.pregnancy_confirmed_at = actualCheckDate; // ✅ Manual check date
+      report.pregnancy_confirmed_at = actualCheckDate;
       await report.save();
 
       // 2) Update AIRecord
@@ -278,7 +278,7 @@ router.post(
           {
             $set: {
               "breeding_cycles.$.is_pregnant": true,
-              "breeding_cycles.$.pregnancy_check_date": actualCheckDate, // ✅ Sync manual date
+              "breeding_cycles.$.pregnancy_check_date": actualCheckDate,
               "breeding_cycles.$.expected_farrowing_date": farrowingDate,
               current_status: "Pregnant"
             }
