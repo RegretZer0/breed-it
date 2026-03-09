@@ -542,7 +542,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     requireField(document.getElementById("first_name"), "First name is required.");
     requireField(document.getElementById("last_name"), "Last name is required.");
     requireField(document.getElementById("email"), "Email is required.");
-    requireField(document.getElementById("contact_info"), "Contact number is required.");
+    requireField(document.getElementById("contact_no"), "Contact number is required.");
 
     // Sex (only if you added it in the EJS)
     const sexEl = document.getElementById("sex");
@@ -594,7 +594,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =========================
     // BUILD PAYLOAD
     // =========================
-    const contactNo = document.getElementById("contact_info")?.value.trim();
+    const contactNo = document.getElementById("contact_no")?.value.trim();
     const password = passEl?.value;
     const otp = otpInput?.value.trim();
 

@@ -688,9 +688,12 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
     }
 
     // 1️⃣ CREATE USER ACCOUNT (CRITICAL)
+    // Updated to include address and map contact_no to contact_info
     const user = await User.create({
       first_name,
       last_name,
+      address, // Added so it saves to UserModel
+      contact_info: contact_no, // Mapped contact_no to contact_info for UserModel
       email,
       password: await bcrypt.hash(password, 10),
       role: "farmer",
@@ -709,7 +712,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_no,
+      contact_no, 
       email,
       password: user.password,
       managerId,
@@ -717,10 +720,10 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       pen_capacity,
       production_type,
       membership_date,
-      user_id: user._id, // 🔑 THIS FIXES NOTIFICATIONS
+      user_id: user._id,
     });
 
-    // ✅ Audit Log: Register Farmer
+    // Audit Log: Register Farmer
     await logAction(
       req.user.id,
       "REGISTER_FARMER",
@@ -841,7 +844,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       first_name,
       last_name,
       address,
-      contact_no,
+      contact_info: contact_no, // 👈 FIXED: Maps the incoming 'contact_no' to the schema's 'contact_info'
       email,
       password: await bcrypt.hash(password, 10),
       role: "encoder",
