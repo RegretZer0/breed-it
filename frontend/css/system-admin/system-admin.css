@@ -127,15 +127,40 @@ body.sa-theme-light.sa-body {
 }
 
 .sa-brand-mark {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  color: #081008;
-  background: linear-gradient(135deg, var(--sa-primary), var(--sa-primary-2));
-  box-shadow: 0 0 0 4px var(--sa-primary-soft-2);
-  font-size: 1rem;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  flex: 0 0 66px;
+}
+
+.sa-brand-logo-shell {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 0;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(111, 207, 127, 0.22),
+    0 0 16px rgba(111, 207, 127, 0.24),
+    0 0 28px rgba(111, 207, 127, 0.12);
+}
+
+.sa-brand-logo-img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+  margin: 0;
 }
 
 .sa-brand-title {
@@ -2906,4 +2931,37 @@ body.sa-theme-light .sa-breakdown-item {
   .sa-deploy-stat-value {
     font-size: 1rem;
   }
+}
+
+/* =========================================================
+   MODULE: Sidebar Active State Light Mode
+   PURPOSE: Make active navigation cleaner and more readable
+            in light theme.
+========================================================= */
+body.sa-theme-light .sa-nav-link.active {
+  color: #1d2a1f;
+  background: linear-gradient(135deg, #8fd39b, #74c785);
+  border-color: rgba(79, 173, 98, 0.22);
+  box-shadow:
+    0 10px 22px rgba(79, 173, 98, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+body.sa-theme-light .sa-nav-link.active:hover {
+  color: #1d2a1f;
+  background: linear-gradient(135deg, #86cf94, #6ec17f);
+  border-color: rgba(79, 173, 98, 0.26);
+}
+
+body.sa-theme-light .sa-nav-link.active .sa-nav-icon {
+  background: rgba(255, 255, 255, 0.26);
+  color: #1f5f31;
+  border: 1px solid rgba(79, 173, 98, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+body.sa-theme-light .sa-nav-link.active .sa-nav-text,
+body.sa-theme-light .sa-nav-link.active span,
+body.sa-theme-light .sa-nav-link.active {
+  font-weight: 700;
 }

@@ -53,6 +53,41 @@ function getRuntimeEnvironment(req) {
   return "unknown";
 }
 
+function getCpuTimesSnapshot() {
+  const cpus = os.cpus() || [];
+  let idle = 0;
+  let total = 0;
+
+  cpus.forEach((cpu) => {
+    const times = cpu.times || {};
+    idle += times.idle || 0;
+    total += Object.values(times).reduce((sum, value) => sum + value, 0);
+  });
+
+  return { idle, total };
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getCpuUsagePercent() {
+  const cpus = os.cpus() || [];
+  if (!cpus.length) return null;
+
+  const start = getCpuTimesSnapshot();
+  await wait(250);
+  const end = getCpuTimesSnapshot();
+
+  const idleDiff = end.idle - start.idle;
+  const totalDiff = end.total - start.total;
+
+  if (totalDiff <= 0) return null;
+
+  const usage = 100 - (idleDiff / totalDiff) * 100;
+  return Math.max(0, Math.min(100, usage));
+}
+
 function getDirectorySize(targetPath) {
   try {
     if (!fs.existsSync(targetPath)) return 0;
@@ -169,7 +204,8 @@ router.get("/stats", async (req, res) => {
 
     const cpuLoad = os.loadavg()[0];
     const cpuCores = os.cpus().length || 1;
-    const cpuPercent = ((cpuLoad / cpuCores) * 100).toFixed(2);
+    const cpuUsageMeasured = await getCpuUsagePercent();
+    const cpuPercent = cpuUsageMeasured == null ? null : cpuUsageMeasured.toFixed(2);
 
     res.json({
       success: true,
@@ -184,8 +220,8 @@ router.get("/stats", async (req, res) => {
           dbConnected: mongoose.connection.readyState === 1,
         }),
         memoryUsage: `${usedMemPercentage}%`,
-        cpuLoad: cpuLoad.toFixed(2),
-        cpuUsagePercent: `${cpuPercent}%`,
+        cpuLoad: process.platform === "win32" ? "N/A" : cpuLoad.toFixed(2),
+        cpuUsagePercent: cpuPercent == null ? "N/A" : `${cpuPercent}%`,
         concurrentUsers: concurrentUsers || 0,
         isTimeMocked: global.timeControl.isMocked,
         virtualTime: virtualNow.toLocaleString()
@@ -306,9 +342,10 @@ router.get("/data", async (req, res) => {
     const cpuModel = cpus[0]?.model || "--";
     const cpuCores = cpus.length || 0;
     const cpuLoadRaw = os.loadavg()[0] || 0;
-    const cpuLoadPercent = cpuCores > 0
-      ? Math.min(100, ((cpuLoadRaw / cpuCores) * 100)).toFixed(2)
-      : "0.00";
+    const cpuUsageMeasured = await getCpuUsagePercent();
+    const cpuLoadPercent = cpuUsageMeasured == null
+      ? null
+      : cpuUsageMeasured.toFixed(2);
 
     const networkInterfaces = os.networkInterfaces();
     const networkList = [];
@@ -403,14 +440,14 @@ router.get("/data", async (req, res) => {
         memoryPercent: toNumber(memoryUsagePercent),
         dbConnected,
       }),
-      cpuHealth: getHealthLevel(cpuLoadPercent),
+      cpuHealth: cpuLoadPercent == null ? "Unknown" : getHealthLevel(cpuLoadPercent),
       memoryHealth: getHealthLevel(memoryUsagePercent),
       timeMode: global.timeControl?.isMocked ? "Mocked" : "Real-Time",
     };
 
     await recordInfrastructureSnapshot({
       capturedAt: new Date(),
-      cpuUsagePercent: toNumber(cpuLoadPercent),
+      cpuUsagePercent: cpuLoadPercent == null ? 0 : toNumber(cpuLoadPercent),
       memoryUsagePercent: toNumber(memoryUsagePercent),
       dbStorageSizeBytes: toNumber(dbStats.storageSize),
       dbDataSizeBytes: toNumber(dbStats.dataSize),
@@ -420,7 +457,7 @@ router.get("/data", async (req, res) => {
 
     const snapshotRows = await InfrastructureSnapshot.find({})
       .sort({ capturedAt: -1 })
-      .limit(24)
+      .limit(240)
       .lean();
 
     const trends = snapshotRows
@@ -463,8 +500,8 @@ router.get("/data", async (req, res) => {
       cpu: {
         model: cpuModel,
         cores: cpuCores,
-        loadAverage: cpuLoadRaw.toFixed(2),
-        usagePercent: cpuLoadPercent,
+        loadAverage: process.platform === "win32" ? "N/A" : cpuLoadRaw.toFixed(2),
+        usagePercent: cpuLoadPercent == null ? "N/A" : cpuLoadPercent,
       },
       memory: {
         totalBytes: totalMem,

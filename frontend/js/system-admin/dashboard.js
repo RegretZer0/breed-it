@@ -89,7 +89,7 @@ const AdminDashboard = (() => {
   ========================================================= */
   const config = {
     API_BASE: "http://localhost:5000",
-    REFRESH_INTERVAL_MS: 3000,
+    REFRESH_INTERVAL_MS: 60000,
   };
 
   /* =========================================================
@@ -1929,6 +1929,8 @@ const AdminDashboard = (() => {
       renderCollectionBreakdown(state.infrastructure?.collections || {});
       renderNetworkTable(state.infrastructure?.network?.interfaces || []);
       renderInfrastructureCharts(state.infrastructure?.trends || []);
+      renderActivityChart();
+      renderActivitySummaryCards();
     } catch (err) {
       console.error("Data Oversight Error:", err);
     }
@@ -1967,6 +1969,13 @@ const AdminDashboard = (() => {
     const systemStatus = infra.health?.serverStatus || "Unknown";
     const environment = infra.app?.environment || "--";
 
+    const cpuUsageRaw = infra.cpu?.usagePercent;
+    const cpuPercent = cpuUsageRaw === "N/A" ? 0 : clampPercent(cpuUsageRaw || 0);
+    const memPercent = clampPercent(infra.memory?.usagePercent || 0);
+    const dbDataSize = Number(infra.database?.dataSizeBytes || 0);
+    const dbStorageSize = Number(infra.database?.storageSizeBytes || 0);
+    const uploadsSize = Number(infra.uploads?.totalBytes || 0);
+
     setText("apiStatus", apiStatus);
     setText("databaseStatus", databaseStatus);
     setText("systemStatus", systemStatus);
@@ -1983,7 +1992,7 @@ const AdminDashboard = (() => {
     setText("cronStatus", infra.operations?.cronStatus || "--");
     setText("lastCronRun", formatDateTime(infra.operations?.lastCronRun));
 
-    setText("infraCpuLoad", `${infra.cpu?.usagePercent || "--"}%`);
+    setText("infraCpuLoad", cpuUsageRaw === "N/A" ? "N/A" : `${infra.cpu?.usagePercent || "--"}%`);
     setText("infraMemoryUsage", `${infra.memory?.usagePercent || "--"}%`);
     setText("dbStorageSize", formatBytes(infra.database?.storageSizeBytes || 0));
     setText("dbStorageSize2", formatBytes(infra.database?.storageSizeBytes || 0));
@@ -2004,17 +2013,11 @@ const AdminDashboard = (() => {
     setText("infraFarmers", infra.users?.farmers ?? 0);
     setText("infraEncoders", infra.users?.encoders ?? 0);
 
-    const cpuPercent = clampPercent(infra.cpu?.usagePercent || 0);
-    const memPercent = clampPercent(infra.memory?.usagePercent || 0);
-    const dbDataSize = Number(infra.database?.dataSizeBytes || 0);
-    const dbStorageSize = Number(infra.database?.storageSizeBytes || 0);
-    const uploadsSize = Number(infra.uploads?.totalBytes || 0);
-
     const dbFillPercent = dbStorageSize > 0 ? clampPercent((dbDataSize / dbStorageSize) * 100) : 0;
     const uploadsReference = Math.max(dbStorageSize, uploadsSize, 1);
     const uploadsPercent = uploadsReference > 0 ? clampPercent((uploadsSize / uploadsReference) * 100) : 0;
 
-    setText("cpuUsagePercentLabel", `${cpuPercent.toFixed(2)}%`);
+    setText("cpuUsagePercentLabel", cpuUsageRaw === "N/A" ? "N/A" : `${cpuPercent.toFixed(2)}%`);
     setText("memoryUsagePercentLabel", `${memPercent.toFixed(2)}%`);
     setText("dbFillPercentLabel", `${dbFillPercent.toFixed(2)}%`);
 
@@ -2285,11 +2288,14 @@ const AdminDashboard = (() => {
       }
 
       state.tickets.stats = data.stats || {};
+      state.openTicketCount = Number(state.tickets.stats.open || 0);
       updateTicketStats(state.tickets.stats);
       renderAdminTickets(Array.isArray(data.tickets) ? data.tickets : []);
       updateTicketsPagination(data.pagination || {});
+      renderActivitySummaryCards();
     } catch (err) {
       console.error("Ticket Load Error:", err);
+      state.openTicketCount = 0;
       renderAdminTickets([]);
       updateTicketsPagination({
         page: 1,
@@ -2297,6 +2303,7 @@ const AdminDashboard = (() => {
         total: 0,
         limit: state.tickets.limit
       });
+      renderActivitySummaryCards();
     }
   }
 
@@ -2735,8 +2742,16 @@ const AdminDashboard = (() => {
      PURPOSE: Render real dashboard snapshot metrics only.
   ========================================================= */
   function renderActivitySummaryCards() {
-    const totalUsers = state.adminStats.totalUsers ?? 0;
-    const activeSessions = state.adminStats.concurrentUsers ?? 0;
+    const totalUsers =
+      state.infrastructure?.users?.totalUsers ??
+      state.adminStats.totalUsers ??
+      0;
+
+    const activeSessions =
+      state.infrastructure?.activity?.activeSessions ??
+      state.adminStats.concurrentUsers ??
+      0;
+
     const openTickets = state.openTicketCount ?? 0;
 
     setText("activityTotalLogins", totalUsers);
@@ -2757,13 +2772,101 @@ const AdminDashboard = (() => {
       state.activityChart = null;
     }
 
-    if (canvas) {
-      canvas.style.display = "none";
+    const trends = Array.isArray(state.infrastructure?.trends)
+      ? [...state.infrastructure.trends]
+      : [];
+
+    if (!canvas || !window.Chart || trends.length < 2) {
+      if (canvas) canvas.style.display = "none";
+      if (emptyState) emptyState.style.display = "grid";
+      return;
     }
 
-    if (emptyState) {
-      emptyState.style.display = "grid";
+    let filtered = trends;
+
+    if (state.activityRange === "24h") {
+      filtered = trends.slice(-24);
+    } else if (state.activityRange === "7d") {
+      filtered = trends.slice(-84);
+    } else if (state.activityRange === "30d") {
+      filtered = trends.slice(-240);
     }
+
+    if (filtered.length < 2) {
+      canvas.style.display = "none";
+      if (emptyState) emptyState.style.display = "grid";
+      return;
+    }
+
+    const labels = filtered.map((item) => item.label || "--");
+    const activityValues = filtered.map((item) => {
+      const concurrentUsers = Number(item.concurrentUsers || 0);
+      const activeSessions = Number(item.activeSessions || 0);
+      return concurrentUsers + activeSessions;
+    });
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      canvas.style.display = "none";
+      if (emptyState) emptyState.style.display = "grid";
+      return;
+    }
+
+    state.activityChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Platform Activity",
+            data: activityValues,
+            tension: 0.35,
+            fill: true,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#8d9b90",
+              maxRotation: 0,
+              autoSkip: true,
+            },
+            grid: {
+              display: false,
+            },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: "#8d9b90",
+              precision: 0,
+            },
+            grid: {
+              color: "rgba(255,255,255,0.08)",
+            },
+          },
+        },
+      },
+    });
+
+    canvas.style.display = "block";
+    if (emptyState) emptyState.style.display = "none";
   }
 
   return {
