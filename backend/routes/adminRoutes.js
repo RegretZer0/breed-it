@@ -164,7 +164,7 @@ async function recordInfrastructureSnapshot(snapshotPayload) {
 
     const oldSnapshots = await InfrastructureSnapshot.find({})
       .sort({ capturedAt: -1 })
-      .skip(180)
+      .skip(720)
       .select("_id")
       .lean();
 
