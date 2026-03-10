@@ -11,7 +11,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // INITIALIZE DATA FETCHING
   // =========================
   syncVirtualTime(); // UPDATED: Now calculates and saves offset
-  loadGlobalAlerts(); // Fetches Maintenance broadcasts
 
   // =========================
   // DASHBOARD NAVIGATION
@@ -40,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===================================
   // GLOBAL NOTIFICATIONS (MAINTENANCE)
   // ===================================
-
   async function loadGlobalAlerts() {
     try {
       const response = await fetch("/api/notifications/global");

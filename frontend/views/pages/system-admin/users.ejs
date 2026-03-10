@@ -17,6 +17,7 @@
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
+
             <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
               <div class="d-flex flex-wrap align-items-center gap-2">
@@ -44,31 +45,184 @@
 
   <main class="sa-content">
     <div class="container-fluid px-3 px-lg-4">
-      <section id="user-control" class="sa-panel">
-        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+
+      <!-- =========================================================
+           MODULE: Users Overview Cards
+      ========================================================== -->
+      <section class="mb-3">
+        <div class="row g-3">
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="sa-metric-card sa-metric-card-accent h-100">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-people"></i>
+                </div>
+                <div class="sa-metric-trend">
+                  <i class="bi bi-grid"></i>
+                </div>
+              </div>
+              <div class="sa-metric-label">Total Users</div>
+              <div class="sa-metric-value" id="usersTotalCount">0</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="sa-metric-card h-100">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-person-badge"></i>
+                </div>
+                <div class="sa-metric-trend">
+                  <i class="bi bi-diagram-3"></i>
+                </div>
+              </div>
+              <div class="sa-metric-label">Farm Managers</div>
+              <div class="sa-metric-value" id="usersFarmManagerCount">0</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="sa-metric-card h-100">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-keyboard"></i>
+                </div>
+                <div class="sa-metric-trend">
+                  <i class="bi bi-sliders"></i>
+                </div>
+              </div>
+              <div class="sa-metric-label">Encoders</div>
+              <div class="sa-metric-value" id="usersEncoderCount">0</div>
+            </div>
+          </div>
+
+          <div class="col-12 col-sm-6 col-xl-3">
+            <div class="sa-metric-card h-100">
+              <div class="sa-metric-top">
+                <div class="sa-metric-icon">
+                  <i class="bi bi-person"></i>
+                </div>
+                <div class="sa-metric-trend">
+                  <i class="bi bi-check-circle"></i>
+                </div>
+              </div>
+              <div class="sa-metric-label">Farmers</div>
+              <div class="sa-metric-value" id="usersFarmerCount">0</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================================================
+           MODULE: Users Control Panel
+      ========================================================== -->
+      <section id="user-control" class="sa-panel sa-users-panel">
+        <div class="sa-panel-header d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
           <div>
             <h2 class="sa-panel-title mb-1">Users</h2>
-            <p class="sa-panel-text mb-0">Search and manage user roles and account status.</p>
+            <p class="sa-panel-text mb-0">
+              Search, filter, and manage user roles and account status in one place.
+            </p>
           </div>
 
-          <div class="sa-search-wrap">
-            <i class="bi bi-search sa-search-icon"></i>
-            <input
-              type="text"
-              id="searchUser"
-              class="form-control sa-input sa-search-input"
-              placeholder="Search by name or email..."
-            />
+          <div class="sa-users-head-actions d-flex flex-wrap gap-2">
+            <span class="sa-page-chip">
+              <i class="bi bi-funnel me-1"></i>
+              Responsive User Directory
+            </span>
           </div>
         </div>
 
+        <!-- =========================================================
+             MODULE: Role Tabs
+        ========================================================== -->
+        <div class="sa-users-tabs-wrap mb-3">
+          <div class="nav sa-users-tabs" id="usersRoleTabs" role="tablist" aria-label="User role tabs">
+            <button type="button" class="btn sa-users-tab active" data-role="all">
+              <i class="bi bi-grid me-2"></i>
+              All
+            </button>
+            <button type="button" class="btn sa-users-tab" data-role="farm_manager">
+              <i class="bi bi-person-badge me-2"></i>
+              Farm Manager
+            </button>
+            <button type="button" class="btn sa-users-tab" data-role="encoder">
+              <i class="bi bi-keyboard me-2"></i>
+              Encoder
+            </button>
+            <button type="button" class="btn sa-users-tab" data-role="farmer">
+              <i class="bi bi-person me-2"></i>
+              Farmers
+            </button>
+          </div>
+        </div>
+
+        <!-- =========================================================
+             MODULE: Search And Filters
+        ========================================================== -->
+        <div class="sa-users-filter-shell mb-3">
+          <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-4">
+              <label for="searchUser" class="sa-label mb-2">Search</label>
+              <div class="sa-search-wrap sa-search-wrap-fluid">
+                <i class="bi bi-search sa-search-icon"></i>
+                <input
+                  type="text"
+                  id="searchUser"
+                  class="form-control sa-input sa-search-input"
+                  placeholder="Search by name or email..."
+                />
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+              <label for="userStatusFilter" class="sa-label mb-2">Status Filter</label>
+              <select id="userStatusFilter" class="form-select sa-input">
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-sm-6 col-xl-3">
+              <label for="userSortFilter" class="sa-label mb-2">Sort By</label>
+              <select id="userSortFilter" class="form-select sa-input">
+                <option value="name_asc">Name A-Z</option>
+                <option value="name_desc">Name Z-A</option>
+                <option value="email_asc">Email A-Z</option>
+                <option value="email_desc">Email Z-A</option>
+                <option value="role_asc">Role A-Z</option>
+                <option value="status_asc">Status A-Z</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-xl-2">
+              <button class="btn sa-btn-outline w-100" id="clearUserFiltersBtn" type="button">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =========================================================
+             MODULE: Toolbar Summary
+        ========================================================== -->
         <div class="sa-table-toolbar mb-3">
-          <div class="sa-table-toolbar-text">
-            Update roles and statuses without leaving this page.
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 w-100">
+            <div class="sa-table-toolbar-text">
+              Showing up to 10 users per page with live search, role tabs, status filtering, and sorting.
+            </div>
+            <div class="sa-users-toolbar-meta">
+              <span class="sa-users-result-pill" id="usersResultCount">0 results</span>
+            </div>
           </div>
         </div>
 
-        <div class="table-responsive sa-table-wrap">
+        <!-- =========================================================
+             MODULE: Desktop And Tablet Table
+        ========================================================== -->
+        <div class="table-responsive sa-table-wrap d-none d-md-block">
           <table id="usersTable" class="table sa-table align-middle mb-0">
             <thead>
               <tr>
@@ -81,6 +235,32 @@
             </thead>
             <tbody></tbody>
           </table>
+        </div>
+
+        <!-- =========================================================
+             MODULE: Mobile Card List
+             PURPOSE: JS will render cards here for small screens only.
+        ========================================================== -->
+        <div id="usersCardList" class="d-grid gap-3 d-md-none mt-3"></div>
+
+        <!-- =========================================================
+             MODULE: Pagination
+        ========================================================== -->
+        <div class="sa-pagination-wrap mt-3">
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="sa-table-toolbar-text" id="usersPaginationInfo">Showing 0 of 0</div>
+
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn sa-btn-outline btn-sm" id="usersPrevBtn">
+                <i class="bi bi-chevron-left me-1"></i>
+                Previous
+              </button>
+              <button type="button" class="btn sa-btn-outline btn-sm" id="usersNextBtn">
+                Next
+                <i class="bi bi-chevron-right ms-1"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

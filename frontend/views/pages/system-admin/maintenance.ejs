@@ -266,7 +266,7 @@
       <!-- =========================================================
            MAINTENANCE HISTORY
       ========================================================== -->
-      <section class="sa-panel">
+      <section class="sa-panel mb-4">
         <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
           <div>
             <h2 class="sa-panel-title mb-1">Maintenance History</h2>
@@ -281,9 +281,50 @@
           </div>
         </div>
 
+        <div class="sa-history-controls mb-3">
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-xl-5">
+              <div class="sa-history-tabs" id="maintenanceTabs">
+                <button class="btn sa-history-tab active" type="button" data-status="all">All</button>
+                <button class="btn sa-history-tab" type="button" data-status="scheduled">Upcoming</button>
+                <button class="btn sa-history-tab" type="button" data-status="active">Active</button>
+                <button class="btn sa-history-tab" type="button" data-status="completed">Completed</button>
+                <button class="btn sa-history-tab" type="button" data-status="cancelled">Cancelled</button>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-7">
+              <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-md-center gap-2 gap-lg-3">
+                <button
+                  class="btn sa-btn-outline"
+                  type="button"
+                  data-bs-toggle="modal"
+                  data-bs-target="#maintenanceArchiveModal"
+                >
+                  <i class="bi bi-archive me-2"></i>
+                  View Archive
+                </button>
+
+                <div class="sa-table-toolbar-text" id="maintenancePaginationInfo">Showing 0 of 0</div>
+
+                <div class="d-flex gap-2">
+                  <button class="btn sa-btn-outline" type="button" id="maintenancePrevBtn">
+                    <i class="bi bi-chevron-left me-1"></i>
+                    Previous
+                  </button>
+                  <button class="btn sa-btn-outline" type="button" id="maintenanceNextBtn">
+                    Next
+                    <i class="bi bi-chevron-right ms-1"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="sa-table-toolbar mb-3">
           <div class="sa-table-toolbar-text">
-            This section can later be connected to your maintenance records endpoint without changing the layout.
+            This section shows current and recent maintenance records that are not archived.
           </div>
         </div>
 
@@ -296,11 +337,12 @@
                 <th class="text-nowrap">End</th>
                 <th>Status</th>
                 <th>Message</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="maintenanceHistoryBody">
               <tr>
-                <td colspan="5" class="text-center py-5">
+                <td colspan="6" class="text-center py-5">
                   <div class="sa-empty-state">
                     <div class="sa-empty-state-icon">
                       <i class="bi bi-clock-history"></i>
@@ -322,6 +364,98 @@
       </footer>
     </div>
   </main>
+</div>
+
+<!-- =========================================================
+     ARCHIVE MODAL
+========================================================== -->
+<div class="modal fade" id="maintenanceArchiveModal" tabindex="-1" aria-labelledby="maintenanceArchiveModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content sa-panel border-0">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h2 class="sa-panel-title mb-1" id="maintenanceArchiveModalLabel">Archived Maintenance Records</h2>
+          <p class="sa-panel-text mb-0">
+            Review archived completed and cancelled maintenance notices in a separate popup.
+          </p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body pt-3">
+        <div class="sa-history-controls mb-3">
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-xl-5">
+              <div class="sa-history-tabs" id="maintenanceArchiveTabs">
+                <button class="btn sa-history-tab active" type="button" data-status="all">All</button>
+                <button class="btn sa-history-tab" type="button" data-status="completed">Completed</button>
+                <button class="btn sa-history-tab" type="button" data-status="cancelled">Cancelled</button>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-7">
+              <div class="d-flex flex-column flex-md-row justify-content-md-end align-items-md-center gap-2 gap-lg-3">
+                <div class="sa-table-toolbar-text" id="maintenanceArchivePaginationInfo">Showing 0 of 0</div>
+
+                <div class="d-flex gap-2">
+                  <button class="btn sa-btn-outline" type="button" id="maintenanceArchivePrevBtn">
+                    <i class="bi bi-chevron-left me-1"></i>
+                    Previous
+                  </button>
+                  <button class="btn sa-btn-outline" type="button" id="maintenanceArchiveNextBtn">
+                    Next
+                    <i class="bi bi-chevron-right ms-1"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar mb-3">
+          <div class="sa-table-toolbar-text">
+            Archived records are separated from the main history for easier long-term review and cleanup.
+          </div>
+        </div>
+
+        <div class="table-responsive sa-table-wrap">
+          <table class="table sa-table align-middle mb-0" id="maintenanceArchiveTable">
+            <thead>
+              <tr>
+                <th class="text-nowrap">Alert Title</th>
+                <th class="text-nowrap">Start</th>
+                <th class="text-nowrap">End</th>
+                <th>Status</th>
+                <th>Message</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="maintenanceArchiveBody">
+              <tr>
+                <td colspan="6" class="text-center py-5">
+                  <div class="sa-empty-state">
+                    <div class="sa-empty-state-icon">
+                      <i class="bi bi-archive"></i>
+                    </div>
+                    <div class="sa-empty-state-title">No archived maintenance records</div>
+                    <div class="sa-empty-state-text">
+                      Completed and cancelled records moved to archive will appear here.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn sa-btn-outline" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <%- include("../../partials/system-admin/footer") %>

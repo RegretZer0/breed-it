@@ -12,11 +12,12 @@
   <header class="sa-topbar">
     <div class="container-fluid px-3 px-lg-4">
       <div class="row g-3 align-items-center">
-        <div class="col-12 col-lg-7">
-          <div class="d-flex align-items-center gap-2">
-            <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
+        <div class="col-12 col-xl-7">
+          <div class="d-flex align-items-start align-items-sm-center gap-2">
+            <button class="btn sa-icon-btn d-lg-none flex-shrink-0" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
+
             <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
               <div class="d-flex flex-wrap align-items-center gap-2">
@@ -30,9 +31,21 @@
           </div>
         </div>
 
-        <div class="col-12 col-lg-5">
-          <div class="d-flex flex-column flex-sm-row justify-content-lg-end gap-2">
+        <div class="col-12 col-xl-5">
+          <div class="d-flex flex-column flex-sm-row justify-content-xl-end gap-2">
             <span id="ticketCountBadge" class="sa-badge-danger align-self-sm-center">0 Open Tickets</span>
+
+            <button
+              class="btn sa-btn-outline"
+              id="openArchivePanelBtn"
+              type="button"
+              data-bs-toggle="modal"
+              data-bs-target="#ticketsArchivePanel"
+            >
+              <i class="bi bi-archive me-2"></i>
+              Archive
+            </button>
+
             <button class="btn sa-btn-outline" id="manualRefreshBtn" type="button">
               <i class="bi bi-arrow-repeat me-2"></i>
               Refresh Data
@@ -45,42 +58,143 @@
 
   <main class="sa-content">
     <div class="container-fluid px-3 px-lg-4">
-      <section id="support-tickets" class="sa-panel">
-        <div class="sa-panel-header">
-          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-            <div>
-              <h2 class="sa-panel-title mb-1">Tickets</h2>
-              <p class="sa-panel-text mb-0">Track reported issues and update their resolution status.</p>
+      <section class="sa-panel sa-tickets-panel">
+        <div class="row g-4 align-items-start">
+          <div class="col-12 col-xl-8">
+            <div class="sa-panel-header mb-3">
+              <h2 class="sa-panel-title mb-1">Tickets Queue</h2>
+              <p class="sa-panel-text mb-0">
+                Review support tickets, update workflow status, and archive old closed cases automatically every 3 months.
+              </p>
             </div>
 
-            <div class="sa-panel-chip">
-              <i class="bi bi-kanban me-1"></i>
-              Resolution Workflow
+            <div class="sa-ticket-tabs-wrap mb-3" id="ticketStatusTabs">
+              <button type="button" class="btn sa-ticket-tab active" data-status="all">
+                <i class="bi bi-grid-1x2 me-2"></i>All
+              </button>
+              <button type="button" class="btn sa-ticket-tab" data-status="open">
+                <i class="bi bi-exclamation-circle me-2"></i>Open
+              </button>
+              <button type="button" class="btn sa-ticket-tab" data-status="in_progress">
+                <i class="bi bi-hourglass-split me-2"></i>In Progress
+              </button>
+              <button type="button" class="btn sa-ticket-tab" data-status="resolved">
+                <i class="bi bi-check-circle me-2"></i>Resolved
+              </button>
+              <button type="button" class="btn sa-ticket-tab" data-status="closed">
+                <i class="bi bi-lock me-2"></i>Closed
+              </button>
+            </div>
+
+            <div class="sa-ticket-filters mb-3">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label for="ticketSearchInput" class="sa-label mb-2">Search ticket</label>
+                  <div class="sa-input-group-icon">
+                    <i class="bi bi-search sa-input-icon"></i>
+                    <input
+                      type="text"
+                      id="ticketSearchInput"
+                      class="form-control sa-input with-icon"
+                      placeholder="Search by ticket ID, subject, note, user, or page"
+                    >
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <label for="ticketCategoryFilter" class="sa-label mb-2">Category</label>
+                  <select id="ticketCategoryFilter" class="form-select sa-input">
+                    <option value="all">All Categories</option>
+                    <option value="technical">Technical</option>
+                    <option value="billing">Billing</option>
+                    <option value="account">Account</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <label for="ticketPriorityFilter" class="sa-label mb-2">Priority</label>
+                  <select id="ticketPriorityFilter" class="form-select sa-input">
+                    <option value="all">All Priorities</option>
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <label for="ticketRoleFilter" class="sa-label mb-2">Account Type</label>
+                  <select id="ticketRoleFilter" class="form-select sa-input">
+                    <option value="all">All Accounts</option>
+                    <option value="system_admin">System Admin</option>
+                    <option value="farm_manager">Farm Manager</option>
+                    <option value="encoder">Encoder</option>
+                    <option value="farmer">Farmer</option>
+                  </select>
+                </div>
+
+                <div class="col-12">
+                  <button type="button" class="btn sa-btn-outline w-100" id="clearTicketFiltersBtn">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Clear Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-4">
+            <div class="sa-tickets-summary-shell">
+              <div class="sa-tickets-summary-grid">
+                <div class="sa-ticket-mini-stat">
+                  <div class="sa-ticket-mini-stat-label">Open</div>
+                  <div class="sa-ticket-mini-stat-value" id="ticketStatOpen">0</div>
+                </div>
+
+                <div class="sa-ticket-mini-stat">
+                  <div class="sa-ticket-mini-stat-label">In Progress</div>
+                  <div class="sa-ticket-mini-stat-value" id="ticketStatInProgress">0</div>
+                </div>
+
+                <div class="sa-ticket-mini-stat">
+                  <div class="sa-ticket-mini-stat-label">Resolved</div>
+                  <div class="sa-ticket-mini-stat-value" id="ticketStatResolved">0</div>
+                </div>
+
+                <div class="sa-ticket-mini-stat">
+                  <div class="sa-ticket-mini-stat-label">Closed</div>
+                  <div class="sa-ticket-mini-stat-value" id="ticketStatClosed">0</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="sa-table-toolbar mb-3">
-          <div class="sa-table-toolbar-text">
-            Change ticket status directly from the table to keep the support queue updated.
+          <div class="sa-table-toolbar-text" id="ticketsResultMeta">
+            Loading tickets...
           </div>
         </div>
 
-        <div class="table-responsive sa-table-wrap">
-          <table id="adminTicketsTable" class="table sa-table align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Ticket ID</th>
-                <th>User Info</th>
-                <th>Category</th>
-                <th>Subject</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Resolution</th>
-              </tr>
-            </thead>
-            <tbody id="adminTicketsBody"></tbody>
-          </table>
+        <div id="adminTicketsTable" class="sa-ticket-card-grid">
+          <div id="adminTicketsBody"></div>
+        </div>
+
+        <div class="sa-pagination-wrap mt-3">
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div id="ticketsPaginationInfo" class="sa-table-toolbar-text">Showing 0 of 0</div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn sa-btn-outline" id="ticketsPrevBtn">
+                <i class="bi bi-chevron-left me-1"></i>
+                Previous
+              </button>
+              <button type="button" class="btn sa-btn-outline" id="ticketsNextBtn">
+                Next
+                <i class="bi bi-chevron-right ms-1"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -89,6 +203,92 @@
       </footer>
     </div>
   </main>
+</div>
+
+<div class="modal fade" id="ticketsArchivePanel" tabindex="-1" aria-labelledby="ticketsArchivePanelLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-content sa-ticket-archive-modal">
+      <div class="modal-header sa-ticket-archive-modal-header">
+        <div class="min-w-0">
+          <h5 class="modal-title mb-1" id="ticketsArchivePanelLabel">Archived Tickets</h5>
+          <div class="sa-panel-text mb-0">
+            Closed tickets stored after 3 months to keep the active queue clean.
+          </div>
+        </div>
+        <button type="button" class="btn-close sa-modal-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body sa-ticket-archive-modal-body">
+        <div class="sa-ticket-filters mb-3">
+          <div class="row g-3">
+            <div class="col-12 col-lg-5">
+              <label for="archiveSearchInput" class="sa-label mb-2">Search archive</label>
+              <div class="sa-input-group-icon">
+                <i class="bi bi-search sa-input-icon"></i>
+                <input
+                  type="text"
+                  id="archiveSearchInput"
+                  class="form-control sa-input with-icon"
+                  placeholder="Search archived ticket ID, subject, note, or user"
+                >
+              </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+              <label for="archiveCategoryFilter" class="sa-label mb-2">Category</label>
+              <select id="archiveCategoryFilter" class="form-select sa-input">
+                <option value="all">All Categories</option>
+                <option value="technical">Technical</option>
+                <option value="billing">Billing</option>
+                <option value="account">Account</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="col-6 col-lg-2">
+              <label for="archivePriorityFilter" class="sa-label mb-2">Priority</label>
+              <select id="archivePriorityFilter" class="form-select sa-input">
+                <option value="all">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+
+            <div class="col-12 col-lg-2 d-flex align-items-end">
+              <button type="button" class="btn sa-btn-outline w-100" id="clearArchiveFiltersBtn">
+                <i class="bi bi-x-circle me-2"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sa-table-toolbar mb-3">
+          <div class="sa-table-toolbar-text" id="archiveResultMeta">Loading archive...</div>
+        </div>
+
+        <div id="adminArchivedTicketsBody" class="sa-ticket-archive-grid"></div>
+
+        <div class="sa-pagination-wrap mt-3">
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+            <div id="archivePaginationInfo" class="sa-table-toolbar-text">Showing 0 of 0</div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn sa-btn-outline" id="archivePrevBtn">
+                <i class="bi bi-chevron-left me-1"></i>
+                Previous
+              </button>
+              <button type="button" class="btn sa-btn-outline" id="archiveNextBtn">
+                Next
+                <i class="bi bi-chevron-right ms-1"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <%- include("../../partials/system-admin/footer") %>

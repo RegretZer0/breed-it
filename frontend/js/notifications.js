@@ -52,6 +52,10 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     return (t || "info").toString().trim().toLowerCase();
   }
 
+  function isVisibleInPanels(notification) {
+    return normalizeType(notification?.type) !== "maintenance";
+  }
+  
   function parseDate(d) {
     const dt = new Date(d);
     return Number.isNaN(dt.getTime()) ? null : dt;
@@ -110,7 +114,10 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function setBadgeCount() {
     if (!notifBadge) return;
 
-    const unreadCount = allNotifications.filter(isUnread).length;
+    const unreadCount = allNotifications
+      .filter(isVisibleInPanels)
+      .filter(isUnread)
+      .length;
 
     if (unreadCount <= 0) {
       notifBadge.style.display = "none";
@@ -176,7 +183,9 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function renderRecent() {
     recentList.innerHTML = "";
 
-    const recent = allNotifications.slice(0, 8);
+    const recent = allNotifications
+    .filter(isVisibleInPanels)
+    .slice(0, 8);
 
     if (!recent.length) {
       recentList.innerHTML = `
@@ -230,7 +239,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function renderHistory() {
     if (!historyList) return;
 
-    const filtered = applyHistoryFilters(allNotifications);
+    const filtered = applyHistoryFilters(allNotifications.filter(isVisibleInPanels));
     const { pageItems, totalPages } = getPaged(filtered);
 
     historyList.innerHTML = "";

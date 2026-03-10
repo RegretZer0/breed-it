@@ -713,3 +713,210 @@ body.dark .notif-pager{
   .side-panel{ max-width: 460px; }
   .history-panel{ max-width: 520px; }
 }
+
+/* =========================================================
+   GLOBAL MAINTENANCE FLOATING BANNER
+========================================================= */
+.maintenance-floating-banner {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1120px, calc(100% - 1.5rem));
+  z-index: 2500;
+  pointer-events: none;
+}
+
+.maintenance-banner-card {
+  pointer-events: auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.16);
+  backdrop-filter: blur(10px);
+}
+
+.maintenance-banner-active {
+  background: linear-gradient(135deg, rgba(255, 244, 204, 0.98), rgba(255, 236, 184, 0.96));
+  color: #4d3900;
+}
+
+.maintenance-banner-upcoming {
+  background: linear-gradient(135deg, rgba(232, 247, 234, 0.98), rgba(213, 241, 219, 0.96));
+  color: #12361c;
+}
+
+.maintenance-banner-accent {
+  width: 8px;
+  flex: 0 0 8px;
+  align-self: stretch;
+}
+
+.maintenance-banner-active .maintenance-banner-accent {
+  background: linear-gradient(180deg, #f0ad00, #f5c451);
+}
+
+.maintenance-banner-upcoming .maintenance-banner-accent {
+  background: linear-gradient(180deg, #24b36b, #52d88d);
+}
+
+.maintenance-banner-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 0.95rem 0 0.95rem 0.25rem;
+}
+
+.maintenance-banner-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.maintenance-banner-content {
+  min-width: 0;
+  padding-right: 0.4rem;
+}
+
+.maintenance-banner-topline {
+  margin-bottom: 0.18rem;
+}
+
+.maintenance-banner-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0.2rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.maintenance-banner-title {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 0.2rem;
+}
+
+.maintenance-banner-message {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  opacity: 0.94;
+  margin-bottom: 0.45rem;
+  word-break: break-word;
+}
+
+.maintenance-banner-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.86;
+}
+
+.maintenance-banner-actions {
+  display: flex;
+  align-items: flex-start;
+  padding: 0.8rem 0.85rem 0 0;
+}
+
+.maintenance-banner-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.42);
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.maintenance-banner-close:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+@media (max-width: 991.98px) {
+  .maintenance-floating-banner {
+    top: 78px;
+    width: min(100%, calc(100% - 1rem));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .maintenance-floating-banner {
+    top: 70px;
+  }
+
+  .maintenance-banner-card {
+    gap: 0.75rem;
+  }
+
+  .maintenance-banner-main {
+    gap: 0.75rem;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .maintenance-banner-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+    border-radius: 12px;
+  }
+
+  .maintenance-banner-title {
+    font-size: 0.94rem;
+  }
+
+  .maintenance-banner-message {
+    font-size: 0.84rem;
+  }
+
+  .maintenance-banner-meta {
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .maintenance-floating-banner {
+    top: 66px;
+    width: calc(100% - 0.75rem);
+  }
+
+  .maintenance-banner-card {
+    align-items: flex-start;
+  }
+
+  .maintenance-banner-main {
+    padding-left: 0.15rem;
+  }
+
+  .maintenance-banner-actions {
+    padding-right: 0.65rem;
+    padding-top: 0.65rem;
+  }
+
+  .maintenance-banner-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+}

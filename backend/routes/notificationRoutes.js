@@ -4,11 +4,52 @@ const mongoose = require("mongoose");
 
 const Notification = require("../models/Notifications");
 const UserModel = require("../models/UserModel"); // Managers & encoders
+const SystemSettings = require("../models/SystemSettings");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
 // Debugging logs
 console.log("Notification Model Status: Loaded");
+
+/*======================================================
+    MAINTENANCE TIME HELPERS
+====================================================== */
+async function getLogicalNow() {
+  const systemSettings = await SystemSettings.findOne().lean();
+  if (systemSettings?.mockDate) {
+    return new Date(systemSettings.mockDate);
+  }
+  return new Date();
+}
+
+async function syncMaintenanceStatuses() {
+  const now = await getLogicalNow();
+
+  // scheduled -> active
+  await Notification.updateMany(
+    {
+      type: "maintenance",
+      status: "scheduled",
+      scheduled_for: { $lte: now },
+      ends_at: { $gte: now }
+    },
+    {
+      $set: { status: "active" }
+    }
+  );
+
+  // scheduled / active -> completed
+  await Notification.updateMany(
+    {
+      type: "maintenance",
+      status: { $in: ["scheduled", "active"] },
+      ends_at: { $lt: now }
+    },
+    {
+      $set: { status: "completed" }
+    }
+  );
+}
 
 /*======================================================
     NEW: NOTIFY ADMINS (Matches report.api.js call)
@@ -28,7 +69,7 @@ router.post(
       }
 
       // Create a notification for every admin found
-      const notificationPromises = admins.map(admin => {
+      const notificationPromises = admins.map((admin) => {
         return Notification.create({
           user_id: admin._id,
           title: title || "Admin Alert",
@@ -63,7 +104,7 @@ router.post(
         return res.status(400).json({ success: false, message: "Missing fields" });
       }
 
-      // 🔐 ENCODER RESTRICTION
+      // Restrict encoders to only create notifications for themselves
       if (req.user.role === "encoder" && user_id !== req.user.id) {
         return res.status(403).json({
           success: false,
@@ -76,8 +117,9 @@ router.post(
         title,
         message,
         type: type || "info",
-        scheduled_for,
-        ends_at
+        is_global: false,
+        scheduled_for: scheduled_for ? new Date(scheduled_for) : null,
+        ends_at: ends_at ? new Date(ends_at) : null
       });
 
       res.status(201).json({ success: true, notification });
@@ -104,9 +146,9 @@ router.get(
 
       const idsArray = userIds
         .split(",")
-        .map(id => id.trim())
-        .filter(id => mongoose.Types.ObjectId.isValid(id))
-        .map(id => new mongoose.Types.ObjectId(id));
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
 
       if (idsArray.length === 0) {
         return res.status(400).json({ success: false, message: "No valid user IDs provided" });
@@ -118,13 +160,12 @@ router.get(
         .sort({ created_at: -1 })
         .lean();
 
-      const userIdStrs = idsArray.map(id => id.toString());
+      const userIdStrs = idsArray.map((id) => id.toString());
 
-      notifications = notifications.map(n => ({
+      notifications = notifications.map((n) => ({
         ...n,
-        is_read: n.read_by?.some(uid =>
-          userIdStrs.includes(uid.toString())
-        ) || false
+        is_read:
+          n.read_by?.some((uid) => userIdStrs.includes(uid.toString())) || false
       }));
 
       res.json({ success: true, notifications });
@@ -146,7 +187,9 @@ router.post(
     try {
       const userId = req.user.id;
       const notification = await Notification.findById(req.params.id);
-      if (!notification) return res.status(404).json({ success: false, message: "Notification not found" });
+      if (!notification) {
+        return res.status(404).json({ success: false, message: "Notification not found" });
+      }
 
       if (!notification.read_by.includes(userId)) {
         notification.read_by.push(userId);
@@ -178,15 +221,15 @@ router.post(
 
       const idsArray = userIds
         .split(",")
-        .map(id => id.trim())
-        .filter(id => mongoose.Types.ObjectId.isValid(id))
-        .map(id => new mongoose.Types.ObjectId(id));
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
 
       if (idsArray.length === 0) {
         return res.status(400).json({ success: false, message: "No valid user IDs provided" });
       }
 
-      // 🔐 Restrict farmers/encoders to only mark their own notifications
+      // Restrict farmers/encoders to only mark their own notifications
       if ((req.user.role === "encoder" || req.user.role === "farmer") && userIds.includes(",")) {
         return res.status(403).json({
           success: false,
@@ -232,7 +275,9 @@ router.delete(
   async (req, res) => {
     try {
       const notification = await Notification.findByIdAndDelete(req.params.id);
-      if (!notification) return res.status(404).json({ success: false, message: "Notification not found" });
+      if (!notification) {
+        return res.status(404).json({ success: false, message: "Notification not found" });
+      }
 
       res.json({ success: true, message: "Notification deleted" });
     } catch (err) {
@@ -260,20 +305,30 @@ router.post(
         return res.status(400).json({ success: false, message: "Missing required schedule fields" });
       }
 
+      const startDate = new Date(scheduled_for);
+      const endDate = new Date(ends_at);
+      const now = await getLogicalNow();
+
+      let status = "scheduled";
+      if (startDate <= now && endDate >= now) status = "active";
+      if (endDate < now) status = "completed";
+
       const notification = await Notification.create({
-        user_id: req.user.id, 
+        user_id: req.user.id,
         title,
         message,
         type: "maintenance",
         is_global: true,
-        scheduled_for: new Date(scheduled_for),
-        ends_at: new Date(ends_at)
+        scheduled_for: startDate,
+        ends_at: endDate,
+        status,
+        is_archived: false
       });
 
       console.log("Broadcast success:", notification._id);
       res.status(201).json({ success: true, notification });
     } catch (err) {
-      console.error("❌ Broadcast error details:", err);
+      console.error("Broadcast error details:", err);
       res.status(500).json({ success: false, message: "Server error", details: err.message });
     }
   }
@@ -294,16 +349,162 @@ router.get(
         });
       }
 
-      const history = await Notification.find({ type: "maintenance" })
+      await syncMaintenanceStatuses();
+
+      const {
+        status = "all",
+        page = 1,
+        limit = 10,
+        archived = "false"
+      } = req.query;
+
+      const numericPage = Math.max(parseInt(page, 10) || 1, 1);
+      const numericLimit = Math.max(parseInt(limit, 10) || 10, 1);
+      const skip = (numericPage - 1) * numericLimit;
+
+      const query = {
+        type: "maintenance"
+      };
+
+      if (archived === "true") {
+        query.is_archived = true;
+      } else {
+        query.$or = [
+          { is_archived: false },
+          { is_archived: { $exists: false } }
+        ];
+      }
+
+      if (status !== "all") {
+        query.status = status;
+      }
+
+      const total = await Notification.countDocuments(query);
+
+      const history = await Notification.find(query)
         .sort({ scheduled_for: -1, created_at: -1 })
+        .skip(skip)
+        .limit(numericLimit)
         .lean();
 
       res.json({
         success: true,
-        history
+        history,
+        pagination: {
+          page: numericPage,
+          limit: numericLimit,
+          total,
+          totalPages: Math.ceil(total / numericLimit)
+        }
       });
     } catch (err) {
       console.error("Maintenance history fetch error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+  }
+);
+
+router.patch(
+  "/maintenance-history/:id/cancel",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "system_admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: Admins only"
+        });
+      }
+
+      const record = await Notification.findOne({
+        _id: req.params.id,
+        type: "maintenance",
+        $or: [
+          { is_archived: false },
+          { is_archived: { $exists: false } }
+        ]
+      });
+
+      if (!record) {
+        return res.status(404).json({
+          success: false,
+          message: "Maintenance record not found"
+        });
+      }
+
+      if (record.status === "completed") {
+        return res.status(400).json({
+          success: false,
+          message: "Completed maintenance can no longer be cancelled"
+        });
+      }
+
+      if (record.status === "cancelled") {
+        return res.status(400).json({
+          success: false,
+          message: "Maintenance is already cancelled"
+        });
+      }
+
+      record.status = "cancelled";
+      record.cancelled_at = new Date();
+      record.cancelled_by = req.user.id;
+      await record.save();
+
+      res.json({
+        success: true,
+        message: "Maintenance cancelled successfully",
+        record
+      });
+    } catch (err) {
+      console.error("Maintenance cancel error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Server error"
+      });
+    }
+  }
+);
+
+router.patch(
+  "/maintenance-history/:id/restore",
+  requireSessionAndToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "system_admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized: Admins only"
+        });
+      }
+
+      const record = await Notification.findOne({
+        _id: req.params.id,
+        type: "maintenance",
+        is_archived: true
+      });
+
+      if (!record) {
+        return res.status(404).json({
+          success: false,
+          message: "Archived maintenance record not found"
+        });
+      }
+
+      record.is_archived = false;
+      record.archived_at = null;
+      await record.save();
+
+      res.json({
+        success: true,
+        message: "Maintenance restored successfully",
+        record
+      });
+    } catch (err) {
+      console.error("Maintenance restore error:", err);
       res.status(500).json({
         success: false,
         message: "Server error"
@@ -317,10 +518,13 @@ router.get(
 ====================================================== */
 router.get("/global", async (req, res) => {
   try {
+    await syncMaintenanceStatuses();
+    const now = await getLogicalNow();
+
     const alerts = await Notification.find({
       is_global: true,
       $or: [
-        { ends_at: { $gt: new Date() } },
+        { ends_at: { $gt: now } },
         { ends_at: null }
       ]
     }).sort({ created_at: -1 });
@@ -331,5 +535,4 @@ router.get("/global", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 module.exports = router;
