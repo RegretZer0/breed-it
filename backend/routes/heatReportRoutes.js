@@ -261,10 +261,33 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
 
 router.get("/:id/detail", requireApiLogin, async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id").lean();
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
-    res.json({ success: true, report });
+    const report = await HeatReport.findById(req.params.id)
+      .populate("swine_id")
+      .populate("farmer_id")
+      .populate("approved_by", "first_name last_name role")
+      .populate("rejected_by", "first_name last_name role")
+      .populate("ai_confirmed_by", "first_name last_name role")
+      .populate("pregnancy_confirmed_by", "first_name last_name role")
+      .populate("farrowing_confirmed_by", "first_name last_name role")
+      .populate("weaning_confirmed_by", "first_name last_name role")
+      .populate("still_in_heat_by", "first_name last_name role")
+      .lean();
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    const aiRecord = await AIRecord.findOne({ heat_report_id: report._id }).lean();
+
+    res.json({
+      success: true,
+      report: {
+        ...report,
+        ai_record: aiRecord || null
+      }
+    });
   } catch (err) {
+    console.error("Error fetching report detail:", err);
     res.status(500).json({ success: false, message: "Error fetching report" });
   }
 });
@@ -297,9 +320,12 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     scheduledInsemination.setDate(virtualNow.getDate() + 2);
 
     report.status = "approved";
-    report.approved_at = virtualNow;
-    report.approved_by = req.user.id;
-    report.next_heat_check = scheduledInsemination;
+    report.next_heat_check = null;
+    report.expected_farrowing = null;
+    report.still_in_heat_at = virtualNow;
+    report.still_in_heat_by = req.user.id;
+    report.still_in_heat_reason = "Returned to heat / pregnancy failed";
+    report.updatedAt = virtualNow;
     await report.save();
 
     const swine = await Swine.findById(report.swine_id);
@@ -386,8 +412,9 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
 
     // Update Heat Report status and anchor dates
     report.status = "under_observation";
-    report.ai_confirmed_at = finalAiDate; 
-    
+    report.ai_confirmed_at = finalAiDate;
+    report.ai_confirmed_by = req.user.id;
+
     // Calculate 23-day check based on the Warped date
     const heatCheckDate = new Date(finalAiDate);
     heatCheckDate.setDate(heatCheckDate.getDate() + 23);
@@ -470,6 +497,7 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
     report.status = "pregnant";
     report.expected_farrowing = farrowingDate;
     report.pregnancy_confirmed_at = confirmationDate;
+    report.pregnancy_confirmed_by = req.user.id;
     await report.save({ session });
 
     // 4. Update AIRecord with the new model fields
@@ -609,6 +637,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
     // 2. Update Heat Report Status
     report.status = "lactating";
     report.actual_farrowing_date = farrowDate;
+    report.farrowing_confirmed_by = req.user.id;
     await report.save({ session });
 
     // 3. Update AI Record Status
@@ -735,8 +764,10 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     report.status = "approved";
     report.next_heat_check = null;
     report.expected_farrowing = null;
-    // Update the timestamp to virtual now so the dashboard sees this as a 2026 event
-    report.updatedAt = virtualNow; 
+    report.still_in_heat_at = virtualNow;
+    report.still_in_heat_by = req.user.id;
+    report.still_in_heat_reason = "Returned to heat / pregnancy failed";
+    report.updatedAt = virtualNow;
     await report.save();
 
     await AIRecord.findOneAndUpdate({ heat_report_id: report._id, status: "Ongoing" }, {
@@ -842,6 +873,7 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
     // 1. Update Heat Report Status to Completed
     report.status = "completed";
     report.weaning_date = finalWeaningDate;
+    report.weaning_confirmed_by = req.user.id;
     await report.save({ session });
 
     // 2. UPDATE THE AI RECORD (Crucial for Time Portal & History)
@@ -1132,8 +1164,9 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
 
     // Update Report Status
     report.status = "rejected";
-    report.rejection_message = reason;
-    report.rejected_at = virtualNow; 
+    report.rejection_message = reason || "No reason provided";
+    report.rejected_at = virtualNow;
+    report.rejected_by = req.user.id;
     await report.save();
 
     // Log the action for audit purposes

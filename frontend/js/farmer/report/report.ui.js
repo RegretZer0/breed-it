@@ -1972,6 +1972,34 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         ? `<div class="remarks-box">${remarksText.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
         : `<div class="empty-mini">No remarks provided.</div>`;
 
+      const actorName = (person) => {
+        if (!person) return "—";
+        const first = person.first_name || "";
+        const last = person.last_name || "";
+        const role = person.role ? ` (${String(person.role).replace(/_/g, " ")})` : "";
+        return `${first} ${last}`.trim() + role;
+      };
+
+      const actionHistoryHtml = `
+        <div class="details-block">
+          <div class="block-title">
+            <i class="bi bi-clock-history"></i> Action History
+          </div>
+
+          <div class="remarks-box" style="display:grid; gap:8px;">
+            <div><strong>Approved by:</strong> ${actorName(report.approved_by)}</div>
+            <div><strong>Rejected by:</strong> ${actorName(report.rejected_by)}</div>
+            <div><strong>Reject reason:</strong> ${report.rejection_message || "—"}</div>
+            <div><strong>AI confirmed by:</strong> ${actorName(report.ai_confirmed_by)}</div>
+            <div><strong>Pregnancy confirmed by:</strong> ${actorName(report.pregnancy_confirmed_by)}</div>
+            <div><strong>Returned to heat by:</strong> ${actorName(report.still_in_heat_by)}</div>
+            <div><strong>Return reason:</strong> ${report.still_in_heat_reason || "—"}</div>
+            <div><strong>Farrowing confirmed by:</strong> ${actorName(report.farrowing_confirmed_by)}</div>
+            <div><strong>Weaning confirmed by:</strong> ${actorName(report.weaning_confirmed_by)}</div>
+          </div>
+        </div>
+      `;
+
       const showBackInHeat = canShowBackInHeat(report);
       const showConfirmPreg = canShowConfirmPregnant(report);
       const showConfirmWean = canShowConfirmWeaning(report);

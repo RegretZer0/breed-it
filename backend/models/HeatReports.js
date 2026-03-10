@@ -81,7 +81,14 @@ const heatReportSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+
     approved_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    rejected_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null
@@ -159,6 +166,46 @@ const heatReportSchema = new mongoose.Schema(
     date_reported: {
       type: Date,
       default: Date.now
+    },
+
+    ai_confirmed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    pregnancy_confirmed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    farrowing_confirmed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    weaning_confirmed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    still_in_heat_at: {
+      type: Date,
+      default: null
+    },
+
+    still_in_heat_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    still_in_heat_reason: {
+      type: String,
+      default: ""
     }
   },
   { 
