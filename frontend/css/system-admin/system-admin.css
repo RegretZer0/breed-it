@@ -2554,3 +2554,356 @@ body.sa-theme-light .modal-backdrop.show {
   }
 }
 
+/* =========================================================
+   MODULE: Infrastructure Page Redesign
+========================================================= */
+.sa-infra-hero {
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.sa-infra-hero::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  top: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(111, 207, 127, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.sa-infra-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.sa-infra-panel::after {
+  content: "";
+  position: absolute;
+  right: -70px;
+  bottom: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(111, 207, 127, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.sa-infra-info-card {
+  height: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.sa-infra-chart-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.sa-resource-chart {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sa-resource-item {
+  border: 1px solid var(--sa-border);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.sa-theme-light .sa-resource-item {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sa-resource-label {
+  color: var(--sa-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.sa-resource-value {
+  color: var(--sa-primary-2);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.sa-progress-shell {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  border: 1px solid var(--sa-border);
+}
+
+body.sa-theme-light .sa-progress-shell {
+  background: #eef5ef;
+}
+
+.sa-progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sa-primary), var(--sa-primary-2));
+}
+
+.sa-deploy-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 86px;
+  padding: 0.9rem;
+  border-radius: 14px;
+  background: rgba(8, 16, 8, 0.12);
+  border: 1px solid rgba(8, 16, 8, 0.12);
+}
+
+.sa-deploy-stat-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: rgba(8, 16, 8, 0.78);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sa-deploy-stat-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #081008;
+  line-height: 1.1;
+}
+
+#networkTable th:nth-child(1),
+#networkTable td:nth-child(1) {
+  min-width: 140px;
+}
+
+#networkTable th:nth-child(2),
+#networkTable td:nth-child(2) {
+  min-width: 180px;
+}
+
+#networkTable th:nth-child(3),
+#networkTable td:nth-child(3) {
+  min-width: 170px;
+}
+
+@media (max-width: 991.98px) {
+  .sa-infra-hero {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .sa-resource-item {
+    padding: 0.8rem;
+    border-radius: 12px;
+  }
+
+  .sa-deploy-stat {
+    min-height: 78px;
+    padding: 0.8rem;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .sa-infra-hero {
+    padding: 0.95rem;
+  }
+
+  .sa-resource-chart {
+    gap: 0.85rem;
+  }
+
+  .sa-resource-item {
+    padding: 0.75rem;
+  }
+
+  .sa-deploy-stat-value {
+    font-size: 1rem;
+  }
+}
+
+/* =========================================================
+   MODULE: Infrastructure Extended Layout
+========================================================= */
+.sa-infra-hero {
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.sa-infra-hero::after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  top: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(111, 207, 127, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.sa-infra-info-card {
+  height: 100%;
+}
+
+.sa-resource-chart {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sa-resource-item {
+  border: 1px solid var(--sa-border);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.sa-theme-light .sa-resource-item {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sa-resource-label {
+  color: var(--sa-text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.sa-resource-value {
+  color: var(--sa-primary-2);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.sa-progress-shell {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  border: 1px solid var(--sa-border);
+}
+
+body.sa-theme-light .sa-progress-shell {
+  background: #eef5ef;
+}
+
+.sa-progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sa-primary), var(--sa-primary-2));
+}
+
+.sa-deploy-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 84px;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: rgba(8, 16, 8, 0.12);
+  border: 1px solid rgba(8, 16, 8, 0.12);
+}
+
+.sa-deploy-stat-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: rgba(8, 16, 8, 0.78);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sa-deploy-stat-value {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #081008;
+  line-height: 1.1;
+}
+
+.sa-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.sa-breakdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  min-height: 64px;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--sa-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.sa-theme-light .sa-breakdown-item {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.sa-breakdown-label {
+  color: var(--sa-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.sa-breakdown-value {
+  color: var(--sa-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+#networkTable th:nth-child(1),
+#networkTable td:nth-child(1) {
+  min-width: 140px;
+}
+
+#networkTable th:nth-child(2),
+#networkTable td:nth-child(2) {
+  min-width: 180px;
+}
+
+#networkTable th:nth-child(3),
+#networkTable td:nth-child(3) {
+  min-width: 170px;
+}
+
+@media (max-width: 991.98px) {
+  .sa-infra-hero {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .sa-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sa-resource-item,
+  .sa-breakdown-item {
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .sa-resource-item,
+  .sa-breakdown-item {
+    padding: 0.8rem;
+  }
+
+  .sa-deploy-stat {
+    min-height: 76px;
+    border-radius: 12px;
+  }
+
+  .sa-deploy-stat-value {
+    font-size: 1rem;
+  }
+}

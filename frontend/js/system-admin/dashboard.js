@@ -20,8 +20,9 @@ const AdminDashboard = (() => {
     activityRange: "24h",
     adminStats: {},
     systemInfo: {},
+    infrastructure: {},
     openTicketCount: 0,
-    
+
     users: {
       roleTab: "all",
       status: "all",
@@ -72,6 +73,13 @@ const AdminDashboard = (() => {
       limit: 6,
       totalPages: 1,
       total: 0
+    },
+
+    infraCharts: {
+      cpu: null,
+      memory: null,
+      users: null,
+      db: null,
     },
   };
 
@@ -146,6 +154,69 @@ const AdminDashboard = (() => {
 
     const data = await res.json().catch(() => ({}));
     return { res, data };
+  }
+
+  /* =========================================================
+     MODULE: Infrastructure Helpers
+     PURPOSE: Shared formatters and chart helper functions.
+  ========================================================= */
+  function formatBytes(bytes = 0) {
+    const value = Number(bytes || 0);
+    if (!Number.isFinite(value) || value <= 0) return "0 B";
+
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+    const sized = value / Math.pow(1024, index);
+
+    return `${sized.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+  }
+
+  function clampPercent(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(100, num));
+  }
+
+  function setProgressBar(id, percent) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const safe = clampPercent(percent);
+    el.style.width = `${safe}%`;
+    el.setAttribute("aria-valuenow", String(safe));
+  }
+
+  function buildStatusTone(value) {
+    const normalized = String(value || "").toLowerCase();
+    if (["online", "connected", "healthy", "stable", "tracking", "real-time"].includes(normalized)) {
+      return "status-stable";
+    }
+    if (["warning", "strained", "connecting", "mocked", "unknown"].includes(normalized)) {
+      return "status-strained";
+    }
+    return "status-danger";
+  }
+
+  function formatDateTime(value) {
+    if (!value) return "--";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "--";
+    return date.toLocaleString();
+  }
+
+  function destroyInfraChart(key) {
+    const chart = state.infraCharts?.[key];
+    if (chart) {
+      chart.destroy();
+      state.infraCharts[key] = null;
+    }
+  }
+
+  function setChartVisibility(canvasId, emptyId, showCanvas) {
+    const canvas = document.getElementById(canvasId);
+    const empty = document.getElementById(emptyId);
+
+    if (canvas) canvas.style.display = showCanvas ? "block" : "none";
+    if (empty) empty.style.display = showCanvas ? "none" : "grid";
   }
 
   /* =========================================================
@@ -1213,6 +1284,7 @@ const AdminDashboard = (() => {
       `;
     }).join("");
   }
+
   /* =========================================================
      MODULE: Maintenance Summary
      PURPOSE: Update maintenance analytics cards.
@@ -1249,7 +1321,7 @@ const AdminDashboard = (() => {
 
   /* =========================================================
      MODULE: Maintenance Actions
-     PURPOSE: Handle cancel requests for maintenance records.
+     PURPOSE: Handle cancel and restore requests.
   ========================================================= */
   async function cancelMaintenanceRecord(id) {
     try {
@@ -1270,14 +1342,43 @@ const AdminDashboard = (() => {
     }
   }
 
+  async function restoreMaintenanceRecord(id) {
+    try {
+      const { data } = await fetchJson(`/api/notifications/maintenance-history/${id}/restore`, {
+        method: "PATCH",
+      });
+
+      if (!data.success) {
+        alert(data.message || "Failed to restore maintenance.");
+        return;
+      }
+
+      alert("Maintenance restored successfully.");
+      await Promise.all([
+        loadMaintenanceHistory(),
+        loadArchivedMaintenanceHistory(),
+      ]);
+    } catch (err) {
+      console.error("Restore Maintenance Error:", err);
+      alert("Error restoring maintenance.");
+    }
+  }
+
   /* =========================================================
      MODULE: Maintenance UI Sync
-     PURPOSE: Keep tabs, archive toggle, and pagination in sync.
+     PURPOSE: Keep tabs and pagination in sync.
   ========================================================= */
   function syncMaintenanceTabs() {
     const tabs = document.querySelectorAll("#maintenanceTabs .sa-history-tab");
     tabs.forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.status === state.maintenanceStatus);
+    });
+  }
+
+  function syncArchiveTabs() {
+    const tabs = document.querySelectorAll("#maintenanceArchiveTabs .sa-history-tab");
+    tabs.forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.status === state.archiveStatus);
     });
   }
 
@@ -1294,6 +1395,33 @@ const AdminDashboard = (() => {
     state.maintenancePage = page;
     state.maintenanceTotalPages = totalPages;
     state.maintenanceTotal = total;
+
+    const start = total === 0 ? 0 : (page - 1) * limit + 1;
+    const end = Math.min(page * limit, total);
+
+    if (info) {
+      info.textContent = total === 0
+        ? "Showing 0 of 0"
+        : `Showing ${start}-${end} of ${total}`;
+    }
+
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page >= totalPages;
+  }
+
+  function updateArchivePagination(pagination = {}) {
+    const info = document.getElementById("maintenanceArchivePaginationInfo");
+    const prevBtn = document.getElementById("maintenanceArchivePrevBtn");
+    const nextBtn = document.getElementById("maintenanceArchiveNextBtn");
+
+    const page = pagination.page || state.archivePage || 1;
+    const totalPages = pagination.totalPages || 1;
+    const total = pagination.total || 0;
+    const limit = pagination.limit || state.archiveLimit;
+
+    state.archivePage = page;
+    state.archiveTotalPages = totalPages;
+    state.archiveTotal = total;
 
     const start = total === 0 ? 0 : (page - 1) * limit + 1;
     const end = Math.min(page * limit, total);
@@ -1326,62 +1454,6 @@ const AdminDashboard = (() => {
       minute: "2-digit",
     });
   }
-
-  function syncArchiveTabs() {
-  const tabs = document.querySelectorAll("#maintenanceArchiveTabs .sa-history-tab");
-  tabs.forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.status === state.archiveStatus);
-  });
-}
-
-function updateArchivePagination(pagination = {}) {
-  const info = document.getElementById("maintenanceArchivePaginationInfo");
-  const prevBtn = document.getElementById("maintenanceArchivePrevBtn");
-  const nextBtn = document.getElementById("maintenanceArchiveNextBtn");
-
-  const page = pagination.page || state.archivePage || 1;
-  const totalPages = pagination.totalPages || 1;
-  const total = pagination.total || 0;
-  const limit = pagination.limit || state.archiveLimit;
-
-  state.archivePage = page;
-  state.archiveTotalPages = totalPages;
-  state.archiveTotal = total;
-
-  const start = total === 0 ? 0 : (page - 1) * limit + 1;
-  const end = Math.min(page * limit, total);
-
-  if (info) {
-    info.textContent = total === 0
-      ? "Showing 0 of 0"
-      : `Showing ${start}-${end} of ${total}`;
-  }
-
-  if (prevBtn) prevBtn.disabled = page <= 1;
-  if (nextBtn) nextBtn.disabled = page >= totalPages;
-}
-
-async function restoreMaintenanceRecord(id) {
-  try {
-    const { data } = await fetchJson(`/api/notifications/maintenance-history/${id}/restore`, {
-      method: "PATCH",
-    });
-
-    if (!data.success) {
-      alert(data.message || "Failed to restore maintenance.");
-      return;
-    }
-
-    alert("Maintenance restored successfully.");
-    await Promise.all([
-      loadMaintenanceHistory(),
-      loadArchivedMaintenanceHistory(),
-    ]);
-  } catch (err) {
-    console.error("Restore Maintenance Error:", err);
-    alert("Error restoring maintenance.");
-  }
-}
 
   function normalizeMaintenanceRawStatus(item) {
     const status = String(item?.status || "").toLowerCase().trim();
@@ -1441,6 +1513,7 @@ async function restoreMaintenanceRecord(id) {
 
       updateVirtualTime(stats);
       updateServerStatus(stats.serverStatus);
+
       const rawCpuLoad = Number.parseFloat(stats.cpuLoad);
       const platform = String(state.systemInfo.platform || "").toLowerCase();
 
@@ -1451,6 +1524,7 @@ async function restoreMaintenanceRecord(id) {
       } else {
         setText("cpuLoad", "--");
       }
+
       setText("memoryUsage", stats.memoryUsage ?? "--");
       setText("totalUsers", stats.totalUsers ?? 0);
       setText("concurrentUsers", stats.concurrentUsers ?? 0);
@@ -1473,7 +1547,7 @@ async function restoreMaintenanceRecord(id) {
       statusEl.textContent = status ?? "--";
       statusEl.classList.remove("status-stable", "status-strained", "status-danger");
 
-      if (status === "Stable") {
+      if (status === "Stable" || status === "Healthy") {
         statusEl.classList.add("status-stable");
       } else if (status === "Danger" || status === "Critical") {
         statusEl.classList.add("status-danger");
@@ -1517,7 +1591,7 @@ async function restoreMaintenanceRecord(id) {
     }
   }
 
-    /* =========================================================
+  /* =========================================================
      MODULE: Users Summary
      PURPOSE: Update user overview metric cards.
   ========================================================= */
@@ -1633,20 +1707,6 @@ async function restoreMaintenanceRecord(id) {
 
     if (prevBtn) prevBtn.disabled = page <= 1;
     if (nextBtn) nextBtn.disabled = page >= totalPages;
-  }
-
-  /* =========================================================
-     MODULE: Role Label Helper
-     PURPOSE: Convert database role keys into readable labels.
-  ========================================================= */
-  function formatRoleLabel(role) {
-    const map = {
-      system_admin: "System Admin",
-      farm_manager: "Farm Manager",
-      encoder: "Encoder",
-      farmer: "Farmer",
-    };
-    return map[role] || "Unknown";
   }
 
   /* =========================================================
@@ -1854,7 +1914,7 @@ async function restoreMaintenanceRecord(id) {
 
   /* =========================================================
      MODULE: Infrastructure Data
-     PURPOSE: Load system info and oversight tables.
+     PURPOSE: Load system info and infrastructure insights.
   ========================================================= */
   async function loadDataOversight() {
     try {
@@ -1862,9 +1922,13 @@ async function restoreMaintenanceRecord(id) {
       const data = parsed.data || parsed || {};
 
       state.systemInfo = data.systemInfo || {};
-      renderSystemInfo(state.systemInfo);
-      renderFarmManagersTable(Array.isArray(data.farmManagers) ? data.farmManagers : []);
-      renderFarmersTable(Array.isArray(data.farmers) ? data.farmers : []);
+      state.infrastructure = data.infrastructure || {};
+
+      renderSystemInfo(state.systemInfo, state.infrastructure);
+      renderInfrastructureSummary(state.infrastructure);
+      renderCollectionBreakdown(state.infrastructure?.collections || {});
+      renderNetworkTable(state.infrastructure?.network?.interfaces || []);
+      renderInfrastructureCharts(state.infrastructure?.trends || []);
     } catch (err) {
       console.error("Data Oversight Error:", err);
     }
@@ -1874,11 +1938,247 @@ async function restoreMaintenanceRecord(id) {
      MODULE: System Info Render
      PURPOSE: Render infrastructure information summary.
   ========================================================= */
-  function renderSystemInfo(systemInfo = {}) {
+  function renderSystemInfo(systemInfo = {}, infrastructure = {}) {
     setText("osPlatform", systemInfo.platform || "--");
     setText("systemUptime", systemInfo.uptime || "--");
     setText("cpuModel", systemInfo.cpuModel || "--");
     setText("totalMemory", systemInfo.totalMemory || "--");
+
+    setText("nodeVersion", infrastructure.app?.nodeVersion || "--");
+    setText("cpuCores", infrastructure.cpu?.cores ?? "--");
+
+    setText("dbName", infrastructure.database?.name || "--");
+    setText("dbCollections", infrastructure.database?.collections ?? 0);
+    setText("dbObjects", infrastructure.database?.objects ?? 0);
+
+    setText("networkHostname", infrastructure.network?.hostname || "--");
+    setText("primaryIp", infrastructure.network?.primaryAddress || "--");
+    setText("appPort", infrastructure.app?.port ?? "--");
+    setText("appArch", infrastructure.app?.arch || "--");
+  }
+
+  /* =========================================================
+    MODULE: Infrastructure Summary Render
+    PURPOSE: Render health cards, resource bars, and runtime data.
+  ========================================================= */
+  function renderInfrastructureSummary(infra = {}) {
+    const apiStatus = infra.health?.apiStatus || "Unknown";
+    const databaseStatus = infra.health?.databaseStatus || "Unknown";
+    const systemStatus = infra.health?.serverStatus || "Unknown";
+    const environment = infra.app?.environment || "--";
+
+    setText("apiStatus", apiStatus);
+    setText("databaseStatus", databaseStatus);
+    setText("systemStatus", systemStatus);
+    setText("appEnvironment", environment);
+
+    setText("infraApiStatus", apiStatus);
+    setText("infraDbStatus", databaseStatus);
+
+    setText("runtimeEnvironment", environment);
+    setText("hostName", infra.app?.hostname || "--");
+    setText("appPid", infra.app?.pid ?? "--");
+    setText("serverTime", formatDateTime(infra.app?.serverTime));
+    setText("virtualTimeInfra", formatDateTime(infra.app?.virtualTime));
+    setText("cronStatus", infra.operations?.cronStatus || "--");
+    setText("lastCronRun", formatDateTime(infra.operations?.lastCronRun));
+
+    setText("infraCpuLoad", `${infra.cpu?.usagePercent || "--"}%`);
+    setText("infraMemoryUsage", `${infra.memory?.usagePercent || "--"}%`);
+    setText("dbStorageSize", formatBytes(infra.database?.storageSizeBytes || 0));
+    setText("dbStorageSize2", formatBytes(infra.database?.storageSizeBytes || 0));
+    setText("dbDataSize", formatBytes(infra.database?.dataSizeBytes || 0));
+    setText("dbIndexSize", formatBytes(infra.database?.indexSizeBytes || 0));
+    setText("dbIndexes", infra.database?.indexes ?? 0);
+
+    setText("pigUploadsSize", formatBytes(infra.uploads?.pigsBytes || 0));
+    setText("profileUploadsSize", formatBytes(infra.uploads?.profilesBytes || 0));
+    setText("uploadsTotalLabel", formatBytes(infra.uploads?.totalBytes || 0));
+
+    setText("infraConcurrentUsers", infra.activity?.concurrentUsers ?? 0);
+    setText("infraActiveSessions", infra.activity?.activeSessions ?? 0);
+    setText("infraUptimeShort", state.systemInfo?.uptime || "--");
+
+    setText("infraTotalUsers", infra.users?.totalUsers ?? 0);
+    setText("infraFarmManagers", infra.users?.farmManagers ?? 0);
+    setText("infraFarmers", infra.users?.farmers ?? 0);
+    setText("infraEncoders", infra.users?.encoders ?? 0);
+
+    const cpuPercent = clampPercent(infra.cpu?.usagePercent || 0);
+    const memPercent = clampPercent(infra.memory?.usagePercent || 0);
+    const dbDataSize = Number(infra.database?.dataSizeBytes || 0);
+    const dbStorageSize = Number(infra.database?.storageSizeBytes || 0);
+    const uploadsSize = Number(infra.uploads?.totalBytes || 0);
+
+    const dbFillPercent = dbStorageSize > 0 ? clampPercent((dbDataSize / dbStorageSize) * 100) : 0;
+    const uploadsReference = Math.max(dbStorageSize, uploadsSize, 1);
+    const uploadsPercent = uploadsReference > 0 ? clampPercent((uploadsSize / uploadsReference) * 100) : 0;
+
+    setText("cpuUsagePercentLabel", `${cpuPercent.toFixed(2)}%`);
+    setText("memoryUsagePercentLabel", `${memPercent.toFixed(2)}%`);
+    setText("dbFillPercentLabel", `${dbFillPercent.toFixed(2)}%`);
+
+    setProgressBar("cpuUsageBar", cpuPercent);
+    setProgressBar("memoryUsageBar", memPercent);
+    setProgressBar("dbStorageBar", dbFillPercent);
+    setProgressBar("uploadsBar", uploadsPercent);
+
+    [
+      ["apiStatus", apiStatus],
+      ["databaseStatus", databaseStatus],
+      ["systemStatus", systemStatus],
+      ["infraApiStatus", apiStatus],
+      ["infraDbStatus", databaseStatus],
+      ["cronStatus", infra.operations?.cronStatus || "Unknown"],
+    ].forEach(([id, value]) => {
+      const nodes = document.querySelectorAll(`#${id}`);
+      nodes.forEach((node) => {
+        node.classList.remove("status-stable", "status-strained", "status-danger");
+        node.classList.add(buildStatusTone(value));
+      });
+    });
+  }
+
+  /* =========================================================
+     MODULE: Collection Breakdown Render
+     PURPOSE: Render live collection counts.
+  ========================================================= */
+  function renderCollectionBreakdown(collections = {}) {
+    setText("collectionUsers", collections.users ?? 0);
+    setText("collectionFarmers", collections.farmers ?? 0);
+    setText("collectionSwine", collections.swine ?? 0);
+    setText("collectionHeatReports", collections.heatReports ?? 0);
+    setText("collectionNotifications", collections.notifications ?? 0);
+    setText("collectionSessions", collections.sessions ?? 0);
+  }
+
+  /* =========================================================
+    MODULE: Network Table Render
+    PURPOSE: Render detected network interfaces.
+  ========================================================= */
+  function renderNetworkTable(rows = []) {
+    const tbody = document.getElementById("networkTableBody");
+    if (!tbody) return;
+
+    if (!rows.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" class="text-center py-4">
+            No network interfaces available.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.name || "-")}</td>
+        <td>${escapeHtml(item.address || "-")}</td>
+        <td>${escapeHtml(item.mac || "-")}</td>
+      </tr>
+    `).join("");
+  }
+
+  /* =========================================================
+     MODULE: Infrastructure Charts
+     PURPOSE: Render real snapshot-based infrastructure charts.
+  ========================================================= */
+  function renderInfrastructureCharts(trends = []) {
+    const hasEnoughData = Array.isArray(trends) && trends.length >= 2;
+
+    [
+      ["infraCpuChart", "infraCpuChartEmpty", "cpu"],
+      ["infraMemoryChart", "infraMemoryChartEmpty", "memory"],
+      ["infraUsersChart", "infraUsersChartEmpty", "users"],
+      ["infraDbChart", "infraDbChartEmpty", "db"],
+    ].forEach(([, , key]) => destroyInfraChart(key));
+
+    if (!hasEnoughData) {
+      setChartVisibility("infraCpuChart", "infraCpuChartEmpty", false);
+      setChartVisibility("infraMemoryChart", "infraMemoryChartEmpty", false);
+      setChartVisibility("infraUsersChart", "infraUsersChartEmpty", false);
+      setChartVisibility("infraDbChart", "infraDbChartEmpty", false);
+      return;
+    }
+
+    const labels = trends.map((item) => item.label);
+    const cpuValues = trends.map((item) => Number(item.cpuUsagePercent || 0));
+    const memoryValues = trends.map((item) => Number(item.memoryUsagePercent || 0));
+    const userValues = trends.map((item) => Number(item.concurrentUsers || 0));
+    const dbValues = trends.map((item) => Number(item.dbStorageSizeBytes || 0) / (1024 * 1024));
+
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        x: {
+          ticks: { color: "#8d9b90" },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#8d9b90" },
+          grid: { color: "rgba(255,255,255,0.08)" },
+        },
+      },
+    };
+
+    const cpuCanvas = document.getElementById("infraCpuChart");
+    const memoryCanvas = document.getElementById("infraMemoryChart");
+    const usersCanvas = document.getElementById("infraUsersChart");
+    const dbCanvas = document.getElementById("infraDbChart");
+
+    if (cpuCanvas && window.Chart) {
+      state.infraCharts.cpu = new Chart(cpuCanvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{ data: cpuValues, tension: 0.35, fill: false }],
+        },
+        options: chartOptions,
+      });
+      setChartVisibility("infraCpuChart", "infraCpuChartEmpty", true);
+    }
+
+    if (memoryCanvas && window.Chart) {
+      state.infraCharts.memory = new Chart(memoryCanvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{ data: memoryValues, tension: 0.35, fill: false }],
+        },
+        options: chartOptions,
+      });
+      setChartVisibility("infraMemoryChart", "infraMemoryChartEmpty", true);
+    }
+
+    if (usersCanvas && window.Chart) {
+      state.infraCharts.users = new Chart(usersCanvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{ data: userValues }],
+        },
+        options: chartOptions,
+      });
+      setChartVisibility("infraUsersChart", "infraUsersChartEmpty", true);
+    }
+
+    if (dbCanvas && window.Chart) {
+      state.infraCharts.db = new Chart(dbCanvas, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [{ data: dbValues, tension: 0.35, fill: false }],
+        },
+        options: chartOptions,
+      });
+      setChartVisibility("infraDbChart", "infraDbChartEmpty", true);
+    }
   }
 
   /* =========================================================

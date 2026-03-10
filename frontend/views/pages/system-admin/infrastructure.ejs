@@ -17,13 +17,14 @@
             <button class="btn sa-icon-btn d-lg-none" type="button" id="sidebarToggleBtn">
               <i class="bi bi-list"></i>
             </button>
+
             <div class="min-w-0">
               <div class="sa-page-kicker">System Administration</div>
               <div class="d-flex flex-wrap align-items-center gap-2">
                 <h1 class="sa-page-title mb-0">Infrastructure Details</h1>
                 <span class="sa-page-chip">
                   <i class="bi bi-hdd-network me-1"></i>
-                  Environment
+                  Live Monitoring
                 </span>
               </div>
             </div>
@@ -45,93 +46,553 @@
   <main class="sa-content">
     <div class="container-fluid px-3 px-lg-4">
 
+      <section class="sa-hero-panel sa-infra-hero mb-4">
+        <div class="row g-3 align-items-stretch">
+          <div class="col-12 col-xl-8">
+            <div>
+              <div class="sa-hero-kicker">Health Snapshot</div>
+              <h2 class="sa-hero-title">Monitor real-time application health, database storage, network endpoints, and operational readiness.</h2>
+              <p class="sa-hero-text mb-0">
+                This view uses only live system data from the current backend, MongoDB connection, filesystem, and runtime process.
+              </p>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-4">
+            <div class="row g-3">
+              <div class="col-6 col-xl-12">
+                <div class="sa-hero-stat">
+                  <div>
+                    <div class="sa-hero-stat-label">API</div>
+                    <div class="sa-inline-status" id="apiStatus">--</div>
+                  </div>
+                  <i class="bi bi-broadcast-pin fs-5"></i>
+                </div>
+              </div>
+
+              <div class="col-6 col-xl-12">
+                <div class="sa-hero-stat">
+                  <div>
+                    <div class="sa-hero-stat-label">Database</div>
+                    <div class="sa-inline-status" id="databaseStatus">--</div>
+                  </div>
+                  <i class="bi bi-database-check fs-5"></i>
+                </div>
+              </div>
+
+              <div class="col-6 col-xl-12">
+                <div class="sa-hero-stat">
+                  <div>
+                    <div class="sa-hero-stat-label">System</div>
+                    <div class="sa-inline-status" id="systemStatus">--</div>
+                  </div>
+                  <i class="bi bi-shield-check fs-5"></i>
+                </div>
+              </div>
+
+              <div class="col-6 col-xl-12">
+                <div class="sa-hero-stat">
+                  <div>
+                    <div class="sa-hero-stat-label">Runtime</div>
+                    <div class="sa-inline-status text-uppercase" id="appEnvironment">--</div>
+                  </div>
+                  <i class="bi bi-cloud-check fs-5"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <div class="row g-3">
+          <div class="col-6 col-lg-3">
+            <div class="sa-metric-card sa-metric-card-accent">
+              <div class="sa-metric-top">
+                <span class="sa-metric-icon"><i class="bi bi-cpu"></i></span>
+                <span class="sa-metric-trend"><i class="bi bi-speedometer2"></i></span>
+              </div>
+              <div class="sa-metric-label">CPU Usage</div>
+              <div class="sa-metric-value" id="infraCpuLoad">--</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <span class="sa-metric-icon"><i class="bi bi-memory"></i></span>
+                <span class="sa-metric-trend"><i class="bi bi-bar-chart-line"></i></span>
+              </div>
+              <div class="sa-metric-label">Memory Usage</div>
+              <div class="sa-metric-value" id="infraMemoryUsage">--</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <span class="sa-metric-icon"><i class="bi bi-hdd-stack"></i></span>
+                <span class="sa-metric-trend"><i class="bi bi-database"></i></span>
+              </div>
+              <div class="sa-metric-label">DB Storage</div>
+              <div class="sa-metric-value" id="dbStorageSize">--</div>
+            </div>
+          </div>
+
+          <div class="col-6 col-lg-3">
+            <div class="sa-metric-card">
+              <div class="sa-metric-top">
+                <span class="sa-metric-icon"><i class="bi bi-people"></i></span>
+                <span class="sa-metric-trend"><i class="bi bi-person-lines-fill"></i></span>
+              </div>
+              <div class="sa-metric-label">Concurrent Users</div>
+              <div class="sa-metric-value" id="infraConcurrentUsers">--</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <div class="row g-3">
+          <div class="col-12 col-xl-7">
+            <div class="sa-panel sa-infra-chart-panel h-100">
+              <div class="sa-panel-header">
+                <div>
+                  <h2 class="sa-panel-title mb-1">Live Resource Utilization</h2>
+                  <p class="sa-panel-text mb-0">Current CPU, memory, database, and upload storage usage.</p>
+                </div>
+              </div>
+
+              <div class="sa-resource-chart">
+                <div class="sa-resource-item">
+                  <div class="d-flex justify-content-between gap-3 mb-2">
+                    <span class="sa-resource-label"><i class="bi bi-cpu me-2"></i>CPU Usage</span>
+                    <span class="sa-resource-value" id="cpuUsagePercentLabel">--</span>
+                  </div>
+                  <div class="progress sa-progress-shell">
+                    <div class="progress-bar sa-progress-bar" id="cpuUsageBar" role="progressbar" style="width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="sa-resource-item">
+                  <div class="d-flex justify-content-between gap-3 mb-2">
+                    <span class="sa-resource-label"><i class="bi bi-memory me-2"></i>Memory Usage</span>
+                    <span class="sa-resource-value" id="memoryUsagePercentLabel">--</span>
+                  </div>
+                  <div class="progress sa-progress-shell">
+                    <div class="progress-bar sa-progress-bar" id="memoryUsageBar" role="progressbar" style="width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="sa-resource-item">
+                  <div class="d-flex justify-content-between gap-3 mb-2">
+                    <span class="sa-resource-label"><i class="bi bi-database me-2"></i>Database Fill</span>
+                    <span class="sa-resource-value" id="dbFillPercentLabel">--</span>
+                  </div>
+                  <div class="progress sa-progress-shell">
+                    <div class="progress-bar sa-progress-bar" id="dbStorageBar" role="progressbar" style="width:0%"></div>
+                  </div>
+                </div>
+
+                <div class="sa-resource-item">
+                  <div class="d-flex justify-content-between gap-3 mb-2">
+                    <span class="sa-resource-label"><i class="bi bi-folder2-open me-2"></i>Uploads Storage</span>
+                    <span class="sa-resource-value" id="uploadsTotalLabel">--</span>
+                  </div>
+                  <div class="progress sa-progress-shell">
+                    <div class="progress-bar sa-progress-bar" id="uploadsBar" role="progressbar" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-1">
+                <div class="col-6 col-lg-3">
+                  <div class="sa-mini-analytic-card">
+                    <div class="sa-mini-analytic-icon"><i class="bi bi-broadcast-pin"></i></div>
+                    <div class="sa-mini-analytic-label">API</div>
+                    <div class="sa-mini-analytic-value" id="infraApiStatus">--</div>
+                    <div class="sa-mini-analytic-meta">Application availability</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                  <div class="sa-mini-analytic-card">
+                    <div class="sa-mini-analytic-icon"><i class="bi bi-database-check"></i></div>
+                    <div class="sa-mini-analytic-label">MongoDB</div>
+                    <div class="sa-mini-analytic-value" id="infraDbStatus">--</div>
+                    <div class="sa-mini-analytic-meta">Connection readiness</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                  <div class="sa-mini-analytic-card">
+                    <div class="sa-mini-analytic-icon"><i class="bi bi-person-badge"></i></div>
+                    <div class="sa-mini-analytic-label">Sessions</div>
+                    <div class="sa-mini-analytic-value" id="infraActiveSessions">--</div>
+                    <div class="sa-mini-analytic-meta">Stored login sessions</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-lg-3">
+                  <div class="sa-mini-analytic-card">
+                    <div class="sa-mini-analytic-icon"><i class="bi bi-clock-history"></i></div>
+                    <div class="sa-mini-analytic-label">Uptime</div>
+                    <div class="sa-mini-analytic-value" id="infraUptimeShort">--</div>
+                    <div class="sa-mini-analytic-meta">Server runtime</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-5">
+            <div class="row g-3 h-100">
+              <div class="col-12">
+                <div class="sa-panel h-100">
+                  <div class="sa-panel-header">
+                    <div>
+                      <h2 class="sa-panel-title mb-1">Runtime And Operations</h2>
+                      <p class="sa-panel-text mb-0">Current process, environment, and scheduler details.</p>
+                    </div>
+                  </div>
+
+                  <div class="sa-info-list">
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Runtime Environment</span>
+                      <span class="sa-info-value text-uppercase" id="runtimeEnvironment">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Hostname</span>
+                      <span class="sa-info-value" id="hostName">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Process ID</span>
+                      <span class="sa-info-value" id="appPid">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Node Version</span>
+                      <span class="sa-info-value" id="nodeVersion">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Server Time</span>
+                      <span class="sa-info-value" id="serverTime">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Virtual Time</span>
+                      <span class="sa-info-value" id="virtualTimeInfra">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Cron Status</span>
+                      <span class="sa-info-value" id="cronStatus">--</span>
+                    </div>
+                    <div class="sa-info-item">
+                      <span class="sa-info-label">Last Cron Run</span>
+                      <span class="sa-info-value" id="lastCronRun">--</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="sa-panel sa-highlight-panel h-100">
+                  <div class="sa-highlight-icon">
+                    <i class="bi bi-collection"></i>
+                  </div>
+                  <div class="sa-highlight-title">Account And Module Distribution</div>
+                  <div class="sa-highlight-text mb-3">
+                    This section summarizes the current account mix and active collection sizes to help spot growth and operational imbalance.
+                  </div>
+
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <div class="sa-deploy-stat">
+                        <span class="sa-deploy-stat-label">Total Users</span>
+                        <span class="sa-deploy-stat-value" id="infraTotalUsers">--</span>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="sa-deploy-stat">
+                        <span class="sa-deploy-stat-label">Farm Managers</span>
+                        <span class="sa-deploy-stat-value" id="infraFarmManagers">--</span>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="sa-deploy-stat">
+                        <span class="sa-deploy-stat-label">Farmers</span>
+                        <span class="sa-deploy-stat-value" id="infraFarmers">--</span>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="sa-deploy-stat">
+                        <span class="sa-deploy-stat-label">Encoders</span>
+                        <span class="sa-deploy-stat-value" id="infraEncoders">--</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       <section id="infrastructure" class="sa-panel mb-4">
         <div class="sa-panel-header">
           <div>
             <h2 class="sa-panel-title mb-1">System Information</h2>
-            <p class="sa-panel-text mb-0">Live environment and server details.</p>
+            <p class="sa-panel-text mb-0">Live environment, machine, and runtime details.</p>
           </div>
         </div>
 
         <div class="row g-3" id="systemInfoBox">
-          <div class="col-12 col-md-6">
-            <div class="sa-info-card">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-info-card sa-infra-info-card">
               <div class="sa-info-card-title">
                 <i class="bi bi-pc-display-horizontal me-2"></i>
                 Environment
               </div>
               <p class="mb-2"><strong>OS Platform:</strong> <span id="osPlatform">--</span></p>
-              <p class="mb-0"><strong>System Uptime:</strong> <span id="systemUptime">--</span></p>
+              <p class="mb-2"><strong>System Uptime:</strong> <span id="systemUptime">--</span></p>
+              <p class="mb-0"><strong>Architecture:</strong> <span id="appArch">--</span></p>
             </div>
           </div>
 
-          <div class="col-12 col-md-6">
-            <div class="sa-info-card">
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-info-card sa-infra-info-card">
               <div class="sa-info-card-title">
                 <i class="bi bi-cpu me-2"></i>
                 Hardware
               </div>
               <p class="mb-2"><strong>CPU Model:</strong> <span id="cpuModel">--</span></p>
-              <p class="mb-0"><strong>Total Memory:</strong> <span id="totalMemory">--</span></p>
+              <p class="mb-2"><strong>Total Memory:</strong> <span id="totalMemory">--</span></p>
+              <p class="mb-0"><strong>CPU Cores:</strong> <span id="cpuCores">--</span></p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-info-card sa-infra-info-card">
+              <div class="sa-info-card-title">
+                <i class="bi bi-database me-2"></i>
+                Database
+              </div>
+              <p class="mb-2"><strong>Database Name:</strong> <span id="dbName">--</span></p>
+              <p class="mb-2"><strong>Collections:</strong> <span id="dbCollections">--</span></p>
+              <p class="mb-0"><strong>Documents:</strong> <span id="dbObjects">--</span></p>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="sa-info-card sa-infra-info-card">
+              <div class="sa-info-card-title">
+                <i class="bi bi-diagram-3 me-2"></i>
+                Network
+              </div>
+              <p class="mb-2"><strong>Hostname:</strong> <span id="networkHostname">--</span></p>
+              <p class="mb-2"><strong>Primary IP:</strong> <span id="primaryIp">--</span></p>
+              <p class="mb-0"><strong>Port:</strong> <span id="appPort">--</span></p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-4">
+        <div class="row g-3">
+          <div class="col-12 col-xl-6">
+            <div class="sa-panel h-100">
+              <div class="sa-panel-header">
+                <div>
+                  <h2 class="sa-panel-title mb-1">Collection Breakdown</h2>
+                  <p class="sa-panel-text mb-0">Current document counts per major system module.</p>
+                </div>
+              </div>
+
+              <div class="sa-breakdown-grid">
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Users</span>
+                  <span class="sa-breakdown-value" id="collectionUsers">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Farmers</span>
+                  <span class="sa-breakdown-value" id="collectionFarmers">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Swine</span>
+                  <span class="sa-breakdown-value" id="collectionSwine">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Heat Reports</span>
+                  <span class="sa-breakdown-value" id="collectionHeatReports">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Notifications</span>
+                  <span class="sa-breakdown-value" id="collectionNotifications">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Sessions</span>
+                  <span class="sa-breakdown-value" id="collectionSessions">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-6">
+            <div class="sa-panel h-100">
+              <div class="sa-panel-header">
+                <div>
+                  <h2 class="sa-panel-title mb-1">Storage Composition</h2>
+                  <p class="sa-panel-text mb-0">Live database and upload storage footprint.</p>
+                </div>
+              </div>
+
+              <div class="sa-breakdown-grid">
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">DB Data Size</span>
+                  <span class="sa-breakdown-value" id="dbDataSize">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">DB Storage Size</span>
+                  <span class="sa-breakdown-value" id="dbStorageSize2">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">DB Index Size</span>
+                  <span class="sa-breakdown-value" id="dbIndexSize">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Indexes</span>
+                  <span class="sa-breakdown-value" id="dbIndexes">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Pig Uploads</span>
+                  <span class="sa-breakdown-value" id="pigUploadsSize">--</span>
+                </div>
+                <div class="sa-breakdown-item">
+                  <span class="sa-breakdown-label">Profile Uploads</span>
+                  <span class="sa-breakdown-value" id="profileUploadsSize">--</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section class="sa-panel mb-4">
-        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div class="sa-panel-header">
           <div>
-            <h2 class="sa-panel-title mb-1">Farm Managers Oversight</h2>
-            <p class="sa-panel-text mb-0">List of farm manager accounts in the system.</p>
-          </div>
-
-          <div class="sa-panel-chip">
-            <i class="bi bi-person-badge me-1"></i>
-            Manager Accounts
+            <h2 class="sa-panel-title mb-1">Real Trend Charts</h2>
+            <p class="sa-panel-text mb-0">These charts render only from saved infrastructure snapshots, not demo data.</p>
           </div>
         </div>
 
-        <div class="table-responsive sa-table-wrap">
-          <table id="farmManagersTable" class="table sa-table align-middle mb-0">
-            <thead>
-              <tr>
-                <th>User ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <div class="row g-3">
+          <div class="col-12 col-xl-6">
+            <div class="sa-chart-card">
+              <div class="sa-chart-head">
+                <div>
+                  <div class="sa-chart-title">CPU Usage Trend</div>
+                  <div class="sa-chart-subtitle">Recent saved infrastructure snapshots</div>
+                </div>
+              </div>
+              <div class="sa-chart-wrap">
+                <canvas id="infraCpuChart"></canvas>
+                <div class="sa-chart-empty" id="infraCpuChartEmpty">
+                  <div>
+                    <div class="sa-chart-empty-icon"><i class="bi bi-graph-up"></i></div>
+                    <div class="sa-chart-empty-title">Not enough snapshot data yet</div>
+                    <div class="sa-chart-empty-text">Charts will appear automatically after enough live snapshots have been recorded.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-6">
+            <div class="sa-chart-card">
+              <div class="sa-chart-head">
+                <div>
+                  <div class="sa-chart-title">Memory Usage Trend</div>
+                  <div class="sa-chart-subtitle">Recent saved infrastructure snapshots</div>
+                </div>
+              </div>
+              <div class="sa-chart-wrap">
+                <canvas id="infraMemoryChart"></canvas>
+                <div class="sa-chart-empty" id="infraMemoryChartEmpty">
+                  <div>
+                    <div class="sa-chart-empty-icon"><i class="bi bi-bar-chart"></i></div>
+                    <div class="sa-chart-empty-title">Not enough snapshot data yet</div>
+                    <div class="sa-chart-empty-text">Charts are hidden until true trend data is available.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-6">
+            <div class="sa-chart-card">
+              <div class="sa-chart-head">
+                <div>
+                  <div class="sa-chart-title">Concurrent Users Trend</div>
+                  <div class="sa-chart-subtitle">Recent active user window changes</div>
+                </div>
+              </div>
+              <div class="sa-chart-wrap">
+                <canvas id="infraUsersChart"></canvas>
+                <div class="sa-chart-empty" id="infraUsersChartEmpty">
+                  <div>
+                    <div class="sa-chart-empty-icon"><i class="bi bi-people"></i></div>
+                    <div class="sa-chart-empty-title">Not enough snapshot data yet</div>
+                    <div class="sa-chart-empty-text">This chart appears after live usage samples are stored.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-6">
+            <div class="sa-chart-card">
+              <div class="sa-chart-head">
+                <div>
+                  <div class="sa-chart-title">Database Storage Trend</div>
+                  <div class="sa-chart-subtitle">Recent MongoDB storage samples</div>
+                </div>
+              </div>
+              <div class="sa-chart-wrap">
+                <canvas id="infraDbChart"></canvas>
+                <div class="sa-chart-empty" id="infraDbChartEmpty">
+                  <div>
+                    <div class="sa-chart-empty-icon"><i class="bi bi-database"></i></div>
+                    <div class="sa-chart-empty-title">Not enough snapshot data yet</div>
+                    <div class="sa-chart-empty-text">Storage trend charts use only saved real database measurements.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="sa-panel">
-        <div class="sa-panel-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div class="sa-panel-header">
           <div>
-            <h2 class="sa-panel-title mb-1">Farmers Oversight</h2>
-            <p class="sa-panel-text mb-0">List of farmers and registration information.</p>
-          </div>
-
-          <div class="sa-panel-chip">
-            <i class="bi bi-person-vcard me-1"></i>
-            Farmer Accounts
+            <h2 class="sa-panel-title mb-1">Network Interfaces</h2>
+            <p class="sa-panel-text mb-0">Available IPv4 network endpoints on the current machine.</p>
           </div>
         </div>
 
         <div class="table-responsive sa-table-wrap">
-          <table id="farmersTable" class="table sa-table align-middle mb-0">
+          <table id="networkTable" class="table sa-table align-middle mb-0">
             <thead>
               <tr>
-                <th>Farmer ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Contact</th>
-                <th>Pens</th>
-                <th>Registered By</th>
+                <th>Interface</th>
+                <th>IP Address</th>
+                <th>MAC Address</th>
               </tr>
             </thead>
-            <tbody></tbody>
+            <tbody id="networkTableBody">
+              <tr>
+                <td colspan="3" class="text-center py-4">Loading network interfaces...</td>
+              </tr>
+            </tbody>
           </table>
         </div>
       </section>
