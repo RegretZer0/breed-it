@@ -81,16 +81,12 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       btn.className = "btn-primary btn-sm hidden";
       btn.innerHTML = `<i class="bi bi-patch-check"></i> Confirm Pregnant`;
 
-      // ✅ Put it in the actions row (next to Close)
-      actionsWrap.appendChild(btn);
-
-    // Insert before the close button if possible
-    const closeBtn = reportModal.querySelector(".close-modal");
-    if (closeBtn?.parentElement) {
-      closeBtn.parentElement.insertBefore(btn, closeBtn);
-    } else {
-      actionsWrap.insertBefore(btn, actionsWrap.firstChild);
-    }
+      const closeBtn = reportModal.querySelector(".close-modal");
+      if (closeBtn?.parentElement) {
+        closeBtn.parentElement.insertBefore(btn, closeBtn);
+      } else {
+        actionsWrap.insertBefore(btn, actionsWrap.firstChild);
+      }
 
     reportConfirmPregBtn = btn;
   })();
@@ -153,8 +149,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     const routeMap = {
       confirm_ai: `${BACKEND_URL}/api/ai/add`,
-      confirm_pregnancy: `${BACKEND_URL}/api/ai/confirm-pregnancy/${reportId}`,
-      confirm_farrowing: `${BACKEND_URL}/api/farrowing/add`
+      confirm_pregnancy: `${BACKEND_URL}/api/heat/${reportId}/confirm-pregnancy`,
+      confirm_farrowing: `${BACKEND_URL}/api/heat/${reportId}/confirm-farrowing`
     };
 
     if (actionType === "confirm_ai") {
@@ -168,13 +164,65 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       };
     }
 
+    if (actionType === "confirm_pregnancy") {
+      data = {
+        check_date: data.event_date || ""
+      };
+    }
+
+    if (actionType === "confirm_farrowing") {
+      const aliveMale = Number(data.alive_male || 0);
+      const aliveFemale = Number(data.alive_female || 0);
+      const deadMale = Number(data.dead_male || 0);
+      const deadFemale = Number(data.dead_female || 0);
+
+      data = {
+        farrowing_date: data.event_date || "",
+        alive_male: aliveMale,
+        alive_female: aliveFemale,
+        dead_male: deadMale,
+        dead_female: deadFemale,
+        total_live: aliveMale + aliveFemale,
+        mortality: deadMale + deadFemale
+      };
+    }
+
     try {
       const res = await api.post(routeMap[actionType], data);
-      if (res.success) {
-        uiAlert("Success!", { variant: "success" });
-        location.reload();
+      if (!res) throw new Error("No response from server");
+
+      let payload = res;
+
+      if (typeof res.ok === "boolean") {
+        const contentType = res.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+          payload = await res.json();
+        } else {
+          const text = await res.text();
+          throw new Error(text || "Server returned a non-JSON response.");
+        }
+
+        if (!res.ok) {
+          uiAlert(payload?.message || "Failed to save", { variant: "danger" });
+          return;
+        }
+      }
+
+      if (payload?.success === false) {
+        uiAlert(payload?.message || "Failed to save", { variant: "danger" });
+        return;
+      }
+
+      closeActionModal();
+      uiAlert(payload?.message || "Success!", { variant: "success" });
+      await reloadAll();
+
+      if (currentDetailsReport?._id === reportId) {
+        await viewEvidence(reportId);
       }
     } catch (err) {
+      console.error("Action submission error:", err);
       uiAlert(err.message || "Failed to save", { variant: "danger" });
     }
   });
@@ -219,7 +267,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     wrap.style.position = "fixed";
     wrap.style.inset = "0";
-    wrap.style.zIndex = "3000";
+    wrap.style.zIndex = "5000";
 
     wrap.style.display = "flex";
     wrap.style.alignItems = "center";
@@ -240,7 +288,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     if (card) {
       card.style.position = "relative";
-      card.style.zIndex = "1";
+      card.style.zIndex = "5001";
       card.style.marginTop = "0";
       card.style.maxWidth = "560px";
       card.style.width = "100%";
@@ -364,6 +412,87 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       });
     });
   }
+
+  //Farrowing Action Styles
+  function ensureFarrowingActionStyles() {
+    if (document.getElementById("farrowActionStyles")) return;
+
+    const style = document.createElement("style");
+    style.id = "farrowActionStyles";
+    style.textContent = `
+      .farrow-form-shell {
+        display: grid;
+        gap: 16px;
+      }
+
+      .farrow-quick-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .farrow-stat-card {
+        background: #f7faf9;
+        border: 1px solid rgba(40, 167, 110, 0.18);
+        border-radius: 16px;
+        padding: 14px 16px;
+      }
+
+      .farrow-stat-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #4b5563;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .farrow-stat-value {
+        font-size: 28px;
+        line-height: 1;
+        font-weight: 800;
+        color: #111827;
+      }
+
+      .farrow-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .farrow-full {
+        grid-column: 1 / -1;
+      }
+
+      .farrow-summary-note {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #4b5563;
+        background: #f9fafb;
+        border: 1px dashed rgba(40, 167, 110, 0.22);
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+
+      @media (max-width: 768px) {
+        .farrow-quick-stats {
+          grid-template-columns: 1fr;
+        }
+
+        .farrow-form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+  ensureFarrowingActionStyles();
 
   //Pregnant Button Helper
   function hideHeaderConfirmPreg() {
@@ -555,6 +684,48 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     return "";
   }
+
+  /* =========================================================
+   Module: Farrowing Helpers
+  ========================================================= */
+  function getExpectedFarrowing(report) {
+    return (
+      report?.expected_farrowing ||
+      report?.expectedFarrowing ||
+      report?.swine_id?.expected_farrowing ||
+      report?.swine_id?.expected_farrowing_date ||
+      ""
+    );
+  }
+
+  function canShowConfirmFarrowing(report) {
+    const reportSt = normStatus(report?.status);
+    const swineSt = normStatus(report?.swine_id?.current_status);
+
+    if (
+      reportSt === "lactating" ||
+      reportSt === "completed" ||
+      reportSt === "farrowed"
+    ) {
+      return false;
+    }
+
+    if (report?.actual_farrowing_date) return false;
+
+    const isPregnancyStage =
+      reportSt === "pregnant" ||
+      reportSt === "farrowing" ||
+      reportSt === "farrowing_ready" ||
+      swineSt === "pregnant" ||
+      swineSt === "farrowing" ||
+      swineSt === "farrowing_ready";
+
+    if (!isPregnancyStage) return false;
+
+    const expectedFarrow = getExpectedFarrowing(report);
+    return isDue(expectedFarrow);
+  }
+
 
   /* =========================================================
      Module: Pig Picker
@@ -982,13 +1153,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     reportsTableBody.querySelectorAll("[data-action='track']").forEach((btn) => {
       btn.addEventListener("click", () => openTrackProgress(btn.dataset.id, btn.dataset.swine));
     });
-
-    reportsTableBody.querySelectorAll("[data-action='confirm-farrow']").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const report = activeReports.find((r) => r._id === btn.dataset.id);
-        openActionConfirmation(report, "confirm_farrowing");
-      });
-    });
   }
 
   /* =========================================================
@@ -1094,12 +1258,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
               >
                 <i class="bi bi-graph-up-arrow"></i> Track Progress
               </button>
-
-              ${(normStatus(r.status) === "pregnant" && isDue(r.expected_farrowing))
-                ? `<button class="btn-primary btn-sm" type="button" data-action="confirm-farrow" data-id="${r._id}">
-                    <i class="bi bi-calendar2-heart"></i> Confirm Farrow
-                  </button>`
-                : ""}
             </div>
 
           </div>
@@ -1132,7 +1290,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
      Module: Time Warp Action Renderer
   ========================================================= */
   function openActionConfirmation(report, type) {
-    if (!actionModal || !actionFormBody) return;
+    if (!actionModal || !actionForm || !actionFormBody || !report?._id) return;
 
     let html = "";
     const today = new Date().toISOString().split("T")[0];
@@ -1148,40 +1306,131 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         <div class="form-group mb-3">
           <label class="form-label">Boar/Sire ID (Optional)</label>
           <input type="text" name="sire_id" class="form-control" placeholder="Enter Boar ID">
-        </div>`;
+        </div>
+      `;
     } else if (type === "confirm_pregnancy") {
       actionModalTitle.textContent = "Confirm Pregnancy";
       html = `
         <div class="form-group mb-3">
           <label class="form-label">Check Date</label>
           <input type="date" name="event_date" class="form-control" value="${today}" required>
-        </div>`;
+        </div>
+      `;
     } else if (type === "confirm_farrowing") {
       actionModalTitle.textContent = "Confirm Farrowing";
       html = `
-        <div class="form-group mb-3">
-          <label class="form-label">Farrowing Date</label>
-          <input type="date" name="event_date" class="form-control" value="${today}" required>
+        <div class="farrow-form-shell">
+          <div class="farrow-quick-stats">
+            <div class="farrow-stat-card">
+              <div class="farrow-stat-label">
+                <i class="bi bi-heart-pulse"></i>
+                Total Alive
+              </div>
+              <div class="farrow-stat-value" id="farrowAliveTotal">0</div>
+            </div>
+
+            <div class="farrow-stat-card">
+              <div class="farrow-stat-label">
+                <i class="bi bi-emoji-frown"></i>
+                Total Dead
+              </div>
+              <div class="farrow-stat-value" id="farrowDeadTotal">0</div>
+            </div>
+
+            <div class="farrow-stat-card">
+              <div class="farrow-stat-label">
+                <i class="bi bi-list-ol"></i>
+                Total Born
+              </div>
+              <div class="farrow-stat-value" id="farrowBornTotal">0</div>
+            </div>
+          </div>
+
+          <div class="farrow-form-grid">
+            <div class="form-group farrow-full">
+              <label class="form-label">Farrowing Date</label>
+              <input type="date" name="event_date" class="form-control" value="${today}" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Alive Male</label>
+              <input type="number" name="alive_male" class="form-control farrow-count-input" min="0" value="0" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Alive Female</label>
+              <input type="number" name="alive_female" class="form-control farrow-count-input" min="0" value="0" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Male Dead</label>
+              <input type="number" name="dead_male" class="form-control farrow-count-input" min="0" value="0" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Female Dead</label>
+              <input type="number" name="dead_female" class="form-control farrow-count-input" min="0" value="0" required>
+            </div>
+          </div>
+
+          <div class="farrow-summary-note">
+            <i class="bi bi-info-circle"></i>
+            Enter all piglet counts. Totals update automatically.
+          </div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-           <div class="form-group">
-            <label class="form-label">Live Piglets</label>
-            <input type="number" name="total_live" class="form-control" min="1" value="1" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Mortality</label>
-            <input type="number" name="mortality" class="form-control" min="0" value="0">
-          </div>
-        </div>`;
+      `;
     }
 
     actionFormBody.innerHTML = html;
     actionForm.dataset.reportId = report._id;
     actionForm.dataset.actionType = type;
 
+    if (type === "confirm_farrowing") {
+      const syncFarrowStats = () => {
+        const aliveMale = Number(actionFormBody.querySelector('[name="alive_male"]')?.value || 0);
+        const aliveFemale = Number(actionFormBody.querySelector('[name="alive_female"]')?.value || 0);
+        const deadMale = Number(actionFormBody.querySelector('[name="dead_male"]')?.value || 0);
+        const deadFemale = Number(actionFormBody.querySelector('[name="dead_female"]')?.value || 0);
+
+        const totalAlive = aliveMale + aliveFemale;
+        const totalDead = deadMale + deadFemale;
+        const totalBorn = totalAlive + totalDead;
+
+        const aliveEl = actionFormBody.querySelector("#farrowAliveTotal");
+        const deadEl = actionFormBody.querySelector("#farrowDeadTotal");
+        const bornEl = actionFormBody.querySelector("#farrowBornTotal");
+
+        if (aliveEl) aliveEl.textContent = totalAlive;
+        if (deadEl) deadEl.textContent = totalDead;
+        if (bornEl) bornEl.textContent = totalBorn;
+      };
+
+      actionFormBody.querySelectorAll(".farrow-count-input").forEach((input) => {
+        input.addEventListener("input", syncFarrowStats);
+      });
+
+      syncFarrowStats();
+    }
+
     actionModal.classList.remove("hidden");
+    actionModal.setAttribute("aria-hidden", "false");
     ensureBodyModalState();
   }
+
+  //Close Action Modal
+  function closeActionModal() {
+    if (!actionModal) return;
+    actionModal.classList.add("hidden");
+    actionModal.setAttribute("aria-hidden", "true");
+    ensureBodyModalState();
+  }
+
+  actionCloseBtn?.addEventListener("click", closeActionModal);
+  document.getElementById("actionCancelBtn")?.addEventListener("click", closeActionModal);
+
+  actionModal?.addEventListener("click", (e) => {
+    if (e.target?.id === "actionModal") closeActionModal();
+  });
 
   function escArchiveOnce(e) {
     if (e.key === "Escape") closeArchiveModal();
@@ -1608,23 +1857,23 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   /* =========================================================
      Module: Legacy Compatibility (Not used)
   ========================================================= */
-  function shouldShowBackInHeat(swineStatus, approvalStatus) {
-    const s = (swineStatus || "").toLowerCase();
-    if (approvalStatus === "rejected") return false;
-    if (s.includes("farrow") || s.includes("lact")) return false;
-    return true;
-  }
-  function shouldShowConfirmPregnant(swineStatus, approvalStatus) {
-    const s = (swineStatus || "").toLowerCase();
-    if (approvalStatus === "rejected") return false;
-    if (s.includes("preg") || s.includes("farrow") || s.includes("lact")) return false;
-    return true;
-  }
-  function shouldShowConfirmWeaning(swineStatus, approvalStatus) {
-    const s = (swineStatus || "").toLowerCase();
-    if (approvalStatus === "rejected") return false;
-    return s.includes("lact");
-  }
+  // function shouldShowBackInHeat(swineStatus, approvalStatus) {
+  //   const s = (swineStatus || "").toLowerCase();
+  //   if (approvalStatus === "rejected") return false;
+  //   if (s.includes("farrow") || s.includes("lact")) return false;
+  //   return true;
+  // }
+  // function shouldShowConfirmPregnant(swineStatus, approvalStatus) {
+  //   const s = (swineStatus || "").toLowerCase();
+  //   if (approvalStatus === "rejected") return false;
+  //   if (s.includes("preg") || s.includes("farrow") || s.includes("lact")) return false;
+  //   return true;
+  // }
+  // function shouldShowConfirmWeaning(swineStatus, approvalStatus) {
+  //   const s = (swineStatus || "").toLowerCase();
+  //   if (approvalStatus === "rejected") return false;
+  //   return s.includes("lact");
+  // }
 
   //Handle Confirm Pregnancy
   async function handleConfirmPregnancy(report) {
@@ -1726,6 +1975,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const showBackInHeat = canShowBackInHeat(report);
       const showConfirmPreg = canShowConfirmPregnant(report);
       const showConfirmWean = canShowConfirmWeaning(report);
+      const showConfirmFarrow = canShowConfirmFarrowing(report);
 
       currentDetailsReport = report;
 
@@ -1836,6 +2086,17 @@ export function createReportUI({ BACKEND_URL, user, api }) {
           }
 
           ${
+            showConfirmFarrow
+              ? `
+            <button class="btn-primary" type="button" id="btnConfirmFarrow">
+              <i class="bi bi-calendar2-heart"></i>
+              Confirm Farrowing
+            </button>
+          `
+              : ``
+          }
+
+          ${
             showConfirmWean
               ? `
             <button class="btn-primary" type="button" id="btnConfirmWean">
@@ -1855,6 +2116,10 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
       modalBody.querySelector("#btnConfirmPreg")?.addEventListener("click", async () => {
         await handleConfirmPregnancy(report);
+      });
+
+       modalBody.querySelector("#btnConfirmFarrow")?.addEventListener("click", () => {
+        openActionConfirmation(report, "confirm_farrowing");
       });
 
       modalBody.querySelectorAll(".evidence-item").forEach((item) => {
@@ -2211,7 +2476,6 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       const data = await res.json();
 
       if (res.ok) {
-        if (reportMessage) reportMessage.textContent = "Heat report submitted!";
         await api.sendAdminNotification(
           "New Heat Report",
           `Farmer ${user.first_name} submitted a new report for ${chosenSwineId}.`,
@@ -2229,7 +2493,17 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         }
         openPigPickerBtn?.classList.remove("hidden");
 
+        if (reportMessage) {
+          reportMessage.textContent = "";
+          reportMessage.style.color = "";
+        }
+
         await reloadAll();
+
+        uiAlert("Heat report submitted successfully!", {
+          title: "Success",
+          variant: "success"
+        });
       } else {
         uiAlert(data.message || "Error submitting report", { title: "Error", variant: "danger" });
       }
@@ -2279,7 +2553,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
     localStorage.clear();
-    window.location.href = "login.html";
+    window.location.href = "/login";
   });
 
   /* =========================================================

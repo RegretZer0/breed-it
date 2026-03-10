@@ -92,6 +92,38 @@
   </div>
 </div>
 
+<!-- ACTION MODAL -->
+<div id="actionModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
+  <div class="modal-content report-details-modal">
+    <div class="report-modal-head">
+      <h3 id="actionModalTitle" class="modal-title">Confirm Action</h3>
+
+      <div class="report-modal-actions">
+        <button type="button" class="close-modal btn-icon" id="actionCloseBtn" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <form id="actionForm">
+      <div id="actionFormBody">
+        <p>Loading form...</p>
+      </div>
+
+      <div class="details-actions" style="margin-top:16px;">
+        <button type="submit" class="btn-primary">
+          <i class="bi bi-check2-circle"></i>
+          Submit
+        </button>
+        <button type="button" class="btn-soft" id="actionCancelBtn">
+          <i class="bi bi-x-circle"></i>
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ================= ARCHIVE MODAL ================= -->
 <div id="archiveModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle">
   <div class="modal-content report-details-modal archive-modal">

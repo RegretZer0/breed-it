@@ -533,8 +533,8 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 /* ======================================================
     UPGRADED CONFIRM FARROWING (CLEANED & OPTIMIZED)
 ====================================================== */
-router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
-  // 1. Multi-click protection: Pre-check status before starting transaction
+router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), async (req, res) => {
+// 1. Multi-click protection: Pre-check status before starting transaction
   const initialCheck = await HeatReport.findById(req.params.id).select("status");
   if (initialCheck && initialCheck.status === "lactating") {
     return res.status(400).json({ success: false, message: "Farrowing already registered for this report." });
@@ -543,15 +543,42 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { total_live, mortality, farrowing_date } = req.body;
-    
+    const {
+      total_live,
+      mortality,
+      farrowing_date,
+      alive_male,
+      alive_female,
+      dead_male,
+      dead_female
+    } = req.body;
+        
     // UPDATE: Removed farrowing_date from the strict null check.
     // If it's missing or null, the logic below will apply the Virtual Date.
-    if (total_live == null) {
+    const aliveMaleNum = Number(alive_male || 0);
+    const aliveFemaleNum = Number(alive_female || 0);
+    const deadMaleNum = Number(dead_male || 0);
+    const deadFemaleNum = Number(dead_female || 0);
+
+    const totalLiveNum = Number(
+      total_live != null ? total_live : aliveMaleNum + aliveFemaleNum
+    );
+
+    const mortalityNum = Number(
+      mortality != null ? mortality : deadMaleNum + deadFemaleNum
+    );
+
+    if (Number.isNaN(totalLiveNum) || totalLiveNum < 0) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: total_live",
-        received: { total_live, mortality }
+        message: "Invalid alive piglet count."
+      });
+    }
+
+    if (Number.isNaN(mortalityNum) || mortalityNum < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid mortality count."
       });
     }
 
@@ -601,8 +628,12 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
           "breeding_cycles.$.farrowed": true,
           "breeding_cycles.$.actual_farrowing_date": farrowDate,
           "breeding_cycles.$.farrowing_results": {
-            total_piglets: Number(total_live) + Number(mortality),
-            live_piglets: Number(total_live)
+            total_piglets: totalLiveNum + mortalityNum,
+            live_piglets: totalLiveNum,
+            alive_male: aliveMaleNum,
+            alive_female: aliveFemaleNum,
+            dead_male: deadMaleNum,
+            dead_female: deadFemaleNum
           },
           current_status: "Lactating"
         },
@@ -612,7 +643,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farm_manager"
     );
 
     // 5. Auto-Register Piglets
-    const liveCount = Number(total_live);
+    const liveCount = totalLiveNum;
     const pigletsToInsert = [];
     const generatedIds = [];
 

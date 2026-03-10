@@ -21,11 +21,35 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
     }
   }
 
+  async function post(url, data = {}) {
+    const res = await fetchWithAuth(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!res) return { success: false, message: "No response from server" };
+
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      return res.json();
+    }
+
+    const text = await res.text();
+    return {
+      success: res.ok,
+      message: text || "Server returned a non-JSON response."
+    };
+  }
+
   async function sendAdminNotification(title, message, type = "info") {
     try {
       await fetch(`${BACKEND_URL}/api/notifications/admin`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`
+        },
         body: JSON.stringify({ title, message, type })
       });
     } catch (err) {
@@ -52,13 +76,23 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
   }
 
   async function stillHeat(reportId) {
-    return fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/still-heat`, { method: "POST" });
+    return fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/still-heat`, {
+      method: "POST"
+    });
   }
 
   async function confirmPregnancy(reportId) {
     return fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/confirm-pregnancy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  async function confirmFarrowing(reportId, payload) {
+    return fetchWithAuth(`${BACKEND_URL}/api/heat/${reportId}/confirm-farrowing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
     });
   }
 
@@ -72,29 +106,21 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
   async function submitHeatReport({ swineId, farmerId, signs, files, remarks }) {
     const formData = new FormData();
 
-    // 1. Match backend route expectation for 'swineId'
     formData.append("swineId", swineId);
-    
-    // Included farmerId in case your backend logic needs it for specific overrides,
-    // though the route primarily uses the logged-in session.
+
     if (farmerId) formData.append("farmerId", farmerId);
 
-    // 2. Ensure signs is stringified JSON for Multer parsing
     const signsArray = Array.isArray(signs) ? signs : [];
     formData.append("signs", JSON.stringify(signsArray));
 
-    // 3. Optional remarks
     if (remarks && String(remarks).trim() !== "") {
-        formData.append("remarks", String(remarks).trim());
+      formData.append("remarks", String(remarks).trim());
     }
 
-    // 4. Match backend field name 'evidence'
     if (files && files.length > 0) {
-        files.forEach(f => formData.append("evidence", f));
+      files.forEach((f) => formData.append("evidence", f));
     }
 
-    // Note: Do not manually set headers to 'multipart/form-data' here. 
-    // fetch + FormData handles boundaries automatically.
     return fetchWithAuth(`${BACKEND_URL}/api/heat/add`, {
       method: "POST",
       body: formData
@@ -103,12 +129,14 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
 
   return {
     fetchWithAuth,
+    post,
     sendAdminNotification,
     fetchFarmerSwine,
     fetchFarmerReports,
     fetchReportDetail,
     stillHeat,
     confirmPregnancy,
+    confirmFarrowing,
     confirmWeaning,
     submitHeatReport
   };
