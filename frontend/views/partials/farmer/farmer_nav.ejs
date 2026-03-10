@@ -152,15 +152,15 @@
 <div class="side-panel notifications-panel" id="notificationsPanel">
   <div class="panel-hero">
     <div class="d-flex flex-column">
-      <h3 class="mb-0">Notifications</h3>
-      <small class="opacity-75">Latest updates</small>
+      <h3 class="mb-0" data-i18n="notifications">Notifications</h3>
+      <small class="opacity-75" data-i18n="latest_updates">Latest updates</small>
     </div>
 
     <div class="d-flex align-items-center gap-2">
       <button type="button"
               class="btn btn-light btn-sm notif-hero-btn"
               id="markAllNotificationsReadBtn">
-        <i class="bi bi-check2-all me-1"></i> Mark all
+        <i class="bi bi-check2-all me-1"></i><span data-i18n="mark_all">Mark all</span>
       </button>
 
       <button class="close-panel"
@@ -176,7 +176,9 @@
       <!-- Dynamic -->
     </div>
 
-    <button id="viewAllNotificationsBtn" class="view-all-btn">
+    <button id="viewAllNotificationsBtn"
+            class="view-all-btn"
+            data-i18n="view_all_notifications">
       View All Notifications
     </button>
   </div>
@@ -190,15 +192,15 @@
 
   <div class="panel-hero">
     <div class="d-flex flex-column">
-      <h3 class="mb-0">Notification History</h3>
-      <small class="opacity-75">All notifications</small>
+      <h3 class="mb-0" data-i18n="notification_history">Notification History</h3>
+      <small class="opacity-75" data-i18n="all_notifications">All notifications</small>
     </div>
 
     <div class="d-flex align-items-center gap-2">
       <button type="button"
               class="btn btn-light btn-sm notif-hero-btn"
               id="markAllNotificationsReadBtnModal">
-        <i class="bi bi-check2-all me-1"></i> Mark all
+        <i class="bi bi-check2-all me-1"></i><span data-i18n="mark_all">Mark all</span>
       </button>
 
       <button class="close-panel"
@@ -213,22 +215,22 @@
     <div class="notif-filters">
       <div class="row g-2 align-items-end">
         <div class="col-12 col-md-6">
-          <label class="form-label notif-filter-label">Type</label>
+          <label class="form-label notif-filter-label" data-i18n="type">Type</label>
           <select class="form-select form-select-sm" id="notifFilterType">
-            <option value="">All Types</option>
-            <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
+            <option value="" data-i18n="all_types">All Types</option>
+            <option value="info" data-i18n="info">Info</option>
+            <option value="success" data-i18n="success">Success</option>
+            <option value="warning" data-i18n="warning">Warning</option>
           </select>
         </div>
 
         <div class="col-12 col-md-6">
-          <label class="form-label notif-filter-label">Time</label>
+          <label class="form-label notif-filter-label" data-i18n="time">Time</label>
           <select class="form-select form-select-sm" id="notifFilterTime">
-            <option value="">Any time</option>
-            <option value="today">Today</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
+            <option value="" data-i18n="any_time">Any time</option>
+            <option value="today" data-i18n="today">Today</option>
+            <option value="7d" data-i18n="last_7_days">Last 7 days</option>
+            <option value="30d" data-i18n="last_30_days">Last 30 days</option>
           </select>
         </div>
       </div>
@@ -243,7 +245,7 @@
         <i class="bi bi-chevron-left"></i>
       </button>
 
-      <div class="notif-page-label" id="notifPageLabel">Page 1 / 1</div>
+      <div class="notif-page-label" id="notifPageLabel" data-i18n="page_default">Page 1 / 1</div>
 
       <button type="button" class="btn btn-outline-secondary btn-sm" id="notifNextPageBtn">
         <i class="bi bi-chevron-right"></i>

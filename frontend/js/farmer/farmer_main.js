@@ -1,5 +1,6 @@
 import { authGuard } from "/js/authGuard.js";
 import { initNotifications } from "/js/notifications.js";
+import { initFarmerLanguage, t, getCurrentLanguage } from "/js/farmer_i18n.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -22,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   /* =========================
-   RESET PANELS ON LOAD
+     RESET PANELS ON LOAD
   ========================= */
   document.querySelectorAll(".side-panel").forEach(panel => {
     panel.classList.remove("active");
@@ -43,22 +44,33 @@ document.addEventListener("DOMContentLoaded", () => {
      PH DATE & TIME
   ========================= */
   const phDateTime = document.getElementById("phDateTime");
+
+  function getLocaleFromLanguage(lang) {
+    return lang === "tl" ? "fil-PH" : "en-PH";
+  }
+
+  function updatePHTimeDisplay() {
+    if (!phDateTime) return;
+
+    const currentLang = getCurrentLanguage();
+    const locale = getLocaleFromLanguage(currentLang);
+
+    phDateTime.textContent = new Intl.DateTimeFormat(locale, {
+      timeZone: "Asia/Manila",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    }).format(new Date());
+  }
+
   if (phDateTime) {
-    const updatePHTime = () => {
-      phDateTime.textContent = new Intl.DateTimeFormat("en-PH", {
-        timeZone: "Asia/Manila",
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true
-      }).format(new Date());
-    };
-    updatePHTime();
-    setInterval(updatePHTime, 1000);
+    updatePHTimeDisplay();
+    setInterval(updatePHTimeDisplay, 1000);
   }
 
   /* =========================
@@ -113,13 +125,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (item.dataset.action === "notifications") openPanel("notificationsPanel");
     if (item.dataset.action === "settings") openPanel("settingsPanel");
-    if (item.dataset.action === "logout" && confirm("Logout?")) {
+    if (item.dataset.action === "logout" && confirm(t("logout_confirm"))) {
       window.location.href = "/login";
     }
   });
 
   /* =========================
-   OPEN NOTIFICATIONS (HEADER BELL)
+     OPEN NOTIFICATIONS (HEADER BELL)
   ========================= */
   const openNotificationsBtn = document.getElementById("openNotifications");
 
@@ -128,9 +140,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* =========================
-   VIEW ALL NOTIFICATIONS (FARMER) - FIXED
-   - closes notifications panel first
-   - opens history panel as side-panel (NOT bootstrap modal)
+     VIEW ALL NOTIFICATIONS (FARMER) - FIXED
+     - closes notifications panel first
+     - opens history panel as side-panel (NOT bootstrap modal)
   ========================= */
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
 
@@ -192,7 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Video size validation
         if (file.type.startsWith("video") && file.size > 350 * 1024 * 1024) {
-          alert("Video must be 350MB or less");
+          alert(t("video_limit_error"));
           return;
         }
 
@@ -236,75 +248,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   
   /* =========================
-     TRANSLATIONS
+     LANGUAGE SETTINGS
   ========================= */
-  const translations = {
-    en: {
-      dashboard: "DASHBOARD",
-      my_pigs: "MY PIGS",
-      report: "REPORT",
-      profile: "PROFILE",
-      help: "HELP",
-      notifications: "Notifications",
-      settings: "Settings",
-      appearance: "Appearance",
-      language: "Language",
-      theme: "Theme",
-      save: "Save",
-      reset: "Reset"
-    },
-    tl: {
-      dashboard: "DASHBOARD",
-      my_pigs: "MGA BABOY KO",
-      report: "ULAT",
-      profile: "PROFILE",
-      help: "TULONG",
-      notifications: "Abiso",
-      settings: "Mga Setting",
-      appearance: "Itsura",
-      language: "Wika",
-      theme: "Tema",
-      save: "I-save",
-      reset: "I-reset"
+  initFarmerLanguage({
+    languageSelectId: "languageSelect",
+    saveButtonId: "saveSettings",
+    resetButtonId: "resetSettings",
+    onLanguageChange: () => {
+      updatePHTimeDisplay();
     }
-  };
-
-  function applyLanguage(lang) {
-    document.querySelectorAll("[data-i18n]").forEach(el => {
-      const key = el.dataset.i18n;
-      el.textContent = translations[lang][key] || el.textContent;
-    });
-    localStorage.setItem("lang", lang);
-  }
-
-  /* =========================
-     SETTINGS (LANGUAGE ONLY)
-  ========================= */
-  const languageSelect = document.getElementById("languageSelect");
-  const saveSettings = document.getElementById("saveSettings");
-  const resetSettings = document.getElementById("resetSettings");
-
-  function loadSettings() {
-    const lang = localStorage.getItem("lang") || "en";
-    applyLanguage(lang);
-    if (languageSelect) languageSelect.value = lang;
-  }
-
-  saveSettings?.addEventListener("click", () => {
-    if (languageSelect) {
-      applyLanguage(languageSelect.value);
-    }
-    alert("Settings saved");
   });
-
-  resetSettings?.addEventListener("click", () => {
-    localStorage.removeItem("lang");
-    applyLanguage("en");
-    if (languageSelect) languageSelect.value = "en";
-    alert("Settings reset");
-  });
-
-  loadSettings();
 
   /* =========================
      NOTIFICATIONS (GLOBAL)

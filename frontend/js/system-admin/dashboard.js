@@ -1504,7 +1504,7 @@ const AdminDashboard = (() => {
       const { data } = await fetchJson("/api/admin/stats");
 
       if (!data.success) {
-        window.location.href = "login.html";
+        window.location.href = "/login";
         return;
       }
 
@@ -1570,7 +1570,7 @@ const AdminDashboard = (() => {
     } catch (err) {
       console.error("Logout Error:", err);
     } finally {
-      window.location.href = "login.html";
+      window.location.href = "/login";
     }
   }
 
