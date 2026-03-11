@@ -95,18 +95,24 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
     let query = {};
 
     if (role === "farmer") {
-      if (!farmerProfileId)
+      if (!farmerProfileId) {
         return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+      }
       query = { farmer_id: new mongoose.Types.ObjectId(farmerProfileId) };
     } else {
       const targetManagerId = role === "farm_manager" || role === "admin" ? userId : managerId;
-      if (!targetManagerId)
+      if (!targetManagerId) {
         return res.status(400).json({ success: false, message: "Farm context not found" });
+      }
       query = { manager_id: new mongoose.Types.ObjectId(targetManagerId) };
     }
 
     const records = await AIRecord.find(query)
       .populate("swine_id", "swine_id")
+      .populate(
+        "heat_report_id",
+        "status ai_confirmed_at next_heat_check expected_farrowing actual_farrowing_date weaning_date pregnancy_confirmed_at date_reported"
+      )
       .sort({ insemination_date: -1 })
       .lean();
 
@@ -132,13 +138,50 @@ router.get("/ai-history", requireSessionAndToken, async (req, res) => {
         }
 
         return {
+          _id: r._id,
           id: r._id,
+          insemination_id: r.insemination_id || "",
+          ai_record_id: r.insemination_id || String(r._id),
+
           farmer_id: r.farmer_id,
           farmer_name: name,
+
+          swine_code: r.swine_id?.swine_id || r.swine_code || "N/A",
           sow_tag: r.swine_id?.swine_id || r.swine_code || "N/A",
+          sow_code: r.swine_id?.swine_id || r.swine_code || "N/A",
+
+          male_swine_id: boarTag,
           boar_tag: boarTag,
-          date: r.insemination_date,
-          status: r.status,
+          boar_code: boarTag,
+
+          insemination_date: r.insemination_date || null,
+          ai_service_date: r.insemination_date || null,
+          date: r.insemination_date || null,
+
+          pregnancy_check_date: r.pregnancy_check_date || null,
+          pregnancy_confirmed: !!r.pregnancy_confirmed,
+
+          farrowing_date: r.farrowing_date || null,
+          expected_farrowing_date:
+            r.heat_report_id?.expected_farrowing || r.farrowing_date || null,
+
+          weaning_date: r.weaning_date || r.heat_report_id?.weaning_date || null,
+
+          status: r.heat_report_id?.status || r.status || "Ongoing",
+
+          heat_report_id: r.heat_report_id
+            ? {
+                _id: r.heat_report_id._id,
+                status: r.heat_report_id.status || null,
+                ai_confirmed_at: r.heat_report_id.ai_confirmed_at || null,
+                next_heat_check: r.heat_report_id.next_heat_check || null,
+                expected_farrowing: r.heat_report_id.expected_farrowing || null,
+                actual_farrowing_date: r.heat_report_id.actual_farrowing_date || null,
+                weaning_date: r.heat_report_id.weaning_date || null,
+                pregnancy_confirmed_at: r.heat_report_id.pregnancy_confirmed_at || null,
+                date_reported: r.heat_report_id.date_reported || null,
+              }
+            : null,
         };
       })
     );

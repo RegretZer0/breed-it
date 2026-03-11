@@ -307,14 +307,15 @@ export function createReproViews({ repo, state, ui }) {
     const isDeceased = String(sw?.health_status || "").toLowerCase().includes("deceased") ||
       String(sw?.health_status || "").toLowerCase().includes("dead");
 
+    const canActionRaw = mon?.can_action;
+    const canAction =
+      canActionRaw === true ||
+      String(canActionRaw).toLowerCase().trim() === "true" ||
+      String(canActionRaw).trim() === "1";
+
     const isEligible =
-      phaseLower.includes("final selection") ||
-      phaseLower.includes("selection overdue") ||
-      phaseLower.includes("3-month") ||
-      phaseLower.includes("3 month") ||
-      phaseLower.includes("day 61-90") ||
-      phaseLower.includes("day 91") ||
-      phaseLower.includes("overdue");
+      canAction ||
+      (Number.isFinite(Number(daysRemaining)) && Number(daysRemaining) <= 0);
 
     return {
       tag,
@@ -477,6 +478,889 @@ export function createReproViews({ repo, state, ui }) {
     if (low.includes("pending")) return { label: "Pending", variant: "warning" };
 
     return { label: r, variant: "light" };
+  }
+
+  /* =========================================================
+     MODULE: Monthly Growth Helpers
+     PURPOSE: Build responsive monthly growth summaries for
+              piglets and sow overview panels.
+  ========================================================= */
+  function monthKeyFromDate(dateVal) {
+    const d = new Date(dateVal);
+    if (Number.isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
+
+  function monthLabelFromKey(key) {
+    if (!key) return "Unknown";
+    const [y, m] = String(key).split("-");
+    const d = new Date(Number(y), Number(m) - 1, 1);
+    if (Number.isNaN(d.getTime())) return key;
+    return d.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  }
+
+  function getMonthlyGrowthForPiglet(pigletTag) {
+    const history = repo.getMorphHistoryForPiglet(pigletTag) || [];
+    const rows = history
+      .filter((r) => r?.date && Number.isFinite(Number(r?.weight)))
+      .map((r) => ({
+        date: r.date,
+        weight: Number(r.weight || 0),
+        stage: r.stage || "N/A",
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (!rows.length) return [];
+
+    const byMonth = new Map();
+
+    for (const row of rows) {
+      const key = monthKeyFromDate(row.date);
+      if (!key) continue;
+
+      if (!byMonth.has(key)) {
+        byMonth.set(key, {
+          key,
+          label: monthLabelFromKey(key),
+          entries: [],
+        });
+      }
+
+      byMonth.get(key).entries.push(row);
+    }
+
+    return [...byMonth.values()]
+      .map((m) => {
+        const entries = m.entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+        const first = entries[0] || null;
+        const last = entries[entries.length - 1] || null;
+
+        const startWeight = first ? Number(first.weight || 0) : null;
+        const endWeight = last ? Number(last.weight || 0) : null;
+        const delta =
+          startWeight != null && endWeight != null ? Number((endWeight - startWeight).toFixed(1)) : null;
+
+        return {
+          key: m.key,
+          label: m.label,
+          count: entries.length,
+          startDate: first?.date || null,
+          endDate: last?.date || null,
+          startWeight,
+          endWeight,
+          delta,
+          stage: last?.stage || first?.stage || "N/A",
+        };
+      })
+      .sort((a, b) => new Date(`${b.key}-01`) - new Date(`${a.key}-01`));
+  }
+
+  function monthlyDeltaBadgeHtml(delta) {
+    if (delta == null) {
+      return `<span class="badge bg-light text-dark border"><i class="bi bi-dash-circle me-1"></i>No change data</span>`;
+    }
+
+    if (delta > 0) {
+      return `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-arrow-up-right me-1"></i>+${esc(
+        delta
+      )} kg</span>`;
+    }
+
+    if (delta < 0) {
+      return `<span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-arrow-down-right me-1"></i>${esc(
+        delta
+      )} kg</span>`;
+    }
+
+    return `<span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-dash-circle me-1"></i>0.0 kg</span>`;
+  }
+
+  function renderPigletMonthlyGrowthCards(pigletTag) {
+    const monthly = getMonthlyGrowthForPiglet(pigletTag);
+
+    if (!monthly.length) {
+      return `
+        <div class="repro-monthly-empty">
+          <i class="bi bi-bar-chart-line me-1"></i>No monthly growth updates recorded yet.
+        </div>
+      `;
+    }
+
+    return `
+      <div class="repro-monthly-grid">
+        ${monthly
+          .map(
+            (m) => `
+          <div class="repro-monthly-card">
+            <div class="repro-monthly-head">
+              <div class="repro-monthly-title">${esc(m.label)}</div>
+              <div>${monthlyDeltaBadgeHtml(m.delta)}</div>
+            </div>
+
+            <div class="repro-monthly-stats">
+              <div class="repro-monthly-stat">
+                <div class="k">Start</div>
+                <div class="v">${m.startWeight != null ? `${esc(m.startWeight)} kg` : "N/A"}</div>
+              </div>
+              <div class="repro-monthly-stat">
+                <div class="k">End</div>
+                <div class="v">${m.endWeight != null ? `${esc(m.endWeight)} kg` : "N/A"}</div>
+              </div>
+              <div class="repro-monthly-stat">
+                <div class="k">Entries</div>
+                <div class="v">${esc(m.count)}</div>
+              </div>
+            </div>
+
+            <div class="repro-monthly-foot">
+              <span><i class="bi bi-calendar3 me-1"></i>${esc(fmtShortDate(m.startDate))} to ${esc(fmtShortDate(m.endDate))}</span>
+              <span><i class="bi bi-tag me-1"></i>${esc(m.stage)}</span>
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  /* =========================================================
+     MODULE: Monthly Updates Panel
+     PURPOSE: Render a dedicated sow-level monthly monitoring panel.
+  ========================================================= */
+  function renderSowMonthlyUpdatesPanel(sowId, mountEl) {
+    if (!mountEl) return;
+
+    const piglets = repo.getPigletsForSow(sowId) || [];
+
+    if (!piglets.length) {
+      mountEl.innerHTML = `
+        <div class="card repro-subcard shadow-sm border-0">
+          <div class="card-body">
+            <div class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i>No piglets found for this sow.
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    mountEl.innerHTML = `
+      <div class="card repro-subcard shadow-sm border-0">
+        <div class="card-body">
+          <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-3">
+            <div class="min-w-0">
+              <div class="fw-bold d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-graph-up-arrow"></i></span>
+                <span>Monthly Monitoring Updates</span>
+              </div>
+              <div class="small text-muted">
+                Review each piglet's monthly weight trend under sow <b>${esc(sowId)}</b>.
+              </div>
+            </div>
+          </div>
+
+          <div class="vstack gap-3">
+            ${piglets
+              .map((p) => {
+                const tag = p?.swine_id || p?.swine_tag || p?.tag || "N/A";
+                const sex = sexLabel(p?.sex);
+                const stage = p?.age_stage || p?.current_status || p?.current_stage || "N/A";
+
+                return `
+                  <div class="card repro-subcard shadow-sm border-0 repro-perf-piglet-card">
+                    <div class="card-body">
+                      <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="repro-pill"><i class="bi bi-pie-chart"></i></span>
+                            <div class="min-w-0">
+                              <div class="fw-bold text-truncate">${esc(tag)}</div>
+                              <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="mt-3">
+                        ${renderPigletMonthlyGrowthCards(tag)}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              })
+              .join("")}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  /* =========================================================
+    MODULE: Piglet Monthly Update Panel Renderer
+  ========================================================= */
+  function renderPigletMonthlyUpdatesPanel(pigletTag, mountEl) {
+    if (!mountEl) return;
+
+    const sw = findSwineByTag(pigletTag) || findMonitoringRow(pigletTag) || null;
+    const sex = sexLabel(sw?.sex);
+    const stage = sw?.age_stage || sw?.current_status || sw?.current_stage || "N/A";
+    const monitoringMeta = getMonitoringMeta(pigletTag);
+
+    const history = repo.getMorphHistoryForPiglet(pigletTag) || [];
+    const latest = history.length ? history[history.length - 1] : null;
+    const deformities = repo.getDeformitiesForPiglet(pigletTag) || [];
+
+    const latestDate = latest?.date || sw?.updatedAt || sw?.createdAt || null;
+    const latestWeight = latest?.weight ?? 0;
+    const latestBodyLength = latest?.body_length ?? latest?.bodyLength ?? null;
+    const latestHeartGirth = latest?.heart_girth ?? latest?.heartGirth ?? 0;
+    const latestStage = latest?.stage || stage || "N/A";
+    const latestDeformities = deformities.length
+      ? deformities.map((d) => d?.deformity_types).filter(Boolean).join(", ")
+      : "None";
+
+    const todayIso = (() => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    })();
+
+    mountEl.innerHTML = `
+      <div class="card repro-subcard shadow-sm border-0 repro-monthly-panel-shell">
+        <div class="card-body">
+          <div class="repro-monthly-topbar">
+            <div class="min-w-0">
+              <div class="fw-bold d-flex align-items-center gap-2 repro-monthly-piglet-title">
+                <span class="repro-pill"><i class="bi bi-calendar2-week"></i></span>
+                <span>${esc(pigletTag)}</span>
+              </div>
+              <div class="small text-muted text-break">${esc(sex)} • ${esc(stage)}</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-start justify-content-md-end">
+              ${monitoringPhaseChipHtml(monitoringMeta.phase)}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-heart-pulse me-1"></i>${esc(sw?.health_status || "Healthy")}
+              </span>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm repro-monthly-status-card mt-3">
+            <div class="card-body">
+              <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-clipboard-data"></i></span>
+                <span>Current Record Status</span>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Total Entries</div>
+                    <div class="v">${esc(history.length || 0)}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Date</div>
+                    <div class="v">${esc(fmtDate(latestDate))}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Weight</div>
+                    <div class="v">${latestWeight != null ? `${esc(latestWeight)} kg` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Stage</div>
+                    <div class="v">${esc(latestStage)}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Body Length</div>
+                    <div class="v">${latestBodyLength != null ? `${esc(latestBodyLength)} cm` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Heart Girth</div>
+                    <div class="v">${latestHeartGirth != null ? `${esc(latestHeartGirth)} cm` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Developed Deformities</div>
+                    <div class="v text-break">${esc(latestDeformities || "None")}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12 col-xl-7">
+              <div class="card border-0 shadow-sm repro-monthly-form-card h-100">
+                <div class="card-body">
+                  <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-bar-chart-line"></i></span>
+                    <span>Monthly Growth Update</span>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Record Date</label>
+                      <input
+                        type="date"
+                        class="form-control repro-input"
+                        id="monthlyRecordDate"
+                        value="${todayIso}"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Weight (kg)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="monthlyWeight"
+                        placeholder="0"
+                        value=""
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Body Length (cm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="monthlyBodyLength"
+                        placeholder="0"
+                        value=""
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Heart Girth (cm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="monthlyHeartGirth"
+                        placeholder="0"
+                        value=""
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Teeth Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="form-control repro-input"
+                        id="monthlyTeethCount"
+                        placeholder="Optional"
+                        value=""
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Leg Conformation</label>
+                      <select class="form-select repro-select" id="monthlyLegConformation">
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Straight">Straight</option>
+                        <option value="Slightly Bent">Slightly Bent</option>
+                        <option value="Bent">Bent</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Teat Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="form-control repro-input"
+                        id="monthlyTeatCount"
+                        placeholder="Optional"
+                        value=""
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">Teat Alignment</label>
+                      <select class="form-select repro-select" id="monthlyTeatAlignment">
+                        <option value="N/A" selected>N/A</option>
+                        <option value="Even">Even</option>
+                        <option value="Uneven">Uneven</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Developed Deformities</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="monthlyDeformities"
+                        placeholder="Example: Hernia, Leg defect, None"
+                        value=""
+                      />
+                      <div class="small text-muted mt-1">
+                        Separate multiple deformities with commas. Leave blank if none.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-5">
+              <div class="card border-0 shadow-sm repro-monthly-form-card h-100">
+                <div class="card-body">
+                  <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-shield-check"></i></span>
+                    <span>Health and Medical Update</span>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Health Status</label>
+                      <select class="form-select repro-select" id="monthlyHealthStatus">
+                        <option value="Healthy" selected>Healthy</option>
+                        <option value="Sick">Sick</option>
+                        <option value="Deceased (Before Weaning)">Deceased (Before Weaning)</option>
+                        <option value="Deceased">Deceased</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Vaccine / Treatment Type</label>
+                      <select class="form-select repro-select" id="monthlyTreatmentType">
+                        <option value="">No medical update</option>
+                        <option value="Vaccination">Vaccination</option>
+                        <option value="Iron Injection">Iron Injection</option>
+                        <option value="Tail Docking">Tail Docking</option>
+                        <option value="Ear Notching">Ear Notching</option>
+                        <option value="Castration">Castration</option>
+                        <option value="Deworming">Deworming</option>
+                        <option value="Antibiotic">Antibiotic</option>
+                        <option value="Vitamin">Vitamin</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Medicine / Vaccine Name</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="monthlyMedicineName"
+                        placeholder="Enter medicine or vaccine name"
+                      />
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Dosage</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="monthlyDosage"
+                        placeholder="Example: 2ml, 1 tablet"
+                      />
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Remarks</label>
+                      <textarea
+                        class="form-control repro-input"
+                        id="monthlyRemarks"
+                        rows="4"
+                        placeholder="Add health notes, symptoms, vaccine remarks, or monthly observations"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 flex-wrap mt-3">
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              data-bs-dismiss="modal"
+            >
+              <i class="bi bi-x-circle me-1"></i> Cancel
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-success"
+              data-act="submitMonthlyUpdateDraft"
+              data-piglet="${esc(pigletTag)}"
+            >
+              <i class="bi bi-send-check me-1"></i> Review Update
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* =========================================================
+   MODULE: Sow Monthly Update Panel Renderer
+  ========================================================= */
+  function renderSowMonthlyUpdateFormPanel(sowId, mountEl) {
+    if (!mountEl) return;
+
+    const sow = getSowByIdOrTag(sowId) || repo.store.sowMap.get(sowId) || null;
+    if (!sow) {
+      mountEl.innerHTML = `
+        <div class="card repro-subcard shadow-sm border-0">
+          <div class="card-body">
+            <div class="text-muted small">
+              <i class="bi bi-info-circle me-1"></i>Sow record not found.
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const perfList = Array.isArray(sow.performance_records) ? [...sow.performance_records] : [];
+    perfList.sort((a, b) => new Date(a?.record_date || 0) - new Date(b?.record_date || 0));
+
+    const latest = perfList.length ? perfList[perfList.length - 1] : null;
+    const latestDate = latest?.record_date || sow?.updatedAt || sow?.createdAt || null;
+    const latestWeight = latest?.weight ?? null;
+    const latestBodyLength = latest?.body_length ?? null;
+    const latestHeartGirth = latest?.heart_girth ?? null;
+    const latestTeeth = latest?.teeth_count ?? null;
+    const latestTeatCount = latest?.teat_count ?? null;
+    const latestLeg = latest?.leg_conformation || "Normal";
+    const latestTeatAlignment = latest?.teat_alignment || "N/A";
+    const latestStage = sow?.current_status || latest?.stage || "Routine";
+    const latestDeformities = Array.isArray(latest?.deformities) && latest.deformities.length
+      ? latest.deformities.join(", ")
+      : "None";
+
+    const todayIso = (() => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    })();
+
+    mountEl.innerHTML = `
+      <div class="card repro-subcard shadow-sm border-0 repro-monthly-panel-shell">
+        <div class="card-body">
+          <div class="repro-monthly-topbar">
+            <div class="min-w-0">
+              <div class="fw-bold d-flex align-items-center gap-2 repro-monthly-piglet-title">
+                <span class="repro-pill"><i class="bi bi-calendar2-week"></i></span>
+                <span>${esc(sowId)}</span>
+              </div>
+              <div class="small text-muted text-break">
+                ${esc(sexLabel(sow?.sex))} • ${esc(sow?.breed || "N/A")}
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-start justify-content-md-end">
+              <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                <i class="bi bi-diagram-3 me-1"></i>${esc(sow?.current_status || "Open")}
+              </span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-heart-pulse me-1"></i>${esc(sow?.health_status || "Healthy")}
+              </span>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm repro-monthly-status-card mt-3">
+            <div class="card-body">
+              <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <span class="repro-pill"><i class="bi bi-clipboard-data"></i></span>
+                <span>Current Record Status</span>
+              </div>
+
+              <div class="row g-2">
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Total Entries</div>
+                    <div class="v">${esc(perfList.length || 0)}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Date</div>
+                    <div class="v">${esc(fmtDate(latestDate))}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Weight</div>
+                    <div class="v">${latestWeight != null ? `${esc(latestWeight)} kg` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Latest Stage</div>
+                    <div class="v">${esc(latestStage)}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Body Length</div>
+                    <div class="v">${latestBodyLength != null ? `${esc(latestBodyLength)} cm` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Heart Girth</div>
+                    <div class="v">${latestHeartGirth != null ? `${esc(latestHeartGirth)} cm` : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <div class="repro-sow-statbox">
+                    <div class="k">Developed Deformities</div>
+                    <div class="v text-break">${esc(latestDeformities || "None")}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-12 col-xl-7">
+              <div class="card border-0 shadow-sm repro-monthly-form-card h-100">
+                <div class="card-body">
+                  <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-bar-chart-line"></i></span>
+                    <span>Monthly Sow Update</span>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Record Date</label>
+                      <input
+                        type="date"
+                        class="form-control repro-input"
+                        id="sowMonthlyRecordDate"
+                        value="${todayIso}"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Weight (kg)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="sowMonthlyWeight"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Body Length (cm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="sowMonthlyBodyLength"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Heart Girth (cm)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        class="form-control repro-input"
+                        id="sowMonthlyHeartGirth"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Teeth Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="form-control repro-input"
+                        id="sowMonthlyTeethCount"
+                        placeholder="Optional"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Leg Conformation</label>
+                      <select class="form-select repro-select" id="sowMonthlyLegConformation">
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Straight">Straight</option>
+                        <option value="Slightly Bent">Slightly Bent</option>
+                        <option value="Bent">Bent</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                      <label class="form-label small fw-semibold">Teat Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        class="form-control repro-input"
+                        id="sowMonthlyTeatCount"
+                        placeholder="Optional"
+                      />
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                      <label class="form-label small fw-semibold">Teat Alignment</label>
+                      <select class="form-select repro-select" id="sowMonthlyTeatAlignment">
+                        <option value="N/A" selected>N/A</option>
+                        <option value="Even">Even</option>
+                        <option value="Uneven">Uneven</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Developed Deformities</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="sowMonthlyDeformities"
+                        placeholder="Example: Hernia, Leg defect, None"
+                      />
+                      <div class="small text-muted mt-1">
+                        Separate multiple deformities with commas. Leave blank if none.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-5">
+              <div class="card border-0 shadow-sm repro-monthly-form-card h-100">
+                <div class="card-body">
+                  <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-shield-check"></i></span>
+                    <span>Health and Medical Update</span>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Health Status</label>
+                      <select class="form-select repro-select" id="sowMonthlyHealthStatus">
+                        <option value="Healthy" selected>Healthy</option>
+                        <option value="Sick">Sick</option>
+                        <option value="Deceased">Deceased</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Vaccine / Treatment Type</label>
+                      <select class="form-select repro-select" id="sowMonthlyTreatmentType">
+                        <option value="">No medical update</option>
+                        <option value="Vaccination">Vaccination</option>
+                        <option value="Iron Injection">Iron Injection</option>
+                        <option value="Tail Docking">Tail Docking</option>
+                        <option value="Ear Notching">Ear Notching</option>
+                        <option value="Castration">Castration</option>
+                        <option value="Deworming">Deworming</option>
+                        <option value="Antibiotic">Antibiotic</option>
+                        <option value="Vitamin">Vitamin</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Medicine / Vaccine Name</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="sowMonthlyMedicineName"
+                        placeholder="Enter medicine or vaccine name"
+                      />
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Dosage</label>
+                      <input
+                        type="text"
+                        class="form-control repro-input"
+                        id="sowMonthlyDosage"
+                        placeholder="Example: 2ml, 1 tablet"
+                      />
+                    </div>
+
+                    <div class="col-12">
+                      <label class="form-label small fw-semibold">Remarks</label>
+                      <textarea
+                        class="form-control repro-input"
+                        id="sowMonthlyRemarks"
+                        rows="4"
+                        placeholder="Add sow health notes, treatment remarks, and monthly observations"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 flex-wrap mt-3">
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              data-bs-dismiss="modal"
+            >
+              <i class="bi bi-x-circle me-1"></i> Cancel
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-success"
+              data-act="submitSowMonthlyUpdateDraft"
+              data-sow="${esc(sowId)}"
+            >
+              <i class="bi bi-send-check me-1"></i> Review Update
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   /* =========================================================
@@ -875,10 +1759,8 @@ export function createReproViews({ repo, state, ui }) {
 
   function sowCardHtml(s) {
     const sowId = s?.swine_id || s?.swine_tag || s?.tag || "N/A";
-
     const rawStatus = s?.current_status || s?.current_stage || s?.age_stage || "";
     const statusLower = String(rawStatus || "").toLowerCase();
-
     const breed = s?.breed || "N/A";
 
     const stats = repo.computeBreedingStatsForSow(sowId);
@@ -895,11 +1777,12 @@ export function createReproViews({ repo, state, ui }) {
       if (statusLower.includes("farrow")) return { label: "Farrowing", variant: "warning", icon: "bi bi-box2-heart" };
       if (statusLower.includes("lact")) return { label: "Lactating", variant: "success", icon: "bi bi-droplet-half" };
       if (statusLower.includes("wean")) return { label: "Weaning", variant: "warning", icon: "bi bi-arrow-down-circle" };
-      if (statusLower.includes("under_observation") || statusLower.includes("observation"))
+      if (statusLower.includes("under_observation") || statusLower.includes("observation")) {
         return { label: "Under observation", variant: "warning", icon: "bi bi-eye" };
-      if (statusLower.includes("heat") || statusLower.includes("estrus"))
+      }
+      if (statusLower.includes("heat") || statusLower.includes("estrus")) {
         return { label: "In-heat", variant: "danger", icon: "bi bi-lightning-charge" };
-
+      }
       return { label: "Open", variant: "light", icon: "bi bi-check2-circle" };
     }
 
@@ -921,42 +1804,50 @@ export function createReproViews({ repo, state, ui }) {
     return `
       <div class="repro-card card border-0 ${isActive ? "repro-card-active" : ""}">
         <div class="card-body">
-          <div class="d-flex align-items-start justify-content-between gap-3">
-            <div class="min-w-0">
-              <div class="d-flex align-items-center gap-2">
-                <span class="repro-pill"><i class="bi bi-heart-pulse"></i></span>
-                <div class="min-w-0">
-                  <div class="fw-bold text-truncate">${esc(sowId)}</div>
-                  <div class="small text-muted text-truncate">${esc(breed)}</div>
+          <div class="row g-3 align-items-center">
+            <div class="col-12 col-lg">
+              <div class="d-flex align-items-start gap-3">
+                <span class="repro-pill">
+                  <i class="bi bi-heart-pulse"></i>
+                </span>
+
+                <div class="min-w-0 flex-grow-1">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="fw-bold text-truncate">${esc(sowId)}</div>
+                    <span class="${phaseBadge}">
+                      <i class="${esc(ph.icon)} me-1"></i>${esc(ph.label)}
+                    </span>
+                  </div>
+
+                  <div class="small text-muted mt-1 text-truncate">
+                    Breed: <b>${esc(breed)}</b>
+                  </div>
+
+                  <div class="d-flex flex-wrap gap-2 mt-2">
+                    <span class="badge bg-light text-dark border">
+                      <i class="bi bi-calendar-event me-1"></i>Last AI: <b>${esc(lastAI)}</b>
+                    </span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                      <i class="bi bi-check-circle me-1"></i>Alive: <b>${totalAlive}</b>
+                    </span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                      <i class="bi bi-x-circle me-1"></i>Dead: <b>${totalDead}</b>
+                    </span>
+                    <span class="badge bg-light text-dark border">
+                      <i class="bi bi-collection me-1"></i>Total: <b>${totalPiglets}</b>
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div class="d-flex flex-wrap gap-2 mt-2">
-                <span class="${phaseBadge}">
-                  <i class="${esc(ph.icon)} me-1"></i>${esc(ph.label)}
-                </span>
-
-                <span class="badge bg-light text-dark border">
-                  <i class="bi bi-calendar-event me-1"></i>Last AI: <b>${esc(lastAI)}</b>
-                </span>
-              </div>
             </div>
 
-            <div class="text-end flex-shrink-0">
-              <div class="small text-muted">Piglets</div>
-              <div class="fw-bold">${totalPiglets}</div>
-              <div class="small text-muted">
-                <span class="text-success fw-semibold">${totalAlive}</span> alive
-                <span class="mx-1">•</span>
-                <span class="text-danger fw-semibold">${totalDead}</span> dead
+            <div class="col-12 col-lg-auto">
+              <div class="d-grid d-sm-flex gap-2 justify-content-lg-end">
+                <button class="btn btn-success btn-sm" data-act="openSow" data-sow="${esc(sowId)}">
+                  View Details <i class="bi bi-arrow-right-circle ms-1"></i>
+                </button>
               </div>
             </div>
-          </div>
-
-          <div class="mt-2 d-flex justify-content-end">
-            <button class="btn btn-success btn-sm" data-act="openSow" data-sow="${esc(sowId)}">
-              View <i class="bi bi-arrow-right-circle ms-1"></i>
-            </button>
           </div>
         </div>
       </div>
@@ -1025,13 +1916,10 @@ export function createReproViews({ repo, state, ui }) {
         .map((c, idx) => {
           const label = c?.date ? `Cycle ${idx + 1} • ${fmtDate(c.date)}` : `Cycle ${idx + 1}`;
           const val = String(c?.id ?? "");
-          return `<option value="${esc(val)}"${String(state.cycleFilterId) === val ? " selected" : ""}>${esc(
-            label
-          )}</option>`;
+          return `<option value="${esc(val)}"${String(state.cycleFilterId) === val ? " selected" : ""}>${esc(label)}</option>`;
         })
         .join("");
 
-    /* The filter is a card so the UI matches the theme consistently */
     return `
       <div class="card repro-subcard shadow-sm border-0 repro-cycle-headcard">
         <div class="card-body">
@@ -1205,7 +2093,7 @@ export function createReproViews({ repo, state, ui }) {
                 <span class="repro-pill"><i class="bi bi-folder2-open"></i></span>
                 <span>Cycle Details</span>
               </div>
-              <div class="small text-muted text-truncate">AI record • performance • growth • selection</div>
+              <div class="small text-muted text-truncate">AI record • growth • selection</div>
             </div>
 
             <div class="repro-cycle-backwrap">
@@ -1267,105 +2155,391 @@ export function createReproViews({ repo, state, ui }) {
     if (nextTarget && state.CYCLE_TABS.includes(nextTarget)) state.activeCycleTabTarget = nextTarget;
   }
 
-  function renderCycleAIRecord(sowId, cycle) {
-    const r = cycle?.raw || {};
+  /* =========================================================
+     MODULE: Cycle Record Value Helpers
+     PURPOSE: Normalize AIRecord + populated HeatReport fields
+              so cycle detail cards show the correct lifecycle data.
+  ========================================================= */
+  function getCycleRaw(cycle) {
+    return cycle?.raw && typeof cycle.raw === "object" ? cycle.raw : null;
+  }
 
-    const boarId = toKey(
-      cycle.boarCode || pickFirst(r, ["male_swine_tag", "boar_tag", "male_swine_id", "boar_id"]) || "N/A"
+  function getCycleHeatReport(cycle) {
+    const raw = getCycleRaw(cycle);
+
+    const directHeat =
+      cycle?.heat_report_id ||
+      cycle?.heatReport ||
+      cycle?.heat_report ||
+      null;
+
+    if (directHeat && typeof directHeat === "object") return directHeat;
+
+    const rawHeat =
+      raw?.heat_report_id ||
+      raw?.heatReport ||
+      raw?.heat_report ||
+      null;
+
+    if (rawHeat && typeof rawHeat === "object") return rawHeat;
+
+    return null;
+  }
+
+  function getCycleTopValue(cycle, keys = []) {
+    return pickFirst(cycle, keys);
+  }
+
+  function getCycleAIValue(cycle, keys = []) {
+    const raw = getCycleRaw(cycle);
+    return pickFirst(raw, keys) || pickFirst(cycle, keys);
+  }
+
+  function getCycleHeatValue(cycle, keys = []) {
+    const hr = getCycleHeatReport(cycle);
+    return pickFirst(hr, keys);
+  }
+
+  function getCycleAnyValue(cycle, keys = []) {
+    return (
+      getCycleHeatValue(cycle, keys) ||
+      getCycleAIValue(cycle, keys) ||
+      getCycleTopValue(cycle, keys) ||
+      null
     );
-    const recordId = toKey(pickFirst(r, ["_id", "id", "record_id", "ai_record_id"]) || cycle.id);
+  }
 
-    const tech = pickFirst(r, ["technician", "ai_technician", "performed_by", "vet", "handled_by"]);
-    const semenSrc = pickFirst(r, ["semen_source", "source", "batch_source", "batch_id", "source_id"]);
+  function getCycleCombinedValue(cycle, aiKeys = [], heatKeys = []) {
+    return (
+      getCycleHeatValue(cycle, heatKeys) ||
+      getCycleAIValue(cycle, aiKeys) ||
+      getCycleTopValue(cycle, [...heatKeys, ...aiKeys]) ||
+      null
+    );
+  }
 
-    const preg = pickFirst(r, ["pregnancy_confirmed", "pregnant", "is_pregnant", "pregnancy"]);
-    const expected = pickFirst(r, ["expected_farrowing", "expected_farrowing_date", "farrowing_date", "expected_date"]);
+  function getCycleLifecycleStatus(cycle) {
+    return (
+      getCycleHeatValue(cycle, ["status"]) ||
+      getCycleTopValue(cycle, ["heat_report_status", "report_status", "status"]) ||
+      getCycleAIValue(cycle, ["status"]) ||
+      ""
+    );
+  }
 
-    const serviceDate = pickFirst(r, ["insemination_date", "ai_service_date", "service_date", "date", "createdAt"]);
-    const status = pickFirst(r, ["cycle_status", "status", "pregnancy_status", "result"]) || cycle.status;
+  function getCyclePregnancyLabel(cycle) {
+    const aiPreg = getCycleAnyValue(cycle, ["pregnancy_confirmed"]);
+    const pregAt = getCycleAnyValue(cycle, ["pregnancy_confirmed_at", "pregnancy_check_date"]);
+    const status = normLower(getCycleLifecycleStatus(cycle));
 
-    const notes = pickFirst(r, ["remarks", "notes", "comment", "description"]);
+    if (
+      aiPreg === true ||
+      !!pregAt ||
+      status === "pregnant" ||
+      status === "awaiting_farrowing" ||
+      status === "farrowing_ready" ||
+      status === "farrowed" ||
+      status === "lactating" ||
+      status === "completed"
+    ) {
+      return "Yes";
+    }
 
-    const badgeVariant =
-      String(status).toLowerCase().includes("fail")
-        ? "danger"
-        : String(status).toLowerCase().includes("preg")
-        ? "info"
-        : String(status).toLowerCase().includes("success")
-        ? "success"
-        : "light";
+    if (aiPreg === false && !pregAt) return "No";
+
+    return "N/A";
+  }
+
+  function getCycleDisplayStatus(cycle) {
+    const st = String(getCycleLifecycleStatus(cycle) || "").trim();
+    const s = normLower(st);
+
+    if (s === "under_observation") return "Under Observation";
+    if (s === "pregnant") return "Pregnant";
+    if (s === "awaiting_farrowing") return "Awaiting Farrowing";
+    if (s === "farrowing_ready") return "Farrowing Ready";
+    if (s === "farrowed") return "Farrowed";
+    if (s === "lactating") return "Lactating";
+    if (s === "completed") return "Completed";
+
+    const aiStatus = String(getCycleAIValue(cycle, ["status"]) || "").trim();
+    return aiStatus || "Recorded";
+  }
+
+  function getCycleStatusVariant(statusText) {
+    const s = normLower(statusText);
+    if (s.includes("completed")) return "success";
+    if (s.includes("lactating")) return "success";
+    if (s.includes("farrow")) return "warning";
+    if (s.includes("awaiting")) return "warning";
+    if (s.includes("preg")) return "info";
+    if (s.includes("observation")) return "warning";
+    if (s.includes("success")) return "success";
+    if (s.includes("fail") || s.includes("abort")) return "danger";
+    return "light";
+  }
+
+  /* =========================================================
+    MODULE: Cycle Display Date Helpers
+  ========================================================= */
+  function hasMeaningfulValue(v) {
+    if (v == null) return false;
+    const s = String(v).trim().toLowerCase();
+    return !!s && s !== "null" && s !== "undefined" && s !== "n/a";
+  }
+
+  function displayDateOrDash(v) {
+    return hasMeaningfulValue(v) ? fmtDate(v) : "-";
+  }
+
+  function displayTextOrDash(v) {
+    return hasMeaningfulValue(v) ? String(v).trim() : "-";
+  }
+
+  /* =========================================================
+    MODULE: Cycle AI Display ID Resolver
+    PURPOSE: Always prefer the explicit cycle display ID,
+              then fall back to raw AI business identifiers.
+  ========================================================= */
+  function getCycleAIRecordDisplayId(cycle) {
+    return (
+      cycle?.displayId ||
+      getCycleAIValue(cycle, ["insemination_id", "ai_record_id", "record_id"]) ||
+      getCycleTopValue(cycle, ["displayId", "insemination_id", "ai_record_id", "record_id"]) ||
+      cycle?.id ||
+      getCycleAIValue(cycle, ["id", "_id"]) ||
+      "N/A"
+    );
+  }
+
+  function getCyclePregnancyConfirmedDate(cycle) {
+    return (
+      getCycleHeatValue(cycle, ["pregnancy_confirmed_at"]) ||
+      getCycleAIValue(cycle, ["pregnancy_check_date"]) ||
+      null
+    );
+  }
+
+  function getCycleExpectedFarrowingDate(cycle) {
+    const lifecycleStatus = normLower(getCycleDisplayStatus(cycle));
+
+    const fromHeat =
+      getCycleHeatValue(cycle, ["expected_farrowing", "expected_farrowing_date"]);
+
+    if (fromHeat) return fromHeat;
+
+    const fromAIExpected = getCycleAIValue(cycle, ["expected_farrowing_date"]);
+    if (fromAIExpected) return fromAIExpected;
+
+    const fromAIFarrowing = getCycleAIValue(cycle, ["farrowing_date"]);
+
+    if (
+      fromAIFarrowing &&
+      (
+        lifecycleStatus.includes("pregnant") ||
+        lifecycleStatus.includes("awaiting farrowing") ||
+        lifecycleStatus.includes("farrowing ready") ||
+        lifecycleStatus === "ongoing" ||
+        lifecycleStatus === "success"
+      )
+    ) {
+      return fromAIFarrowing;
+    }
+
+    return null;
+  }
+
+  function getCycleActualFarrowingDate(cycle) {
+    const lifecycleStatus = normLower(getCycleDisplayStatus(cycle));
+
+    const fromHeat =
+      getCycleHeatValue(cycle, ["actual_farrowing_date"]) ||
+      getCycleTopValue(cycle, ["actual_farrowing_date"]);
+
+    if (fromHeat) return fromHeat;
+
+    const fromAIFarrowing = getCycleAIValue(cycle, ["farrowing_date"]);
+
+    if (
+      fromAIFarrowing &&
+      (
+        lifecycleStatus.includes("farrowed") ||
+        lifecycleStatus.includes("lactating") ||
+        lifecycleStatus.includes("completed")
+      )
+    ) {
+      return fromAIFarrowing;
+    }
+
+    return null;
+  }
+
+  function getCycleWeaningDate(cycle) {
+    return (
+      getCycleHeatValue(cycle, ["weaning_date"]) ||
+      getCycleAIValue(cycle, ["weaning_date"]) ||
+      null
+    );
+  }
+
+  /* =========================================================
+    MODULE: Cycle AI Record Renderer
+    PURPOSE: Render AI and breeding lifecycle details using
+            both AIRecord and populated HeatReport fields.
+  ========================================================= */
+  function renderCycleAIRecord(sowId, cycle) {
+    const boarId = toKey(
+      cycle?.boarCode ||
+      getCycleAIValue(cycle, ["male_swine_id", "boar_tag", "male_swine_tag", "boar_id"]) ||
+      "N/A"
+    );
+
+    const recordId = toKey(getCycleAIRecordDisplayId(cycle));
+    const tech = getCycleAIValue(cycle, ["technician", "ai_technician", "performed_by", "vet", "handled_by"]);
+    const semenSrc = getCycleAIValue(cycle, ["semen_source", "source", "batch_source", "batch_id", "source_id"]);
+
+    const serviceDate = getCycleAIValue(cycle, [
+      "insemination_date",
+      "ai_service_date",
+      "service_date",
+      "date",
+      "createdAt"
+    ]);
+
+    const pregnancyConfirmedDate = getCyclePregnancyConfirmedDate(cycle);
+    const expectedFarrowing = getCycleExpectedFarrowingDate(cycle);
+    const actualFarrowing = getCycleActualFarrowingDate(cycle);
+    const weaningDate = getCycleWeaningDate(cycle);
+
+    const statusLabel = getCycleDisplayStatus(cycle);
+    const statusVariant = getCycleStatusVariant(statusLabel);
+
+    const notes =
+      getCycleAIValue(cycle, ["remarks", "notes", "comment", "description"]) ||
+      getCycleHeatValue(cycle, ["remarks"]) ||
+      null;
 
     return `
       <div class="row g-3">
-        <div class="col-12 col-lg-6">
-          <div class="card repro-subcard h-100 shadow-sm border-0">
+        <div class="col-12 col-xl-5">
+          <div class="card repro-subcard shadow-sm border-0 repro-cycle-info-card h-100">
             <div class="card-body">
-              <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+              <div class="fw-bold mb-3 d-flex align-items-center gap-2">
                 <span class="repro-pill"><i class="bi bi-journal-text"></i></span>
                 <span>Artificial Insemination Record</span>
               </div>
 
-              <div class="small text-muted">Sow</div>
-              <div class="fw-semibold">${esc(sowId)}</div>
+              <div class="repro-cycle-stat-grid">
+                <div class="repro-cycle-stat-item">
+                  <div class="k">Sow</div>
+                  <div class="v">${esc(sowId)}</div>
+                </div>
 
-              <div class="small text-muted mt-2">AI Service Date</div>
-              <div class="fw-semibold">${esc(fmtDate(serviceDate))}</div>
+                <div class="repro-cycle-stat-item">
+                  <div class="k">AI Service Date</div>
+                  <div class="v">${esc(displayDateOrDash(serviceDate))}</div>
+                </div>
 
-              <div class="small text-muted mt-2">Cycle Status</div>
-              <div>${badge(status, badgeVariant)}</div>
+                <div class="repro-cycle-stat-item">
+                  <div class="k">Cycle Status</div>
+                  <div class="v">${badge(statusLabel, statusVariant)}</div>
+                </div>
 
-              <hr class="my-3"/>
-
-              <div class="small text-muted">AI Record ID</div>
-              <div class="fw-semibold text-break">${esc(recordId)}</div>
+                <div class="repro-cycle-stat-item">
+                  <div class="k">AI Record ID</div>
+                  <div class="v text-break">${esc(displayTextOrDash(recordId))}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-12 col-lg-6">
-          <div class="card repro-subcard h-100 shadow-sm border-0">
+        <div class="col-12 col-xl-7">
+          <div class="card repro-subcard shadow-sm border-0 repro-cycle-info-card h-100">
             <div class="card-body">
-              <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+              <div class="fw-bold mb-3 d-flex align-items-center gap-2">
                 <span class="repro-pill"><i class="bi bi-clipboard2-check"></i></span>
                 <span>Service Details</span>
               </div>
 
-              <div class="small text-muted">Boar (Sire Tag / Code)</div>
-              <div class="fw-semibold text-break">${esc(boarId)}</div>
+              <div class="row g-2">
+                <div class="col-12 col-md-6">
+                  <div class="repro-cycle-stat-item h-100">
+                    <div class="k">Boar (Sire Tag / Code)</div>
+                    <div class="v text-break">${esc(displayTextOrDash(boarId))}</div>
+                  </div>
+                </div>
 
-              <div class="small text-muted mt-2">Pregnancy Confirmed</div>
-              <div class="fw-semibold">${esc(yesNo(preg))}</div>
+                <div class="col-12 col-md-6">
+                  <div class="repro-cycle-stat-item h-100">
+                    <div class="k">Pregnancy Confirmed Date</div>
+                    <div class="v">${esc(displayDateOrDash(pregnancyConfirmedDate))}</div>
+                  </div>
+                </div>
 
-              <div class="small text-muted mt-2">Expected Farrowing</div>
-              <div class="fw-semibold">${esc(fmtDate(expected))}</div>
+                <div class="col-12 col-md-6">
+                  <div class="repro-cycle-stat-item h-100">
+                    <div class="k">Expected Farrowing</div>
+                    <div class="v">${esc(displayDateOrDash(expectedFarrowing))}</div>
+                  </div>
+                </div>
 
-              ${
-                tech
-                  ? `
-                <div class="small text-muted mt-2">Technician</div>
-                <div class="fw-semibold">${esc(tech)}</div>
-              `
-                  : ""
-              }
+                <div class="col-12 col-md-6">
+                  <div class="repro-cycle-stat-item h-100">
+                    <div class="k">Actual Farrowing</div>
+                    <div class="v">${esc(displayDateOrDash(actualFarrowing))}</div>
+                  </div>
+                </div>
 
-              ${
-                semenSrc
-                  ? `
-                <div class="small text-muted mt-2">Batch / Source</div>
-                <div class="fw-semibold">${esc(semenSrc)}</div>
-              `
-                  : ""
-              }
+                <div class="col-12 col-md-6">
+                  <div class="repro-cycle-stat-item h-100">
+                    <div class="k">Weaning Date</div>
+                    <div class="v">${esc(displayDateOrDash(weaningDate))}</div>
+                  </div>
+                </div>
 
-              ${
-                notes
-                  ? `
-                <hr class="my-3"/>
-                <div class="small text-muted">Notes</div>
-                <div class="small">${esc(notes)}</div>
-              `
-                  : ""
-              }
+                ${
+                  tech
+                    ? `
+                      <div class="col-12 col-md-6">
+                        <div class="repro-cycle-stat-item h-100">
+                          <div class="k">Technician</div>
+                          <div class="v">${esc(displayTextOrDash(tech))}</div>
+                        </div>
+                      </div>
+                    `
+                    : ""
+                }
+
+                ${
+                  semenSrc
+                    ? `
+                      <div class="col-12 col-md-6">
+                        <div class="repro-cycle-stat-item h-100">
+                          <div class="k">Batch / Source</div>
+                          <div class="v">${esc(displayTextOrDash(semenSrc))}</div>
+                        </div>
+                      </div>
+                    `
+                    : ""
+                }
+
+                ${
+                  notes
+                    ? `
+                      <div class="col-12">
+                        <div class="repro-cycle-note">
+                          <div class="fw-semibold mb-1 d-flex align-items-center gap-2">
+                            <i class="bi bi-chat-left-text"></i>
+                            <span>Notes</span>
+                          </div>
+                          <div class="small">${esc(notes)}</div>
+                        </div>
+                      </div>
+                    `
+                    : ""
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -1383,13 +2557,41 @@ export function createReproViews({ repo, state, ui }) {
         const stage = p?.age_stage || p?.current_status || p?.current_stage || "N/A";
         const hs = p?.health_status || "N/A";
         const isDead = String(hs).toLowerCase().includes("deceased") || String(hs).toLowerCase().includes("dead");
+
         return `
-          <div class="list-group-item d-flex align-items-center justify-content-between gap-2">
-            <div class="min-w-0">
-              <div class="fw-semibold text-truncate">${esc(tag)}</div>
-              <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
+          <div class="card repro-subcard shadow-sm border-0 repro-perf-piglet-card">
+            <div class="card-body">
+              <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                <div class="min-w-0">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-pie-chart"></i></span>
+                    <div class="min-w-0">
+                      <div class="fw-bold text-truncate">${esc(tag)}</div>
+                      <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  ${isDead ? badge("Deceased", "danger") : badge("Alive", "success")}
+                  <span class="badge bg-light text-dark border">
+                    <i class="bi bi-heart-pulse me-1"></i>${esc(hs)}
+                  </span>
+                </div>
+              </div>
+
+              <div class="repro-perf-monthly-wrap mt-3">
+                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                  <div class="fw-bold d-flex align-items-center gap-2">
+                    <span class="repro-pill"><i class="bi bi-calendar3"></i></span>
+                    <span>Monthly Growth Update</span>
+                  </div>
+                  <div class="small text-muted">Based on recorded morphology history</div>
+                </div>
+
+                ${renderPigletMonthlyGrowthCards(tag)}
+              </div>
             </div>
-            <div>${isDead ? badge("Deceased", "danger") : badge("Alive", "success")}</div>
           </div>
         `;
       })
@@ -1399,7 +2601,7 @@ export function createReproViews({ repo, state, ui }) {
       <div class="row g-3">
         <div class="col-12">
           <div class="row g-2">
-            <div class="col-6 col-md-4">
+            <div class="col-6 col-md-3">
               <div class="card repro-stat h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Alive Male</div>
@@ -1407,7 +2609,7 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               </div>
             </div>
-            <div class="col-6 col-md-4">
+            <div class="col-6 col-md-3">
               <div class="card repro-stat h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Alive Female</div>
@@ -1415,7 +2617,7 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               </div>
             </div>
-            <div class="col-6 col-md-4">
+            <div class="col-6 col-md-3">
               <div class="card repro-stat-danger h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Deceased</div>
@@ -1423,7 +2625,7 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               </div>
             </div>
-            <div class="col-6 d-md-none">
+            <div class="col-6 col-md-3">
               <div class="card repro-stat h-100 shadow-sm border-0">
                 <div class="card-body">
                   <div class="small text-muted">Total Piglets</div>
@@ -1438,10 +2640,14 @@ export function createReproViews({ repo, state, ui }) {
           <div class="card repro-subcard shadow-sm border-0">
             <div class="card-body">
               <div class="fw-bold mb-2 d-flex align-items-center gap-2">
-                <span class="repro-pill"><i class="bi bi-list-ul"></i></span>
-                <span>Piglets</span>
+                <span class="repro-pill"><i class="bi bi-bar-chart-steps"></i></span>
+                <span>Breeding Performance by Piglet</span>
               </div>
-              <div class="list-group list-group-flush repro-list">
+              <div class="text-muted small mb-3">
+                Review life status and monthly growth updates for each piglet under this sow.
+              </div>
+
+              <div class="vstack gap-3">
                 ${rows || `<div class="text-muted small">No piglets found for this sow.</div>`}
               </div>
             </div>
@@ -1498,40 +2704,96 @@ export function createReproViews({ repo, state, ui }) {
       `;
     }
 
-    return `
-      <div class="card repro-subcard shadow-sm border-0">
-        <div class="card-body d-flex flex-column gap-2">
+    if (ctx === "growth") {
+      return `
+        <div class="card repro-subcard shadow-sm border-0 repro-growth-piglet-card">
+          <div class="card-body">
+            <div class="repro-growth-piglet-row">
+              <div class="repro-growth-piglet-main">
+                <div class="d-flex align-items-start gap-3">
+                  <span class="repro-pill repro-growth-piglet-ic">
+                    <i class="bi bi-tag"></i>
+                  </span>
 
-          <div class="d-flex align-items-start justify-content-between gap-2">
-            <div class="min-w-0">
-              <div class="d-flex align-items-center gap-2">
-                <span class="repro-pill"><i class="bi bi-tag"></i></span>
-                <div class="min-w-0">
-                  <div class="fw-bold text-truncate">${esc(tag)}</div>
-                  <div class="small text-muted text-truncate">${esc(sex)} • ${esc(stage)}</div>
+                  <div class="min-w-0 flex-grow-1">
+                    <div class="fw-bold repro-growth-piglet-title text-break">${esc(tag)}</div>
+                    <div class="small text-muted mt-1">${esc(sex)} • ${esc(stage)}</div>
+
+                    <div class="repro-growth-piglet-badges mt-3">
+                      ${phaseChip}
+                      ${lifeBadge}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="repro-growth-piglet-actions">
+                <button
+                  type="button"
+                  class="btn btn-outline-success btn-sm repro-growth-action-btn"
+                  data-act="openPigletMonthlyUpdates"
+                  data-piglet="${esc(tag)}"
+                >
+                  <i class="bi bi-calendar3 me-1"></i> Monthly Monitoring Update
+                </button>
+
+                <button
+                  class="btn btn-success btn-sm repro-growth-action-btn"
+                  data-act="${btnAct}"
+                  data-piglet="${esc(tag)}"
+                >
+                  Open <i class="bi bi-chevron-right ms-1"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="card repro-subcard shadow-sm border-0 repro-selection-piglet-card repro-growth-like-card">
+        <div class="card-body">
+          <div class="repro-growth-piglet-row">
+            <div class="repro-growth-piglet-main">
+              <div class="d-flex align-items-start gap-3">
+                <span class="repro-pill repro-growth-piglet-ic">
+                  <i class="bi bi-tag"></i>
+                </span>
+
+                <div class="min-w-0 flex-grow-1">
+                  <div class="fw-bold repro-growth-piglet-title text-break">${esc(tag)}</div>
+                  <div class="small text-muted mt-1">${esc(sex)} • ${esc(stage)}</div>
+
+                  <div class="repro-growth-piglet-badges mt-3">
+                    ${statusChip}
+                    ${lifeBadge}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="text-end d-flex flex-column align-items-end gap-2">
-              ${statusChip}
-              ${phaseChip}
-              ${lifeBadge}
+            <div class="repro-growth-piglet-actions">
+              <button
+                class="btn btn-success btn-sm repro-growth-action-btn"
+                data-act="${btnAct}"
+                data-piglet="${esc(tag)}"
+              >
+                Open <i class="bi bi-chevron-right ms-1"></i>
+              </button>
             </div>
           </div>
 
-          ${suggestionHtml}
-
-          <div class="d-flex justify-content-end pt-1">
-            <button class="btn btn-success btn-sm" data-act="${btnAct}" data-piglet="${esc(tag)}">
-              Open <i class="bi bi-chevron-right ms-1"></i>
-            </button>
-          </div>
-
+          ${
+            suggestionHtml
+              ? `<div class="repro-selection-suggestion-wrap mt-3">${suggestionHtml}</div>`
+              : ""
+          }
         </div>
       </div>
     `;
   }
+
 
   function renderPagerHtml(which, meta) {
     return `
@@ -1612,21 +2874,22 @@ export function createReproViews({ repo, state, ui }) {
     const listHtml = meta.items.map((p) => pigletCardHtml(p, "growth", maps)).join("");
 
     return `
-      <div class="card repro-subcard shadow-sm border-0">
+      <div class="card repro-subcard shadow-sm border-0 repro-growth-shell">
         <div class="card-body">
           ${
             state.growthView === "detail" && state.selectedPigletTagForGrowth
               ? `
-                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                <div class="repro-growth-head">
                   <div class="min-w-0">
                     <div class="fw-bold text-truncate d-flex align-items-center gap-2">
                       <span class="repro-pill"><i class="bi bi-activity"></i></span>
-                      <span>Weight Trend</span>
+                      <span>Growth Detail</span>
                     </div>
-                    <div class="small text-muted text-truncate">Auto-updated based on recorded morphology entries</div>
+                    <div class="small text-muted">Weight trend, monitoring summary, and deformity records</div>
                   </div>
-                  <button type="button" class="btn btn-outline-success btn-sm" data-act="growthBack">
-                    <i class="bi bi-arrow-left me-1"></i> Back
+
+                  <button type="button" class="btn btn-outline-success btn-sm repro-growth-backbtn" data-act="growthBack">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Piglets
                   </button>
                 </div>
 
@@ -1635,31 +2898,40 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               `
               : `
-                <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                <div class="repro-growth-head">
                   <div class="min-w-0">
                     <div class="fw-bold mb-1 d-flex align-items-center gap-2">
                       <span class="repro-pill"><i class="bi bi-graph-up-arrow"></i></span>
                       <span>Growth Monitoring</span>
                     </div>
-                    <div class="text-muted small">Filter piglets, then open one to view chart and deformities.</div>
-                  </div>
-
-                  <div class="w-100 w-sm-auto text-start text-sm-end">
-                    <div class="small text-muted mb-1">Sex Filter</div>
-                    ${renderSexPills(state.growthSexFilter, "growthSexFilter")}
+                    <div class="text-muted small">
+                      Search piglets, filter by sex, then open one record to review growth details.
+                    </div>
                   </div>
                 </div>
 
-                <div class="mt-3">
-                  <input
-                    class="form-control form-control-sm"
-                    id="growthFilterInput"
-                    placeholder="Filter piglets by tag or stage..."
-                    value="${esc(state.pigletGrowthFilter)}"
-                  />
+                <div class="repro-growth-filter-card mt-3">
+                  <div class="repro-growth-filter-grid">
+                    <div class="repro-growth-filter-main">
+                      <label class="form-label small text-muted mb-1" for="growthFilterInput">Search Piglet</label>
+                      <input
+                        class="form-control form-control-sm"
+                        id="growthFilterInput"
+                        placeholder="Filter piglets by tag or stage..."
+                        value="${esc(state.pigletGrowthFilter)}"
+                      />
+                    </div>
+
+                    <div class="repro-growth-filter-side">
+                      <div class="small text-muted mb-2">Sex Filter</div>
+                      <div class="repro-growth-sex-pills">
+                        ${renderSexPills(state.growthSexFilter, "growthSexFilter")}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="vstack gap-3 mt-3" id="growthPigletCards">
+                <div class="repro-growth-list mt-3" id="growthPigletCards">
                   ${listHtml || `<div class="text-muted small">No piglets match.</div>`}
                 </div>
 
@@ -1678,47 +2950,47 @@ export function createReproViews({ repo, state, ui }) {
     const sum = computeSelectionSummaryForPigletsFromList(list);
 
     return `
-      <div class="row g-2 mt-2">
-        <div class="col-6 col-md-3">
-          <div class="card repro-stat h-100 shadow-sm border-0">
+      <div class="row g-2">
+        <div class="col-6 col-lg-3">
+          <div class="card repro-stat h-100 shadow-sm border-0 repro-selection-stat-card">
             <div class="card-body">
               <div class="small text-muted d-flex align-items-center gap-2">
                 <i class="bi bi-collection"></i><span>Total</span>
               </div>
-              <div class="h4 mb-0" id="selectionStatTotal">${sum.total}</div>
+              <div class="h4 mb-0">${sum.total}</div>
             </div>
           </div>
         </div>
 
-        <div class="col-6 col-md-3">
-          <div class="card repro-stat h-100 shadow-sm border-0">
+        <div class="col-6 col-lg-3">
+          <div class="card repro-stat h-100 shadow-sm border-0 repro-selection-stat-card">
             <div class="card-body">
               <div class="small text-muted d-flex align-items-center gap-2">
                 <i class="bi bi-check-circle"></i><span>Retain</span>
               </div>
-              <div class="h4 mb-0" id="selectionStatRetain">${sum.retain}</div>
+              <div class="h4 mb-0">${sum.retain}</div>
             </div>
           </div>
         </div>
 
-        <div class="col-6 col-md-3">
-          <div class="card repro-stat-danger h-100 shadow-sm border-0">
+        <div class="col-6 col-lg-3">
+          <div class="card repro-stat-danger h-100 shadow-sm border-0 repro-selection-stat-card">
             <div class="card-body">
               <div class="small text-muted d-flex align-items-center gap-2">
                 <i class="bi bi-tag"></i><span>For Sale</span>
               </div>
-              <div class="h4 mb-0" id="selectionStatSell">${sum.sell}</div>
+              <div class="h4 mb-0">${sum.sell}</div>
             </div>
           </div>
         </div>
 
-        <div class="col-6 col-md-3">
-          <div class="card repro-stat h-100 shadow-sm border-0">
+        <div class="col-6 col-lg-3">
+          <div class="card repro-stat h-100 shadow-sm border-0 repro-selection-stat-card">
             <div class="card-body">
               <div class="small text-muted d-flex align-items-center gap-2">
                 <i class="bi bi-hourglass-split"></i><span>Pending</span>
               </div>
-              <div class="h4 mb-0" id="selectionStatPending">${sum.pending || 0}</div>
+              <div class="h4 mb-0">${sum.pending || 0}</div>
             </div>
           </div>
         </div>
@@ -1738,21 +3010,22 @@ export function createReproViews({ repo, state, ui }) {
     const listHtml = meta.items.map((p) => pigletCardHtml(p, "selection", maps)).join("");
 
     return `
-      <div class="card repro-subcard shadow-sm border-0">
+      <div class="card repro-subcard shadow-sm border-0 repro-selection-shell">
         <div class="card-body">
           ${
             state.selectionView === "detail" && state.selectedPigletTagForSelection
               ? `
-                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                <div class="repro-selection-head">
                   <div class="min-w-0">
                     <div class="fw-bold text-truncate d-flex align-items-center gap-2">
                       <span class="repro-pill"><i class="bi bi-person-check"></i></span>
-                      <span>Selection Details</span>
+                      <span>Selection Detail</span>
                     </div>
-                    <div class="small text-muted text-truncate">Status, suggestion, and actions</div>
+                    <div class="small text-muted">Status, system suggestion, and final action</div>
                   </div>
-                  <button type="button" class="btn btn-outline-success btn-sm" data-act="selectionBack">
-                    <i class="bi bi-arrow-left me-1"></i> Back
+
+                  <button type="button" class="btn btn-outline-success btn-sm repro-selection-backbtn" data-act="selectionBack">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Piglets
                   </button>
                 </div>
 
@@ -1761,29 +3034,41 @@ export function createReproViews({ repo, state, ui }) {
                 </div>
               `
               : `
-                <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                <div class="repro-selection-head">
                   <div class="min-w-0">
                     <div class="fw-bold mb-1 d-flex align-items-center gap-2">
                       <span class="repro-pill"><i class="bi bi-check2-circle"></i></span>
                       <span>Selection Process</span>
                     </div>
-                    <div class="text-muted small">Filter piglets, then open one to view selection status and actions.</div>
-                  </div>
-
-                  <div class="w-100 w-sm-auto text-start text-sm-end">
-                    <div class="small text-muted mb-1">Sex Filter</div>
-                    ${renderSexPills(state.selectionSexFilter, "selectionSexFilter")}
+                    <div class="text-muted small">
+                      Review piglets, filter by sex and decision, then open one record to finalize the action.
+                    </div>
                   </div>
                 </div>
 
-                ${renderSelectionSummaryCards(piglets)}
-
-                <div class="mt-3">
-                  <div class="small text-muted mb-1">Decision Filter</div>
-                  ${renderDecisionTabs(state.selectionDecisionFilter, "selDecisionTab")}
+                <div class="repro-selection-summary-grid mt-3">
+                  ${renderSelectionSummaryCards(piglets)}
                 </div>
 
-                <div class="vstack gap-3 mt-3" id="selectionPigletCards">
+                <div class="repro-selection-filter-card mt-3">
+                  <div class="repro-selection-filter-grid">
+                    <div class="repro-selection-filter-main">
+                      <div class="small text-muted mb-2">Decision Filter</div>
+                      <div class="repro-selection-decision-pills">
+                        ${renderDecisionTabs(state.selectionDecisionFilter, "selDecisionTab")}
+                      </div>
+                    </div>
+
+                    <div class="repro-selection-filter-side">
+                      <div class="small text-muted mb-2">Sex Filter</div>
+                      <div class="repro-selection-sex-pills">
+                        ${renderSexPills(state.selectionSexFilter, "selectionSexFilter")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="repro-selection-list mt-3" id="selectionPigletCards">
                   ${listHtml || `<div class="text-muted small">No piglets match.</div>`}
                 </div>
 
@@ -1849,14 +3134,9 @@ export function createReproViews({ repo, state, ui }) {
     const hsLower = String(fallbackObj?.health_status || "").toLowerCase();
     const isDeceased = hsLower.includes("deceased") || hsLower.includes("dead");
 
-    const stageLower = String(stage || "").toLowerCase();
-    const isEligible =
-      stageLower.includes("weaned") ||
-      stageLower.includes("weaner") ||
-      stageLower.includes("3 months") ||
-      stageLower.includes("final selection") ||
-      stageLower.includes("final");
-
+    const monitoringMeta = getMonitoringMeta(pigletTag);
+    const isEligible = !!monitoringMeta.isEligible;
+    
     const canActBase = isObjectId(actionSwineId);
     const canAct = canActBase && isEligible && !isDeceased;
 
@@ -1893,7 +3173,7 @@ export function createReproViews({ repo, state, ui }) {
         <div class="px-3 py-2 rounded-3 border bg-warning-subtle border-warning-subtle text-dark mb-3">
           <div class="small fw-semibold">
             <i class="bi bi-info-circle me-1"></i>
-            Final selection actions are only allowed after weaning / final selection stage.
+            Final selection actions unlock once the monitoring countdown is complete.
           </div>
         </div>
       `
@@ -1977,8 +3257,7 @@ export function createReproViews({ repo, state, ui }) {
           canActBase && !isEligible
             ? `
             <div class="text-warning small mt-1">
-              Note: This piglet is not eligible yet (stage must be weaned / final selection).
-            </div>
+              Note: This piglet is not eligible yet because the monitoring countdown is still active.
           `
             : ""
         }
@@ -1987,9 +3266,7 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   /* =========================================================
-     MODULE: Piglet Growth Detail Renderer
-     PURPOSE: Render growth detail view with monitoring summary,
-              trend chart, and deformity information.
+    MODULE: Piglet Growth Detail Renderer
   ========================================================= */
   function renderPigletGrowthDetail(pigletTag) {
     const mount = document.getElementById("growthDetailMount");
@@ -2009,54 +3286,88 @@ export function createReproViews({ repo, state, ui }) {
     const delta = first && last ? (last.y - first.y).toFixed(1) : "0.0";
 
     mount.innerHTML = `
-      <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-        <div class="min-w-0">
-          <div class="fw-bold text-truncate d-flex align-items-center gap-2">
-            <span class="repro-pill"><i class="bi bi-tag"></i></span>
-            <span>${esc(pigletTag)}</span>
+      <div class="repro-growth-detail-shell">
+        <div class="repro-growth-detail-top">
+          <div class="repro-growth-detail-main">
+            <div class="repro-growth-detail-titlewrap">
+              <span class="repro-pill repro-growth-detail-icon">
+                <i class="bi bi-tag"></i>
+              </span>
+
+              <div class="min-w-0">
+                <div class="fw-bold repro-growth-detail-piglet text-break">${esc(pigletTag)}</div>
+                <div class="repro-growth-detail-meta-row">
+                  <div class="repro-growth-entry-chip">
+                    <span class="repro-growth-entry-label">Entries</span>
+                    <span class="repro-growth-entry-value">${esc(points.length)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="small text-muted">Entries: <b>${points.length}</b></div>
+
+          ${
+            first && last
+              ? `
+                <div class="repro-growth-detail-summary">
+                  <div class="repro-growth-detail-range">
+                    ${esc(fmtShortDate(first.x))} → ${esc(fmtShortDate(last.x))}
+                  </div>
+                  <div class="repro-growth-delta-chip">
+                    <i class="bi bi-arrow-up-right"></i>
+                    <span>Δ ${esc(delta)} kg</span>
+                  </div>
+                </div>
+              `
+              : `
+                <div class="repro-growth-detail-summary">
+                  <div class="repro-growth-detail-range text-muted">No weight summary</div>
+                </div>
+              `
+          }
         </div>
-        ${
-          first && last
-            ? `<div class="text-end">
-                 <div class="small text-muted">${esc(fmtShortDate(first.x))} → ${esc(fmtShortDate(last.x))}</div>
-                 <div class="badge bg-success-subtle text-success border">
-                   <i class="bi bi-arrow-up-right me-1"></i>Δ ${esc(delta)} kg
-                 </div>
-               </div>`
-            : `<div class="small text-muted">No weight summary.</div>`
-        }
+
+        <div class="mt-3">
+          ${monitoringSummaryCardHtml(monitoringMeta)}
+        </div>
+
+        <div class="repro-growth-chart-card mt-3">
+          <div class="repro-growth-chart-head">
+            <div class="fw-bold d-flex align-items-center gap-2">
+              <span class="repro-pill"><i class="bi bi-graph-up-arrow"></i></span>
+              <span>Weight Trend</span>
+            </div>
+            <div class="small text-muted">Recorded growth points over time</div>
+          </div>
+
+          <div class="repro-growth-chart-wrap">
+            <canvas id="growthChartCanvas" class="repro-growth-chart-canvas" height="280"></canvas>
+          </div>
+        </div>
+
+        <hr class="my-4"/>
+
+        <div class="fw-bold mb-2 d-flex align-items-center gap-2">
+          <span class="repro-pill"><i class="bi bi-exclamation-triangle"></i></span>
+          <span>Deformities</span>
+        </div>
+
+        <div class="repro-growth-deformity-wrap">
+          ${
+            deformities.length
+              ? deformities
+                  .map(
+                    (d) => `
+              <div class="repro-alert-item">
+                <div class="fw-semibold">${esc(d.swine_tag)}</div>
+                <div class="small text-muted">${esc(d.deformity_types || "N/A")}</div>
+              </div>`
+                  )
+                  .join("")
+              : `<div class="text-success small"><i class="bi bi-check-circle me-1"></i>No deformities found.</div>`
+          }
+        </div>
       </div>
-
-      <div class="mt-3">
-        ${monitoringSummaryCardHtml(monitoringMeta)}
-      </div>
-
-      <div class="mt-3">
-        <canvas id="growthChartCanvas" style="width:100%; height:240px;" height="240"></canvas>
-      </div>
-
-      <hr class="my-3"/>
-
-      <div class="fw-bold mb-2 d-flex align-items-center gap-2">
-        <span class="repro-pill"><i class="bi bi-exclamation-triangle"></i></span>
-        <span>Deformities</span>
-      </div>
-
-      ${
-        deformities.length
-          ? deformities
-              .map(
-                (d) => `
-            <div class="repro-alert-item">
-              <div class="fw-semibold">${esc(d.swine_tag)}</div>
-              <div class="small text-muted">${esc(d.deformity_types || "N/A")}</div>
-            </div>`
-              )
-              .join("")
-          : `<div class="text-success small"><i class="bi bi-check-circle me-1"></i>No deformities found.</div>`
-      }
     `;
 
     ui.drawAreaLineChart("growthChartCanvas", points);
@@ -2105,59 +3416,84 @@ export function createReproViews({ repo, state, ui }) {
     const tabBtnClass = (t) => `nav-link${isActive(t) ? " active" : ""}`;
     const tabPaneClass = (t) => `tab-pane fade${isActive(t) ? " show active" : ""}`;
 
+    const cycleDate = cycle?.date ? fmtDate(cycle.date) : "N/A";
+    const cycleBoar = cycle?.boarCode || "N/A";
+    const cycleStatus = cycle?.status || "Recorded";
+
+    const statusPill =
+      String(cycleStatus).toLowerCase().includes("preg")
+        ? `<span class="badge bg-info text-dark"><i class="bi bi-heart-fill me-1"></i>Pregnant</span>`
+        : String(cycleStatus).toLowerCase().includes("success")
+        ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Success</span>`
+        : String(cycleStatus).toLowerCase().includes("fail")
+        ? `<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Failed</span>`
+        : `<span class="badge bg-light text-dark border"><i class="bi bi-info-circle me-1"></i>${esc(cycleStatus)}</span>`;
+
     if (needsFull) {
       mount.innerHTML = `
-        <div class="card repro-subcard shadow-sm border-0">
+        <div class="card repro-subcard shadow-sm border-0 repro-cycle-shell">
           <div class="card-body">
-            <div class="fw-bold d-flex align-items-center gap-2">
-              <span class="repro-pill"><i class="bi bi-folder2-open"></i></span>
-              <span>Cycle • ${esc(fmtDate(cycle.date))}</span>
-            </div>
-            <div class="small text-muted">
-              Boar: <b>${esc(cycle.boarCode || "N/A")}</b> • ${badge(cycle.status || "Recorded")}
+            <div class="repro-cycle-topbar">
+              <div class="repro-cycle-topbar-main">
+                <div class="d-flex align-items-start gap-3 min-w-0">
+                  <span class="repro-sow-avatar repro-cycle-avatar">
+                    <i class="bi bi-folder2-open"></i>
+                  </span>
+
+                  <div class="min-w-0 flex-grow-1">
+                    <div class="fw-bold repro-cycle-title text-truncate">
+                      Cycle • ${esc(cycleDate)}
+                    </div>
+
+                    <div class="repro-cycle-meta mt-1">
+                      <span class="repro-cycle-meta-chip">
+                        <i class="bi bi-upc-scan"></i>
+                        <span>Boar: <b>${esc(cycleBoar)}</b></span>
+                      </span>
+                      <span>${statusPill}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <ul class="nav nav-tabs mt-3 repro-tabs" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button class="${tabBtnClass("#cycleAI")}" data-bs-toggle="tab" data-bs-target="#cycleAI" type="button" role="tab">
-                  <i class="bi bi-journal-text me-1"></i>
-                  <span class="d-none d-sm-inline">Artificial Insemination Record</span>
-                  <span class="d-inline d-sm-none">AI</span>
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="${tabBtnClass("#cyclePerf")}" data-bs-toggle="tab" data-bs-target="#cyclePerf" type="button" role="tab">
-                  <i class="bi bi-bar-chart-line me-1"></i>
-                  <span class="d-none d-sm-inline">Breeding Performance</span>
-                  <span class="d-inline d-sm-none">Perf</span>
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="${tabBtnClass("#cycleGrowth")}" data-bs-toggle="tab" data-bs-target="#cycleGrowth" type="button" role="tab">
-                  <i class="bi bi-graph-up-arrow me-1"></i>
-                  <span class="d-none d-sm-inline">Growth Monitoring</span>
-                  <span class="d-inline d-sm-none">Growth</span>
-                </button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="${tabBtnClass("#cycleSelect")}" data-bs-toggle="tab" data-bs-target="#cycleSelect" type="button" role="tab">
-                  <i class="bi bi-check2-circle me-1"></i>
-                  <span class="d-none d-sm-inline">Selection Process</span>
-                  <span class="d-inline d-sm-none">Select</span>
-                </button>
-              </li>
-            </ul>
+            <div class="repro-cycle-tabs-wrap mt-3">
+              <ul class="nav nav-tabs repro-tabs repro-cycle-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="${tabBtnClass("#cycleAI")}" data-bs-toggle="tab" data-bs-target="#cycleAI" type="button" role="tab">
+                    <i class="bi bi-journal-text"></i>
+                    <span class="d-none d-sm-inline">Artificial Insemination Record</span>
+                    <span class="d-inline d-sm-none">AI</span>
+                  </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                  <button class="${tabBtnClass("#cycleGrowth")}" data-bs-toggle="tab" data-bs-target="#cycleGrowth" type="button" role="tab">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span class="d-none d-sm-inline">Growth Monitoring</span>
+                    <span class="d-inline d-sm-none">Growth</span>
+                  </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                  <button class="${tabBtnClass("#cycleSelect")}" data-bs-toggle="tab" data-bs-target="#cycleSelect" type="button" role="tab">
+                    <i class="bi bi-check2-circle"></i>
+                    <span class="d-none d-sm-inline">Selection Process</span>
+                    <span class="d-inline d-sm-none">Selection</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
 
             <div class="tab-content pt-3">
               <div class="${tabPaneClass("#cycleAI")}" id="cycleAI" role="tabpanel">
                 ${renderCycleAIRecord(sowId, cycle)}
               </div>
-              <div class="${tabPaneClass("#cyclePerf")}" id="cyclePerf" role="tabpanel">
-                ${renderCyclePerformance(sowId, piglets)}
-              </div>
+
               <div class="${tabPaneClass("#cycleGrowth")}" id="cycleGrowth" role="tabpanel">
                 ${renderCycleGrowth(sowId, piglets, maps)}
               </div>
+
               <div class="${tabPaneClass("#cycleSelect")}" id="cycleSelect" role="tabpanel">
                 ${renderCycleSelection(sowId, piglets, maps)}
               </div>
@@ -2201,6 +3537,7 @@ export function createReproViews({ repo, state, ui }) {
     const stats = repo.computeBreedingStatsForSow(sowId);
 
     const sowObj = getSowByIdOrTag(sowId) || s;
+    const piglets = repo.getPigletsForSow(sowId) || [];
 
     const hs = sowObj?.health_status || "N/A";
     const cs = sowObj?.current_status || sowObj?.current_stage || sowObj?.age_stage || stage || "N/A";
@@ -2226,6 +3563,7 @@ export function createReproViews({ repo, state, ui }) {
       csLower.includes("under_observation") || csLower.includes("observation") ? { label: "Under observation", cls: "bg-warning text-dark", icon: "bi bi-eye" } :
       csLower.includes("farrow") ? { label: "Farrowing", cls: "bg-warning text-dark", icon: "bi bi-box2-heart" } :
       csLower.includes("wean") ? { label: "Weaning", cls: "bg-warning text-dark", icon: "bi bi-arrow-down-circle" } :
+      csLower.includes("lact") ? { label: "Lactating", cls: "bg-success", icon: "bi bi-droplet-half" } :
       { label: "Open", cls: "bg-light text-dark border", icon: "bi bi-check2-circle" };
 
     const shellKey = String(sowId || "");
@@ -2236,56 +3574,63 @@ export function createReproViews({ repo, state, ui }) {
 
       mount.innerHTML = `
         <div class="repro-sow-shell">
-          <div class="card border-0 shadow-sm repro-sow-top">
+          <div class="card border-0 shadow-sm repro-sow-top repro-sow-top-modern">
             <div class="card-body">
-              <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-                <div class="d-flex align-items-start gap-3 min-w-0">
-                  <div class="repro-sow-avatar">
-                    <i class="bi bi-heart-pulse"></i>
-                  </div>
-                  <div class="min-w-0">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                      <h5 class="mb-0 text-truncate">${esc(sowId)}</h5>
-                      <span class="badge ${phase.cls}">
-                        <i class="${esc(phase.icon)} me-1"></i>${esc(phase.label)}
-                      </span>
+              <div class="repro-sow-head-grid">
+                <div class="repro-sow-main">
+                  <div class="d-flex align-items-start gap-3 min-w-0">
+                    <div class="repro-sow-avatar repro-sow-avatar-lg">
+                      <i class="bi bi-heart-pulse"></i>
                     </div>
-                    <div class="small text-muted mt-1 text-truncate">
-                      Breed: <b>${esc(breed)}</b> • DOB: <b>${esc(dob)}</b>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mt-2">
-                      <span class="badge bg-success-subtle text-success border">
-                        <i class="bi bi-people me-1"></i>Alive: <b>${alive}</b>
-                      </span>
-                      <span class="badge bg-danger-subtle text-danger border">
-                        <i class="bi bi-x-circle me-1"></i>Dead: <b>${dead}</b>
-                      </span>
-                      <span class="badge bg-light text-dark border">
-                        <i class="bi bi-collection me-1"></i>Total: <b>${total}</b>
-                      </span>
-                    </div>
-                  </div>
-                </div>
 
-                <div class="repro-sow-meta ms-auto">
-                  <div class="repro-sow-meta-item">
-                    <div class="repro-sow-meta-k">Status</div>
-                    <div class="repro-sow-meta-v text-truncate">${esc(cs)}</div>
-                  </div>
-                  <div class="repro-sow-meta-item">
-                    <div class="repro-sow-meta-k">Health</div>
-                    <div class="repro-sow-meta-v text-truncate">${esc(hs)}</div>
-                  </div>
-                  <div class="repro-sow-meta-item">
-                    <div class="repro-sow-meta-k">Sex</div>
-                    <div class="repro-sow-meta-v">${esc(sex)}</div>
+                    <div class="min-w-0 flex-grow-1">
+                      <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <h5 class="mb-0 text-truncate repro-sow-name">${esc(sowId)}</h5>
+                        <span class="badge ${phase.cls}">
+                          <i class="${esc(phase.icon)} me-1"></i>${esc(phase.label)}
+                        </span>
+                      </div>
+
+                      <div class="small text-muted mt-1 text-wrap">
+                        Breed: <b>${esc(breed)}</b> • DOB: <b>${esc(dob)}</b>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
+              <div class="repro-sow-top-stats mt-3">
+                <div class="repro-sow-top-stat">
+                  <div class="repro-sow-top-stat-k">Status</div>
+                  <div class="repro-sow-top-stat-v">${esc(cs)}</div>
+                </div>
+
+                <div class="repro-sow-top-stat">
+                  <div class="repro-sow-top-stat-k">Health</div>
+                  <div class="repro-sow-top-stat-v">${esc(hs)}</div>
+                </div>
+
+                <div class="repro-sow-top-stat">
+                  <div class="repro-sow-top-stat-k">Sex</div>
+                  <div class="repro-sow-top-stat-v">${esc(sex)}</div>
+                </div>
+              </div>
+
+              <div class="repro-sow-inline-stats mt-3">
+                <span class="badge bg-success-subtle text-success border">
+                  <i class="bi bi-check-circle me-1"></i>Alive: <b>${alive}</b>
+                </span>
+                <span class="badge bg-danger-subtle text-danger border">
+                  <i class="bi bi-x-circle me-1"></i>Dead: <b>${dead}</b>
+                </span>
+                <span class="badge bg-light text-dark border">
+                  <i class="bi bi-collection me-1"></i>Total Piglets: <b>${total}</b>
+                </span>
+              </div>
+
               <hr class="my-3"/>
 
-              <ul class="nav nav-pills repro-pills gap-2" role="tablist">
+              <ul class="nav nav-pills repro-pills gap-2 flex-wrap" role="tablist">
                 <li class="nav-item" role="presentation">
                   <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabOverview" type="button" role="tab">
                     <i class="bi bi-clipboard-data me-1"></i> Overview
@@ -2303,12 +3648,15 @@ export function createReproViews({ repo, state, ui }) {
           <div class="tab-content mt-3">
             <div class="tab-pane fade show active" id="tabOverview" role="tabpanel">
               <div class="row g-3">
-                <div class="col-12 col-lg-8">
-                  <div class="card border-0 shadow-sm repro-subcard">
+                <div class="col-12 col-xl-8">
+                  <div class="card border-0 shadow-sm repro-subcard repro-overview-card repro-measure-card">
                     <div class="card-body">
-                      <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-2">
+                      <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-3">
                         <div class="min-w-0">
-                          <div class="fw-bold"><i class="bi bi-rulers me-1"></i>Latest Measurements</div>
+                          <div class="fw-bold d-flex align-items-center gap-2">
+                            <span class="repro-pill"><i class="bi bi-rulers"></i></span>
+                            <span>Latest Measurements</span>
+                          </div>
                           <div class="small text-muted">
                             Last record: <b>${esc(fmtDate(latestDate))}</b>
                           </div>
@@ -2349,48 +3697,81 @@ export function createReproViews({ repo, state, ui }) {
                       </div>
 
                       <div class="small text-muted mt-3">
-                        Measurements are pulled from the latest <code>performance_records</code> entry (if available).
+                        Measurements are pulled from the latest performance record when available.
+                      </div>
+
+                      <div class="repro-measure-action-wrap mt-3">
+                        <button
+                          type="button"
+                          class="btn btn-success repro-measure-action-btn"
+                          data-act="openSowMonthlyUpdateForm"
+                          data-sow="${esc(sowId)}"
+                        >
+                          <i class="bi bi-graph-up-arrow me-1"></i> Monthly Sow Update
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="col-12 col-lg-4">
-                  <div class="card border-0 shadow-sm repro-subcard mb-3">
+                <div class="col-12 col-xl-4">
+                  <div class="card border-0 shadow-sm repro-subcard repro-overview-card">
                     <div class="card-body">
-                      <div class="fw-bold mb-2"><i class="bi bi-people me-1"></i>Piglet Summary</div>
-                      <div class="d-flex flex-wrap gap-2">
-                        <span class="badge bg-success-subtle text-success border">
-                          <i class="bi bi-check-circle me-1"></i>Alive: <b>${alive}</b>
-                        </span>
-                        <span class="badge bg-danger-subtle text-danger border">
-                          <i class="bi bi-x-circle me-1"></i>Dead: <b>${dead}</b>
-                        </span>
-                        <span class="badge bg-light text-dark border">
-                          <i class="bi bi-collection me-1"></i>Total: <b>${total}</b>
-                        </span>
+                      <div class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <span class="repro-pill"><i class="bi bi-people"></i></span>
+                        <span>Piglet Summary</span>
                       </div>
-                    </div>
-                  </div>
 
-                  <div class="card border-0 shadow-sm repro-subcard">
-                    <div class="card-body">
-                      <div class="fw-bold mb-2"><i class="bi bi-lightning-charge me-1"></i>Quick Actions</div>
-                      <div class="d-grid gap-2">
-                        <button class="btn btn-outline-success btn-sm" data-act="jumpRepro">
-                          <i class="bi bi-arrow-down-right-circle me-1"></i> View Cycles
-                        </button>
-                        <button class="btn btn-outline-success btn-sm" data-act="jumpSelection">
-                          <i class="bi bi-check2-square me-1"></i> Selection Process
-                        </button>
+                      <div class="mb-3">
+                        <label class="form-label small text-muted mb-1" for="cycleFilterSelectOverview">Cycle Filter</label>
+                        <select class="form-select form-select-sm" id="cycleFilterSelectOverview">
+                          <option value="all">All cycles</option>
+                          ${getCyclesForSowSafe(sowId).map((c, idx) => {
+                            const label = c?.date ? `Cycle ${idx + 1} • ${fmtDate(c.date)}` : `Cycle ${idx + 1}`;
+                            return `<option value="${esc(String(c.id || ""))}">${esc(label)}</option>`;
+                          }).join("")}
+                        </select>
                       </div>
-                      <div class="small text-muted mt-2">
-                        Use the Reproduction tab to open a cycle and manage piglets.
+
+                      <div class="row g-2">
+                        <div class="col-6">
+                          <div class="repro-mini-stat">
+                            <div class="small text-muted">Male Alive</div>
+                            <div class="fw-bold text-success">${stats.aliveMale || 0}</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="repro-mini-stat">
+                            <div class="small text-muted">Female Alive</div>
+                            <div class="fw-bold text-success">${stats.aliveFemale || 0}</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="repro-mini-stat">
+                            <div class="small text-muted">Male Dead</div>
+                            <div class="fw-bold text-danger">${stats.deadMale || 0}</div>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="repro-mini-stat">
+                            <div class="small text-muted">Female Dead</div>
+                            <div class="fw-bold text-danger">${stats.deadFemale || 0}</div>
+                          </div>
+                        </div>
+                        <div class="col-12">
+                          <div class="repro-mini-stat">
+                            <div class="small text-muted">Total Piglets</div>
+                            <div class="fw-bold">${total}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="small text-muted mt-3">
+                        Quick cycle-aware piglet summary for this sow.
                       </div>
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -2416,7 +3797,10 @@ export function createReproViews({ repo, state, ui }) {
     renderCyclePanel,
 
     renderSowPanel,
+    renderSowMonthlyUpdatesPanel,
+    renderSowMonthlyUpdateFormPanel,
 
+    renderPigletMonthlyUpdatesPanel,
     renderPigletGrowthDetail,
     renderPigletSelectionDetail,
     setCycleTabTarget,

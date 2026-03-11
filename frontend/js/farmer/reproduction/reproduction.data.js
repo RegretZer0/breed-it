@@ -241,9 +241,22 @@ export function createReproductionStore({ user, token, baseUrl }) {
     return toKey(s) || "";
   }
 
+  /* =========================================================
+    MODULE: Cycle Identifier Normalizer
+    PURPOSE: Prefer business-facing AI identifiers for display
+              and cycle linking before falling back to Mongo _id.
+  ========================================================= */
   function normalizeCycleId(r, sowCode, dateVal) {
-    const id = pickFirst(r, ["_id", "id", "record_id", "ai_record_id"]);
+    const id = pickFirst(r, [
+      "insemination_id",
+      "ai_record_id",
+      "record_id",
+      "id",
+      "_id",
+    ]);
+
     if (id) return toKey(id);
+
     const stamp = dateVal ? new Date(dateVal).getTime() : Date.now();
     return `${sowCode || "SOW"}-${stamp}`;
   }
@@ -318,6 +331,9 @@ export function createReproductionStore({ user, token, baseUrl }) {
       const dateVal = normalizeCycleDate(r);
       const cycle = {
         id: normalizeCycleId(r, sowCode, dateVal),
+        displayId: toKey(
+          pickFirst(r, ["insemination_id", "ai_record_id", "record_id", "id", "_id"]) || ""
+        ),
         sowCode,
         boarCode: normalizeBoarCode(r),
         date: dateVal,
@@ -423,7 +439,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
     if (data?.authError) return data;
 
     if (data?.success) {
-      const rawList = data.data || data.records || [];
+      const rawList = data.data || data.records || data.aiRecords || [];
 
       // AI rows often do NOT contain farmer_id, so match by sow tag/code too
       let list = filterMineWithFallback(rawList, {
@@ -572,8 +588,11 @@ export function createReproductionStore({ user, token, baseUrl }) {
 
   function computeBreedingStatsForSow(sowId) {
     const piglets = getPigletsForSow(sowId);
+
     let aliveMale = 0;
     let aliveFemale = 0;
+    let deadMale = 0;
+    let deadFemale = 0;
     let deceased = 0;
 
     for (const p of piglets) {
@@ -583,6 +602,8 @@ export function createReproductionStore({ user, token, baseUrl }) {
       const isDeceased = hs.includes("deceased") || hs.includes("dead");
       if (isDeceased) {
         deceased += 1;
+        if (sex === "male") deadMale += 1;
+        else if (sex === "female") deadFemale += 1;
         continue;
       }
 
@@ -590,7 +611,14 @@ export function createReproductionStore({ user, token, baseUrl }) {
       else if (sex === "female") aliveFemale += 1;
     }
 
-    return { aliveMale, aliveFemale, deceased, total: piglets.length };
+    return {
+      aliveMale,
+      aliveFemale,
+      deadMale,
+      deadFemale,
+      deceased,
+      total: piglets.length,
+    };
   }
 
   function getSelectionSummary() {

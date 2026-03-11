@@ -1,210 +1,340 @@
 /* =========================================================
-   REPRODUCTION & MONITORING — EVENT REMINDER APP THEME (V3.1)
-   PURPOSE
-   - Bootstrap-based, responsive, app-like
-   - Keeps all existing IDs intact
-   - Fixes "design not applying" by resolving conflicts with Bootstrap defaults
-   HOW THIS FIX WORKS
-   - Increases specificity by scoping key overrides under .app-root
-   - Uses !important only where Bootstrap commonly overrides (buttons, badge radius)
-   - Removes duplicate/overlapping rules (notably cycle card)
+   MODULE: ROOT TOKENS
 ========================================================= */
-
-/* =========================================================
-   TOKENS
-========================================================= */
-
 :root{
-  --repro-bg: #f3f6fb;
+  --repro-bg: #edf2f4;
+  --repro-bg-soft: #f7fafb;
   --repro-card: #ffffff;
-  --repro-border: #e8eef6;
+  --repro-card-soft: #f9fcfb;
+  --repro-border: #e4ece8;
 
-  --repro-text: #1f2937;
-  --repro-muted: #6b7280;
+  --repro-text: #1d2b2a;
+  --repro-muted: #70807d;
 
-  --repro-green: #1fb87a;
-  --repro-green-2: #11a56a;
-  --repro-green-3: #0f7a34;
+  --repro-green: #22b07d;
+  --repro-green-2: #18a56f;
+  --repro-green-3: #12895c;
 
-  --repro-accent: #f6c75a;
+  --repro-yellow: #f3ca69;
+  --repro-yellow-soft: rgba(243, 202, 105, 0.18);
 
+  --repro-radius-xxl: 32px;
   --repro-radius-xl: 26px;
   --repro-radius-lg: 22px;
   --repro-radius-md: 18px;
   --repro-radius-sm: 14px;
 
-  --repro-shadow-sm: 0 8px 22px rgba(16,24,40,.06);
-  --repro-shadow-md: 0 16px 42px rgba(16,24,40,.10);
+  --repro-shadow-xs: 0 6px 16px rgba(20, 34, 29, 0.04);
+  --repro-shadow-sm: 0 12px 28px rgba(20, 34, 29, 0.07);
+  --repro-shadow-md: 0 18px 44px rgba(20, 34, 29, 0.10);
 
-  --repro-focus: 0 0 0 .22rem rgba(31,184,122,.18);
+  --repro-focus: 0 0 0 .22rem rgba(34, 176, 125, 0.16);
 }
 
 /* =========================================================
-   PAGE SHELL
+   MODULE: PAGE SHELL
 ========================================================= */
+html,
+body{
+  overflow-x: hidden;
+}
 
-html, body { overflow-x: hidden; }
-
-.app-root{
+.app-root.repro-app-shell{
+  min-height: 100vh;
   padding-top: 74px;
   background:
-    radial-gradient(1200px 600px at 80% -10%, rgba(31,184,122,.10), transparent 60%),
-    radial-gradient(900px 520px at 10% 10%, rgba(246,199,90,.12), transparent 58%),
-    var(--repro-bg);
-  min-height: 100vh;
+    radial-gradient(900px 420px at 92% -10%, rgba(34,176,125,.10), transparent 60%),
+    radial-gradient(700px 360px at 10% 0%, rgba(243,202,105,.16), transparent 58%),
+    linear-gradient(180deg, #eef3f4 0%, #f6f9fa 100%);
   overflow-x: clip;
 }
 
-.app-root *{ box-sizing: border-box; }
-
-@media (min-width: 1200px){
-  .app-root main.container-fluid{ max-width: 1240px; }
+.app-root *{
+  box-sizing: border-box;
 }
 
 .repro-center-wrap{
   width: 100%;
-  max-width: 1240px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
-.min-w-0{ min-width: 0 !important; }
-.text-break{ word-break: break-word; }
+@media (min-width: 1400px){
+  .app-root main.container-fluid{
+    max-width: 1320px;
+  }
+}
+
+.min-w-0{
+  min-width: 0 !important;
+}
 
 /* =========================================================
-   HERO
+   MODULE: HERO
 ========================================================= */
-
 .repro-hero{
-  border-radius: var(--repro-radius-xl);
-  border: 1px solid var(--repro-border);
-  box-shadow: var(--repro-shadow-sm);
+  border-radius: var(--repro-radius-xxl);
+  background: transparent;
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,.35);
 }
 
 .repro-hero::before{
-  content:"";
-  position:absolute;
-  inset:0;
+  content: "";
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(520px 220px at 80% 0%, rgba(246,199,90,.30), transparent 55%),
-    linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 55%, #22c98a 100%);
+    radial-gradient(280px 180px at 92% 12%, rgba(255,255,255,.12), transparent 62%),
+    radial-gradient(220px 160px at 75% 0%, rgba(243,202,105,.20), transparent 64%),
+    linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 56%, #1ec287 100%);
   z-index: 0;
-  pointer-events: none;
 }
 
 .repro-hero .card-body{
   position: relative;
   z-index: 1;
-  padding: 18px;
+  padding: 1.25rem;
+}
+
+@media (min-width: 992px){
+  .repro-hero .card-body{
+    padding: 1.5rem 1.6rem;
+  }
 }
 
 .repro-hero-avatar{
-  width: 54px;
-  height: 54px;
-  border-radius: 18px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255,255,255,.18);
   color: #fff;
-  box-shadow: 0 16px 34px rgba(0,0,0,.14);
+  box-shadow: 0 16px 34px rgba(0,0,0,.12);
+  font-size: 1.5rem;
   flex: 0 0 auto;
-  font-size: 22px;
 }
 
 .repro-hero-kicker{
   color: rgba(255,255,255,.92);
   font-weight: 800;
-  letter-spacing: .01em;
-  font-size: 13px;
+  font-size: .9rem;
 }
 
 .repro-title{
-  font-weight: 900;
-  letter-spacing: .02em;
   color: #fff;
-  margin-top: 2px;
+  font-size: clamp(1.25rem, 2vw, 1.9rem);
+  font-weight: 900;
+  letter-spacing: .01em;
 }
 
 .repro-hero-sub{
-  color: rgba(255,255,255,.80);
-  font-size: 13px;
+  color: rgba(255,255,255,.84);
+  max-width: 760px;
+  line-height: 1.5;
+  font-size: .95rem;
 }
 
 .repro-hero-chip{
-  display:inline-flex;
-  align-items:center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.16);
-  border: 1px solid rgba(255,255,255,.20);
-  color: rgba(255,255,255,.92);
-  font-weight: 700;
-  font-size: 12px;
-}
-
-/* =========================================================
-   FILTER CARD
-========================================================= */
-
-.repro-filter-card{
-  border-radius: var(--repro-radius-xl);
-  border: 1px solid var(--repro-border);
-  background: var(--repro-card);
-  box-shadow: var(--repro-shadow-sm);
-}
-
-.repro-filter-card .card-body{ padding: 14px; }
-
-@media (min-width: 992px){
-  .repro-filter-card .card-body{ padding: 16px; }
-}
-
-.repro-filter-card .input-group,
-.repro-filter-card .form-select{
-  width: 100%;
-  max-width: 100%;
-}
-
-/* =========================================================
-   PANELS / CARDS
-========================================================= */
-
-.repro-panel-card{
-  border-radius: var(--repro-radius-xl);
-  box-shadow: var(--repro-shadow-sm);
-  background: var(--repro-card);
-  border: 1px solid var(--repro-border);
-}
-
-.repro-panel-card .card-body{ padding: 16px; }
-
-@media (min-width: 992px){
-  .repro-panel-card .card-body{ padding: 18px; }
-}
-
-.repro-pill{
-  width: 34px;
-  height: 34px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: .5rem;
   border-radius: 999px;
-  background: rgba(31,184,122,.12);
-  color: var(--repro-green-3);
+  padding: .55rem .9rem;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.18);
+  color: #fff;
+  font-weight: 700;
+  font-size: .82rem;
+}
+
+.repro-hero-side-card{
+  border-radius: 24px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.14);
+  padding: 1rem 1.1rem;
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(0,0,0,.08);
+}
+
+.repro-hero-side-date{
+  font-weight: 800;
+  font-size: .95rem;
+}
+
+.repro-hero-side-text{
+  margin-top: .4rem;
+  color: rgba(255,255,255,.84);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+/* =========================================================
+   MODULE: FILTER CARD
+========================================================= */
+.repro-filter-card{
+  border-radius: var(--repro-radius-xxl);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.5);
+  box-shadow: var(--repro-shadow-sm);
+}
+
+.repro-filter-card .card-body{
+  padding: 1.15rem 1rem 1rem;
+}
+
+@media (min-width: 992px){
+  .repro-filter-card .card-body{
+    padding: 1.25rem 1.25rem 1.1rem;
+  }
+}
+
+.repro-input-group .input-group-text{
+  border-radius: 16px 0 0 16px;
+  background: #fff;
+  border-color: var(--repro-border);
+  color: var(--repro-muted);
+}
+
+.repro-input-group .form-control{
+  border-radius: 0 16px 16px 0;
+}
+
+.repro-filter-row{
+  align-items: stretch;
+}
+
+.repro-filter-field{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.repro-filter-field > .form-label{
+  min-height: 20px;
+  margin-bottom: .4rem !important;
+}
+
+.repro-filter-field .input-group,
+.repro-filter-field .form-select{
   flex: 0 0 auto;
 }
 
-.repro-pill.lg{ width: 42px; height: 42px; }
-.repro-pill.is-white{ background: rgba(255,255,255,.18); color: #fff; }
+.repro-filter-field-actions{
+  justify-content: flex-end;
+}
+
+.repro-filter-actions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  align-items: center;
+  min-height: 46px;
+}
+
+.repro-filter-btn{
+  min-height: 46px;
+  min-width: 118px;
+  padding: .65rem 1rem;
+  justify-content: center;
+}
+
+@media (min-width: 1200px){
+  .repro-filter-row{
+    align-items: end;
+  }
+
+  .repro-filter-field{
+    justify-content: flex-end;
+  }
+
+  .repro-filter-field-actions .form-label{
+    visibility: hidden;
+  }
+
+  .repro-filter-field-actions .repro-filter-actions{
+    justify-content: flex-end;
+    align-items: center;
+  }
+
+  .repro-filter-field-actions .repro-filter-btn{
+    flex: 0 0 auto;
+    width: auto;
+  }
+}
+
+@media (max-width: 575.98px){
+  .repro-filter-actions{
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .repro-filter-btn{
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* =========================================================
+   MODULE: PANEL CARDS
+========================================================= */
+.repro-panel-card,
+.repro-subcard,
+.repro-filter-card{
+  border: 1px solid rgba(228,236,232,.95);
+}
+
+.repro-panel-card{
+  border-radius: var(--repro-radius-xxl);
+  background: rgba(255,255,255,.90);
+  box-shadow: var(--repro-shadow-sm);
+}
+
+.repro-panel-card .card-body{
+  padding: 1rem;
+}
+
+@media (min-width: 992px){
+  .repro-panel-card .card-body{
+    padding: 1.2rem;
+  }
+}
+
+.repro-directory-card{
+  border-radius: var(--repro-radius-xxl);
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(255,255,255,.55);
+  backdrop-filter: blur(10px);
+}
+
+.repro-directory-card .card-body{
+  padding: 1.3rem 1.25rem 1.1rem;
+}
+
+@media (max-width: 991.98px){
+  .repro-directory-card .card-body{
+    padding: 1rem;
+  }
+}
+
+.repro-subcard{
+  border-radius: var(--repro-radius-xl);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow: var(--repro-shadow-xs);
+}
 
 .repro-card{
-  border-radius: var(--repro-radius-lg);
-  background: var(--repro-card);
-  transition: transform .15s ease, box-shadow .15s ease;
-  box-shadow: var(--repro-shadow-sm);
+  width: 100%;
+  border-radius: 24px;
+  background:
+    radial-gradient(180px 100px at 100% 0%, rgba(243,202,105,.12), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow: var(--repro-shadow-xs);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
 
 .repro-card:hover{
@@ -213,122 +343,242 @@ html, body { overflow-x: hidden; }
 }
 
 .repro-card-active{
-  box-shadow: 0 18px 46px rgba(31,184,122,.18) !important;
-  outline: 2px solid rgba(31,184,122,.20);
+  box-shadow: 0 18px 40px rgba(34,176,125,.14) !important;
+  outline: 2px solid rgba(34,176,125,.18);
 }
 
-/* Sow card compact height */
 .repro-card .card-body{
-  padding: 10px 12px;
+  padding: .95rem 1rem;
+}
+
+.repro-directory-card .repro-card .card-body{
+  padding: 1rem 1.05rem;
 }
 
 @media (min-width: 992px){
-  .repro-card .card-body{
-    padding: 10px 14px;
+  .repro-directory-card .repro-card .card-body{
+    padding: 1.05rem 1.15rem;
   }
 }
 
-.repro-subcard{
-  border-radius: var(--repro-radius-lg);
-  background: #fff;
-}
-
-.repro-soft-card{
-  border: 1px solid var(--repro-border);
-  box-shadow: 0 10px 26px rgba(16,24,40,.06);
-}
-
-/* Prevent Bootstrap defaults from flattening cards inside the modal mount */
-.app-root .repro-subcard,
-.app-root .repro-panel-card,
-.app-root .repro-filter-card{
-  border-color: var(--repro-border);
+.repro-list-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .55rem .85rem;
+  border-radius: 999px;
+  background: rgba(34,176,125,.08);
+  color: var(--repro-green-3);
+  border: 1px solid rgba(34,176,125,.12);
+  font-size: .8rem;
+  font-weight: 700;
 }
 
 /* =========================================================
-   CHIPS / BADGES / STATS
+   MODULE: ICON PILLS / CHIPS
 ========================================================= */
-
-.repro-chip{
-  font-size: 11px;
-  padding: 5px 10px;
+.repro-pill{
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
-  white-space: nowrap;
-  line-height: 1.15;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  background: rgba(34,176,125,.12);
+  color: var(--repro-green-3);
+  flex: 0 0 auto;
 }
 
-.repro-chip b{ font-weight: 900; }
+.repro-pill.is-white{
+  background: rgba(255,255,255,.16);
+  color: #fff;
+}
 
-/* Conflict fix: Bootstrap may override badge radius; keep app pill style */
-.app-root .repro-card .badge,
-.app-root .repro-subcard .badge{
-  padding: .32rem .52rem;
-  border-radius: 999px !important;
+.repro-chip{
+  font-size: .78rem;
+  padding: .42rem .78rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+/* =========================================================
+   MODULE: META / STAT BOXES
+========================================================= */
+.repro-sow-meta{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .7rem;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.repro-sow-meta-item,
+.repro-sow-statbox,
+.repro-mini-stat{
+  border: 1px solid var(--repro-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  box-shadow: 0 8px 20px rgba(20,34,29,.04);
+}
+
+.repro-sow-meta-item{
+  padding: .85rem .95rem;
+}
+
+.repro-sow-meta-k,
+.repro-sow-statbox .k{
+  font-size: .76rem;
+  color: var(--repro-muted);
+  margin-bottom: .2rem;
+}
+
+.repro-sow-meta-v,
+.repro-sow-statbox .v{
+  font-size: .98rem;
   font-weight: 800;
-  line-height: 1.1;
-  max-width: 100%;
-  white-space: nowrap;
+  color: var(--repro-text);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.repro-sow-statbox{
+  padding: .8rem .9rem;
+  height: 100%;
 }
 
 .repro-mini-stat{
-  border: 1px solid var(--repro-border);
-  border-radius: 16px;
-  background: #fff;
-  padding: 10px 12px;
-  box-shadow: 0 10px 24px rgba(16,24,40,.05);
+  padding: .85rem .95rem;
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .repro-stat,
 .repro-stat-danger{
-  border-radius: var(--repro-radius-lg);
-  background: #fff;
-  box-shadow: 0 10px 26px rgba(16,24,40,.06);
+  border-radius: 22px;
+  background:
+    radial-gradient(180px 100px at 100% 0%, rgba(243,202,105,.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow: 0 10px 24px rgba(20,34,29,.05);
+  overflow: hidden;
+  position: relative;
 }
 
-.repro-stat{ border: 1px solid var(--repro-border); }
-.repro-stat-danger{ border: 1px solid rgba(220,53,69,.20); }
-
-.repro-list .list-group-item{
-  border-color: var(--repro-border);
-  padding-top: 12px;
-  padding-bottom: 12px;
+.repro-stat::before,
+.repro-stat-danger::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  pointer-events: none;
 }
 
-/* Allow pill groups to wrap */
-.repro-card .d-flex.flex-wrap{ flex-wrap: wrap !important; }
+.repro-stat{
+  border: 1px solid rgba(34,176,125,.10);
+}
+
+.repro-stat::before{
+  background: linear-gradient(90deg, rgba(34,176,125,.9), rgba(34,176,125,.15));
+}
+
+.repro-stat-danger{
+  border: 1px solid rgba(220,53,69,.18);
+}
+
+.repro-stat-danger::before{
+  background: linear-gradient(90deg, rgba(220,53,69,.9), rgba(220,53,69,.12));
+}
 
 /* =========================================================
-   TABS
+   MODULE: BUTTONS / INPUTS
 ========================================================= */
+.repro-input,
+.repro-select,
+#growthFilterInput,
+#selectionFilterInput,
+.app-root .form-control,
+.app-root .form-select{
+  border-radius: 16px;
+  border-color: var(--repro-border);
+  min-height: 46px;
+  background: #fff;
+}
 
+.repro-input:focus,
+.repro-select:focus,
+.app-root .form-control:focus,
+.app-root .form-select:focus,
+.app-root .btn:focus{
+  border-color: rgba(34,176,125,.45);
+  box-shadow: var(--repro-focus);
+}
+
+.app-root .btn.btn-success{
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%) !important;
+  border-color: transparent !important;
+  border-radius: 16px;
+  font-weight: 700;
+}
+
+.app-root .btn.btn-success:hover{
+  background: linear-gradient(135deg, var(--repro-green-2) 0%, var(--repro-green-3) 100%) !important;
+}
+
+.app-root .btn.btn-outline-success{
+  border-radius: 16px;
+  border-color: rgba(34,176,125,.55) !important;
+  color: var(--repro-green-3) !important;
+  font-weight: 700;
+}
+
+.app-root .btn.btn-outline-success:hover{
+  background: rgba(34,176,125,.08) !important;
+  color: var(--repro-green-3) !important;
+}
+
+.app-root .btn.btn-outline-danger{
+  border-radius: 16px;
+}
+
+.app-root .btn.btn-sm{
+  border-radius: 14px;
+  padding: .45rem .8rem;
+}
+
+/* =========================================================
+   MODULE: NAV TABS / PILLS
+========================================================= */
 .repro-tabs.nav-tabs{
-  gap: 8px;
+  gap: .45rem;
   border-bottom: 1px solid var(--repro-border);
   flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  padding-bottom: .2rem;
 }
 
 .repro-tabs.nav-tabs .nav-link{
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
   white-space: nowrap;
-  flex: 0 0 auto;
   border: 1px solid transparent;
   border-bottom: 3px solid transparent;
-  border-radius: 16px 16px 0 0;
-  padding: .58rem .95rem;
+  border-radius: 18px 18px 0 0;
+  padding: .7rem 1rem;
   color: var(--repro-muted);
   font-weight: 800;
   background: transparent;
-  transition: all .15s ease;
 }
 
 .repro-tabs.nav-tabs .nav-link:hover{
-  background: rgba(31,184,122,.08);
+  background: rgba(34,176,125,.07);
   color: var(--repro-text);
 }
 
@@ -337,126 +587,34 @@ html, body { overflow-x: hidden; }
   background: #fff;
   border-color: var(--repro-border);
   border-bottom-color: var(--repro-green);
-  box-shadow: 0 14px 28px rgba(31,184,122,.14);
+  box-shadow: 0 10px 20px rgba(34,176,125,.10);
 }
 
 .repro-pills .nav-link{
   border-radius: 999px !important;
-  padding: .45rem .95rem;
+  padding: .55rem .95rem;
   color: var(--repro-green-3);
-  font-weight: 900;
-  background: rgba(31,184,122,.08);
-  border: 1px solid rgba(31,184,122,.14);
+  background: rgba(34,176,125,.08);
+  border: 1px solid rgba(34,176,125,.12);
+  font-weight: 800;
 }
-
-.repro-pills .nav-link:hover{ background: rgba(31,184,122,.12); }
 
 .repro-pills .nav-link.active{
   background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%) !important;
   color: #fff !important;
-  border-color: rgba(255,255,255,.18);
-}
-
-/* =========================================================
-   ALERT ITEMS
-========================================================= */
-
-.repro-alert-item{
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(220,53,69,.18);
-  background: rgba(220,53,69,.06);
-  margin-bottom: 10px;
-}
-
-/* =========================================================
-   INPUTS / BUTTONS (CONFLICT FIX)
-   NOTE
-   - Bootstrap .btn-success is very commonly overridden depending on load order.
-   - To ensure the theme applies, scope under .app-root with higher specificity.
-========================================================= */
-
-.repro-input,
-.repro-select,
-#growthFilterInput,
-#selectionFilterInput{
-  border-radius: 14px;
-  border-color: var(--repro-border);
-  background: #fff;
-}
-
-.repro-input:focus,
-.repro-select:focus,
-#growthFilterInput:focus,
-#selectionFilterInput:focus{
-  border-color: rgba(31,184,122,.50);
-  box-shadow: var(--repro-focus);
-}
-
-/* Theme buttons inside app only (prevents conflicts elsewhere) */
-.app-root .btn.btn-success{
-  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%) !important;
   border-color: transparent !important;
 }
 
-.app-root .btn.btn-success:hover{
-  background: linear-gradient(135deg, var(--repro-green-2) 0%, var(--repro-green-3) 100%) !important;
-  border-color: transparent !important;
-}
-
-.app-root .btn.btn-outline-success{
-  border-color: rgba(31,184,122,.55) !important;
-  color: var(--repro-green-3) !important;
-}
-
-.app-root .btn.btn-outline-success:hover{
-  background: rgba(31,184,122,.10) !important;
-  border-color: rgba(31,184,122,.65) !important;
-  color: var(--repro-green-3) !important;
-}
-
-/* Outline danger (used by Sell) should stay consistent */
-.app-root .btn.btn-outline-danger{
-  border-radius: 14px;
-}
-
-/* Small buttons */
-.app-root .btn.btn-sm{
-  border-radius: 14px;
-  padding: .42rem .78rem;
-}
-
-/* Ensure buttons never push width */
-.repro-card .btn{ max-width: 100%; }
-
 /* =========================================================
-   PAGER (RESPONSIVE)
+   MODULE: PAGERS
 ========================================================= */
-
-/* Compact pager (used in sow list and cycles list after your JS fix) */
-.repro-pager-compact{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 6px;
-}
-
-.repro-pager-compact .btn{
-  white-space: nowrap;
-}
-
-/* Legacy pager class used by piglet pager render */
+.repro-pager-compact,
 .repro-pager{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 6px;
-}
-
-.repro-pager .btn{
-  white-space: nowrap;
+  gap: .8rem;
+  padding-top: .35rem;
 }
 
 @media (max-width: 575.98px){
@@ -464,83 +622,548 @@ html, body { overflow-x: hidden; }
   .repro-pager{
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    gap: 10px;
+    gap: .7rem;
     align-items: center;
   }
+
   .repro-pager-compact .btn,
   .repro-pager .btn{
     width: 100%;
-    min-width: 0;
   }
+
   .repro-pager-compact > .small,
   .repro-pager > .small{
     text-align: center;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 360px){
-  .repro-pager-compact > .small,
-  .repro-pager > .small{
     white-space: normal;
-    line-height: 1.15;
+    line-height: 1.2;
   }
 }
 
 /* =========================================================
-   MODAL THEME
-   NOTE
-   - Your sow modal uses inline styles for header background.
-   - These rules still help backdrop and mobile sizing.
+   MODULE: MODALS
 ========================================================= */
-
-.modal-backdrop.show{ opacity: .55; }
-
-@supports ((-webkit-backdrop-filter: blur(6px)) or (backdrop-filter: blur(6px))){
-  .modal-backdrop.show{
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-  }
+.modal-backdrop.show{
+  opacity: .5;
 }
 
-.repro-modal .modal-dialog{ max-width: 1100px; }
+.repro-modal .modal-dialog{
+  max-width: 1180px;
+}
 
-.repro-modal-body{
-  background: var(--repro-bg);
-  padding: 14px 14px 16px;
+.repro-modal .modal-content{
+  border-radius: 28px !important;
 }
 
 @media (max-width: 575.98px){
   .repro-modal .modal-dialog{
-    margin: 0 !important;
-    height: 100vh;
+    margin: 0;
     max-width: 100%;
+    min-height: 100vh;
   }
+
   .repro-modal .modal-content{
-    height: 100vh;
+    min-height: 100vh;
     border-radius: 0 !important;
   }
-  .repro-modal-body{ padding: 12px 12px 16px; }
-  .repro-title{ font-size: 20px; }
+
+  .repro-modal .modal-body{
+    padding: .95rem;
+  }
 }
 
 /* =========================================================
-   ACCESSIBILITY / FOCUS
+   MODULE: SOW TOP SHELL
 ========================================================= */
+.repro-sow-shell{
+  width: 100%;
+}
 
-button:focus,
-.btn:focus,
-.form-control:focus,
-.form-select:focus{
-  box-shadow: var(--repro-focus);
+.repro-sow-top{
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+}
+
+.repro-sow-top .card-body{
+  padding: 1rem;
+}
+
+@media (min-width: 992px){
+  .repro-sow-top .card-body{
+    padding: 1.2rem;
+  }
+}
+
+.repro-sow-avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 100%);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(34,176,125,.20);
+  font-size: 1.25rem;
+}
+
+.repro-sow-top-stats{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.repro-sow-top-stat{
+  border: 1px solid var(--repro-border);
+  border-radius: 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  box-shadow: 0 8px 20px rgba(20,34,29,.04);
+  padding: .95rem 1rem;
+  min-width: 0;
+}
+
+.repro-sow-top-stat-k{
+  font-size: .78rem;
+  color: var(--repro-muted);
+  margin-bottom: .2rem;
+}
+
+.repro-sow-top-stat-v{
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.repro-sow-inline-stats{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: center;
+}
+
+.repro-overview-card .card-body{
+  padding: 1rem;
+}
+
+.repro-measure-card{
+  height: auto;
+}
+
+.repro-measure-card .card-body{
+  padding-bottom: 1rem;
+}
+
+.repro-measure-action-wrap{
+  border-top: 1px solid var(--repro-border);
+  padding-top: 1rem;
+}
+
+.repro-measure-action-btn{
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: .8rem 1rem;
+  border-radius: 16px;
 }
 
 /* =========================================================
-   SKELETON LOADING (SOW LIST)
+   MODULE: CYCLE LAYOUT
 ========================================================= */
+.repro-cycle-headcard,
+.repro-cycle-detail-headcard,
+.repro-cycle-card{
+  border-radius: 24px;
+}
 
+.repro-cycle-head{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repro-cycle-filter{
+  width: 320px;
+  max-width: 100%;
+}
+
+.repro-cycle-card .card-body{
+  padding: 1rem;
+}
+
+.repro-cycle-open{
+  border-radius: 14px !important;
+}
+
+.repro-cycle-shell{
+  border-radius: 28px;
+}
+
+.repro-cycle-shell .card-body{
+  padding: 1rem;
+}
+
+@media (min-width: 992px){
+  .repro-cycle-shell .card-body{
+    padding: 1.2rem;
+  }
+}
+
+.repro-cycle-topbar{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repro-cycle-topbar-main{
+  min-width: 0;
+  width: 100%;
+}
+
+.repro-cycle-avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  font-size: 1.2rem;
+}
+
+.repro-cycle-title{
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--repro-text);
+  line-height: 1.15;
+}
+
+.repro-cycle-meta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  align-items: center;
+}
+
+.repro-cycle-meta-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--repro-border);
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  font-size: .82rem;
+  color: var(--repro-text);
+}
+
+.repro-cycle-tabs-wrap{
+  border-top: 1px solid rgba(228,236,232,.85);
+  padding-top: 1rem;
+}
+
+.repro-cycle-tabs.repro-tabs{
+  border-bottom: 0;
+  padding-bottom: 0;
+  gap: .6rem;
+}
+
+.repro-cycle-tabs.repro-tabs .nav-link{
+  border-radius: 18px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  padding: .8rem 1rem;
+  background: rgba(34,176,125,.04);
+  color: var(--repro-muted);
+  font-weight: 800;
+}
+
+.repro-cycle-tabs.repro-tabs .nav-link i{
+  margin-right: .1rem;
+}
+
+.repro-cycle-tabs.repro-tabs .nav-link:hover{
+  background: rgba(34,176,125,.08);
+  color: var(--repro-text);
+}
+
+.repro-cycle-tabs.repro-tabs .nav-link.active{
+  background: linear-gradient(135deg, rgba(34,176,125,.12) 0%, rgba(34,176,125,.06) 100%);
+  color: var(--repro-green-3);
+  border: 1px solid rgba(34,176,125,.16);
+  box-shadow: 0 10px 22px rgba(34,176,125,.08);
+}
+
+.repro-cycle-info-card{
+  border-radius: 24px;
+}
+
+.repro-cycle-info-card .card-body{
+  padding: 1rem;
+}
+
+.repro-cycle-stat-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .75rem;
+}
+
+.repro-cycle-stat-item{
+  border: 1px solid var(--repro-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  padding: .85rem .95rem;
+  box-shadow: 0 8px 18px rgba(20,34,29,.04);
+}
+
+.repro-cycle-stat-item .k{
+  font-size: .78rem;
+  color: var(--repro-muted);
+  margin-bottom: .25rem;
+}
+
+.repro-cycle-stat-item .v{
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.2;
+}
+
+.repro-cycle-note{
+  border: 1px dashed rgba(34,176,125,.24);
+  background: rgba(34,176,125,.05);
+  border-radius: 18px;
+  padding: .9rem 1rem;
+  color: var(--repro-text);
+}
+
+/* =========================================================
+   MODULE: MONTHLY / MONITORING
+========================================================= */
+.repro-monitor-shell{
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  border: 1px solid rgba(20,34,29,.06);
+  border-radius: 24px;
+  box-shadow: 0 10px 28px rgba(20,34,29,.05);
+  padding: 1rem;
+}
+
+.repro-monitor-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.repro-monitor-header-left{
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-width: 0;
+}
+
+.repro-monitor-icon{
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(34,176,125,.12), rgba(34,176,125,.2));
+  color: var(--repro-green-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+}
+
+.repro-monitor-title{
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--repro-text);
+}
+
+.repro-monitor-subtitle{
+  font-size: .84rem;
+  color: var(--repro-muted);
+  margin-top: .15rem;
+}
+
+.repro-monitor-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.repro-monitor-card{
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+  border: 1px solid rgba(20,34,29,.06);
+  border-radius: 20px;
+  padding: .95rem;
+  min-width: 0;
+}
+
+.repro-monitor-card-top{
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .65rem;
+}
+
+.repro-monitor-card-ic{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: rgba(34,176,125,.12);
+  color: var(--repro-green-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .95rem;
+}
+
+.repro-monitor-label{
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--repro-muted);
+}
+
+.repro-monitor-value{
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+.repro-monitor-eligibility{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: .55rem .9rem;
+  border-radius: 999px;
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.repro-monitor-eligibility.is-yes{
+  background: rgba(34,197,94,.12);
+  color: #15803d;
+  border: 1px solid rgba(34,197,94,.2);
+}
+
+.repro-monitor-eligibility.is-no{
+  background: rgba(245,158,11,.14);
+  color: #92400e;
+  border: 1px solid rgba(245,158,11,.22);
+}
+
+/* =========================================================
+   MODULE: MONTHLY CARDS
+========================================================= */
+.repro-perf-piglet-card{
+  border-radius: 24px;
+}
+
+.repro-perf-monthly-wrap{
+  border-top: 1px solid var(--repro-border);
+  padding-top: 1rem;
+}
+
+.repro-monthly-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.repro-monthly-card{
+  border: 1px solid var(--repro-border);
+  background:
+    radial-gradient(220px 120px at 100% 0%, rgba(243,202,105,.14), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f9fcfb 100%);
+  border-radius: 22px;
+  padding: .95rem;
+  box-shadow: 0 8px 20px rgba(20,34,29,.04);
+}
+
+.repro-monthly-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+  margin-bottom: .85rem;
+}
+
+.repro-monthly-title{
+  font-size: .96rem;
+  font-weight: 800;
+  color: var(--repro-text);
+}
+
+.repro-monthly-stats{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.repro-monthly-stat{
+  border: 1px solid var(--repro-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: .75rem .8rem;
+  min-width: 0;
+}
+
+.repro-monthly-stat .k{
+  font-size: .72rem;
+  color: var(--repro-muted);
+  margin-bottom: .2rem;
+}
+
+.repro-monthly-stat .v{
+  font-size: .95rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.15;
+}
+
+.repro-monthly-foot{
+  margin-top: .85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  flex-wrap: wrap;
+  font-size: .8rem;
+  color: var(--repro-muted);
+}
+
+.repro-monthly-empty{
+  border: 1px dashed rgba(34,176,125,.24);
+  background: rgba(34,176,125,.05);
+  color: var(--repro-muted);
+  border-radius: 18px;
+  padding: .95rem 1rem;
+}
+
+/* =========================================================
+   MODULE: ALERT ITEM
+========================================================= */
+.repro-alert-item{
+  padding: .8rem .9rem;
+  border-radius: 16px;
+  border: 1px solid rgba(220,53,69,.16);
+  background: rgba(220,53,69,.05);
+  margin-bottom: .65rem;
+}
+
+/* =========================================================
+   MODULE: SKELETON
+========================================================= */
 .repro-skel-card{
-  border-radius: var(--repro-radius-lg);
+  border-radius: 24px;
   border: 1px solid var(--repro-border);
   background: #fff;
 }
@@ -548,10 +1171,12 @@ button:focus,
 .repro-skel-line,
 .repro-skel-pill,
 .repro-skel-btn{
-  background: linear-gradient(90deg,
-    rgba(31,184,122,.10) 0%,
-    rgba(31,184,122,.22) 45%,
-    rgba(31,184,122,.10) 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(34,176,125,.10) 0%,
+    rgba(34,176,125,.22) 45%,
+    rgba(34,176,125,.10) 100%
+  );
   background-size: 180% 100%;
   animation: reproSkel 1.15s ease-in-out infinite;
 }
@@ -596,474 +1221,840 @@ button:focus,
 }
 
 @keyframes reproSkel{
-  0% { background-position: 0% 0; }
-  100% { background-position: 180% 0; }
+  0%{ background-position: 0% 0; }
+  100%{ background-position: 180% 0; }
 }
 
 /* =========================================================
-   SOW PANEL (MODAL CONTENT) — THEME V3
+   MODULE: GROWTH MONITORING
 ========================================================= */
-
-.repro-sow-shell{
-  width: 100%;
+.repro-growth-shell{
+  border-radius: 26px;
+  border: 1px solid rgba(228,236,232,.95);
+  box-shadow: 0 10px 24px rgba(20,34,29,.05);
 }
 
-.repro-sow-top{
-  border-radius: var(--repro-radius-xl);
-  border: 1px solid var(--repro-border);
+.repro-growth-shell .card-body{
+  padding: 1rem;
+}
+
+.repro-growth-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repro-growth-filter-card{
+  border: 1px solid rgba(34,176,125,.14);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  box-shadow: 0 10px 22px rgba(20,34,29,.04);
+  padding: 1rem;
+}
+
+.repro-growth-filter-grid{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.repro-growth-filter-main{
+  min-width: 0;
+}
+
+.repro-growth-filter-side{
+  min-width: 220px;
+}
+
+.repro-growth-sex-pills .d-flex{
+  justify-content: flex-end;
+}
+
+.repro-growth-list{
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.repro-growth-piglet-card,
+.repro-growth-like-card{
+  border-radius: 24px;
+  border: 1px solid rgba(34,176,125,.12) !important;
+  background:
+    radial-gradient(220px 120px at 100% 0%, rgba(243,202,105,.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow: 0 12px 26px rgba(20,34,29,.06);
+  position: relative;
   overflow: hidden;
-  background: #fff;
 }
 
-.repro-sow-top .card-body{
-  padding: 16px;
+.repro-growth-piglet-card::before,
+.repro-growth-like-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(34,176,125,.9), rgba(34,176,125,.2));
+  pointer-events: none;
 }
 
-@media (min-width: 992px){
-  .repro-sow-top .card-body{
-    padding: 18px;
+.repro-growth-piglet-card .card-body,
+.repro-growth-like-card .card-body{
+  padding: 1rem 1.05rem;
+}
+
+.repro-growth-piglet-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.15rem;
+  align-items: center;
+}
+
+.repro-growth-piglet-main{
+  min-width: 0;
+  padding-right: .25rem;
+}
+
+.repro-growth-piglet-title{
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.2;
+}
+
+.repro-growth-piglet-badges{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  align-items: center;
+}
+
+.repro-growth-piglet-badges .badge{
+  border-radius: 12px !important;
+  padding: .48rem .72rem;
+}
+
+.repro-growth-piglet-actions{
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+  align-items: stretch;
+  min-width: 280px;
+}
+
+.repro-growth-action-btn{
+  min-height: 44px;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.repro-growth-backbtn{
+  min-height: 44px;
+}
+
+/* =========================================================
+   MODULE: SELECTION PROCESS
+========================================================= */
+.repro-selection-shell{
+  border-radius: 26px;
+  border: 1px solid rgba(228,236,232,.95);
+  box-shadow: 0 10px 24px rgba(20,34,29,.05);
+}
+
+.repro-selection-shell .card-body{
+  padding: 1rem;
+}
+
+.repro-selection-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repro-selection-summary-grid .row{
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.repro-selection-stat-card{
+  border-radius: 22px;
+  background:
+    radial-gradient(180px 100px at 100% 0%, rgba(243,202,105,.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  border: 1px solid rgba(34,176,125,.10);
+  box-shadow: 0 10px 24px rgba(20,34,29,.05);
+  overflow: hidden;
+  position: relative;
+}
+
+.repro-selection-stat-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(34,176,125,.9), rgba(34,176,125,.15));
+  pointer-events: none;
+}
+
+.repro-selection-stat-card .card-body{
+  padding: 1rem 1rem .95rem;
+}
+
+.repro-selection-stat-card .small{
+  font-weight: 700;
+}
+
+.repro-selection-stat-card .h4{
+  font-weight: 900;
+  color: var(--repro-text);
+}
+
+.repro-selection-filter-card{
+  border: 1px solid rgba(34,176,125,.14);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafcfb 100%);
+  box-shadow: 0 8px 18px rgba(20,34,29,.04);
+  padding: 1rem;
+}
+
+.repro-selection-filter-grid{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.repro-selection-filter-main{
+  min-width: 0;
+}
+
+.repro-selection-filter-side{
+  min-width: 220px;
+}
+
+.repro-selection-sex-pills .d-flex{
+  justify-content: flex-end;
+}
+
+.repro-selection-list{
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.repro-selection-piglet-card{
+  border-radius: 24px;
+  border: 1px solid rgba(34,176,125,.12) !important;
+  background:
+    radial-gradient(220px 120px at 100% 0%, rgba(243,202,105,.10), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdfc 100%);
+  box-shadow: 0 12px 26px rgba(20,34,29,.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.repro-selection-piglet-card::before{
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(34,176,125,.9), rgba(34,176,125,.2));
+  pointer-events: none;
+}
+
+.repro-selection-piglet-card .card-body{
+  padding: 1rem 1.05rem;
+}
+
+.repro-selection-piglet-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.repro-selection-piglet-main{
+  min-width: 0;
+}
+
+.repro-selection-piglet-title{
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--repro-text);
+  line-height: 1.2;
+}
+
+.repro-selection-piglet-badges{
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  align-items: center;
+}
+
+.repro-selection-piglet-badges .badge{
+  border-radius: 12px !important;
+  padding: .48rem .74rem;
+}
+
+.repro-selection-piglet-side{
+  min-width: 132px;
+}
+
+.repro-selection-action-wrap{
+  display: flex;
+  justify-content: flex-end;
+}
+
+.repro-selection-action-btn{
+  min-height: 44px;
+  min-width: 104px;
+  justify-content: center;
+}
+
+.repro-selection-suggestion-wrap .border{
+  border-radius: 16px !important;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
+}
+
+/* =========================================================
+   MODULE: RESPONSIVE
+========================================================= */
+@media (max-width: 1199.98px){
+  .repro-monitor-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .repro-monthly-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .repro-sow-top-stats{
+    grid-template-columns: 1fr;
   }
 }
 
-.repro-sow-avatar{
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: linear-gradient(135deg, var(--repro-green) 0%, var(--repro-green-2) 60%, #22c98a 100%);
-  box-shadow: 0 14px 30px rgba(31,184,122,.22);
-  flex: 0 0 auto;
-  font-size: 20px;
+@media (max-width: 991.98px){
+  .repro-growth-filter-grid,
+  .repro-selection-filter-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .repro-growth-filter-side,
+  .repro-selection-filter-side{
+    min-width: 0;
+    width: 100%;
+  }
+
+  .repro-growth-sex-pills .d-flex,
+  .repro-selection-sex-pills .d-flex{
+    justify-content: flex-start;
+  }
+
+  .repro-growth-piglet-row,
+  .repro-selection-piglet-row{
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .repro-growth-piglet-actions,
+  .repro-selection-piglet-side{
+    min-width: 0;
+    width: 100%;
+  }
+
+  .repro-selection-action-wrap{
+    justify-content: stretch;
+  }
+
+  .repro-selection-action-btn{
+    width: 100%;
+  }
 }
 
-.repro-sow-meta{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  min-width: 220px;
-  max-width: 320px;
-}
-
-.repro-sow-meta-item{
-  border: 1px solid var(--repro-border);
-  border-radius: 16px;
-  background: #fff;
-  padding: 10px 12px;
-  box-shadow: 0 10px 22px rgba(16,24,40,.05);
-}
-
-.repro-sow-meta-k{
-  font-size: 12px;
-  color: var(--repro-muted);
-  margin-bottom: 2px;
-}
-
-.repro-sow-meta-v{
-  font-weight: 900;
-  color: var(--repro-text);
-  line-height: 1.1;
-}
-
-@media (max-width: 575.98px){
+@media (max-width: 767.98px){
   .repro-sow-meta{
     min-width: 100%;
     max-width: 100%;
   }
-}
 
-.repro-sow-statbox{
-  border: 1px solid var(--repro-border);
-  border-radius: 16px;
-  background: #fff;
-  padding: 10px 12px;
-  box-shadow: 0 10px 22px rgba(16,24,40,.05);
-}
-
-.repro-sow-statbox .k{
-  font-size: 12px;
-  color: var(--repro-muted);
-  margin-bottom: 2px;
-}
-
-.repro-sow-statbox .v{
-  font-weight: 900;
-  color: var(--repro-text);
-}
-
-/* =========================================================
-   REPRODUCTION TAB (CYCLES) LAYOUT
-   CONFLICT FIX
-   - Removed duplicate .repro-cycle-card definitions
-========================================================= */
-
-.repro-cycle-head{
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.repro-cycle-filter{
-  width: 320px;
-  max-width: 100%;
-}
-
-@media (max-width: 575.98px){
-  .repro-cycle-filter{
-    width: 100%;
-  }
-}
-
-/* Cycle cards: consistent rounded/padded layout */
-.repro-cycle-card{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-lg);
-  overflow: hidden;
-}
-
-.repro-cycle-card .card-body{
-  padding: 14px;
-}
-
-@media (min-width: 992px){
-  .repro-cycle-card .card-body{ padding: 16px; }
-}
-
-.repro-cycle-open{
-  border-radius: 14px !important;
-}
-
-/* On very small screens, keep cycle card button from forcing width */
-@media (max-width: 360px){
-  .repro-cycle-open{
-    width: 100%;
-  }
-}
-
-/* Reproduction mount: make subcards feel like the app surface */
-#reproReproMount .repro-subcard{
-  border-radius: var(--repro-radius-xl);
-}
-
-/* Ensure the tab content spacing remains consistent across screen sizes */
-#cyclePanelMount .tab-content{
-  padding-top: .25rem;
-}
-
-/* =========================================================
-   CYCLES HEADER CARD (dynamic cycle filter container)
-========================================================= */
-
-.repro-cycle-headcard{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-xl);
-  background: #fff;
-}
-
-.repro-cycle-headcard .card-body{
-  padding: 14px;
-}
-
-@media (min-width: 992px){
-  .repro-cycle-headcard .card-body{
-    padding: 16px;
-  }
-}
-
-/* =========================================================
-   CYCLE DETAILS HEADER (Back button in a card)
-========================================================= */
-
-.repro-cycle-detail-headcard{
-  border: 1px solid var(--repro-border);
-  border-radius: var(--repro-radius-xl);
-  background: #fff;
-}
-
-.repro-cycle-detail-headcard .card-body{
-  padding: 14px;
-}
-
-@media (min-width: 992px){
-  .repro-cycle-detail-headcard .card-body{
-    padding: 16px;
-  }
-}
-
-/* Keep back button compact and aligned on small screens */
-.repro-cycle-backwrap{
-  display: flex;
-  align-items: center;
-}
-
-@media (max-width: 575.98px){
-  .repro-cycle-backwrap{
-    width: 100%;
-    justify-content: flex-end;
-  }
-  .repro-cycle-backbtn{
-    width: 100%;
-    max-width: 220px;
-  }
-}
-
-/* =========================================================
-   CYCLE TABS: Small-screen readability fixes
-   - Allow content to fit without cutting off labels
-========================================================= */
-
-/* Keep scroll behavior, but allow better sizing */
-.repro-tabs.nav-tabs{
-  gap: 6px;
-}
-
-/* Default: allow wrapping so text isn't clipped */
-.repro-tabs.nav-tabs .nav-link{
-  white-space: normal;            /* was nowrap */
-  line-height: 1.15;
-  max-width: 220px;               /* prevents ultra-wide tabs */
-}
-
-/* On extra-small screens: tighter padding and smaller text */
-@media (max-width: 575.98px){
-  .repro-tabs.nav-tabs .nav-link{
-    padding: .50rem .70rem;
-    font-size: 12px;
-    max-width: 160px;
-  }
-  .repro-tabs.nav-tabs .nav-link i{
-    margin-right: .35rem !important;
-  }
-}
-
-/* =========================================================
-   CYCLE TABS — RESPONSIVE FIX
-   - Desktop/tablet: stable single-line tabs
-   - Mobile: compact tabs with short labels
-========================================================= */
-
-/* Base: keep tabs tidy and vertically aligned */
-.repro-tabs.nav-tabs .nav-link{
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  white-space: nowrap;     /* desktop/tablet default */
-  max-width: none;         /* remove any global max-width */
-  line-height: 1.15;
-}
-
-/* Mobile: tighter, keep short labels visible */
-@media (max-width: 575.98px){
-  .repro-tabs.nav-tabs .nav-link{
-    padding: .50rem .70rem;
-    font-size: 12px;
-  }
-  .repro-tabs.nav-tabs{
-    gap: 6px;
-  }
-}
-
-/* =========================================================
-   MODULE: Growth Monitoring Summary Card
-   PURPOSE: Dashboard-style summary card for monitoring phase,
-            age, remaining days, and selection readiness.
-========================================================= */
-.repro-monitor-shell {
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 24px;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-  padding: 1rem;
-}
-
-.repro-monitor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.repro-monitor-header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  min-width: 0;
-}
-
-.repro-monitor-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(31, 167, 116, 0.12), rgba(31, 167, 116, 0.2));
-  color: #15803d;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  font-size: 1.15rem;
-}
-
-.repro-monitor-title {
-  font-weight: 800;
-  font-size: 1rem;
-  color: #1f2937;
-  line-height: 1.2;
-}
-
-.repro-monitor-subtitle {
-  font-size: 0.85rem;
-  color: #6b7280;
-  line-height: 1.35;
-  margin-top: 0.15rem;
-}
-
-.repro-monitor-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.9rem;
-}
-
-.repro-monitor-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 20px;
-  padding: 1rem;
-  min-width: 0;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-}
-
-.repro-monitor-card-phase {
-  background: linear-gradient(180deg, #ffffff 0%, #f6fbf8 100%);
-}
-
-.repro-monitor-card-top {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  margin-bottom: 0.7rem;
-  min-width: 0;
-}
-
-.repro-monitor-card-ic {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  background: rgba(31, 167, 116, 0.12);
-  color: #15803d;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  font-size: 0.95rem;
-}
-
-.repro-monitor-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #6b7280;
-  line-height: 1.2;
-  min-width: 0;
-}
-
-.repro-monitor-value {
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: #1f2937;
-  line-height: 1.15;
-  word-break: break-word;
-}
-
-.repro-monitor-phase-wrap .badge,
-.repro-monitor-phase-wrap .repro-chip {
-  font-size: 0.92rem;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.55rem 0.85rem;
-}
-
-.repro-monitor-eligibility {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  min-height: 40px;
-  padding: 0.55rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-  line-height: 1.2;
-}
-
-.repro-monitor-eligibility.is-yes {
-  background: rgba(34, 197, 94, 0.12);
-  color: #15803d;
-  border-color: rgba(34, 197, 94, 0.2);
-}
-
-.repro-monitor-eligibility.is-no {
-  background: rgba(245, 158, 11, 0.14);
-  color: #92400e;
-  border-color: rgba(245, 158, 11, 0.22);
-}
-
-/* =========================================================
-   Responsive
-========================================================= */
-@media (max-width: 1199.98px) {
-  .repro-monitor-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767.98px) {
-  .repro-monitor-shell {
-    padding: 0.9rem;
-    border-radius: 20px;
+  .repro-monitor-grid,
+  .repro-monthly-stats{
+    grid-template-columns: 1fr;
   }
 
-  .repro-monitor-header {
-    margin-bottom: 0.85rem;
+  .repro-title{
+    font-size: 1.4rem;
   }
 
-  .repro-monitor-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 14px;
+  .repro-hero-sub{
+    font-size: .9rem;
+  }
+
+  .repro-panel-card .card-body,
+  .repro-filter-card .card-body,
+  .repro-sow-top .card-body,
+  .repro-overview-card .card-body,
+  .repro-growth-shell .card-body,
+  .repro-selection-shell .card-body{
+    padding: .95rem;
+  }
+
+  .repro-sow-inline-stats{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .45rem;
+  }
+
+  .repro-mini-stat{
+    min-height: 76px;
+  }
+
+  .repro-sow-top-stat{
+    padding: .85rem .9rem;
+  }
+
+  .repro-sow-top-stat-v{
     font-size: 1rem;
   }
 
-  .repro-monitor-title {
+  .repro-cycle-title{
+    font-size: 1.1rem;
+  }
+
+  .repro-cycle-avatar{
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    font-size: 1.05rem;
+  }
+
+  .repro-cycle-tabs.repro-tabs .nav-link{
+    padding: .7rem .85rem;
+    font-size: .82rem;
+  }
+
+  .repro-cycle-info-card .card-body{
+    padding: .9rem;
+  }
+
+  .repro-cycle-stat-item{
+    padding: .8rem .85rem;
+  }
+
+  .repro-growth-filter-card,
+  .repro-selection-filter-card{
+    padding: .9rem;
+    border-radius: 20px;
+  }
+
+  .repro-growth-piglet-card,
+  .repro-selection-piglet-card,
+  .repro-growth-like-card{
+    border-radius: 20px;
+  }
+
+  .repro-growth-piglet-card .card-body,
+  .repro-selection-piglet-card .card-body,
+  .repro-growth-like-card .card-body{
+    padding: 1rem .95rem;
+  }
+
+  .repro-growth-piglet-title,
+  .repro-selection-piglet-title{
+    font-size: 1.02rem;
+  }
+
+  .repro-growth-action-btn,
+  .repro-growth-backbtn,
+  .repro-selection-action-btn,
+  .repro-selection-backbtn,
+  .repro-growth-sex-pills .btn,
+  .repro-selection-sex-pills .btn,
+  .repro-selection-decision-pills .nav-link{
+    min-height: 48px;
+    font-size: .95rem;
+    padding: .75rem 1rem;
+  }
+
+  .repro-growth-sex-pills .btn{
+    min-width: 88px;
+  }
+
+  .repro-selection-stat-card .card-body{
+    padding: .95rem;
+  }
+}
+
+@media (max-width: 575.98px){
+  .repro-tabs.nav-tabs .nav-link{
+    padding: .58rem .75rem;
+    font-size: .8rem;
+  }
+
+  .repro-card .card-body{
+    padding: .9rem;
+  }
+
+  .repro-monitor-shell{
+    padding: .9rem;
+  }
+
+  .repro-monthly-card{
+    padding: .9rem;
+    border-radius: 18px;
+  }
+
+  .repro-cycle-meta{
+    gap: .45rem;
+  }
+
+  .repro-cycle-meta-chip{
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .repro-cycle-tabs.repro-tabs{
+    gap: .5rem;
+  }
+
+  .repro-cycle-tabs.repro-tabs .nav-link{
+    min-height: 48px;
+    padding: .72rem .9rem;
+    border-radius: 16px;
+    font-size: .9rem;
+    font-weight: 800;
+  }
+
+  .repro-growth-shell .card-body,
+  .repro-selection-shell .card-body{
+    padding: .8rem;
+  }
+
+  .repro-growth-head{
+    align-items: stretch;
+  }
+
+  .repro-growth-filter-card,
+  .repro-selection-filter-card{
+    padding: .85rem;
+    border-radius: 18px;
+  }
+
+  .repro-growth-filter-main .form-control{
+    min-height: 48px;
+    font-size: .95rem;
+  }
+
+  .repro-growth-sex-pills .d-flex,
+  .repro-selection-sex-pills .d-flex{
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .45rem !important;
+    width: 100%;
+  }
+
+  .repro-growth-sex-pills .btn,
+  .repro-selection-sex-pills .btn{
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: .72rem .5rem;
+    font-size: .92rem;
+  }
+
+  .repro-selection-decision-pills{
+    width: 100%;
+  }
+
+  .repro-selection-decision-pills .repro-pills{
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: .55rem !important;
+  }
+
+  .repro-selection-decision-pills .nav-link{
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    margin: 0;
+  }
+
+  .repro-growth-piglet-card,
+  .repro-selection-piglet-card,
+  .repro-growth-like-card{
+    border-radius: 18px;
+  }
+
+  .repro-growth-piglet-main{
+    padding-right: 0;
+  }
+
+  .repro-growth-piglet-title,
+  .repro-selection-piglet-title{
+    font-size: .98rem;
+    word-break: break-word;
+  }
+
+  .repro-growth-piglet-badges,
+  .repro-selection-piglet-badges{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .5rem;
+  }
+
+  .repro-growth-piglet-badges .badge,
+  .repro-selection-piglet-badges .badge{
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .repro-growth-action-btn,
+  .repro-selection-action-btn{
+    width: 100%;
+    min-height: 52px;
+    padding: .82rem .9rem;
+  }
+
+  .repro-growth-piglet-actions{
+    width: 100%;
+    gap: .65rem;
+  }
+
+  .repro-selection-list{
+    gap: .9rem;
+  }
+}
+
+/* =========================================================
+   MODULE: Growth Detail Header
+   PURPOSE: Mobile-friendly themed layout for piglet growth detail
+            aligned with the soft green app-style design.
+========================================================= */
+.repro-growth-detail-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.repro-growth-detail-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repro-growth-detail-main {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.repro-growth-detail-titlewrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.repro-growth-detail-icon {
+  flex: 0 0 auto;
+}
+
+.repro-growth-detail-piglet {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  color: #153629;
+}
+
+.repro-growth-detail-meta-row {
+  margin-top: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.repro-growth-detail-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 180px;
+  flex: 0 1 auto;
+}
+
+.repro-growth-detail-range {
+  font-size: 0.95rem;
+  color: #637381;
+  font-weight: 600;
+  text-align: right;
+}
+
+.repro-growth-entry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.78rem 1rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f5fbf8 0%, #edf8f2 100%);
+  border: 1px solid rgba(34, 171, 115, 0.14);
+  box-shadow: 0 10px 24px rgba(28, 119, 89, 0.08);
+}
+
+.repro-growth-entry-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6f7d87;
+}
+
+.repro-growth-entry-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #15925f;
+  line-height: 1;
+}
+
+.repro-growth-delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 12px;
+  background: #e7f7ef;
+  color: #198754;
+  border: 1px solid rgba(25, 135, 84, 0.14);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+/* =========================================================
+   MODULE: Growth Chart Card
+   PURPOSE: Soft card container and responsive chart spacing
+            to prevent clipping across devices.
+========================================================= */
+.repro-growth-chart-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%);
+  border: 1px solid rgba(34, 171, 115, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 14px 32px rgba(26, 94, 70, 0.08);
+  padding: 1rem 1rem 0.75rem;
+}
+
+.repro-growth-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.repro-growth-chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(38, 186, 136, 0.08), transparent 34%),
+    linear-gradient(180deg, #fbfefd 0%, #f1faf5 100%);
+  padding: 0.25rem 0.35rem 0.1rem;
+}
+
+.repro-growth-chart-canvas {
+  display: block;
+  width: 100%;
+  height: 280px;
+}
+
+.repro-growth-deformity-wrap {
+  padding-top: 0.35rem;
+}
+
+/* =========================================================
+   MODULE: Responsive Growth Detail
+   PURPOSE: Keep layout friendly for tablets and phones.
+========================================================= */
+@media (max-width: 767.98px) {
+  .repro-growth-detail-top {
+    gap: 0.85rem;
+  }
+
+  .repro-growth-detail-summary {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+  }
+
+  .repro-growth-detail-range {
+    text-align: left;
+  }
+
+  .repro-growth-detail-piglet {
+    font-size: 1.02rem;
+  }
+
+  .repro-growth-entry-chip {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.8rem 0.95rem;
+  }
+
+  .repro-growth-chart-card {
+    padding: 0.85rem 0.8rem 0.65rem;
+    border-radius: 20px;
+  }
+
+  .repro-growth-chart-wrap {
+    min-height: 250px;
+    border-radius: 18px;
+    padding: 0.15rem 0.2rem 0.05rem;
+  }
+
+  .repro-growth-chart-canvas {
+    height: 250px;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .repro-growth-detail-titlewrap {
+    gap: 0.7rem;
+  }
+
+  .repro-growth-detail-piglet {
     font-size: 0.96rem;
   }
 
-  .repro-monitor-subtitle {
-    font-size: 0.8rem;
+  .repro-growth-entry-label {
+    font-size: 0.74rem;
   }
 
-  .repro-monitor-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+  .repro-growth-entry-value {
+    font-size: 1.02rem;
   }
 
-  .repro-monitor-card {
-    border-radius: 18px;
-    padding: 0.9rem;
+  .repro-growth-delta-chip {
+    font-size: 0.84rem;
+    padding: 0.42rem 0.65rem;
   }
 
-  .repro-monitor-value {
-    font-size: 1.25rem;
+  .repro-growth-chart-wrap {
+    min-height: 230px;
   }
 
-  .repro-monitor-phase-wrap .badge,
-  .repro-monitor-phase-wrap .repro-chip,
-  .repro-monitor-eligibility {
-    width: 100%;
-    justify-content: center;
+  .repro-growth-chart-canvas {
+    height: 230px;
   }
 }

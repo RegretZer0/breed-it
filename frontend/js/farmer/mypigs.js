@@ -3,7 +3,7 @@ import { authGuard } from "/js/authGuard.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
   /* =========================================================
-     AUTH + BASE DOM REFS
+     MODULE: AUTH + BASE DOM REFERENCES
   ========================================================= */
   const user = await authGuard("farmer");
   if (!user) return;
@@ -14,8 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pigModal = document.getElementById("pigModal");
   const modalBody = document.getElementById("modalBody");
   const closeModal = document.getElementById("closeModal");
+  const searchInput = document.getElementById("searchInput");
 
-  // Ensure modal is hidden on refresh
   pigModal?.classList.remove("show");
   document.body.style.overflow = "";
 
@@ -25,28 +25,71 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentPage = 1;
   let itemsPerPage = 5;
   let currentTypeFilter = "all";
+  let currentSearchTerm = "";
   let weightChartInstance = null;
   let offspringChartInstance = null;
 
   /* =========================================================
-     SUMMARY STATS
+     MODULE: SUMMARY STATS
   ========================================================= */
   function updateSummaryStats() {
     const totalEl = document.getElementById("totalCount");
     const healthyEl = document.getElementById("healthyCount");
     const sickEl = document.getElementById("sickCount");
+    const sowEl = document.getElementById("sowCount");
+    const pigletEl = document.getElementById("pigletCount");
+    const boarEl = document.getElementById("boarCount");
+    const deadEl = document.getElementById("deadCount");
 
-    if (totalEl) totalEl.textContent = String(currentSwineData.length);
+    const all = currentSwineData || [];
 
-    const healthyCount = currentSwineData.filter((p) => p.health_status === "Healthy").length;
-    const sickCount = currentSwineData.filter((p) => p.health_status === "Sick").length;
+    const healthyCount = all.filter((p) => String(p.health_status || "").trim() === "Healthy").length;
+    const sickCount = all.filter((p) => String(p.health_status || "").trim() === "Sick").length;
 
+    const deadCount = all.filter((p) => {
+      const health = String(p.health_status || "").toLowerCase();
+      const status = String(p.current_status || "").toLowerCase();
+      return (
+        health.includes("deceased") ||
+        health === "dead" ||
+        status.includes("deceased") ||
+        status === "dead"
+      );
+    }).length;
+
+    const pigletCount = all.filter((p) => {
+      const stage = String(p.age_stage || "").toLowerCase();
+      const status = String(p.current_status || "").toLowerCase();
+      return (
+        stage.includes("piglet") ||
+        stage.includes("monitoring") ||
+        status.includes("piglet")
+      );
+    }).length;
+
+    const sowCount = all.filter((p) => {
+      const stage = String(p.age_stage || "").toLowerCase();
+      const sex = String(p.sex || "").toLowerCase();
+      return sex === "female" && stage.includes("adult");
+    }).length;
+
+    const boarCount = all.filter((p) => {
+      const stage = String(p.age_stage || "").toLowerCase();
+      const sex = String(p.sex || "").toLowerCase();
+      return sex === "male" && stage.includes("adult");
+    }).length;
+
+    if (totalEl) totalEl.textContent = String(all.length);
     if (healthyEl) healthyEl.textContent = String(healthyCount);
     if (sickEl) sickEl.textContent = String(sickCount);
+    if (sowEl) sowEl.textContent = String(sowCount);
+    if (pigletEl) pigletEl.textContent = String(pigletCount);
+    if (boarEl) boarEl.textContent = String(boarCount);
+    if (deadEl) deadEl.textContent = String(deadCount);
   }
 
   /* =========================================================
-     FATHER ID RESOLVER (ObjectId -> swine_id)
+     MODULE: FATHER ID RESOLVER
   ========================================================= */
   const swineIdCache = new Map();
 
@@ -57,11 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function resolveSwineId(idOrCode) {
     const raw = (idOrCode || "").toString().trim();
     if (!raw) return "—";
-
-    // If already a swine_id like "CE0B-BOAR-0001", just return it
     if (!looksLikeObjectId(raw)) return raw;
-
-    // Cached
     if (swineIdCache.has(raw)) return swineIdCache.get(raw) || raw;
 
     try {
@@ -69,8 +108,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         headers: { Authorization: `Bearer ${token}` },
         credentials: "include",
       });
-      const data = await res.json();
 
+      const data = await res.json();
       const swineId = data?.swine?.swine_id || raw;
       swineIdCache.set(raw, swineId);
       return swineId;
@@ -82,7 +121,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =========================================================
-     MODAL CONTROLS (VIEW MODAL)
+     MODULE: MODAL CONTROLS
   ========================================================= */
   closeModal?.addEventListener("click", () => {
     pigModal.classList.remove("show");
@@ -96,16 +135,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  /* =========================================================
-     MODAL CONTROLS (EDIT MODAL)
-  ========================================================= */
   const editModal = document.getElementById("editPigModal");
   const closeEditModal = document.getElementById("closeEditModal");
   const editForm = document.getElementById("editPigForm");
+  const backToOverviewEdit = document.getElementById("backToOverviewEdit");
 
   closeEditModal?.addEventListener("click", () => {
     editModal?.classList.remove("show");
     document.body.style.overflow = "";
+  });
+
+  backToOverviewEdit?.addEventListener("click", () => {
+    editModal?.classList.remove("show");
+    pigModal?.classList.add("show");
+    document.body.style.overflow = "hidden";
   });
 
   editModal?.addEventListener("click", (e) => {
@@ -116,7 +159,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* =========================================================
-     EDIT FORM SUBMIT (UPDATE PIG INFO)
+     MODULE: EDIT FORM SUBMIT
   ========================================================= */
   editForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -149,11 +192,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       alert("Pig information updated successfully.");
-
       editModal?.classList.remove("show");
       document.body.style.overflow = "";
-
-      // Refresh swine list
       location.reload();
     } catch (err) {
       console.error(err);
@@ -162,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* =========================================================
-     SHARED HELPERS (DISPLAY + COMPUTATIONS)
+     MODULE: SHARED HELPERS
   ========================================================= */
   function formatStageDisplay(stage) {
     const mapping = {
@@ -191,9 +231,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  /* =========================================================
-   SHARED HELPERS (LATEST GROWTH + ADG)
-  ========================================================= */
+  function getStageIcon(pig) {
+    const stage = String(pig.age_stage || "").toLowerCase();
+    const sex = String(pig.sex || "").toLowerCase();
+
+    if (stage.includes("piglet") || stage.includes("monitoring")) return "bi-heart-pulse";
+    if (sex === "female") return "bi-gender-female";
+    if (sex === "male") return "bi-gender-male";
+    return "bi-piggy-bank";
+  }
+
   function getLatestPerformance(records = []) {
     if (!Array.isArray(records) || !records.length) return {};
 
@@ -283,7 +330,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =========================================================
-     OFFSPRING: FIND PIGLETS FROM LOADED SWINE DATA
+     MODULE: OFFSPRING HELPERS
   ========================================================= */
   function getPigletsFromLoadedSwine(motherPig, cycle) {
     if (!motherPig || !cycle) return [];
@@ -297,7 +344,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       .filter((p) => {
         const damId = String(p.dam_id || "").trim();
         const birthCycle = Number(p.birth_cycle_number || 0);
-
         return damId === motherId && birthCycle === cycleNumber;
       })
       .sort((a, b) => {
@@ -312,9 +358,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }));
   }
 
-  /* =========================================================
-     OFFSPRING: EXTRACT PIGLETS LIST FROM CYCLE
-  ========================================================= */
   function extractCyclePiglets(cycleObj) {
     if (!cycleObj) return [];
 
@@ -331,9 +374,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return [];
   }
 
-  /* =========================================================
-     OFFSPRING: NORMALIZE BREEDING CYCLES (FALLBACKS)
-  ========================================================= */
   function normalizeCycles(pig) {
     const raw = Array.isArray(pig?.breeding_cycles) ? pig.breeding_cycles : [];
 
@@ -384,9 +424,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return cycles.filter((c) => c.cycle_number > 0);
   }
 
-  /* =========================================================
-     OFFSPRING: PIGLET BADGE MAPPER
-  ========================================================= */
   function badgeForPigletStatus(piglet) {
     const status =
       piglet?.status ||
@@ -415,9 +452,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return { text: status || "Unknown", cls: "neutral" };
   }
 
-  /* =========================================================
-     OFFSPRING: BUILD PER-CYCLE BAR CHART
-  ========================================================= */
   function buildOffspringCycleChart(cycles) {
     const canvas = document.getElementById("offspringCycleChart");
     if (!canvas) return;
@@ -440,14 +474,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           {
             label: "Live",
             data: live,
-            backgroundColor: "rgba(31,167,116,0.65)",
-            borderRadius: 10,
+            backgroundColor: "rgba(31,167,116,0.70)",
+            borderRadius: 12,
           },
           {
             label: "Dead",
             data: dead,
             backgroundColor: "rgba(220,38,38,0.55)",
-            borderRadius: 10,
+            borderRadius: 12,
           },
         ],
       },
@@ -460,32 +494,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /* =========================================================
-     OFFSPRING: DISPLAY PIGLETS (PLACEHOLDERS WHEN NEEDED)
-  ========================================================= */
-    function getDisplayPiglets(motherPig, cycle) {
-      const embeddedList = extractCyclePiglets(cycle?.raw || cycle);
-      if (embeddedList && embeddedList.length) return embeddedList;
+  function getDisplayPiglets(motherPig, cycle) {
+    const embeddedList = extractCyclePiglets(cycle?.raw || cycle);
+    if (embeddedList && embeddedList.length) return embeddedList;
 
-      const linkedPiglets = getPigletsFromLoadedSwine(motherPig, cycle);
-      if (linkedPiglets && linkedPiglets.length) return linkedPiglets;
+    const linkedPiglets = getPigletsFromLoadedSwine(motherPig, cycle);
+    if (linkedPiglets && linkedPiglets.length) return linkedPiglets;
 
-      const total = toNum(cycle?.total);
-      if (total > 0) {
-        return Array.from({ length: total }, (_, i) => ({
-          piglet_id: `Piglet ${i + 1}`,
-          status: "Unrecorded",
-        }));
-      }
-
-      return [];
+    const total = toNum(cycle?.total);
+    if (total > 0) {
+      return Array.from({ length: total }, (_, i) => ({
+        piglet_id: `Piglet ${i + 1}`,
+        status: "Unrecorded",
+      }));
     }
 
-  /* =========================================================
-     OFFSPRING: NORMALIZE PIGLET SEX LABEL
-     PURPOSE:
-       Standardize piglet sex values for filter tabs.
-  ========================================================= */
+    return [];
+  }
+
   function normalizePigletSex(value) {
     const v = String(value || "").trim().toLowerCase();
     if (v === "male") return "male";
@@ -493,11 +519,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return "unknown";
   }
 
-  /* =========================================================
-     OFFSPRING: PAGINATE ARRAY
-     PURPOSE:
-       Reusable client-side pagination helper.
-  ========================================================= */
   function paginateItems(items = [], page = 1, perPage = 5) {
     const safePage = Math.max(1, Number(page) || 1);
     const safePerPage = Math.max(1, Number(perPage) || 5);
@@ -516,11 +537,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
   }
 
-  /* =========================================================
-     OFFSPRING: RENDER PIGLET FILTER TABS
-     PURPOSE:
-       Render All / Male / Female tabs with counts.
-  ========================================================= */
   function renderPigletFilterTabs(piglets = [], activeFilter = "all") {
     const maleCount = piglets.filter((p) => normalizePigletSex(p.sex) === "male").length;
     const femaleCount = piglets.filter((p) => normalizePigletSex(p.sex) === "female").length;
@@ -554,11 +570,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  /* =========================================================
-     OFFSPRING: RENDER PIGLET CARD
-     PURPOSE:
-       Display one piglet card with compact details and view action.
-  ========================================================= */
   function renderPigletCard(piglet, index = 0) {
     const badge = badgeForPigletStatus(piglet);
     const pigletId = piglet.swine_id || piglet.piglet_id || piglet.tag_id || `Piglet ${index + 1}`;
@@ -630,11 +641,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  /* =========================================================
-     OFFSPRING: BIND PIGLET CARD ACTIONS
-     PURPOSE:
-       Open the selected piglet in the main pig detail modal.
-  ========================================================= */
   function bindPigletCardActions() {
     document.querySelectorAll("[data-view-piglet-id]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -655,11 +661,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /* =========================================================
-     OFFSPRING: BIND PIGLET FILTER TABS
-     PURPOSE:
-       Switch between All / Male / Female piglet views.
-  ========================================================= */
   function bindPigletFilterTabs(onChange) {
     document.querySelectorAll("[data-piglet-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -669,11 +670,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /* =========================================================
-     OFFSPRING: BIND PIGLET PAGINATION
-     PURPOSE:
-       Handle previous and next controls for the piglet card list.
-  ========================================================= */
   function bindPigletPagination(onChange) {
     const prevBtn = document.getElementById("pigletPrevPageBtn");
     const nextBtn = document.getElementById("pigletNextPageBtn");
@@ -681,343 +677,28 @@ document.addEventListener("DOMContentLoaded", async () => {
     prevBtn?.addEventListener("click", () => onChange("prev"));
     nextBtn?.addEventListener("click", () => onChange("next"));
   }
-    
-  /* =========================================================
-     OFFSPRING: CYCLE DETAILS (FULL MODAL VIEW)
-     Note: Kept for compatibility even if you primarily use inline details view.
-  ========================================================= */
-  function openCycleDetailsModal(motherPig, cycle) {
-    const pm = document.getElementById("pigModal");
-    const mb = document.getElementById("modalBody");
-    if (!pm || !mb) return;
-
-    const mother = cycle.mother_id || motherPig?.swine_id || "—";
-    const piglets = extractCyclePiglets(cycle?.raw || cycle);
-
-    const pigletListHtml = piglets.length
-      ? piglets
-          .map((p, idx) => {
-            const pid = p.swine_id || p.piglet_id || p.tag_id || `Piglet ${idx + 1}`;
-            const b = badgeForPigletStatus(p);
-            return `
-              <div class="piglet-row">
-                <div class="piglet-left">
-                  <i class="bi bi-dot"></i>
-                  <div class="piglet-id">${pid}</div>
-                </div>
-                <span class="piglet-badge ${b.cls}">${b.text}</span>
-              </div>
-            `;
-          })
-          .join("")
-      : `
-        <div class="empty-state">
-          <i class="bi bi-list-check"></i>
-          <p>No piglet list recorded for this cycle yet.</p>
-        </div>
-      `;
-
-    mb.innerHTML = `
-      <div class="cycle-details">
-
-        <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
-          <div class="min-w-0">
-            <h3 class="mb-0">Cycle ${cycle.cycle_number} Details</h3>
-            <small class="modal-subtitle d-block">Parents and piglet outcomes</small>
-          </div>
-        </div>
-
-        <div class="details-grid mb-3">
-          <div class="info-card"><small>Total</small><strong>${cycle.total}</strong></div>
-          <div class="info-card"><small>Live</small><strong>${cycle.live}</strong></div>
-          <div class="info-card"><small>Dead</small><strong>${cycle.dead}</strong></div>
-          <div class="info-card"><small>Date</small>
-            <strong>${
-              cycle.actual_farrowing_date
-                ? new Date(cycle.actual_farrowing_date).toLocaleDateString()
-                : "—"
-            }</strong>
-          </div>
-        </div>
-
-        <div class="parents-card mb-3">
-          <div class="parent-item">
-            <small>Mother</small>
-            <div class="mono">${mother}</div>
-          </div>
-          <div class="parent-item">
-            <small>Father</small>
-            <div class="mono" id="fatherDetailsLabel2">Loading...</div>
-          </div>
-        </div>
-
-        <div class="piglets-card">
-          <div class="piglets-title">
-            <h4 class="mb-0">Piglets</h4>
-            <small>${piglets.length ? `${piglets.length} record(s)` : "No list recorded"}</small>
-          </div>
-          <div class="piglets-list">
-            ${pigletListHtml}
-          </div>
-        </div>
-
-      </div>
-    `;
-
-    pm.classList.add("show");
-    document.body.style.overflow = "hidden";
-  }
 
   /* =========================================================
-     OFFSPRING: INIT UI (CHART + SELECT + CARDS + DETAILS VIEW)
-  ========================================================= */
-  function initializeOffspringUI(pig) {
-    const cycles = normalizeCycles(pig);
-    if (!cycles.length) return;
-
-    const cycleSelect = document.getElementById("cycleSelect");
-    const cycleCardsArea = document.getElementById("cycleCardsArea");
-    const jumpLatestBtn = document.getElementById("jumpLatestCycleBtn");
-
-    const latestCycleNum = Math.max(...cycles.map((c) => c.cycle_number || 0));
-
-    if (cycleSelect) cycleSelect.value = String(latestCycleNum);
-
-    buildOffspringCycleChart(cycles);
-
-    // Render cycle details inside cycleCardsArea
-    function showCycleDetails(cycle) {
-      if (!cycleCardsArea) return;
-
-      cycleCardsArea.innerHTML = renderCycleDetailsView(pig, cycle);
-
-      const fatherEl2 = document.getElementById("fatherDetailsLabel2");
-      if (fatherEl2) {
-        resolveSwineId(cycle.father_id).then((v) => {
-          fatherEl2.textContent = v || "—";
-        });
-      }
-
-      renderPigletCardSection(pig, cycle, {
-        filter: "all",
-        page: 1,
-      });
-
-      const backBtn = document.getElementById("backToOffspringBtn");
-      backBtn?.addEventListener("click", () => {
-        const currentVal = toNum(cycleSelect?.value);
-        renderSelectedCycle(currentVal || latestCycleNum);
-      });
-    }
-
-    // Render summary card for selected cycle
-    function renderSelectedCycle(cycleNum) {
-      if (!cycleCardsArea) return;
-
-      const selected = cycles.find((c) => c.cycle_number === cycleNum);
-      if (!selected) {
-        cycleCardsArea.innerHTML = `
-          <div class="empty-state">
-            <i class="bi bi-exclamation-triangle"></i>
-            <p>No data found for this cycle.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const dateLabel = selected.actual_farrowing_date
-        ? new Date(selected.actual_farrowing_date).toLocaleDateString()
-        : "Date not recorded";
-
-      cycleCardsArea.innerHTML = `
-        <div class="cycle-card modern-cycle-card" id="cycleCardClickable" role="button" tabindex="0" aria-label="Open cycle details">
-          <div class="cycle-card-top">
-            <div class="min-w-0">
-              <strong>Cycle ${selected.cycle_number}</strong>
-              <small class="d-block text-truncate">${dateLabel}</small>
-            </div>
-
-            <div class="cycle-badges">
-              <span class="mini-badge total"><i class="bi bi-collection"></i> ${selected.total}</span>
-              <span class="mini-badge live"><i class="bi bi-heart-pulse"></i> ${selected.live}</span>
-              <span class="mini-badge dead"><i class="bi bi-x-circle"></i> ${selected.dead}</span>
-            </div>
-          </div>
-
-          <div class="cycle-card-bottom">
-            <div class="cycle-mini">
-              <small>Mother</small>
-              <div class="mono">${selected.mother_id || "-"}</div>
-            </div>
-            <div class="cycle-mini">
-              <small>Father</small>
-              <div class="mono" id="fatherCycleLabel">Loading...</div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      const fatherEl = document.getElementById("fatherCycleLabel");
-      if (fatherEl) {
-        resolveSwineId(selected.father_id).then((v) => {
-          fatherEl.textContent = v || "—";
-        });
-      }
-
-      const clickable = document.getElementById("cycleCardClickable");
-      const openDetails = () => showCycleDetails(selected);
-
-      clickable?.addEventListener("click", openDetails);
-      clickable?.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openDetails();
-        }
-      });
-    }
-
-    renderSelectedCycle(latestCycleNum);
-
-    cycleSelect?.addEventListener("change", (e) => {
-      renderSelectedCycle(toNum(e.target.value));
-    });
-
-    jumpLatestBtn?.addEventListener("click", () => {
-      if (!cycleSelect) return;
-      cycleSelect.value = String(latestCycleNum);
-      renderSelectedCycle(latestCycleNum);
-    });
-  }
-
-  /* =========================================================
-     API: UPDATE HEALTH STATUS
-  ========================================================= */
-  async function updateHealthStatus(swineId, newStatus) {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/swine/update/${swineId}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ health_status: newStatus }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        alert(data.message || "Failed to update.");
-        return;
-      }
-
-      const pig = currentSwineData.find((p) => p.swine_id === swineId);
-      if (pig) pig.health_status = newStatus;
-
-      updateSummaryStats();
-      renderSwine();
-      pigModal.classList.remove("show");
-    } catch (err) {
-      console.error(err);
-      alert("Update failed.");
-    }
-  }
-
-  /* =========================================================
-     UI: MONTHLY UPDATE MODAL (GROWTH FORM)
+     MODULE: LEGACY MONTHLY UPDATE
+     PURPOSE:
+       Kept in memory for later transfer. Not used in current UI.
   ========================================================= */
   function openMonthlyUpdateModal(pig) {
     if (!modalBody) return;
 
-    // Bootstrap-aligned markup while keeping all IDs used by logic
     modalBody.innerHTML = `
-      <div class="monthly-section">
-        <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-          <div class="min-w-0">
-            <h4 class="section-title mb-1">
-              <i class="bi bi-graph-up"></i> Monthly Growth
-            </h4>
-            <div class="pig-ref mb-0">${pig.swine_id}</div>
-          </div>
-        </div>
-
-        <form id="growthForm" class="modern-form">
-          <div class="row g-3">
-            <div class="col-12 col-md-6">
-              <div class="form-group mb-0">
-                <label>Weight (kg)</label>
-                <input type="number" step="0.01" required name="weight" />
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6">
-              <div class="form-group mb-0">
-                <label>Body Length (cm)</label>
-                <input type="number" step="0.1" required name="body_length" />
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6">
-              <div class="form-group mb-0">
-                <label>Heart Girth (cm)</label>
-                <input type="number" step="0.1" required name="heart_girth" />
-              </div>
-            </div>
-
-            <div class="col-12 col-md-6">
-              <div class="form-group mb-0">
-                <label>Teeth Count</label>
-                <input type="number" required name="teeth_count" />
-              </div>
-            </div>
-
-            <div class="col-12">
-              <button type="submit" class="primary-btn full-width">
-                <i class="bi bi-check-circle"></i> Save Update
-              </button>
-            </div>
-          </div>
-        </form>
+      <div class="empty-state">
+        <i class="bi bi-box-seam"></i>
+        <p>Monthly update has been moved from this interface and reserved for future transfer.</p>
       </div>
     `;
-
-    const formEl = modalBody.querySelector("#growthForm");
-    if (formEl) {
-      formEl.onsubmit = async (e) => {
-        e.preventDefault();
-        const form = e.target;
-
-        const payload = {
-          performance_records: {
-            weight: Number(form.weight.value),
-            body_length: Number(form.body_length.value),
-            heart_girth: Number(form.heart_girth.value),
-            teeth_count: Number(form.teeth_count.value),
-            stage: pig.current_status,
-          },
-        };
-
-        await fetch(`${BACKEND_URL}/api/swine/update/${pig.swine_id}`, {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        alert("Update saved!");
-        pigModal.classList.remove("show");
-        document.body.style.overflow = "";
-      };
-    }
 
     pigModal.classList.add("show");
     document.body.style.overflow = "hidden";
   }
 
   /* =========================================================
-     UI: DETAILS TABS (OVERVIEW / GROWTH / OFFSPRING)
+     MODULE: DETAILS TABS
   ========================================================= */
   function generateTabs(pig) {
     const stage = (pig.age_stage || "").toLowerCase();
@@ -1025,19 +706,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isFemale = (pig.sex || "").toLowerCase() === "female";
 
     let tabs = `
-      <button class="details-tab active" data-tab="overview" type="button">Overview</button>
-      <button class="details-tab" data-tab="growth" type="button">Growth</button>
+      <button class="details-tab active" data-tab="overview" type="button">
+        <i class="bi bi-grid"></i>
+        <span>Overview</span>
+      </button>
+      <button class="details-tab" data-tab="growth" type="button">
+        <i class="bi bi-graph-up-arrow"></i>
+        <span>Growth</span>
+      </button>
     `;
 
     if (!isPiglet && isFemale) {
-      tabs += `<button class="details-tab" data-tab="offspring" type="button">Offspring</button>`;
+      tabs += `
+        <button class="details-tab" data-tab="offspring" type="button">
+          <i class="bi bi-diagram-3"></i>
+          <span>Offspring</span>
+        </button>
+      `;
     }
 
     return `<div class="details-tabs">${tabs}</div>`;
   }
 
   /* =========================================================
-     UI: OPEN PIG DETAILS MODAL
+     MODULE: OPEN PIG DETAILS MODAL
   ========================================================= */
   function openPigDetails(pig) {
     if (!modalBody) return;
@@ -1056,10 +748,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     modalBody.innerHTML = `
       <div class="pig-details">
 
-        <div class="details-header">
-          <div class="min-w-0">
-            <h2 class="mb-0">${pig.swine_id}</h2>
-            <small class="d-block text-truncate">${pig.breed || "-"} • ${pig.sex || "-"}</small>
+        <div class="details-hero">
+          <div class="details-hero-left">
+            <div class="details-avatar">
+              <i class="bi ${getStageIcon(pig)}"></i>
+            </div>
+
+            <div class="min-w-0">
+              <h2 class="mb-1">${pig.swine_id}</h2>
+              <div class="details-hero-meta">
+                <span>${pig.breed || "-"}</span>
+                <span class="dot-sep"></span>
+                <span>${pig.sex || "-"}</span>
+              </div>
+            </div>
           </div>
 
           <span class="health-badge ${getStatusClass(pig.health_status)}">
@@ -1099,12 +801,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
 
     initializeTabSwitching(pig, latest, adg);
-
     pigModal.classList.add("show");
     document.body.style.overflow = "hidden";
   }
+
   /* =========================================================
-     UI: OVERVIEW TAB CONTENT
+     MODULE: OVERVIEW TAB
   ========================================================= */
   function renderOverviewTab(pig, latest = {}, adg = "N/A") {
     const weightText =
@@ -1133,46 +835,37 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     return `
       <div class="overview-section">
+        <div class="content-block">
+          <div class="content-block-head">
+            <h4 class="mb-0">Pig Information</h4>
+          </div>
 
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <h4 class="mb-0">Pig Information</h4>
+          <div class="condition-list">
+            <div><span>Status</span><span>${pig.current_status || "-"}</span></div>
+            <div><span>Health</span><span>${pig.health_status || "-"}</span></div>
+            <div><span>Age Group</span><span>${formatStageDisplay(pig.age_stage)}</span></div>
+            <div><span>Sex</span><span>${pig.sex || "-"}</span></div>
+          </div>
         </div>
 
-        <div class="condition-list">
-          <div><span>Status</span><span>${pig.current_status || "-"}</span></div>
-          <div><span>Health</span><span>${pig.health_status || "-"}</span></div>
-          <div><span>Age Group</span><span>${formatStageDisplay(pig.age_stage)}</span></div>
-          <div><span>Sex</span><span>${pig.sex || "-"}</span></div>
+        <div class="content-block">
+          <div class="content-block-head">
+            <h4 class="mb-0">Latest Growth Record</h4>
+          </div>
+
+          <div class="condition-list">
+            <div><span>Weight</span><span>${weightText}</span></div>
+            <div><span>Daily Gain (ADG)</span><span>${adg}</span></div>
+            <div><span>Body Length</span><span>${bodyLengthText}</span></div>
+            <div><span>Heart Girth</span><span>${heartGirthText}</span></div>
+          </div>
         </div>
 
-        <div class="d-flex align-items-center justify-content-between mt-3 mb-2">
-          <h4 class="mb-0">Latest Growth Record</h4>
-        </div>
-
-        <div class="condition-list">
-          <div><span>Weight</span><span>${weightText}</span></div>
-          <div><span>Daily Gain (ADG)</span><span>${adg}</span></div>
-          <div><span>Body Length</span><span>${bodyLengthText}</span></div>
-          <div><span>Heart Girth</span><span>${heartGirthText}</span></div>
-        </div>
-
-        <div class="overview-actions mt-3">
-          <button class="secondary-btn full-btn" id="updateInfoBtn" type="button">
-            <i class="bi bi-pencil-square"></i> Update Pig Info
-          </button>
-
-          <button class="primary-btn full-btn" id="monthlyUpdateBtn" type="button">
-            <i class="bi bi-graph-up"></i> Add Monthly Growth
-          </button>
-        </div>
-
+        <div class="overview-actions mt-3"></div>
       </div>
     `;
   }
 
-  /* =========================================================
-     UI: DEFAULT TAB FALLBACK
-  ========================================================= */
   function renderComingSoon() {
     return `
       <div class="empty-state">
@@ -1183,7 +876,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =========================================================
-     UI: GROWTH TAB CONTENT
+     MODULE: GROWTH TAB
+     NOTE:
+       Read-only growth view retained.
+       Monthly update action removed from interface.
   ========================================================= */
   function renderGrowthTab(pig) {
     const records = [...(pig.performance_records || [])]
@@ -1203,9 +899,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!records.length) {
       return `
-        <div class="empty-state">
-          <i class="bi bi-graph-up"></i>
-          <p>No growth records yet.</p>
+        <div class="growth-section">
+          <div class="growth-topbar">
+            <button class="back-btn growth-back-btn" id="backToOverviewGrowth" type="button">
+              <i class="bi bi-arrow-left"></i>
+              <span>Back to Overview</span>
+            </button>
+          </div>
+
+          <div class="empty-state">
+            <i class="bi bi-graph-up"></i>
+            <p>No growth records yet.</p>
+          </div>
         </div>
       `;
     }
@@ -1213,21 +918,42 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `
       <div class="growth-section">
 
-        <button class="back-btn" id="backToOverviewGrowth" type="button">
-          <i class="bi bi-arrow-left"></i> Back
-        </button>
-
-        <div class="chart-card">
-          <div class="chart-header">
-            <h4 class="mb-0">Weight Trend</h4>
-            <small class="d-block">Auto-updated</small>
-          </div>
-          <canvas id="weightChart"></canvas>
+        <div class="growth-topbar">
+          <button class="back-btn growth-back-btn" id="backToOverviewGrowth" type="button">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Overview</span>
+          </button>
         </div>
 
-        <div class="summary-card-light">
-          <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-            <h4 class="mb-0">Monthly Growth Summary</h4>
+        <div class="chart-card growth-chart-card">
+          <div class="chart-card-head">
+            <div>
+              <h4 class="mb-1">Weight Trend</h4>
+              <small>Recorded growth history</small>
+            </div>
+
+            <div class="chart-card-badge">
+              <i class="bi bi-graph-up-arrow"></i>
+              <span>${records.length} Record${records.length > 1 ? "s" : ""}</span>
+            </div>
+          </div>
+
+          <div class="chart-canvas-wrap">
+            <canvas id="weightChart"></canvas>
+          </div>
+        </div>
+
+        <div class="summary-card-light growth-summary-shell">
+          <div class="growth-summary-head">
+            <div>
+              <h4 class="mb-1">Monthly Growth Summary</h4>
+              <small>Review recorded measurements by month</small>
+            </div>
+
+            <span class="readonly-pill">
+              <i class="bi bi-lock"></i>
+              <span>Read Only</span>
+            </span>
           </div>
 
           <div class="growth-filter-card">
@@ -1251,9 +977,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  /* =========================================================
-     UI: GROWTH CHART INITIALIZATION
-  ========================================================= */
   function initializeGrowthChart(pig) {
     const records = [...(pig.performance_records || [])]
       .filter((r) => {
@@ -1309,16 +1032,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         responsive: true,
         maintainAspectRatio: false,
         devicePixelRatio: window.devicePixelRatio,
-        layout: { padding: { bottom: 30 } },
+        layout: { padding: { bottom: 20 } },
         plugins: { legend: { display: false } },
         scales: {
           x: {
-            ticks: { autoSkip: false, maxRotation: 0, padding: 20 },
+            ticks: { autoSkip: true, maxRotation: 0 },
           },
           y: {
             ticks: {
               callback: (value) => value + " kg",
-              padding: 8,
             },
           },
         },
@@ -1328,9 +1050,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     generateMonthlySummary(records);
   }
 
-  /* =========================================================
-     UI: MONTHLY SUMMARY (YEAR FILTER + COLLAPSIBLE MONTHS)
-  ========================================================= */
+  /* ===============================
+     MODULE: MONTHLY SUMMARY
+  =================================== */
   function generateMonthlySummary(records) {
     const container = document.getElementById("monthlySummary");
     const yearFilter = document.getElementById("yearFilter");
@@ -1363,6 +1085,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         .map((m) => parseInt(m, 10))
         .sort((a, b) => b - a);
 
+      if (!sortedMonths.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-calendar-x"></i>
+            <p>No records found for the selected year.</p>
+          </div>
+        `;
+        return;
+      }
+
       container.innerHTML = sortedMonths
         .map((monthIndex) => {
           const monthData = monthly[monthIndex];
@@ -1370,16 +1102,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             (a, b) => new Date(a.record_date) - new Date(b.record_date)
           );
 
-          const start = data[0].weight;
-          const end = data[data.length - 1].weight;
+          const start = Number(data[0].weight || 0);
+          const end = Number(data[data.length - 1].weight || 0);
           const diff = (end - start).toFixed(1);
 
           return `
             <div class="month-card">
               <div class="month-header">
-                <strong>${monthData.name} ${year}</strong>
+                <div class="month-header-left">
+                  <strong>${monthData.name} ${year}</strong>
+                  <small>${data.length} update${data.length > 1 ? "s" : ""}</small>
+                </div>
+
                 <div class="month-right">
-                  <span>${start} → ${end} kg</span>
+                  <span class="month-range">${start} → ${end} kg</span>
                   <span class="gain-badge ${diff > 0 ? "positive" : "neutral"}">
                     ${diff > 0 ? "+" : ""}${diff} kg
                   </span>
@@ -1387,7 +1123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               </div>
 
               <button class="month-toggle-btn" type="button">
-                View ${data.length} update(s)
+                View details
               </button>
 
               <div class="month-details hidden">
@@ -1395,11 +1131,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                   .map(
                     (r) => `
                       <div class="month-row">
-                        <div>${new Date(r.record_date).toLocaleDateString()}</div>
-                        <div>
-                          Weight <strong>${r.weight}</strong> kg
-                          &nbsp; Length ${r.body_length || "-"} cm
-                          &nbsp; Girth ${r.heart_girth || "-"} cm
+                        <div class="month-row-date">
+                          ${new Date(r.record_date).toLocaleDateString()}
+                        </div>
+
+                        <div class="month-row-metrics">
+                          <span>Weight <strong>${r.weight || "-"}</strong> kg</span>
+                          <span>Length <strong>${r.body_length || "-"}</strong> cm</span>
+                          <span>Girth <strong>${r.heart_girth || "-"}</strong> cm</span>
                         </div>
                       </div>
                     `
@@ -1419,26 +1158,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     yearFilter.addEventListener("change", (e) => render(e.target.value));
   }
 
-  /* =========================================================
-     UI: MONTH TOGGLE BINDINGS
-  ========================================================= */
+  /* ============================================
+     MODULE: MONTH TOGGLE BINDINGS
+  ============================================= */
   function attachMonthToggle() {
     document.querySelectorAll(".month-toggle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         const details = btn.nextElementSibling;
         if (!details) return;
 
+        const isHidden = details.classList.contains("hidden");
         details.classList.toggle("hidden");
 
-        btn.textContent = details.classList.contains("hidden")
-          ? btn.textContent.replace("Hide", "View")
-          : "Hide";
+        btn.textContent = isHidden ? "Hide details" : "View details";
       });
     });
   }
 
   /* =========================================================
-     UI: OFFSPRING TAB CONTENT
+     MODULE: OFFSPRING TAB
   ========================================================= */
   function renderOffspringTab(pig) {
     const isFemale = (pig.sex || "").toLowerCase() === "female";
@@ -1546,9 +1284,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  /* =========================================================
-     UI: CYCLE DETAILS VIEW (INLINE, NOT NEW MODAL)
-  ========================================================= */
   function renderCycleDetailsView(pig, cycle) {
     const mother = cycle.mother_id || pig?.swine_id || "—";
     const allPiglets = getDisplayPiglets(pig, cycle);
@@ -1640,11 +1375,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
-  /* =========================================================
-     UI: RENDER PIGLET CARD SECTION
-     PURPOSE:
-       Render tabs, card list, and pagination for the selected cycle.
-  ========================================================= */
   function renderPigletCardSection(motherPig, cycle, options = {}) {
     const mount = document.getElementById("pigletCardsMount");
     if (!mount) return;
@@ -1732,8 +1462,124 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindPigletCardActions();
   }
 
+  function initializeOffspringUI(pig) {
+    const cycles = normalizeCycles(pig);
+    if (!cycles.length) return;
+
+    const cycleSelect = document.getElementById("cycleSelect");
+    const cycleCardsArea = document.getElementById("cycleCardsArea");
+    const jumpLatestBtn = document.getElementById("jumpLatestCycleBtn");
+
+    const latestCycleNum = Math.max(...cycles.map((c) => c.cycle_number || 0));
+
+    if (cycleSelect) cycleSelect.value = String(latestCycleNum);
+
+    buildOffspringCycleChart(cycles);
+
+    function showCycleDetails(cycle) {
+      if (!cycleCardsArea) return;
+
+      cycleCardsArea.innerHTML = renderCycleDetailsView(pig, cycle);
+
+      const fatherEl2 = document.getElementById("fatherDetailsLabel2");
+      if (fatherEl2) {
+        resolveSwineId(cycle.father_id).then((v) => {
+          fatherEl2.textContent = v || "—";
+        });
+      }
+
+      renderPigletCardSection(pig, cycle, {
+        filter: "all",
+        page: 1,
+      });
+
+      const backBtn = document.getElementById("backToOffspringBtn");
+      backBtn?.addEventListener("click", () => {
+        const currentVal = toNum(cycleSelect?.value);
+        renderSelectedCycle(currentVal || latestCycleNum);
+      });
+    }
+
+    function renderSelectedCycle(cycleNum) {
+      if (!cycleCardsArea) return;
+
+      const selected = cycles.find((c) => c.cycle_number === cycleNum);
+      if (!selected) {
+        cycleCardsArea.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-exclamation-triangle"></i>
+            <p>No data found for this cycle.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const dateLabel = selected.actual_farrowing_date
+        ? new Date(selected.actual_farrowing_date).toLocaleDateString()
+        : "Date not recorded";
+
+      cycleCardsArea.innerHTML = `
+        <div class="cycle-card modern-cycle-card" id="cycleCardClickable" role="button" tabindex="0" aria-label="Open cycle details">
+          <div class="cycle-card-top">
+            <div class="min-w-0">
+              <strong>Cycle ${selected.cycle_number}</strong>
+              <small class="d-block text-truncate">${dateLabel}</small>
+            </div>
+
+            <div class="cycle-badges">
+              <span class="mini-badge total"><i class="bi bi-collection"></i> ${selected.total}</span>
+              <span class="mini-badge live"><i class="bi bi-heart-pulse"></i> ${selected.live}</span>
+              <span class="mini-badge dead"><i class="bi bi-x-circle"></i> ${selected.dead}</span>
+            </div>
+          </div>
+
+          <div class="cycle-card-bottom">
+            <div class="cycle-mini">
+              <small>Mother</small>
+              <div class="mono">${selected.mother_id || "-"}</div>
+            </div>
+            <div class="cycle-mini">
+              <small>Father</small>
+              <div class="mono" id="fatherCycleLabel">Loading...</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const fatherEl = document.getElementById("fatherCycleLabel");
+      if (fatherEl) {
+        resolveSwineId(selected.father_id).then((v) => {
+          fatherEl.textContent = v || "—";
+        });
+      }
+
+      const clickable = document.getElementById("cycleCardClickable");
+      const openDetails = () => showCycleDetails(selected);
+
+      clickable?.addEventListener("click", openDetails);
+      clickable?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openDetails();
+        }
+      });
+    }
+
+    renderSelectedCycle(latestCycleNum);
+
+    cycleSelect?.addEventListener("change", (e) => {
+      renderSelectedCycle(toNum(e.target.value));
+    });
+
+    jumpLatestBtn?.addEventListener("click", () => {
+      if (!cycleSelect) return;
+      cycleSelect.value = String(latestCycleNum);
+      renderSelectedCycle(latestCycleNum);
+    });
+  }
+
   /* =========================================================
-     UI: RENDER SWINE LIST (CARDS + PAGINATION)
+     MODULE: RENDER SWINE LIST
   ========================================================= */
   function renderSwine() {
     if (!pigList) return;
@@ -1742,7 +1588,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let filtered = [...currentSwineData];
 
-    // Type filtering
     if (currentTypeFilter !== "all") {
       filtered = filtered.filter((p) => {
         const stage = (p.age_stage || "").toLowerCase();
@@ -1764,11 +1609,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    // Sort sick first
+    if (currentSearchTerm) {
+      const q = currentSearchTerm.toLowerCase();
+      filtered = filtered.filter((p) => {
+        return [
+          p.swine_id,
+          p.breed,
+          p.sex,
+          p.age_stage,
+          p.current_status,
+          p.health_status,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(q));
+      });
+    }
+
     filtered.sort((a, b) => {
-      if (a.health_status === "Sick") return -1;
-      if (b.health_status === "Sick") return 1;
-      return 0;
+      if (a.health_status === "Sick" && b.health_status !== "Sick") return -1;
+      if (b.health_status === "Sick" && a.health_status !== "Sick") return 1;
+      return String(a.swine_id || "").localeCompare(String(b.swine_id || ""), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
     });
 
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -1777,48 +1640,97 @@ document.addEventListener("DOMContentLoaded", async () => {
     const start = (currentPage - 1) * itemsPerPage;
     const paginatedItems = filtered.slice(start, start + itemsPerPage);
 
-    paginatedItems.forEach((pig) => {
-      const latest = getLatestPerformance(pig.performance_records);
-      const adg = calculateADG(pig.performance_records);
-
-      const card = document.createElement("div");
-      card.className = "pig-card";
-
-      // More structured, still compatible with your CSS theme
-      card.innerHTML = `
-        <div class="pig-card-top">
-          <div class="pig-id">
-            <i class="bi bi-piggy-bank"></i> ${pig.swine_id}
-          </div>
-          <span class="status-badge ${getStatusClass(pig.health_status)}">
-            ${pig.health_status || "-"}
-          </span>
-        </div>
-
-        <div class="pig-card-meta">
-          ${formatStageDisplay(pig.age_stage)} • ${pig.current_status || "-"}
+    if (!paginatedItems.length) {
+      pigList.innerHTML = `
+        <div class="empty-state">
+          <i class="bi bi-search"></i>
+          <p>No pigs found for the current filter.</p>
         </div>
       `;
+    } else {
+      paginatedItems.forEach((pig) => {
+        const latest = getLatestPerformance(pig.performance_records);
+        const latestWeight =
+          latest.weight !== undefined &&
+          latest.weight !== null &&
+          latest.weight !== "" &&
+          !Number.isNaN(Number(latest.weight))
+            ? `${Number(latest.weight)} kg`
+            : "-";
 
-      card.addEventListener("click", () => {
-        openPigDetails(pig, latest, adg);
+        const card = document.createElement("div");
+        card.className = "pig-card";
+
+        card.innerHTML = `
+          <div class="pig-card-shell">
+            <div class="pig-card-top">
+              <div class="pig-card-identity">
+                <div class="pig-card-icon">
+                  <i class="bi ${getStageIcon(pig)}"></i>
+                </div>
+
+                <div class="min-w-0">
+                  <div class="pig-id">${pig.swine_id}</div>
+                  <div class="pig-card-meta">
+                    <span>${pig.breed || "-"}</span>
+                    <span class="dot-sep"></span>
+                    <span>${pig.sex || "-"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <span class="status-badge ${getStatusClass(pig.health_status)}">
+                ${pig.health_status || "-"}
+              </span>
+            </div>
+
+            <div class="pig-card-body">
+              <div class="pig-mini-stat">
+                <small>Age Group</small>
+                <strong>${formatStageDisplay(pig.age_stage)}</strong>
+              </div>
+
+              <div class="pig-mini-stat">
+                <small>Current Status</small>
+                <strong>${pig.current_status || "-"}</strong>
+              </div>
+
+              <div class="pig-mini-stat">
+                <small>Latest Weight</small>
+                <strong>${latestWeight}</strong>
+              </div>
+            </div>
+
+            <div class="pig-card-footer">
+              <span class="pig-card-link">
+                <span class="pig-card-link-text">View Details</span>
+                <span class="pig-card-link-arrow">
+                  <i class="bi bi-arrow-right"></i>
+                </span>
+              </span>
+            </div>
+          </div>
+        `;
+
+        card.addEventListener("click", () => {
+          openPigDetails(pig);
+        });
+
+        pigList.appendChild(card);
       });
+    }
 
-      pigList.appendChild(card);
-    });
-
-    // Update pagination UI
     const pageInfo = document.getElementById("pageInfo");
     const prevBtn = document.getElementById("prevPage");
     const nextBtn = document.getElementById("nextPage");
 
     if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
     if (prevBtn) prevBtn.disabled = currentPage === 1;
-    if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+    if (nextBtn) nextBtn.disabled = currentPage === totalPages || totalPages === 0;
   }
 
   /* =========================================================
-     UI: TYPE TAB FILTER BINDINGS
+     MODULE: TYPE FILTER BINDINGS
   ========================================================= */
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1832,10 +1744,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* =========================================================
-     DATA: LOAD SWINE (FARMER)
+     MODULE: SEARCH BINDING
+  ========================================================= */
+  searchInput?.addEventListener("input", (e) => {
+    currentSearchTerm = String(e.target.value || "").trim();
+    currentPage = 1;
+    renderSwine();
+  });
+
+  /* =========================================================
+     MODULE: LOAD SWINE DATA
   ========================================================= */
   try {
-    if (loadingMessage) loadingMessage.textContent = "Loading your pigs...";
+    if (loadingMessage) {
+      loadingMessage.classList.remove("hidden");
+      loadingMessage.textContent = "Loading your pig records...";
+    }
 
     const response = await fetch(`${BACKEND_URL}/api/swine/farmer`, {
       headers: {
@@ -1853,19 +1777,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     currentSwineData = data.swine || [];
-    if (loadingMessage) loadingMessage.textContent = "";
+
+    if (loadingMessage) {
+      loadingMessage.textContent = "";
+      loadingMessage.classList.add("hidden");
+    }
 
     updateSummaryStats();
     renderSwine();
   } catch (err) {
     console.error(err);
     if (loadingMessage) {
+      loadingMessage.classList.remove("hidden");
       loadingMessage.innerHTML = `<span style="color:red">${err.message}</span>`;
     }
   }
 
   /* =========================================================
-     UI: PAGINATION BINDINGS
+     MODULE: PAGINATION BINDINGS
   ========================================================= */
   document.getElementById("prevPage")?.addEventListener("click", () => {
     if (currentPage > 1) {
@@ -1879,43 +1808,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderSwine();
   });
 
-  /* =========================================================
-     UI: TAB SWITCHING (DETAILS VIEW)
+    /* =========================================================
+     MODULE: TAB SWITCHING
+     PURPOSE:
+       Handle detail tab navigation and render each selected
+       content panel. Update Pig Info action has been removed
+       from this interface and reserved for later transfer.
   ========================================================= */
   function initializeTabSwitching(pig, latest, adg) {
     const tabs = document.querySelectorAll(".details-tab");
     const content = document.getElementById("detailsContent");
     if (!tabs.length || !content) return;
 
-    // Attach Overview actions (monthly + edit)
+    /* =========================================================
+       MODULE: OVERVIEW ACTIONS
+       PURPOSE:
+         Reserved for future overview actions. The previous
+         Update Pig Info flow is intentionally disabled here.
+    ========================================================= */
     function attachOverviewActions() {
-      const monthlyBtn = document.getElementById("monthlyUpdateBtn");
-      if (monthlyBtn) {
-        monthlyBtn.addEventListener("click", () => openMonthlyUpdateModal(pig));
-      }
-
-      const updateInfoBtn = document.getElementById("updateInfoBtn");
-      if (updateInfoBtn) {
-        updateInfoBtn.addEventListener("click", () => {
-          const em = document.getElementById("editPigModal");
-          if (!em) return;
-
-          const idField = document.getElementById("editPigId");
-          const healthField = document.getElementById("editHealth");
-          const statusField = document.getElementById("editStatus");
-          const notesField = document.getElementById("editNotes");
-
-          if (idField) idField.value = pig.swine_id;
-          if (healthField) healthField.value = pig.health_status || "Healthy";
-          if (statusField) statusField.value = pig.current_status || "Open";
-          if (notesField) notesField.value = "";
-
-          em.classList.add("show");
-          document.body.style.overflow = "hidden";
-        });
-      }
+      // Update Pig Info has been removed from this interface.
+      // Keep this function for compatibility and future transfer.
     }
 
+    /* =========================================================
+       MODULE: TAB CLICK BINDINGS
+       PURPOSE:
+         Switch active tab state and render the matching content.
+    ========================================================= */
     tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
         tabs.forEach((t) => t.classList.remove("active"));
@@ -1934,10 +1854,16 @@ document.addEventListener("DOMContentLoaded", async () => {
           initializeGrowthChart(pig);
 
           const backBtn = document.getElementById("backToOverviewGrowth");
-          backBtn?.addEventListener("click", () => {
-            const overviewTab = document.querySelector('[data-tab="overview"]');
-            overviewTab?.click();
+          backBtn?.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const overviewTab = document.querySelector('.details-tab[data-tab="overview"]');
+            if (overviewTab) {
+              overviewTab.click();
+            }
           });
+
           return;
         }
 
@@ -1951,7 +1877,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
 
-    // Ensure Overview actions work on first render
+    /* =========================================================
+       MODULE: INITIAL OVERVIEW HOOK
+       PURPOSE:
+         Run compatibility hooks for the default Overview tab.
+    ========================================================= */
     attachOverviewActions();
   }
 });

@@ -2,51 +2,64 @@
   <div class="modal-panel">
 
     <div class="modal-header">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button type="button" id="backToOverviewEdit" class="modal-close-btn">
+      <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+        <button type="button" id="backToOverviewEdit" class="modal-close-btn" aria-label="Back">
           <i class="bi bi-arrow-left"></i>
         </button>
-        <h3>Update Pig Information</h3>
+
+        <div class="min-w-0">
+          <h3 class="mb-0">Update Pig Information</h3>
+          <small class="modal-subtitle">Review and modify health details</small>
+        </div>
       </div>
 
-      <button id="closeEditModal" class="modal-close-btn">
+      <button id="closeEditModal" class="modal-close-btn" type="button" aria-label="Close">
         <i class="bi bi-x-lg"></i>
       </button>
     </div>
 
     <form id="editPigForm" class="modal-body">
-
       <input type="hidden" id="editPigId" />
 
-      <div class="form-group">
-        <label>Health Condition</label>
-        <select id="editHealth">
-          <option value="Healthy">Healthy</option>
-          <option value="Sick">Sick</option>
-          <option value="Injured">Injured</option>
-        </select>
-      </div>
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label for="editHealth">Health Condition</label>
+            <select id="editHealth">
+              <option value="Healthy">Healthy</option>
+              <option value="Sick">Sick</option>
+              <option value="Injured">Injured</option>
+            </select>
+          </div>
+        </div>
 
-      <div class="form-group">
-        <label>Status</label>
-        <select id="editStatus">
-          <option value="Open">Open</option>
-          <option value="Monitoring">Monitoring</option>
-          <option value="Under Observation">Under Observation</option>
-        </select>
-      </div>
+        <div class="col-12 col-md-6">
+          <div class="form-group">
+            <label for="editStatus">Status</label>
+            <select id="editStatus">
+              <option value="Open">Open</option>
+              <option value="Monitoring">Monitoring</option>
+              <option value="Under Observation">Under Observation</option>
+            </select>
+          </div>
+        </div>
 
-      <div class="form-group">
-        <label>Notes</label>
-        <textarea id="editNotes" rows="4"></textarea>
-      </div>
+        <div class="col-12">
+          <div class="form-group mb-0">
+            <label for="editNotes">Notes</label>
+            <textarea id="editNotes" rows="4" placeholder="Add remarks or observations"></textarea>
+          </div>
+        </div>
 
-      <div class="modal-footer">
-        <button type="submit" class="primary-btn full-width">
-          Save Changes
-        </button>
+        <div class="col-12">
+          <div class="modal-footer p-0 pt-2">
+            <button type="submit" class="primary-btn full-width">
+              <i class="bi bi-check-circle"></i>
+              <span>Save Changes</span>
+            </button>
+          </div>
+        </div>
       </div>
-
     </form>
 
   </div>

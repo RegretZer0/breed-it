@@ -1,79 +1,183 @@
 <%- include("../../../partials/farmer/farmer_nav") %>
-    <div class="pigs-container">
 
-  <!-- SUMMARY CARD -->
-  <div class="summary-card">
-    <div class="summary-left">
-      <h2><i class="bi bi-piggy-bank"></i> My Pigs</h2>
-      <p>Manage your livestock efficiently</p>
+<div class="pigs-container container-fluid">
+  <div class="row g-4">
+
+    <!-- PAGE TITLE CARD -->
+    <div class="col-12">
+      <section class="summary-card">
+        <div class="row g-3 align-items-center">
+          <div class="col-12">
+            <div class="summary-left">
+              <div class="summary-eyebrow">
+                <span class="summary-dot"></span>
+                <span>Livestock Overview</span>
+              </div>
+
+              <h2><i class="bi bi-piggy-bank"></i> My Pigs</h2>
+              <p>
+                Track pig records, monitor health condition, and review growth and offspring information in one place.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <div class="summary-stats">
-      <div>
-        <span id="totalCount">0</span>
-        <small>Total</small>
+        <!-- STATUS SUMMARY CARD -->
+    <div class="col-12">
+      <section class="status-summary-card">
+        <div class="status-summary-head">
+          <div>
+            <h3 class="mb-1">Pig Status Summary</h3>
+            <p class="mb-0">Quick view of your livestock population and health distribution.</p>
+          </div>
+        </div>
+
+        <div class="status-summary-grid">
+          <div class="status-summary-item total">
+            <div class="status-summary-icon">
+              <i class="bi bi-collection"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="totalCount">0</span>
+              <small>Total</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item healthy">
+            <div class="status-summary-icon">
+              <i class="bi bi-heart-pulse"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="healthyCount">0</span>
+              <small>Healthy</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item sick">
+            <div class="status-summary-icon">
+              <i class="bi bi-bandaid"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="sickCount">0</span>
+              <small>Sick</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item sow">
+            <div class="status-summary-icon">
+              <i class="bi bi-gender-female"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="sowCount">0</span>
+              <small>Sow</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item piglet">
+            <div class="status-summary-icon">
+              <i class="bi bi-heart"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="pigletCount">0</span>
+              <small>Piglet</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item boar">
+            <div class="status-summary-icon">
+              <i class="bi bi-gender-male"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="boarCount">0</span>
+              <small>Boar</small>
+            </div>
+          </div>
+
+          <div class="status-summary-item dead">
+            <div class="status-summary-icon">
+              <i class="bi bi-x-circle"></i>
+            </div>
+            <div class="status-summary-content">
+              <span id="deadCount">0</span>
+              <small>Dead</small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- FILTER CARD -->
+    <div class="col-12">
+      <section class="filter-card">
+        <div class="row g-3 align-items-center">
+          <div class="col-12 col-xl-5">
+            <div class="search-box">
+              <i class="bi bi-search"></i>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search by Tag ID..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-7">
+            <div class="type-tabs">
+              <button class="tab-btn active" data-type="all" type="button">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>All</span>
+              </button>
+
+              <button class="tab-btn" data-type="piglet" type="button">
+                <i class="bi bi-heart-pulse"></i>
+                <span>Piglets</span>
+              </button>
+
+              <button class="tab-btn" data-type="sow" type="button">
+                <i class="bi bi-gender-female"></i>
+                <span>Sows</span>
+              </button>
+
+              <button class="tab-btn" data-type="boar" type="button">
+                <i class="bi bi-gender-male"></i>
+                <span>Boars</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col-12">
+      <p id="loadingMessage" class="loading-message hidden">
+        Loading your pigs...
+      </p>
+    </div>
+
+    <div class="col-12">
+      <div id="pigList" class="pig-list"></div>
+    </div>
+
+    <div class="col-12">
+      <div class="pagination">
+        <button id="prevPage" type="button" aria-label="Previous page">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <span id="pageInfo">Page 1 of 1</span>
+
+        <button id="nextPage" type="button" aria-label="Next page">
+          <i class="bi bi-chevron-right"></i>
+        </button>
       </div>
-
-      <div class="healthy">
-        <span id="healthyCount">0</span>
-        <small>Healthy</small>
-      </div>
-
-      <div class="sick">
-        <span id="sickCount">0</span>
-        <small>Sick</small>
-      </div>
-    </div>
-  </div>
-
-  <!-- FILTER CARD -->
-  <div class="filter-card">
-
-    <!-- KEEP ORIGINAL ID -->
-    <div class="search-box">
-      <i class="bi bi-search"></i>
-      <input 
-        type="text" 
-        id="searchInput"
-        placeholder="Search by Tag ID..."
-      />
-    </div>
-
-    <!-- KEEP ORIGINAL CLASS + data-type -->
-    <div class="type-tabs">
-      <button class="tab-btn active" data-type="all">All</button>
-      <button class="tab-btn" data-type="piglet">Piglets</button>
-      <button class="tab-btn" data-type="sow">Sows</button>
-      <button class="tab-btn" data-type="boar">Boars</button>
     </div>
 
   </div>
+</div>
 
-  <!-- KEEP ORIGINAL ID -->
-  <p id="loadingMessage" class="loading-message hidden">
-    Loading your pigs...
-  </p>
-
-  <!-- KEEP ORIGINAL ID -->
-  <div id="pigList" class="pig-list"></div>
-
-  <!-- KEEP ORIGINAL IDs -->
-  <div class="pagination">
-    <button id="prevPage">
-      <i class="bi bi-chevron-left"></i>
-    </button>
-
-    <span id="pageInfo">Page 1 of 1</span>
-
-    <button id="nextPage">
-      <i class="bi bi-chevron-right"></i>
-    </button>
-  </div>
-
-    </div>
-
-
-<!-- MODAL -->
 <%- include("./modal") %>
 <%- include("./edit-modal") %>
 

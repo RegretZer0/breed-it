@@ -1,107 +1,110 @@
 <%- include("../../../partials/farmer/farmer_nav") %>
 
-<div class="app-root">
+<div class="app-root repro-app-shell">
   <main class="container-fluid py-3 py-lg-4">
 
-    <!-- APP HERO (TITLE CARD) -->
-    <div class="repro-hero card shadow-sm mb-3 overflow-hidden">
+    <!-- MODULE: App Hero -->
+    <section class="repro-hero card border-0 shadow-sm mb-3 mb-lg-4 overflow-hidden">
       <div class="card-body">
         <div class="row g-3 align-items-center">
-
-          <!-- Left: greeting / title -->
-          <div class="col-12">
+          <div class="col-12 col-xl-8">
             <div class="d-flex align-items-start gap-3">
-              <div class="repro-hero-avatar d-none d-sm-flex">
-                <i class="bi bi-graph-up-arrow"></i>
+              <div class="repro-hero-avatar d-none d-sm-inline-flex">
+                <i class="bi bi-calendar2-heart"></i>
               </div>
 
               <div class="min-w-0">
-                <div class="repro-hero-kicker">Hi! Farmer</div>
-                <h4 class="mb-1 repro-title text-truncate">Reproduction Monitoring</h4>
-                <div class="repro-hero-sub text-truncate">
-                  Track sow cycles, monitor piglets, review performance, and finalize selection.
+                <h1 class="repro-title mb-1">Reproduction Monitoring</h1>
+                <div class="repro-hero-sub">
+                  Track sow cycles, monitor piglet growth, manage monthly updates, and review final selection in one place.
                 </div>
-
               </div>
             </div>
           </div>
-
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ✅ FILTER CARD (NEW) -->
-    <div class="card repro-filter-card shadow-sm border-0 mb-3 mb-lg-4">
+    <!-- MODULE: Filter Bar -->
+    <section class="card repro-filter-card border-0 shadow-sm mb-3 mb-lg-4">
       <div class="card-body">
-        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap mb-2">
+        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap mb-3">
           <div class="min-w-0">
             <div class="fw-bold d-flex align-items-center gap-2">
               <span class="repro-pill"><i class="bi bi-funnel"></i></span>
               <span>Filters</span>
             </div>
-            <div class="text-muted small">Search by sow tag/pig ID and narrow down by status.</div>
-          </div>
-        </div>
-
-        <div class="row g-2 align-items-center">
-          <!-- Search (KEEP ID: reproductionSearch) -->
-          <div class="col-12 col-lg-6">
-            <div class="input-group">
-              <span class="input-group-text bg-white">
-                <i class="bi bi-search"></i>
-              </span>
-              <input
-                type="text"
-                id="reproductionSearch"
-                class="form-control"
-                placeholder="Tag / Pig ID..."
-              />
-            </div>
-          </div>
-
-          <!-- Status dropdown -->
-          <div class="col-12 col-lg-3">
-            <select id="reproStatusFilter" class="form-select">
-              <option value="all" selected>All Status</option>
-              <option value="open_sows">Open sows</option>
-              <option value="in_heat">In-heat</option>
-              <option value="under_observation">Under observation</option>
-              <option value="pregnant">Pregnant</option>
-              <option value="farrowing">Farrowing</option>
-              <option value="lactating">Lactating</option>
-              <option value="weaning">Weaning</option>
-            </select>
-          </div>
-
-          <!-- Apply / Reset -->
-          <div class="col-12 col-lg-3">
-            <div class="d-grid d-sm-flex gap-2 justify-content-lg-end">
-              <button type="button" class="btn btn-success" data-act="applySowFilters">
-                <i class="bi bi-check2-circle me-1"></i> Apply
-              </button>
-              <button type="button" class="btn btn-outline-success" data-act="resetSowFilters">
-                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-              </button>
+            <div class="text-muted small">
+              Search by sow tag or filter records by reproduction stage.
             </div>
           </div>
         </div>
 
-        <div class="small text-muted mt-2">
-          Tip: Try “pregnant”, “lactating”, or a sow tag.
+        <div class="row g-2 g-lg-3 repro-filter-row">
+          <div class="col-12 col-md-6 col-xl-5">
+            <div class="repro-filter-field">
+              <label for="reproductionSearch" class="form-label small text-muted mb-1">Search</label>
+              <div class="input-group repro-input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-search"></i>
+                </span>
+                <input
+                  type="text"
+                  id="reproductionSearch"
+                  class="form-control"
+                  placeholder="Tag / Pig ID..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6 col-xl-3">
+            <div class="repro-filter-field">
+              <label for="reproStatusFilter" class="form-label small text-muted mb-1">Status</label>
+              <select id="reproStatusFilter" class="form-select">
+                <option value="all" selected>All Status</option>
+                <option value="open_sows">Open sows</option>
+                <option value="in_heat">In-heat</option>
+                <option value="under_observation">Under observation</option>
+                <option value="pregnant">Pregnant</option>
+                <option value="farrowing">Farrowing</option>
+                <option value="lactating">Lactating</option>
+                <option value="weaning">Weaning</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col-12 col-xl-4">
+            <div class="repro-filter-field repro-filter-field-actions">
+              <label class="form-label small text-muted mb-1 d-none d-xl-block opacity-0">Actions</label>
+              <div class="repro-filter-actions d-grid d-sm-flex gap-2 justify-content-xl-end">
+                <button type="button" class="btn btn-success repro-filter-btn" data-act="applySowFilters">
+                  <i class="bi bi-check2-circle me-1"></i> Apply
+                </button>
+                <button type="button" class="btn btn-outline-success repro-filter-btn" data-act="resetSowFilters">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="small text-muted mt-3">
+          Tip: Try “pregnant”, “lactating”, “in-heat”, or a sow tag.
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- MAIN -->
-    <div class="row g-3 g-lg-4">
+    <!-- MODULE: Main Workspace -->
+    <section class="row g-3 g-lg-4">
       <div class="col-12">
         <div class="repro-center-wrap">
           <%- include("./sow_list") %>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- LEGACY IDS (HIDDEN COMPAT) -->
+    <!-- MODULE: Legacy Compatibility -->
     <%- include("./legacy_compat") %>
 
   </main>
