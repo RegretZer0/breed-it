@@ -367,7 +367,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
 });
 
 /* ======================================================
-    CONFIRM AI (With Time Warp & Double-Entry Protection)
+    CONFIRM AI (With Time Warp & Updated Double-Entry Protection)
 ====================================================== */
 router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   const session = await mongoose.startSession();
@@ -379,10 +379,15 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) throw new Error("Report not found");
 
-    // Ensures an AI record isn't already linked to this specific heat report
-    const existingAI = await AIRecord.findOne({ heat_report_id: report._id });
-    if (existingAI) {
-      throw new Error("An AI record has already been submitted for this heat report.");
+    // UPDATED PROTECTION: Only block if there is an active 'Ongoing' AI record.
+    // This allows a new AI record to be created if the previous one was marked 'Failed' via the Still-in-Heat route.
+    const ongoingAI = await AIRecord.findOne({ 
+      heat_report_id: report._id, 
+      status: "Ongoing" 
+    });
+    
+    if (ongoingAI) {
+      throw new Error("An active AI record is already ongoing for this heat report.");
     }
 
     const virtualNow = await timeHelper.getVirtualNow();
@@ -421,7 +426,7 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
     report.next_heat_check = heatCheckDate;
     await report.save({ session });
 
-    // Update Swine lifecycle and breeding cycle history
+    // Update Swine lifecycle and breeding cycle history with the NEW AI record ID
     await Swine.updateOne(
       { _id: report.swine_id._id, "breeding_cycles.heat_report_id": report._id },
       {
@@ -755,51 +760,87 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
 ====================================================== */
 router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
-    const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    // FIX: Added fallback to empty object to prevent "req.body is undefined" crash
+    const { heat_signs, notes } = req.body || {}; 
 
-    // Get virtual time for consistent status logging
+    const report = await HeatReport.findById(req.params.id)
+      .populate("swine_id")
+      .populate("farmer_id");
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
+
+    // Get virtual time for consistent status logging (Timewarp Sync)
     const virtualNow = await timeHelper.getVirtualNow();
 
+    // CALCULATION: Set next heat check to 3 days from the current virtual date
+    const threeDaysFromNow = new Date(virtualNow);
+    threeDaysFromNow.setDate(virtualNow.getDate() + 3);
+
+    // 1. Update Heat Report
     report.status = "approved";
-    report.next_heat_check = null;
-    report.expected_farrowing = null;
+    report.expected_farrowing = null; // Clear failed pregnancy projections
+    
+    // Set the new check date for the calendar/task list
+    report.next_heat_check = threeDaysFromNow; 
+    
     report.still_in_heat_at = virtualNow;
     report.still_in_heat_by = req.user.id;
-    report.still_in_heat_reason = "Returned to heat / pregnancy failed";
+    report.still_in_heat_reason = notes || "Returned to heat / pregnancy failed";
+    
+    // Store selected signs if provided
+    if (heat_signs && Array.isArray(heat_signs)) {
+      report.heat_signs = heat_signs; 
+    }
+
     report.updatedAt = virtualNow;
     await report.save();
 
-    await AIRecord.findOneAndUpdate({ heat_report_id: report._id, status: "Ongoing" }, {
-      still_in_heat: true,
-      status: "Failed",
-      // Record exactly when the failure was noted in the warp timeline
-      failed_at: virtualNow 
-    });
+    // 2. Fail the linked AI Record (Stop ongoing breeding tracking)
+    await AIRecord.findOneAndUpdate(
+      { heat_report_id: report._id, status: "Ongoing" }, 
+      {
+        still_in_heat: true,
+        status: "Failed",
+        // Record exactly when the failure was noted in the warp timeline
+        failed_at: virtualNow 
+      }
+    );
 
+    // 3. Revert Swine Status to In-Heat for immediate UI visibility
     await Swine.findByIdAndUpdate(report.swine_id._id, { 
         current_status: "In-Heat",
         last_updated: virtualNow 
     });
 
+    // 4. Log the action with specific signs
+    const signsText = heat_signs ? ` (Signs: ${heat_signs.join(", ")})` : "";
     await logAction(
         req.user.id, 
         "STILL_IN_HEAT", 
         "BREEDING", 
-        `Still In Heat for Swine ${report.swine_id.swine_id} recorded on ${virtualNow.toDateString()}.`, 
+        `Still In Heat for Swine ${report.swine_id.swine_id} recorded on ${virtualNow.toDateString()}.${signsText}`, 
         req
     );
 
+    // 5. Notify the Breeding Team
+    // FIXED: Using "alert" to match your Notification.js schema enum: ["info", "success", "alert", "error", "maintenance"]
     await notifyBreedingTeam(
       report.manager_id,
       report.farmer_id.user_id,
       "Breeding Cycle Reset",
-      `Swine ${report.swine_id.swine_id} is still in heat. Cycle reset as of ${virtualNow.toLocaleDateString()}.`,
-      "warning"
+      `Swine ${report.swine_id.swine_id} is still in heat${signsText}. Cycle reset. Next check scheduled for ${threeDaysFromNow.toLocaleDateString()}.`,
+      "alert" 
     );
 
-    res.json({ success: true, message: "Cycle reset." });
+    res.json({ 
+      success: true, 
+      message: "Cycle reset. Next heat check scheduled in 3 days." 
+    });
+
   } catch (err) {
+    console.error("Still-Heat Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
