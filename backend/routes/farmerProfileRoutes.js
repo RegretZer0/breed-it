@@ -74,7 +74,7 @@ router.put(
   "/profile",
   requireSessionAndToken,
   allowRoles("farmer"),
-  upload.single("profile_picture"), // ✅ IMPORTANT
+  upload.single("profile_picture"), // IMPORTANT
   async (req, res) => {
     try {
       const farmer = await Farmer.findById(req.user.id);
