@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     onUnauthorized: () => {
       alert("Authorization Error: Session expired or system clock changed. Please log in again.");
       localStorage.clear();
-      window.location.href = "login.html";
+      window.location.href = "/login";
     }
   });
 

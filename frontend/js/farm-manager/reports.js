@@ -607,7 +607,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (res.status === 401 || res.status === 403) {
         alert("Session expired. Please log in again.");
-        window.location.href = "login.html";
+        window.location.href = "/login";
         return;
       }
 
