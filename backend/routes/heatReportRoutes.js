@@ -108,6 +108,83 @@ const notifyBreedingTeam = async (managerId, farmerUserId, title, message, type 
   }
 };
 
+function formatActorName(user) {
+  if (!user) return "Unknown User";
+
+  const first = user.first_name || "";
+  const last = user.last_name || "";
+  const full = `${first} ${last}`.trim();
+
+  return (
+    full ||
+    user.name ||
+    user.full_name ||
+    user.display_name ||
+    user.email ||
+    "Unknown User"
+  );
+}
+
+function formatActorRole(user) {
+  return String(user?.role || "unknown").replace(/_/g, " ");
+}
+
+function pushProgressHistory(report, {
+  eventKey = "",
+  title = "",
+  description = "",
+  fromStatus = "",
+  toStatus = "",
+  actor = null,
+  actionAt = new Date(),
+  meta = {}
+} = {}) {
+  if (!report.progress_history) report.progress_history = [];
+
+  report.progress_history.push({
+    event_key: eventKey,
+    title,
+    description,
+    from_status: fromStatus || report.status || "",
+    to_status: toStatus || report.status || "",
+    actor_id: actor?._id || actor?.id || null,
+    actor_name: formatActorName(actor),
+    actor_role: formatActorRole(actor),
+    action_at: actionAt,
+    meta
+  });
+}
+
+function ensureSubmittedHistory(report, actor = null) {
+  if (!report.progress_history) report.progress_history = [];
+
+  const hasSubmitted = report.progress_history.some(
+    (item) => String(item?.event_key || "").toLowerCase() === "report_submitted"
+  );
+
+  if (hasSubmitted) return;
+
+  pushProgressHistory(report, {
+    eventKey: "report_submitted",
+    title: "Report Submitted",
+    description: `Heat report submitted for sow ${report.swine_id?.swine_id || ""}.`,
+    fromStatus: "",
+    toStatus: "pending",
+    actor: actor || {
+      _id: report.farmer_id?._id || report.farmer_id || null,
+      first_name: report.farmer_id?.first_name || "",
+      last_name: report.farmer_id?.last_name || "",
+      role: "farmer"
+    },
+    actionAt: report.createdAt || new Date(),
+    meta: {
+      swine_code: report.swine_id?.swine_id || "",
+      signs: Array.isArray(report.signs) ? report.signs : [],
+      heat_probability: report.heat_probability ?? null
+    }
+  });
+}
+
 /* ======================================================
     ADD NEW HEAT REPORT (With Culling Logic)
 ====================================================== */
@@ -202,6 +279,8 @@ router.post(
       }
 
       // 6. Create the Heat Report
+      const computedProbability = calculateProbability(parsedSigns, swine);
+
       const newReport = new HeatReport({
         swine_id: swine._id,
         farmer_id: farmer._id,
@@ -210,10 +289,27 @@ router.post(
         standing_reflex: parsedSigns.includes("Standing Reflex"),
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
         evidence_url: evidenceData,
-        heat_probability: calculateProbability(parsedSigns, swine),
+        heat_probability: computedProbability,
         remarks: cleanRemarks,
-
-        status: "pending"
+        status: "pending",
+        progress_history: [
+          {
+            event_key: "report_submitted",
+            title: "Report Submitted",
+            description: `Heat report submitted for sow ${swine.swine_id}.`,
+            from_status: "",
+            to_status: "pending",
+            actor_id: req.user.id,
+            actor_name: req.user.name || `${farmer.first_name} ${farmer.last_name}`.trim(),
+            actor_role: req.user.role || "farmer",
+            action_at: new Date(),
+            meta: {
+              swine_code: swine.swine_id,
+              signs: parsedSigns,
+              heat_probability: computedProbability
+            }
+          }
+        ]
       });
 
       await newReport.save();
@@ -313,6 +409,9 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+
     const virtualNow = await timeHelper.getVirtualNow(); 
     
     // Calculate scheduled insemination based on virtual time
@@ -322,9 +421,26 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     report.status = "approved";
     report.next_heat_check = null;
     report.expected_farrowing = null;
-    report.still_in_heat_at = virtualNow;
-    report.still_in_heat_by = req.user.id;
-    report.still_in_heat_reason = "Returned to heat / pregnancy failed";
+
+    report.approved_at = virtualNow;
+    report.approved_by = req.user.id;
+
+    pushProgressHistory(report, {
+      eventKey: "report_approved",
+      title: "Report Approved",
+      description: `Heat report approved and sow scheduled for AI.`,
+      fromStatus: previousStatus,
+      toStatus: "approved",
+      actor: req.user,
+      actionAt: virtualNow,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        breeding_cycle_number: report.breeding_cycle_number || null
+      }
+    });
+    // report.still_in_heat_at = virtualNow;
+    // report.still_in_heat_by = req.user.id;
+    // report.still_in_heat_reason = "Returned to heat / pregnancy failed";
     report.updatedAt = virtualNow;
     await report.save();
 
@@ -379,6 +495,9 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) throw new Error("Report not found");
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+
     // UPDATED PROTECTION: Only block if there is an active 'Ongoing' AI record.
     // This allows a new AI record to be created if the previous one was marked 'Failed' via the Still-in-Heat route.
     const ongoingAI = await AIRecord.findOne({ 
@@ -424,6 +543,22 @@ router.post("/:id/confirm-ai", requireApiLogin, allowRoles("farm_manager"), asyn
     const heatCheckDate = new Date(finalAiDate);
     heatCheckDate.setDate(heatCheckDate.getDate() + 23);
     report.next_heat_check = heatCheckDate;
+
+    pushProgressHistory(report, {
+      eventKey: "ai_confirmed",
+      title: "Artificial Insemination Confirmed",
+      description: `AI procedure recorded for sow ${report.swine_id?.swine_id || ""}.`,
+      fromStatus: previousStatus,
+      toStatus: "under_observation",
+      actor: req.user,
+      actionAt: finalAiDate,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        male_swine_id: maleSwineId,
+        ai_date: finalAiDate
+      }
+    });
+
     await report.save({ session });
 
     // Update Swine lifecycle and breeding cycle history with the NEW AI record ID
@@ -486,6 +621,9 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+
     // Use your timeHelper utility
     const virtualNow = await timeHelper.getVirtualNow();
 
@@ -503,6 +641,21 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
     report.expected_farrowing = farrowingDate;
     report.pregnancy_confirmed_at = confirmationDate;
     report.pregnancy_confirmed_by = req.user.id;
+
+    pushProgressHistory(report, {
+      eventKey: "pregnancy_confirmed",
+      title: "Pregnancy Confirmed",
+      description: `Pregnancy confirmed for sow ${report.swine_id?.swine_id || ""}.`,
+      fromStatus: previousStatus,
+      toStatus: "pregnant",
+      actor: req.user,
+      actionAt: confirmationDate,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        expected_farrowing: farrowingDate
+      }
+    });
+
     await report.save({ session });
 
     // 4. Update AIRecord with the new model fields
@@ -618,6 +771,9 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+
     // Get the virtual "Today"
     const virtualNow = await timeHelper.getVirtualNow();
     
@@ -643,6 +799,23 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
     report.status = "lactating";
     report.actual_farrowing_date = farrowDate;
     report.farrowing_confirmed_by = req.user.id;
+
+    pushProgressHistory(report, {
+      eventKey: "farrowing_confirmed",
+      title: "Farrowing Confirmed",
+      description: `Farrowing recorded with ${totalLiveNum} live piglets and ${mortalityNum} mortality.`,
+      fromStatus: previousStatus,
+      toStatus: "lactating",
+      actor: req.user,
+      actionAt: farrowDate,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        total_live: totalLiveNum,
+        mortality: mortalityNum,
+        actual_farrowing_date: farrowDate
+      }
+    });
+
     await report.save({ session });
 
     // 3. Update AI Record Status
@@ -771,6 +944,9 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+    
     // Get virtual time for consistent status logging (Timewarp Sync)
     const virtualNow = await timeHelper.getVirtualNow();
 
@@ -789,6 +965,22 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     report.still_in_heat_by = req.user.id;
     report.still_in_heat_reason = notes || "Returned to heat / pregnancy failed";
     
+    pushProgressHistory(report, {
+      eventKey: "cycle_reset_still_in_heat",
+      title: "Cycle Reset to In-Heat",
+      description: `Sow returned to heat after AI/observation. Previous progress preserved and a new heat cycle was recorded.`,
+      fromStatus: previousStatus,
+      toStatus: "approved",
+      actor: req.user,
+      actionAt: virtualNow,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        next_heat_check: threeDaysFromNow,
+        notes: notes || "",
+        heat_signs: Array.isArray(heat_signs) ? heat_signs : []
+      }
+    });
+
     // Store selected signs if provided
     if (heat_signs && Array.isArray(heat_signs)) {
       report.heat_signs = heat_signs; 
@@ -898,7 +1090,10 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
 
     if (!report) return res.status(404).json({ success: false, message: "Report not found" });
-    
+
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
+
     // Safety check: Can only wean if the sow is currently lactating
     if (report.status !== "lactating") {
       return res.status(400).json({ success: false, message: "Report must be in 'lactating' status to confirm weaning." });
@@ -915,6 +1110,23 @@ router.post("/:id/confirm-weaning", requireApiLogin, allowRoles("farmer", "farm_
     report.status = "completed";
     report.weaning_date = finalWeaningDate;
     report.weaning_confirmed_by = req.user.id;
+
+    pushProgressHistory(report, {
+      eventKey: "weaning_confirmed",
+      title: "Weaning Confirmed",
+      description: `Weaning completed and breeding cycle closed.`,
+      fromStatus: previousStatus,
+      toStatus: "completed",
+      actor: req.user,
+      actionAt: finalWeaningDate,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        weaning_date: finalWeaningDate,
+        weight: finalWeight,
+        remarks: remarks || "Standard weaning"
+      }
+    });
+
     await report.save({ session });
 
     // 2. UPDATE THE AI RECORD (Crucial for Time Portal & History)
@@ -1201,6 +1413,8 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
+    ensureSubmittedHistory(report);
+    const previousStatus = report.status;
     const virtualNow = await timeHelper.getVirtualNow();
 
     // Update Report Status
@@ -1208,6 +1422,21 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
     report.rejection_message = reason || "No reason provided";
     report.rejected_at = virtualNow;
     report.rejected_by = req.user.id;
+
+    pushProgressHistory(report, {
+      eventKey: "report_rejected",
+      title: "Report Rejected",
+      description: `Heat report was rejected. Reason: ${reason || "No reason provided"}`,
+      fromStatus: previousStatus,
+      toStatus: "rejected",
+      actor: req.user,
+      actionAt: virtualNow,
+      meta: {
+        swine_code: report.swine_id?.swine_id || "",
+        reason: reason || "No reason provided"
+      }
+    });
+
     await report.save();
 
     // Log the action for audit purposes
@@ -1224,7 +1453,7 @@ router.post("/:id/reject", requireApiLogin, allowRoles("farm_manager"), async (r
       user_id: report.farmer_id.user_id,
       title: "Heat Report Rejected ❌",
       message: `Your heat report for Swine ${report.swine_id.swine_id} was rejected. Reason: ${reason}`,
-      type: "danger", // Red alert in UI
+      type: "error", // Red alert in UI
       createdAt: virtualNow
     });
 

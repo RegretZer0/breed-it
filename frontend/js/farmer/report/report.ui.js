@@ -2241,6 +2241,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     const farmerLine = document.getElementById("trackFarmerLine");
     const swineEl = document.getElementById("trackSwineId");
     const stageEl = document.getElementById("trackCurrentStage");
+    const targetEl = document.getElementById("trackTargetDate");
     const remainEl = document.getElementById("trackTimeRemaining");
     const statePill = document.getElementById("trackStatePill");
 
@@ -2255,6 +2256,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
     trackBody.innerHTML = `<div class="empty-state">Loading progress...</div>`;
     if (stageEl) stageEl.textContent = "—";
+    if (targetEl) targetEl.textContent = "—";
     if (remainEl) remainEl.textContent = "—";
     if (statePill) statePill.textContent = "Active";
 
@@ -2271,6 +2273,18 @@ export function createReportUI({ BACKEND_URL, user, api }) {
       if (stageEl) stageEl.textContent = statusLabel;
 
       const due = computeNextCheckDate(report);
+
+      if (targetEl) {
+        if (due) {
+          const dueDate = new Date(due);
+          targetEl.textContent = Number.isNaN(dueDate.getTime())
+            ? "—"
+            : dueDate.toLocaleDateString();
+        } else {
+          targetEl.textContent = "—";
+        }
+      }
+
       if (remainEl) remainEl.textContent = due ? formatCountdown(due) : "—";
 
       const steps = buildTimelineSteps(report);
@@ -2285,7 +2299,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
               <div class="tl-card">
                 <div class="tl-top">
                   <div class="tl-title">${s.title}</div>
-                  <div class="tl-badge">recorded</div>
+                  <div class="tl-badge">${s.badge || "recorded"}</div>
                 </div>
                 <div class="tl-desc">${s.desc}</div>
                 <div class="tl-date">

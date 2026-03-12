@@ -76,14 +76,6 @@ export function labelApprovalStatus(normalized) {
 export function buildTimelineSteps(report) {
   const steps = [];
 
-  const fullName = (person) => {
-    if (!person) return "Unknown user";
-    const first = person.first_name || "";
-    const last = person.last_name || "";
-    const role = person.role ? ` (${String(person.role).replace(/_/g, " ")})` : "";
-    return `${first} ${last}`.trim() + role;
-  };
-
   const fmtDate = (dateVal) => {
     if (!dateVal) return "—";
     const d = new Date(dateVal);
@@ -91,16 +83,97 @@ export function buildTimelineSteps(report) {
     return d.toLocaleString();
   };
 
+  const roleText = (role) => String(role || "unknown").replace(/_/g, " ");
+
+  const fullName = (person) => {
+    if (!person) return "Unknown user";
+    const first = person.first_name || "";
+    const last = person.last_name || "";
+    const full = `${first} ${last}`.trim();
+    const base =
+      full ||
+      person.name ||
+      person.full_name ||
+      person.display_name ||
+      person.email ||
+      "Unknown user";
+    const role = person.role ? ` (${roleText(person.role)})` : "";
+    return `${base}${role}`;
+  };
+
+  const actorLineFromHistory = (item) => {
+    const actorName =
+      item?.actor_name ||
+      item?.actorName ||
+      "Unknown user";
+
+    const actorRole =
+      item?.actor_role ||
+      item?.actorRole ||
+      "unknown";
+
+    return `${actorName} (${roleText(actorRole)})`;
+  };
+
+  const iconFromEvent = (eventKey, toStatus) => {
+    const key = String(eventKey || "").toLowerCase();
+    const st = String(toStatus || "").toLowerCase();
+
+    if (key.includes("submitted")) return "bi-file-earmark-plus";
+    if (key.includes("approved")) return "bi-check2-circle";
+    if (key.includes("rejected")) return "bi-x-circle";
+    if (key.includes("ai")) return "bi-clipboard2-check";
+    if (key.includes("pregnancy")) return "bi-heart-pulse";
+    if (key.includes("still_in_heat") || key.includes("reset")) return "bi-arrow-repeat";
+    if (key.includes("farrowing")) return "bi-calendar2-heart";
+    if (key.includes("weaning")) return "bi-scissors";
+
+    if (st === "pending") return "bi-file-earmark-plus";
+    if (st === "approved") return "bi-check2-circle";
+    if (st === "rejected") return "bi-x-circle";
+    if (st === "under_observation") return "bi-clipboard2-check";
+    if (st === "pregnant") return "bi-heart-pulse";
+    if (st === "lactating") return "bi-calendar2-heart";
+    if (st === "completed") return "bi-scissors";
+
+    return "bi-clock-history";
+  };
+
   const addStep = ({ date, icon, title, desc }) => {
     if (!date) return;
+
+    const ts = new Date(date).getTime();
+    if (Number.isNaN(ts)) return;
+
     steps.push({
-      sortDate: new Date(date).getTime(),
+      sortDate: ts,
       dateText: fmtDate(date),
       icon,
       title,
       desc
     });
   };
+
+  const history = Array.isArray(report?.progress_history) ? report.progress_history : [];
+
+  if (history.length) {
+    history.forEach((item) => {
+      const eventKey = item?.event_key || "";
+      const title = item?.title || "Activity Recorded";
+      const description = item?.description || "No description available.";
+      const toStatus = item?.to_status || "";
+      const date = item?.action_at || item?.createdAt || null;
+
+      addStep({
+        date,
+        icon: iconFromEvent(eventKey, toStatus),
+        title,
+        desc: `${description} By ${actorLineFromHistory(item)}.`
+      });
+    });
+
+    return steps.sort((a, b) => b.sortDate - a.sortDate);
+  }
 
   addStep({
     date: report.createdAt,
@@ -158,5 +231,5 @@ export function buildTimelineSteps(report) {
     desc: `Confirmed by ${fullName(report.weaning_confirmed_by)}.`
   });
 
-  return steps.sort((a, b) => a.sortDate - b.sortDate);
+  return steps.sort((a, b) => b.sortDate - a.sortDate);
 }

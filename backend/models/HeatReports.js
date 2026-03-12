@@ -203,10 +203,65 @@ const heatReportSchema = new mongoose.Schema(
       default: null
     },
 
-    still_in_heat_reason: {
+        still_in_heat_reason: {
       type: String,
       default: ""
-    }
+    },
+
+    progress_history: [
+      {
+        event_key: {
+          type: String,
+          default: ""
+        },
+
+        title: {
+          type: String,
+          default: ""
+        },
+
+        description: {
+          type: String,
+          default: ""
+        },
+
+        from_status: {
+          type: String,
+          default: ""
+        },
+
+        to_status: {
+          type: String,
+          default: ""
+        },
+
+        actor_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null
+        },
+
+        actor_name: {
+          type: String,
+          default: ""
+        },
+
+        actor_role: {
+          type: String,
+          default: ""
+        },
+
+        action_at: {
+          type: Date,
+          default: Date.now
+        },
+
+        meta: {
+          type: mongoose.Schema.Types.Mixed,
+          default: {}
+        }
+      }
+    ]
   },
   { 
     timestamps: true,
@@ -214,6 +269,7 @@ const heatReportSchema = new mongoose.Schema(
     toObject: { virtuals: true }
   }
 );
+
 
 // ------------------- LOGIC / HELPERS -------------------
 

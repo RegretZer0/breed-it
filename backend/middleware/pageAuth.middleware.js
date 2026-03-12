@@ -91,36 +91,73 @@ async function requireApiLogin(req, res, next) {
     let farmerProfileId = sessionUser.farmerProfileId || null;
 
     // 4. Farmer Profile Logic (Cached to prevent DB spam on refresh)
-    if (sessionUser.role === "farmer" && !farmerProfileId) {
-      const farmer = await Farmer.findOne({
+    let farmerProfile = null;
+
+    if (sessionUser.role === "farmer") {
+      farmerProfile = await Farmer.findOne({
         $or: [
           userId ? { user_id: userId } : null,
           sessionUser.email ? { email: sessionUser.email } : null,
         ].filter(Boolean),
       }).lean();
 
-      if (!farmer) {
+      if (!farmerProfile) {
         return res.status(401).json({
           success: false,
           message: "Farmer profile not linked",
         });
       }
-      farmerProfileId = farmer._id.toString();
+
+      farmerProfileId = farmerProfile._id.toString();
     }
 
     // 5. Re-bind Unified User Object
     // This ensures that even if you refresh, req.user is always populated
+    const firstName =
+      sessionUser.first_name ||
+      sessionUser.firstName ||
+      sessionUser.user?.first_name ||
+      farmerProfile?.first_name ||
+      "";
+
+    const lastName =
+      sessionUser.last_name ||
+      sessionUser.lastName ||
+      sessionUser.user?.last_name ||
+      farmerProfile?.last_name ||
+      "";
+
+    const computedName =
+      `${firstName} ${lastName}`.trim() ||
+      sessionUser.name ||
+      sessionUser.full_name ||
+      sessionUser.fullName ||
+      sessionUser.display_name ||
+      sessionUser.displayName ||
+      "";
+
     req.user = {
       id: userId,
       role: sessionUser.role,
-      email: sessionUser.email,
+      email: sessionUser.email || "",
+      first_name: firstName,
+      last_name: lastName,
+      name: computedName,
+      full_name: computedName,
       farmerProfileId,
       managerId: sessionUser.managerId || null,
     };
 
     // 6. Optional: Sync back to session to prevent repeated DB lookups on next F5
     if (req.session) {
-        req.session.user = { ...sessionUser, farmerProfileId: req.user.farmerProfileId };
+      req.session.user = {
+        ...sessionUser,
+        farmerProfileId: req.user.farmerProfileId,
+        first_name: req.user.first_name,
+        last_name: req.user.last_name,
+        name: req.user.name,
+        full_name: req.user.full_name,
+      };
     }
 
     next();

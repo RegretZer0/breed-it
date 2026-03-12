@@ -41,6 +41,83 @@ async function resolveFarmerById(value, session) {
   return Farmer.findById(v).session(session || null);
 }
 
+//Progress History Related
+function formatActorName(user) {
+  if (!user) return "Unknown User";
+
+  const first = user.first_name || "";
+  const last = user.last_name || "";
+  const full = `${first} ${last}`.trim();
+
+  return (
+    full ||
+    user.name ||
+    user.full_name ||
+    user.display_name ||
+    user.email ||
+    "Unknown User"
+  );
+}
+
+function formatActorRole(user) {
+  return String(user?.role || "unknown").replace(/_/g, " ");
+}
+
+function pushProgressHistory(report, {
+  eventKey = "",
+  title = "",
+  description = "",
+  fromStatus = "",
+  toStatus = "",
+  actor = null,
+  actionAt = new Date(),
+  meta = {}
+} = {}) {
+  if (!report.progress_history) report.progress_history = [];
+
+  report.progress_history.push({
+    event_key: eventKey,
+    title,
+    description,
+    from_status: fromStatus || report.status || "",
+    to_status: toStatus || report.status || "",
+    actor_id: actor?._id || actor?.id || null,
+    actor_name: formatActorName(actor),
+    actor_role: formatActorRole(actor),
+    action_at: actionAt,
+    meta
+  });
+}
+
+function ensureSubmittedHistory(report, actor = null) {
+  if (!report.progress_history) report.progress_history = [];
+
+  const hasSubmitted = report.progress_history.some(
+    (item) => String(item?.event_key || "").toLowerCase() === "report_submitted"
+  );
+
+  if (hasSubmitted) return;
+
+  pushProgressHistory(report, {
+    eventKey: "report_submitted",
+    title: "Report Submitted",
+    description: `Heat report submitted for sow ${report.swine_code || report.swine_id?.swine_id || ""}.`,
+    fromStatus: "",
+    toStatus: "pending",
+    actor: actor || {
+      _id: report.farmer_id?._id || report.farmer_id || null,
+      first_name: report.farmer_id?.first_name || "",
+      last_name: report.farmer_id?.last_name || "",
+      role: "farmer"
+    },
+    actionAt: report.createdAt || new Date(),
+    meta: {
+      signs: Array.isArray(report.signs) ? report.signs : [],
+      heat_probability: report.heat_probability ?? null
+    }
+  });
+}
+
 /* ======================================================
     POST /api/ai/add
     Add new AI Record (Confirms the Insemination)
@@ -65,7 +142,10 @@ router.post(
 
       // Resolve sow by tag or _id
       const swine = await resolveSwineByTagOrId(swineId, session);
-      const heatReport = await HeatReport.findById(heatReportId).session(session);
+      const heatReport = await HeatReport.findById(heatReportId)
+        .populate("swine_id")
+        .populate("farmer_id")
+        .session(session);
 
       if (!swine || !heatReport) {
         await session.abortTransaction();
@@ -105,15 +185,37 @@ router.post(
 
       await newAI.save({ session });
 
-      // 2) Update Heat Report -> under_observation + 23-day recheck
+    // 2) Update Heat Report -> under_observation + 23-day recheck
+      const previousStatus = heatReport.status;
+
+      ensureSubmittedHistory(heatReport);
+
       heatReport.status = "under_observation";
       heatReport.ai_confirmed_at = actualInseminationDate;
+      heatReport.ai_confirmed_by = user.id;
 
       // ✅ Recalculate recheck based on the manual date
       const heatCheckDate = new Date(actualInseminationDate);
       heatCheckDate.setDate(heatCheckDate.getDate() + 23);
       heatReport.next_heat_check = heatCheckDate;
 
+      pushProgressHistory(heatReport, {
+        eventKey: "ai_confirmed",
+        title: "Artificial Insemination Confirmed",
+        description: `AI procedure recorded for sow ${swine.swine_id}.`,
+        fromStatus: previousStatus,
+        toStatus: "under_observation",
+        actor: user,
+        actionAt: actualInseminationDate,
+        meta: {
+          swine_code: swine.swine_id,
+          male_swine_id: boarTag,
+          ai_date: actualInseminationDate,
+          ai_record_id: newAI._id
+        }
+      });
+
+      heatReport.markModified("progress_history");
       await heatReport.save({ session });
 
       // 3) Sync with Swine Breeding Cycle
@@ -209,7 +311,9 @@ router.post(
   allowRoles("farm_manager", "encoder"),
   async (req, res) => {
     try {
-      const report = await HeatReport.findById(req.params.heatReportId);
+      const report = await HeatReport.findById(req.params.heatReportId)
+        .populate("swine_id")
+        .populate("farmer_id");
       if (!report) return res.status(404).json({ success: false, message: "Report not found" });
 
       await AIRecord.findOneAndUpdate(
@@ -217,9 +321,31 @@ router.post(
         { still_in_heat: true, status: "Failed" }
       );
 
+            const previousStatus = report.status;
+
+      ensureSubmittedHistory(report);
+
       report.status = "approved";
       report.next_heat_check = null;
       report.expected_farrowing = null;
+      report.still_in_heat = true;
+      report.still_in_heat_at = new Date();
+      report.still_in_heat_by = req.user.id;
+
+      pushProgressHistory(report, {
+        eventKey: "cycle_reset_still_in_heat",
+        title: "Cycle Reset to In-Heat",
+        description: "Sow returned to heat after AI/observation.",
+        fromStatus: previousStatus,
+        toStatus: "approved",
+        actor: req.user,
+        actionAt: new Date(),
+        meta: {
+          heat_report_id: report._id
+        }
+      });
+
+      report.markModified("progress_history");
       await report.save();
 
       if (report.swine_id) {
@@ -244,7 +370,9 @@ router.post(
   async (req, res) => {
     try {
       const { event_date } = req.body; 
-      const report = await HeatReport.findById(req.params.heatReportId);
+        const report = await HeatReport.findById(req.params.heatReportId)
+          .populate("swine_id")
+          .populate("farmer_id");
       if (!report) return res.status(404).json({ success: false, message: "Heat report not found" });
 
       const gestationDays = 114;
@@ -258,11 +386,32 @@ router.post(
       const farrowingDate = new Date(baseDate);
       farrowingDate.setDate(farrowingDate.getDate() + gestationDays);
 
-      // 1) Update Heat Report
+    // 1) Update Heat Report
+      const previousStatus = report.status;
+
+      ensureSubmittedHistory(report);
+
       report.status = "pregnant";
       report.pregnancy_confirmed = true; 
       report.expected_farrowing = farrowingDate;
       report.pregnancy_confirmed_at = actualCheckDate;
+      report.pregnancy_confirmed_by = req.user.id;
+
+      pushProgressHistory(report, {
+        eventKey: "pregnancy_confirmed",
+        title: "Pregnancy Confirmed",
+        description: `Pregnancy confirmed for sow ${report.swine_id?.swine_id || ""}.`,
+        fromStatus: previousStatus,
+        toStatus: "pregnant",
+        actor: req.user,
+        actionAt: actualCheckDate,
+        meta: {
+          swine_code: report.swine_id?.swine_id || "",
+          expected_farrowing: farrowingDate
+        }
+      });
+
+      report.markModified("progress_history");
       await report.save();
 
       // 2) Update AIRecord

@@ -19,6 +19,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const reportSigns = document.getElementById("reportSigns");
   const reportProbability = document.getElementById("reportProbability");
   const reportStatus = document.getElementById("reportStatus");
+  const reportActionHistory = document.getElementById("reportActionHistory");
 
   const confirmPregnancyBtn = document.getElementById("confirmPregnancyBtn");
   const followUpBtn = document.getElementById("followUpBtn");
@@ -239,6 +240,84 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   function statusLabelOf(status) {
     return `${status || ""}`.replace(/_/g, " ").trim() || "—";
+  }
+
+  function renderProgressTimeline(report) {
+    const timelineContainer = document.getElementById("cycleTimeline");
+    if (!timelineContainer) return;
+
+    const history = normalizeProgressHistory(report);
+    const events = history.length ? history : buildLegacyProgressHistory(report);
+
+    if (!events.length) {
+      timelineContainer.innerHTML = `<div class="timeline-empty text-muted">No cycle data available.</div>`;
+      return;
+    }
+
+    timelineContainer.innerHTML = events.map((event) => {
+      const actionDate = event.actionAt ? new Date(event.actionAt) : null;
+      const dateText = actionDate && !isNaN(actionDate.getTime())
+        ? actionDate.toLocaleString()
+        : "Date unavailable";
+
+      const actorLine = `${event.actorName || "Unknown User"} • ${event.actorRole || "unknown role"}`;
+      const statusText = event.toStatus ? String(event.toStatus).replace(/_/g, " ") : "recorded";
+
+      return `
+        <div class="timeline-step completed">
+          <div class="step-icon"><i class="bi ${getHistoryIcon(event.eventKey, event.toStatus)}"></i></div>
+          <div class="step-content">
+            <div class="step-header">
+              <strong>${escHtml(event.title)}</strong>
+              <span class="step-status completed">${escHtml(statusText)}</span>
+            </div>
+            <p class="step-desc">${escHtml(event.description)}</p>
+            <div class="step-meta">
+              <div>${escHtml(dateText)}</div>
+              <div>By: ${escHtml(actorLine)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderReportActionHistory(report) {
+    if (!reportActionHistory) return;
+
+    const storedHistory = normalizeProgressHistory(report);
+    const legacyHistory = buildLegacyProgressHistory(report);
+    const events = [...storedHistory, ...legacyHistory]
+      .sort((a, b) => new Date(b.actionAt || 0) - new Date(a.actionAt || 0));
+
+    if (!events.length) {
+      reportActionHistory.innerHTML = `<div class="text-muted"><em>No action history recorded yet.</em></div>`;
+      return;
+    }
+
+    reportActionHistory.innerHTML = events.map((event) => {
+      const dt = event.actionAt ? new Date(event.actionAt) : null;
+      const when = dt && !isNaN(dt.getTime()) ? dt.toLocaleString() : "Date unavailable";
+
+      return `
+        <div class="audit-row">
+          <div class="audit-row-icon">
+            <i class="bi ${getHistoryIcon(event.eventKey, event.toStatus)}"></i>
+          </div>
+          <div class="audit-row-main">
+            <div class="audit-row-top">
+              <strong>${escHtml(event.title)}</strong>
+            </div>
+            <div class="audit-row-meta">
+              <span>${escHtml(when)}</span>
+              <span>By: ${escHtml(event.actorName || "Unknown User")}</span>
+              <span>Role: ${escHtml(event.actorRole || "unknown")}</span>
+            </div>
+            <div class="audit-row-desc">${escHtml(event.description || "")}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 
   /* =========================
@@ -1283,6 +1362,237 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     });
   }
 
+  function escHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function formatRoleLabel(role) {
+    return String(role || "unknown").replace(/_/g, " ");
+  }
+
+  function getHistoryIcon(eventKey, toStatus) {
+    const key = safeLower(eventKey);
+    const st = safeLower(toStatus);
+
+    if (key.includes("submitted")) return "bi-file-earmark-text";
+    if (key.includes("approved")) return "bi-check-circle";
+    if (key.includes("rejected")) return "bi-x-circle";
+    if (key.includes("ai")) return "bi-droplet-half";
+    if (key.includes("pregnancy")) return "bi-heart-pulse";
+    if (key.includes("farrowing")) return "bi-egg-fried";
+    if (key.includes("weaning")) return "bi-basket";
+    if (key.includes("reset") || key.includes("still_in_heat")) return "bi-arrow-repeat";
+
+    if (st === "pending") return "bi-file-earmark-text";
+    if (st === "approved") return "bi-check-circle";
+    if (st === "under_observation") return "bi-eye";
+    if (st === "pregnant") return "bi-heart-pulse";
+    if (st === "lactating") return "bi-egg-fried";
+    if (st === "completed") return "bi-basket";
+    if (st === "rejected") return "bi-x-circle";
+
+    return "bi-clock-history";
+  }
+
+  function normalizeProgressHistory(report) {
+    const raw = Array.isArray(report?.progress_history) ? report.progress_history : [];
+
+    return raw
+      .map((item) => ({
+        eventKey: item?.event_key || "",
+        title: item?.title || "Activity Recorded",
+        description: item?.description || "No description available.",
+        fromStatus: item?.from_status || "",
+        toStatus: item?.to_status || "",
+        actorName: item?.actor_name || "Unknown User",
+        actorRole: formatRoleLabel(item?.actor_role),
+        actionAt: item?.action_at || item?.createdAt || null,
+        meta: item?.meta || {}
+      }))
+      .sort((a, b) => new Date(b.actionAt || 0) - new Date(a.actionAt || 0));
+  }
+
+  function buildLegacyProgressHistory(r) {
+    const storedKeys = new Set(
+      (Array.isArray(r?.progress_history) ? r.progress_history : [])
+        .map((item) => String(item?.event_key || "").toLowerCase())
+        .filter(Boolean)
+    );
+
+    const events = [];
+    const st = normalizeLifecycleStatus(r);
+    const aiDate = r.ai_confirmed_at || r.ai_date || null;
+
+    const farmerName = r?.farmer_id
+      ? `${r.farmer_id.first_name || ""} ${r.farmer_id.last_name || ""}`.trim()
+      : "Unknown Farmer";
+
+    if (!storedKeys.has("report_submitted")) {
+      events.push({
+        eventKey: "report_submitted",
+        title: "Report Submitted",
+        description: "Farmer submitted the heat detection report.",
+        toStatus: "pending",
+        actorName: farmerName,
+        actorRole: "farmer",
+        actionAt: r.createdAt
+      });
+    }
+
+    if (
+      !storedKeys.has("report_approved") &&
+      ["approved", "under_observation", "pregnant", "farrowing_ready", "lactating", "completed"].includes(st)
+    ) {
+      events.push({
+        eventKey: "report_approved",
+        title: "Report Approved",
+        description: "Heat report approved and sow scheduled for AI.",
+        toStatus: "approved",
+        actorName: r?.approved_by
+          ? `${r.approved_by.first_name || ""} ${r.approved_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.approved_by?.role || "farm_manager",
+        actionAt: r.approved_at || r.updatedAt
+      });
+    }
+
+    if (
+      !storedKeys.has("ai_confirmed") &&
+      ["under_observation", "pregnant", "farrowing_ready", "lactating", "completed"].includes(st)
+    ) {
+      events.push({
+        eventKey: "ai_confirmed",
+        title: "Artificial Insemination Confirmed",
+        description: "Farm manager confirmed AI procedure.",
+        toStatus: "under_observation",
+        actorName: r?.ai_confirmed_by
+          ? `${r.ai_confirmed_by.first_name || ""} ${r.ai_confirmed_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.ai_confirmed_by?.role || "farm_manager",
+        actionAt: aiDate
+      });
+    }
+
+    if (
+      !storedKeys.has("pregnancy_confirmed") &&
+      ["pregnant", "farrowing_ready", "lactating", "completed"].includes(st)
+    ) {
+      events.push({
+        eventKey: "pregnancy_confirmed",
+        title: "Pregnancy Confirmed",
+        description: "Pregnancy confirmed and gestation monitoring started.",
+        toStatus: "pregnant",
+        actorName: r?.pregnancy_confirmed_by
+          ? `${r.pregnancy_confirmed_by.first_name || ""} ${r.pregnancy_confirmed_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.pregnancy_confirmed_by?.role || "farm_manager",
+        actionAt: r.pregnancy_confirmed_at
+      });
+    }
+
+    if (
+      !storedKeys.has("farrowing_confirmed") &&
+      ["lactating", "completed"].includes(st)
+    ) {
+      events.push({
+        eventKey: "farrowing_confirmed",
+        title: "Farrowing Confirmed",
+        description: "Birth process recorded successfully.",
+        toStatus: "lactating",
+        actorName: r?.farrowing_confirmed_by
+          ? `${r.farrowing_confirmed_by.first_name || ""} ${r.farrowing_confirmed_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.farrowing_confirmed_by?.role || "farmer",
+        actionAt: r.actual_farrowing_date
+      });
+    }
+
+    if (
+      !storedKeys.has("weaning_confirmed") &&
+      st === "completed"
+    ) {
+      events.push({
+        eventKey: "weaning_confirmed",
+        title: "Weaning Confirmed",
+        description: "Weaning completed and cycle closed.",
+        toStatus: "completed",
+        actorName: r?.weaning_confirmed_by
+          ? `${r.weaning_confirmed_by.first_name || ""} ${r.weaning_confirmed_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.weaning_confirmed_by?.role || "farmer",
+        actionAt: r.weaning_date
+      });
+    }
+
+    if (
+      !storedKeys.has("report_rejected") &&
+      st === "rejected"
+    ) {
+      events.push({
+        eventKey: "report_rejected",
+        title: "Report Rejected",
+        description: `Heat report was rejected. Reason: ${r?.rejection_message || "No reason provided"}`,
+        toStatus: "rejected",
+        actorName: r?.rejected_by
+          ? `${r.rejected_by.first_name || ""} ${r.rejected_by.last_name || ""}`.trim()
+          : "Unknown User",
+        actorRole: r?.rejected_by?.role || "farm_manager",
+        actionAt: r.rejected_at
+      });
+    }
+
+    return events
+      .filter((e) => e.actionAt || e.title)
+      .sort((a, b) => new Date(b.actionAt || 0) - new Date(a.actionAt || 0));
+  }
+
+  function renderProgressTimeline(report) {
+    const timelineContainer = document.getElementById("cycleTimeline");
+    if (!timelineContainer) return;
+
+    const storedHistory = normalizeProgressHistory(report);
+    const legacyHistory = buildLegacyProgressHistory(report);
+    const events = [...storedHistory, ...legacyHistory]
+      .sort((a, b) => new Date(b.actionAt || 0) - new Date(a.actionAt || 0));
+
+    if (!events.length) {
+      timelineContainer.innerHTML = `<div class="timeline-empty text-muted">No cycle data available.</div>`;
+      return;
+    }
+
+    timelineContainer.innerHTML = events.map((event) => {
+      const actionDate = event.actionAt ? new Date(event.actionAt) : null;
+      const dateText = actionDate && !isNaN(actionDate.getTime())
+        ? actionDate.toLocaleString()
+        : "Date unavailable";
+
+      const actorLine = `${event.actorName || "Unknown User"} • ${event.actorRole || "unknown role"}`;
+      const statusText = event.toStatus ? String(event.toStatus).replace(/_/g, " ") : "recorded";
+
+      return `
+        <div class="timeline-step completed">
+          <div class="step-icon"><i class="bi ${getHistoryIcon(event.eventKey, event.toStatus)}"></i></div>
+          <div class="step-content">
+            <div class="step-header">
+              <strong>${escHtml(event.title)}</strong>
+              <span class="step-status completed">${escHtml(statusText)}</span>
+            </div>
+            <p class="step-desc">${escHtml(event.description)}</p>
+            <div class="step-meta">
+              <div>${escHtml(dateText)}</div>
+              <div>By: ${escHtml(actorLine)}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
   /* =========================
      PROGRESS PANEL MODULE
      Adds targetDate output (expects element id "targetDate" in the progress panel)
@@ -1334,94 +1644,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const swEl = document.getElementById("progressSwineId");
       if (swEl) swEl.textContent = `${r.swine_id?.swine_id || "Unknown"}`;
 
-      const timelineContainer = document.getElementById("cycleTimeline");
-      if (!timelineContainer) return;
-      timelineContainer.innerHTML = "";
-
-      const events = [];
-
-      /* Use HeatReport.status as lifecycle truth */
       const st = normalizeLifecycleStatus(r);
 
-      /* Target date field reset (if present) */
       const targetDateEl = document.getElementById("targetDate");
       if (targetDateEl) targetDateEl.textContent = "—";
 
-      const aiDate = r.ai_confirmed_at || r.ai_date || null;
-
-      if (st === "lactating") {
-        events.push({
-          title: "Lactating",
-          desc: "Sow is currently nursing piglets.",
-          icon: "bi-heart-pulse-fill",
-          date: "Currently Active"
-        });
-
-        events.push({
-          title: "Farrowing Confirmed",
-          desc: "Birth process recorded successfully.",
-          icon: "bi-piggy-bank",
-          date: r.actual_farrowing_date ? new Date(r.actual_farrowing_date).toLocaleDateString() : "Check Records"
-        });
-      }
-
-      if (st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
-        events.push({
-          title: "Pregnant Monitoring",
-          desc: "Pregnancy confirmed. Monitoring gestation period.",
-          icon: "bi-person-hearts",
-          date: r.expected_farrowing ? `Due: ${new Date(r.expected_farrowing).toLocaleDateString()}` : "Ongoing"
-        });
-      }
-
-      if (st === "under_observation" || st === "pregnant" || st === "farrowing_ready" || st === "lactating") {
-        events.push({
-          title: "Under Observation",
-          desc: "Monitoring for return to heat signs post-AI.",
-          icon: "bi-eye",
-          date: aiDate ? `Started: ${new Date(aiDate).toLocaleDateString()}` : "Ongoing"
-        });
-
-        events.push({
-          title: "Artificial Insemination Performed",
-          desc: "Farm Manager confirmed Artificial Insemination procedure.",
-          icon: "bi-droplet-half",
-          date: aiDate ? new Date(aiDate).toLocaleDateString() : "Date N/A"
-        });
-      }
-
-      if (st !== "pending" && st !== "rejected") {
-        events.push({
-          title: "Sow In Heat & Scheduled for AI",
-          desc: "Report approved by Farm Manager. AI preparation started.",
-          icon: "bi-calendar-check",
-          date: r.updatedAt ? new Date(r.updatedAt).toLocaleDateString() : "Approved"
-        });
-      }
-
-      events.push({
-        title: "Report Submitted",
-        desc: "Farmer submitted the heat detection report.",
-        icon: "bi-file-earmark-text",
-        date: r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "Pending"
-      });
-
-      events.forEach((event) => {
-        const stepDiv = document.createElement("div");
-        stepDiv.className = "timeline-step completed";
-        stepDiv.innerHTML = `
-          <div class="step-icon"><i class="bi ${event.icon}"></i></div>
-          <div class="step-content">
-            <div class="step-header">
-              <strong>${event.title}</strong>
-              <span class="step-status completed">recorded</span>
-            </div>
-            <p class="step-desc">${event.desc}</p>
-            <div class="step-meta"><span>${event.date}</span></div>
-          </div>
-        `;
-        timelineContainer.appendChild(stepDiv);
-      });
+      renderProgressTimeline(r);
 
       const currentStageEl = document.getElementById("currentStage");
       if (currentStageEl) currentStageEl.textContent = st.replace(/_/g, " ").toUpperCase();
@@ -1648,6 +1876,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         notesEl.innerHTML = safe ? `<span>${safe}</span>` : `<em class="text-muted">No remarks provided.</em>`;
       }
 
+      renderReportActionHistory(r);
+
       /* Created at chip */
       const d = r.createdAt ? new Date(r.createdAt) : null;
       const createdText = d && !isNaN(d.getTime()) ? d.toLocaleString() : "—";
@@ -1820,7 +2050,17 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   if (rejectBtn) {
     rejectBtn.onclick = () => {
       if (rejectReasonInput) rejectReasonInput.value = "";
-      if (rejectReasonModal) openOverlay(rejectReasonModal, { zIndex: 2800 });
+
+      if (rejectReasonModal) {
+        const topZ = Array.from(document.querySelectorAll(".modal-overlay"))
+          .filter((m) => m && m.style.display === "flex")
+          .reduce((maxZ, m) => {
+            const z = parseInt(getComputedStyle(m).zIndex || m.style.zIndex || "0", 10);
+            return Math.max(maxZ, isNaN(z) ? 0 : z);
+          }, 0);
+
+        openOverlay(rejectReasonModal, { zIndex: Math.max(12000, topZ + 200) });
+      }
     };
   }
 
