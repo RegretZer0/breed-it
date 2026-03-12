@@ -15,6 +15,7 @@ const AIRecord = require("../models/AIRecord");
 const logAction = require("../middleware/logger");
 const SystemSettings = require("../models/SystemSettings");
 const timeHelper = require("../utils/timeHelper");
+const supabase = require("../utils/supabase");
 
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 const { allowRoles } = require("../middleware/roleMiddleware");
@@ -22,20 +23,23 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 /* ======================================================
     HELPERS
 ====================================================== */
-const uploadDir = "uploads/";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + path.extname(file.originalname))
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { 
+    fileSize: 10 * 1024 * 1024
+  },
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Error: Only images (jpeg, jpg, png, webp) are allowed!"));
+  }
 });
 
 const calculateProbability = (signs, swine) => {
@@ -186,19 +190,19 @@ function ensureSubmittedHistory(report, actor = null) {
 }
 
 /* ======================================================
-    ADD NEW HEAT REPORT (With Culling Logic)
+    ADD NEW HEAT REPORT (With Culling & Supabase Cloud Storage)
 ====================================================== */
 router.post(
   "/add",
   requireApiLogin,
   allowRoles("farm_manager", "encoder", "farmer"),
-  upload.array("evidence", 5),
+  upload.array("evidence", 5), // 'upload' must now be using multer.memoryStorage()
   async (req, res) => {
     try {
       const { swineId, signs, remarks } = req.body;
       const files = req.files;
 
-      // sanitize remarks (optional field)
+      // Sanitize remarks
       const cleanRemarks = (remarks ?? "").toString().trim();
 
       // 1. Initial Validation
@@ -234,7 +238,29 @@ router.post(
         return res.status(404).json({ success: false, message: "Swine not found" });
       }
 
-      const evidenceData = files.map((file) => `/uploads/${file.filename}`);
+      // --- SUPABASE CLOUD UPLOAD START ---
+      const evidenceData = [];
+      for (const file of files) {
+        // Create a unique path: evidence/SWINE_ID/TIMESTAMP-FILENAME
+        const fileName = `${Date.now()}-${file.originalname}`;
+        const filePath = `evidence/${swineId}/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('heat-report-evidence') // The bucket you created
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+          });
+
+        if (error) {
+          console.error("Supabase Upload Error:", error);
+          throw new Error("Failed to upload images to cloud storage.");
+        }
+        
+        // Store the path in the array to be saved in MongoDB
+        evidenceData.push(data.path);
+      }
+      // --- SUPABASE CLOUD UPLOAD END ---
 
       // 5. --- CULLING CHECK (Auto-Cull Feature) ---
       const hasBasis =
@@ -245,35 +271,29 @@ router.post(
       if (hasBasis) {
         const basisSigns = swine.first_success_basis.signs;
         
-        // REFINED LOGIC: Instead of a strict identical match, we check for core compatibility.
-        // 1. If 'Standing Reflex' was present in the successful history, it MUST be present now.
         const historyHadStandingReflex = basisSigns.includes("Standing Reflex");
         const currentHasStandingReflex = parsedSigns.includes("Standing Reflex");
         
-        // 2. Calculate overlap percentage (How many historical signs are present now?)
         const matchingSigns = basisSigns.filter(sign => parsedSigns.includes(sign));
         const overlapPercentage = (matchingSigns.length / basisSigns.length) * 100;
 
-        // CULL CRITERIA: 
-        // - Missing Standing Reflex if it was historically required
-        // - OR Overlap is less than 50% (Too many different signs)
         const isCompatible = (!historyHadStandingReflex || currentHasStandingReflex) && overlapPercentage >= 50;
 
         if (!isCompatible) {
-          swine.current_status = "Culled/Sold"; // Match Swine.js enum
+          swine.current_status = "Culled/Sold"; 
           await swine.save();
 
           await logAction(
             req.user.id,
             "AUTO_CULL",
             "BREEDING",
-            `Swine ${swineId} auto-culled: Current signs (${parsedSigns.join(", ")}) failed compatibility check against history (${basisSigns.join(", ")}).`,
+            `Swine ${swineId} auto-culled: Current signs (${parsedSigns.join(", ")}) failed compatibility check.`,
             req
           );
 
           return res.status(403).json({
             success: false,
-            message: `Report rejected: Swine ${swineId} has been auto-culled. The current heat signs deviate significantly from its successful breeding history.`
+            message: `Report rejected: Swine ${swineId} has been auto-culled due to deviation from history.`
           });
         }
       }
@@ -288,7 +308,7 @@ router.post(
         signs: parsedSigns,
         standing_reflex: parsedSigns.includes("Standing Reflex"),
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
-        evidence_url: evidenceData,
+        evidence_url: evidenceData, // Stores Supabase paths
         heat_probability: computedProbability,
         remarks: cleanRemarks,
         status: "pending",
@@ -339,8 +359,38 @@ router.post(
 );
 
 /* ======================================================
-    GET ROUTES
+    GET ROUTES (Updated for Supabase Signed URLs)
 ====================================================== */
+
+/**
+ * HELPER: Converts an array of Supabase paths into temporary Signed URLs.
+ * This is necessary because your bucket is PRIVATE.
+ */
+const generateEvidenceLinks = async (evidencePaths) => {
+  if (!evidencePaths || !Array.isArray(evidencePaths) || evidencePaths.length === 0) {
+    return [];
+  }
+
+  const links = await Promise.all(
+    evidencePaths.map(async (path) => {
+      try {
+        const { data, error } = await supabase.storage
+          .from('heat-report-evidence')
+          .createSignedUrl(path, 3600); // URL valid for 1 hour
+
+        if (error) throw error;
+        return data.signedUrl;
+      } catch (err) {
+        console.error("Error signing URL for path:", path, err.message);
+        return null; // Skip broken paths
+      }
+    })
+  );
+
+  return links.filter(url => url !== null);
+};
+
+// 1. GET ALL REPORTS (For Managers/Encoders)
 router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async (req, res) => {
   try {
     const managerId = req.user.role === "farm_manager" ? req.user.id : req.user.managerId;
@@ -349,12 +399,22 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
       .populate("farmer_id", "first_name last_name farmer_id user_id")
       .sort({ createdAt: -1 })
       .lean();
-    res.json({ success: true, reports });
+
+    // Generate links for each report in the list
+    const reportsWithLinks = await Promise.all(
+      reports.map(async (report) => ({
+        ...report,
+        evidence_url: await generateEvidenceLinks(report.evidence_url)
+      }))
+    );
+
+    res.json({ success: true, reports: reportsWithLinks });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to fetch reports" });
   }
 });
 
+// 2. GET REPORT DETAIL (Individual View)
 router.get("/:id/detail", requireApiLogin, async (req, res) => {
   try {
     const report = await HeatReport.findById(req.params.id)
@@ -375,10 +435,14 @@ router.get("/:id/detail", requireApiLogin, async (req, res) => {
 
     const aiRecord = await AIRecord.findOne({ heat_report_id: report._id }).lean();
 
+    // Convert private paths to viewable links
+    const signedLinks = await generateEvidenceLinks(report.evidence_url);
+
     res.json({
       success: true,
       report: {
         ...report,
+        evidence_url: signedLinks, // Replace paths with temporary links
         ai_record: aiRecord || null
       }
     });
@@ -388,14 +452,25 @@ router.get("/:id/detail", requireApiLogin, async (req, res) => {
   }
 });
 
+// 3. GET FARMER'S REPORTS
 router.get("/farmer", requireApiLogin, allowRoles("farmer", "farm_manager", "encoder"), async (req, res) => {
   try {
     if (!req.user.farmerProfileId) return res.status(400).json({ success: false, message: "Farmer profile not linked" });
+    
     const reports = await HeatReport.find({ farmer_id: req.user.farmerProfileId })
       .populate("swine_id", "swine_id breed current_status")
       .sort({ createdAt: -1 })
       .lean();
-    res.json({ success: true, reports });
+
+    // Generate links for the farmer's list
+    const reportsWithLinks = await Promise.all(
+      reports.map(async (report) => ({
+        ...report,
+        evidence_url: await generateEvidenceLinks(report.evidence_url)
+      }))
+    );
+
+    res.json({ success: true, reports: reportsWithLinks });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to fetch reports" });
   }

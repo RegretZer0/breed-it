@@ -1,0 +1,7 @@
+# --- Environment Variables (CRITICAL) ---
+# Never commit your secrets to GitHub
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
