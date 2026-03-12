@@ -117,7 +117,7 @@ router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res
 });
 
 /* ======================================================
-    ADD MASTER BOAR
+    ADD MASTER BOAR (UNIFIED ID: A-1, A-2)
 ====================================================== */
 router.post(
   "/add-master-boar",
@@ -141,19 +141,36 @@ router.post(
     try {
       const user = req.user;
       const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
-      const prefix = getManagerPrefix(registeredBy);
-
+      
       const virtualNow = await timeHelper.getVirtualNow();
+      const currentYear = virtualNow.getFullYear();
 
-      const boarCount = await Swine.countDocuments({
-        registered_by: registeredBy,
-        swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
-      });
+      // 1. CALCULATE YEAR BATCH (2022 = A, 2023 = B, etc.)
+      const startYear = 2022;
+      let yearIndex = currentYear - startYear;
+      if (yearIndex < 0) yearIndex = 0; 
+      
+      const yearLetter = String.fromCharCode(65 + yearIndex);
 
-      const swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
+      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
+      // We look for the absolute last number used for this batch letter
+      // across all swine types to maintain a single continuous sequence.
+      const lastSwineInBatch = await Swine.findOne({
+        swine_id: new RegExp(`^${yearLetter}-`)
+      }).sort({ swine_id: -1 });
+
+      let nextNumber = 1;
+      if (lastSwineInBatch && lastSwineInBatch.swine_id) {
+        const parts = lastSwineInBatch.swine_id.split("-");
+        const lastNum = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
+      }
+
+      const swineId = `${yearLetter}-${nextNumber}`;
 
       const newBoar = new Swine({
         swine_id: swineId,
+        batch: yearLetter, 
         registered_by: registeredBy,
         farmer_id: null,
         sex: "Male",
@@ -179,11 +196,12 @@ router.post(
       });
 
       await newBoar.save();
+      
       await logAction(
         user.id,
         "REGISTER_MASTER_BOAR",
         "SWINE_MANAGEMENT",
-        `Registered Master Boar ${swineId}`,
+        `Registered Master Boar ${swineId} for Year ${currentYear} (Batch ${yearLetter})`,
         req
       );
 
@@ -194,14 +212,14 @@ router.post(
       });
     } catch (error) {
       if (error.code === 11000)
-        return res.status(400).json({ success: false, message: "Duplicate ID. Please refresh." });
+        return res.status(400).json({ success: false, message: "Duplicate ID collision." });
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
 );
 
 /* ======================================================
-    ADD NEW SWINE (UPDATED ID LOGIC + NOTIFICATION)
+    ADD NEW SWINE (UNIFIED ID LOGIC: A-1, A-2, etc.)
 ====================================================== */
 router.post(
   "/add",
@@ -236,30 +254,34 @@ router.post(
 
       const user = req.user;
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-      const prefix = getManagerPrefix(managerId);
       const virtualNow = await timeHelper.getVirtualNow();
 
-      // 1. Resolve Auto-batch letter if empty
-      if (!batch || batch.trim() === "") {
-        const existingBatches = await Swine.distinct("batch", {
-          registered_by: managerId,
-          batch: { $regex: /^[A-Z]+$/ }
-        });
+      // 1. Resolve Auto-batch letter based on Year (2022 = A, 2023 = B...)
+      const currentYear = virtualNow.getFullYear();
+      const startYear = 2022;
+      let yearIndex = currentYear - startYear;
+      if (yearIndex < 0) yearIndex = 0;
 
-        const usedIndices = existingBatches
-          .map((b) => {
-            let num = 0;
-            for (let i = 0; i < b.length; i++) num = num * 26 + (b.charCodeAt(i) - 64);
-            return num - 1;
-          })
-          .filter((n) => !isNaN(n));
+      // Force the batch to be the Year Letter for the unified format
+      const batchLetter = String.fromCharCode(65 + yearIndex);
 
-        let nextIndex = 0;
-        while (usedIndices.includes(nextIndex)) nextIndex++;
-        batch = getBatchLetter(nextIndex);
+      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
+      // Search for the highest number currently assigned to this batch letter
+      const lastSwineInBatch = await Swine.findOne({
+        swine_id: new RegExp(`^${batchLetter}-`)
+      }).sort({ swine_id: -1 });
+
+      let nextNumber = 1;
+      if (lastSwineInBatch && lastSwineInBatch.swine_id) {
+        const parts = lastSwineInBatch.swine_id.split("-");
+        // We take the last part of the ID as the number
+        const lastNum = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
       }
+      
+      const swineId = `${batchLetter}-${nextNumber}`;
 
-      // 2. Farmer authorization check
+      // 3. Farmer authorization check
       let targetFarmer = null;
       if (farmer_id) {
         targetFarmer = await Farmer.findOne({
@@ -267,31 +289,6 @@ router.post(
           $or: [{ managerId: managerId }, { registered_by: managerId }, { user_id: managerId }]
         });
         if (!targetFarmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
-      }
-
-      // 3. GENERATE ID
-      let swineId;
-      if (batch === "BOAR" || (sex.toLowerCase() === "male" && age_stage === "adult")) {
-        const boarCount = await Swine.countDocuments({
-          registered_by: managerId,
-          swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
-        });
-        swineId = `${prefix}-BOAR-${String(boarCount + 1).padStart(4, "0")}`;
-      } else {
-        const lastSwineInBatch = await Swine.find({
-          batch: batch,
-          registered_by: managerId
-        })
-          .sort({ swine_id: -1 })
-          .limit(1);
-
-        let nextNumber = 1;
-        if (lastSwineInBatch.length && lastSwineInBatch[0].swine_id) {
-          const parts = lastSwineInBatch[0].swine_id.split("-");
-          const lastNum = parseInt(parts[parts.length - 1]);
-          if (!isNaN(lastNum)) nextNumber = lastNum + 1;
-        }
-        swineId = `${prefix}-${batch}-${String(nextNumber).padStart(4, "0")}`;
       }
 
       // 4. Set Initial Status
@@ -310,7 +307,7 @@ router.post(
 
       const newSwine = new Swine({
         swine_id: swineId,
-        batch,
+        batch: batchLetter,
         registered_by: managerId,
         farmer_id: farmer_id || null,
         sex,
@@ -327,7 +324,6 @@ router.post(
         performance_records: [
           {
             stage: initialPerfStage,
-            // ✅ UPDATE: Use virtualNow for the record date
             record_date: virtualNow,
             weight: Number(weight) || 0,
             body_length: Number(bodyLength) || 0,
@@ -343,18 +339,25 @@ router.post(
 
       await newSwine.save();
 
-      // ✅ NEW FEATURE: NOTIFY FARMER
+      // NOTIFY FARMER
       if (targetFarmer && targetFarmer.user_id) {
         await Notification.create({
           user_id: targetFarmer.user_id,
           title: "New Swine Registered",
           message: `A new ${breed} ${sex} (ID: ${swineId}) has been assigned to your profile.`,
-          type: "success"
+          type: "success",
+          created_at: virtualNow 
         });
       }
 
-      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId}`, req);
-      res.status(201).json({ success: true, message: "Swine added", swine: newSwine });
+      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} (Year: ${currentYear})`, req);
+      
+      res.status(201).json({ 
+        success: true, 
+        message: "Swine added", 
+        swine: newSwine 
+      });
+
     } catch (error) {
       if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID collision." });
       res.status(500).json({ success: false, message: error.message });
@@ -855,7 +858,7 @@ router.get(
 );
 
 /* ======================================================
-   BATCH REGISTER PIGLETS (LITTER BIRTH) - UPDATED
+    BATCH REGISTER PIGLETS (LITTER BIRTH) - UNIFIED ID
 ====================================================== */
 router.post("/batch-register-litter", requireSessionAndToken, async (req, res) => {
   const {
@@ -878,19 +881,39 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-    const prefix = getManagerPrefix(managerId);
+    
+    const virtualNow = await timeHelper.getVirtualNow();
+    const currentYear = virtualNow.getFullYear();
 
-    // 1. Resolve Batch Letter
-    const existingBatches = await Swine.distinct("batch", { registered_by: managerId });
-    let batchLetter = getBatchLetter(existingBatches.length);
+    // 1. Resolve Batch Letter based on Year (START 2022 = A)
+    const startYear = 2022;
+    let yearIndex = currentYear - startYear;
+    if (yearIndex < 0) yearIndex = 0;
+    
+    const batchLetter = String.fromCharCode(65 + yearIndex);
 
     const totalLive = Number(num_males || 0) + Number(num_females || 0);
     const totalDead = Number(num_stillborn || 0) + Number(num_mummified || 0);
     const grandTotal = totalLive + totalDead;
 
+    // 2. Find the last absolute number used for THIS batch letter to continue the sequence
+    // This ensures no conflict with previously added Boars or individual pigs
+    const lastSwineInBatch = await Swine.findOne({
+      swine_id: new RegExp(`^${batchLetter}-`)
+    })
+      .sort({ swine_id: -1 })
+      .session(session);
+
+    let startingNumber = 1;
+    if (lastSwineInBatch && lastSwineInBatch.swine_id) {
+      const parts = lastSwineInBatch.swine_id.split("-");
+      const lastNum = parseInt(parts[parts.length - 1]);
+      if (!isNaN(lastNum)) startingNumber = lastNum + 1;
+    }
+
     const piglets = [];
 
-    // 2. Prepare Piglet Array (Loop through all categories)
+    // 3. Prepare Piglet Array
     for (let i = 0; i < grandTotal; i++) {
       let sex = "Female";
       let health_status = "Healthy";
@@ -900,18 +923,19 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
         sex = "Male";
       } else if (i < totalLive) {
         sex = "Female";
-      } else if (i < totalLive + Number(num_stillborn)) {
-        sex = i % 2 === 0 ? "Male" : "Female";
-        health_status = "Deceased (Before Weaning)";
-        current_status = "Inactive";
       } else {
         sex = i % 2 === 0 ? "Male" : "Female";
         health_status = "Deceased (Before Weaning)";
         current_status = "Inactive";
       }
 
+      // Generate Unified ID (e.g., A-101, A-102)
+      const currentPigletNum = startingNumber + i;
+      const swineId = `${batchLetter}-${currentPigletNum}`;
+
       piglets.push({
-        swine_id: `${prefix}-${batchLetter}-${String(i + 1).padStart(4, "0")}`,
+        swine_id: swineId,
+        batch: batchLetter,
         registered_by: managerId,
         farmer_id: farmer_id || null,
         sex: sex,
@@ -919,23 +943,22 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
         age_stage: "piglet",
         current_status: current_status,
         health_status: health_status,
-        birth_date: farrowing_date || new Date(),
+        birth_date: farrowing_date || virtualNow,
         dam_id: dam_id,
         sire_id: sire_id,
-        batch: batchLetter,
         performance_records: [
           {
             stage: "Monitoring (Day 1-30)",
             weight: Number(avg_weight) || 0,
             recorded_by: user.id,
-            record_date: farrowing_date || new Date(),
-            remarks: health_status === "Healthy" ? "Initial Registration" : "Registered as Deceased (Farrowing)"
+            record_date: farrowing_date || virtualNow,
+            remarks: health_status === "Healthy" ? "Litter Registration" : "Registered as Deceased (Farrowing)"
           }
         ]
       });
     }
 
-    // 3. DATABASE UPDATES
+    // 4. DATABASE UPDATES
     if (piglets.length > 0) {
       await Swine.insertMany(piglets, { session });
     }
@@ -946,7 +969,7 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
         $set: {
           "breeding_cycles.$.farrowed": true,
           "breeding_cycles.$.is_pregnant": false,
-          "breeding_cycles.$.actual_farrowing_date": farrowing_date || new Date(),
+          "breeding_cycles.$.actual_farrowing_date": farrowing_date || virtualNow,
           "breeding_cycles.$.farrowing_results": {
             total_piglets: grandTotal,
             live_piglets: totalLive,
@@ -954,7 +977,8 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
             female_count: Number(num_females),
             mortality_count: totalDead
           },
-          current_status: "Lactating"
+          current_status: "Lactating",
+          last_updated: virtualNow
         },
         $inc: { parity: 1 }
       },
@@ -966,19 +990,28 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
         ai_record_id,
         {
           status: "Completed",
-          actual_farrowing_date: farrowing_date || new Date()
+          actual_farrowing_date: farrowing_date || virtualNow
         },
         { session }
       );
     }
 
+    await logAction(
+      user.id, 
+      "BATCH_REGISTER_LITTER", 
+      "SWINE_MANAGEMENT", 
+      `Registered batch of ${grandTotal} piglets for Dam ${dam_id} (IDs: ${batchLetter}-${startingNumber} to ${batchLetter}-${startingNumber + grandTotal - 1})`, 
+      req
+    );
+
     await session.commitTransaction();
     res.status(201).json({
       success: true,
-      message: `Farrowing successful. Batch ${batchLetter} created with ${totalLive} live and ${totalDead} deceased records.`
+      message: `Farrowing successful. Batch ${batchLetter} updated with ${totalLive} live and ${totalDead} deceased records.`
     });
   } catch (error) {
     if (session.inTransaction()) await session.abortTransaction();
+    console.error("Batch Register Error:", error);
     res.status(500).json({ success: false, message: error.message });
   } finally {
     session.endSession();
