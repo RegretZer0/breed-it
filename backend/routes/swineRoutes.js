@@ -216,7 +216,7 @@ router.post(
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
-);
+);q
 
 /* ======================================================
     ADD NEW SWINE (UNIFIED ID LOGIC: A-1, A-2, etc.)
