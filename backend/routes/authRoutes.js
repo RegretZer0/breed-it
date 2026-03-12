@@ -75,6 +75,29 @@ function generateToken(user) {
   );
 }
 
+/* ======================
+    ENCODER ID GENERATOR
+====================== */
+async function generateEncoderId() {
+  const latestEncoder = await User.findOne({
+    role: "encoder",
+    encoder_id: { $exists: true, $ne: null },
+  })
+    .sort({ createdAt: -1, _id: -1 })
+    .select("encoder_id")
+    .lean();
+
+  if (!latestEncoder?.encoder_id) {
+    return "Encoder-00001";
+  }
+
+  const match = String(latestEncoder.encoder_id).match(/(\d+)$/);
+  const lastNumber = match ? parseInt(match[1], 10) : 0;
+  const nextNumber = lastNumber + 1;
+
+  return `Encoder-${String(nextNumber).padStart(5, "0")}`;
+}
+
 // Mail transporter (reuse across requests)
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -224,15 +247,15 @@ router.post("/login", async (req, res) => {
         await logAction(user._id, "LOGIN", "USER_AUTH", `User (${role}) successfully logged into the system`, req);
 
         /**
-         * VIRTUAL TIME FIX: 
+         * VIRTUAL TIME FIX:
          * We calculate the virtual timestamp in seconds.
-         * To avoid the "iat is not allowed in options" error, 
+         * To avoid the "iat is not allowed in options" error,
          * we put it directly in the payload.
          */
         const virtualTimestamp = Math.floor(global.getNow().getTime() / 1000);
-        
-        const payload = { 
-          id: user._id, 
+
+        const payload = {
+          id: user._id,
           role: role || user.role,
           iat: virtualTimestamp // Moving iat here fixes the crash
         };
@@ -240,7 +263,7 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign(
           payload,
           process.env.JWT_SECRET || "fallback_secret",
-          { expiresIn: "1d" } 
+          { expiresIn: "1d" }
         );
 
         res.json({
@@ -705,7 +728,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       first_name,
       last_name,
       address,
-      contact_no, 
+      contact_no,
       email,
       password: user.password,
       managerId,
@@ -832,6 +855,8 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       return res.status(400).json({ success: false, message: "Email already registered" });
     }
 
+    const encoderId = await generateEncoderId();
+
     const encoder = await User.create({
       first_name,
       last_name,
@@ -842,9 +867,16 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       role: "encoder",
       managerId,
       status: "active",
+      encoder_id: encoderId,
     });
 
-    await logAction(req.user.id, "REGISTER_ENCODER", "ACCOUNT_MANAGEMENT", `Registered new Encoder: ${first_name} ${last_name}`, req);
+    await logAction(
+      req.user.id,
+      "REGISTER_ENCODER",
+      "ACCOUNT_MANAGEMENT",
+      `Registered new Encoder: ${first_name} ${last_name} (${encoderId})`,
+      req
+    );
 
     res.status(201).json({
       success: true,

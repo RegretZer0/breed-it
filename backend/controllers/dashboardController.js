@@ -37,23 +37,27 @@ async function getFarmManagerStats(req, res) {
 
     const farmerIds = farmers.map((f) => f._id);
 
-    // 4) Base scope query for Swine stats
-    //    Includes manager_id (control-70) + Time Warp stats behavior (mvp)
-    const baseQuery = {
+    // 4) Scope query for all pigs under this manager
+    const scopeQuery = {
       $or: [
         { registered_by: managerId },
-        { manager_id: managerId }, // include manager_id scope
+        { manager_id: managerId },
         { farmer_id: { $in: farmerIds } },
       ],
+    };
+
+    // 5) Active pigs only for operational stats
+    const activeQuery = {
+      ...scopeQuery,
       current_status: { $ne: "Culled/Sold" },
     };
 
-    // 5) Heat workflow scope (for lactating count via HeatReport)
+    // 6) Heat workflow scope (for lactating count via HeatReport)
     const heatScopeQuery = {
       $or: [{ manager_id: managerId }, { farmer_id: { $in: farmerIds } }],
     };
 
-    // 6) Compute stats (Time Warp-aware where relevant)
+    // 7) Compute stats
     const [
       totalPigs,
       alive,
@@ -64,26 +68,59 @@ async function getFarmManagerStats(req, res) {
       weaning,
       lactating,
     ] = await Promise.all([
-      Swine.countDocuments(baseQuery),
+      // Total pigs under this manager scope
+      Swine.countDocuments(scopeQuery),
 
+      // Alive pigs: not culled/sold and not deceased
       Swine.countDocuments({
-        ...baseQuery,
-        health_status: { $nin: ["Deceased", "Deceased (Before Weaning)"] },
+        ...scopeQuery,
+        current_status: { $ne: "Culled/Sold" },
+        health_status: {
+          $nin: [
+            "Deceased",
+            "Deceased (Before Weaning)",
+            "Dead",
+            "Death",
+          ],
+        },
       }),
 
+      // Mortality: dead/deceased OR culled
       Swine.countDocuments({
-        ...baseQuery,
-        health_status: { $in: ["Deceased", "Deceased (Before Weaning)"] },
+        ...scopeQuery,
+        $or: [
+          {
+            health_status: {
+              $in: [
+                "Deceased",
+                "Deceased (Before Weaning)",
+                "Dead",
+                "Death",
+              ],
+            },
+          },
+          {
+            current_status: {
+              $in: ["Culled", "Culled/Sold"],
+            },
+          },
+          {
+            health_status: {
+              $in: ["Culled"],
+            },
+          },
+        ],
       }),
 
+      // In-heat
       Swine.countDocuments({
-        ...baseQuery,
+        ...activeQuery,
         current_status: "In-Heat",
       }),
 
       // Pregnant: expected farrowing is still in the future relative to virtualNow
       Swine.countDocuments({
-        ...baseQuery,
+        ...activeQuery,
         sex: "Female",
         current_status: "Pregnant",
         "breeding_cycles.expected_farrowing_date": { $gt: virtualNow },
@@ -91,7 +128,7 @@ async function getFarmManagerStats(req, res) {
 
       // Farrowing: farrowing-related statuses OR pregnant whose farrowing date is due/past in virtualNow
       Swine.countDocuments({
-        ...baseQuery,
+        ...activeQuery,
         $or: [
           {
             current_status: {
@@ -107,7 +144,7 @@ async function getFarmManagerStats(req, res) {
 
       // Weaning: already weaned/weaning OR lactating past 30 days since actual farrowing in virtualNow
       Swine.countDocuments({
-        ...baseQuery,
+        ...activeQuery,
         $or: [
           { current_status: { $in: ["Weaned", "Weaning"] } },
           {
@@ -119,7 +156,7 @@ async function getFarmManagerStats(req, res) {
         ],
       }),
 
-      // Lactating: source of truth from heat workflow (control-70 behavior)
+      // Lactating: source of truth from heat workflow
       HeatReport.countDocuments({
         ...heatScopeQuery,
         status: "lactating",

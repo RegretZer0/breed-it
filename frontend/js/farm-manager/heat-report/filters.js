@@ -14,14 +14,15 @@ export function initHeatReportFilters({
   const state = getFilterState();
 
   // ------------- FILTER LOGIG -------------
-  document.querySelectorAll(".heat-tab").forEach(tab => {
+  document.querySelectorAll(".heat-tab").forEach((tab) => {
     tab.addEventListener("click", function () {
-      document.querySelectorAll(".heat-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".heat-tab").forEach((t) => t.classList.remove("active"));
 
       this.classList.add("active");
       state.selectedStatus = this.dataset.status || "";
 
       onSetFilterState(state);
+      onApply();
     });
   });
 

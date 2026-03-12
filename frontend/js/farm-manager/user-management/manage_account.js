@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
   /* =========================
      RECENCY LOGIC
   ========================= */
-  const RECENT_WINDOW_HOURS = 24;
+  const RECENT_WINDOW_HOURS = 12;
 
   function isRecentByCreatedAt(acc, hours = RECENT_WINDOW_HOURS) {
     const createdAt = acc?.createdAt;
@@ -115,9 +115,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const created = new Date(createdAt);
     if (Number.isNaN(created.getTime())) return false;
 
-    const now = Date.now();
+    const ageMs = Date.now() - created.getTime();
     const windowMs = hours * 60 * 60 * 1000;
-    return now - created.getTime() <= windowMs;
+
+    return ageMs >= 0 && ageMs <= windowMs;
   }
 
   /* =========================
@@ -170,12 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function toId(acc) {
-    return acc?.farmer_id || acc?._id || "";
+    return acc?.farmer_id || acc?.encoder_id || "";
   }
-
+  
   function toStatus(acc) {
-    const raw = String(acc?.status || "Active").trim().toLowerCase();
-    return raw === "inactive" ? "inactive" : "active";
+    const raw = String(acc?.status || "active").trim().toLowerCase();
+    return raw === "inactive" || raw === "disabled" ? "inactive" : "active";
   }
 
   function formatDateTime(val) {
@@ -281,18 +282,9 @@ document.addEventListener("DOMContentLoaded", () => {
      TAB DATA SOURCE
   ========================= */
   function getRecentBaseList() {
-    const combined = [...farmers, ...encoders];
-
-    const withinWindow = combined.filter(acc => isRecentByCreatedAt(acc, RECENT_WINDOW_HOURS));
-
-    if (!withinWindow.length) {
-      return combined
-        .filter(acc => acc?.createdAt)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        .slice(0, 10);
-    }
-
-    return withinWindow.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return [...farmers, ...encoders]
+      .filter(acc => isRecentByCreatedAt(acc, RECENT_WINDOW_HOURS))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 
   function getTabBaseList() {
@@ -335,8 +327,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const address = acc.address || "—";
     const contact = acc.contact_no || acc.contact_info || "—";
-    const pens = isFarmer ? (acc.num_of_pens ?? "—") : "—";
-    const cap = isFarmer ? (acc.pen_capacity ?? "—") : "—";
+    const pens = acc.num_of_pens ?? "—";
+    const cap = acc.pen_capacity ?? "—";
 
     const imgSrc = resolveImageUrl(pickProfilePicture(acc));
     const isNew = isRecentByCreatedAt(acc, RECENT_WINDOW_HOURS);
@@ -355,8 +347,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <span><i class="bi bi-hash"></i> <b>${escapeHtml(id)}</b></span>
             <span><i class="bi bi-geo-alt"></i> ${escapeHtml(address)}</span>
             <span><i class="bi bi-telephone"></i> ${escapeHtml(contact)}</span>
-            <span><i class="bi bi-house"></i> Pens: <b>${escapeHtml(pens)}</b></span>
-            <span><i class="bi bi-people"></i> Capacity: <b>${escapeHtml(cap)}</b></span>
+            ${isFarmer ? `<span><i class="bi bi-house"></i> Pens: <b>${escapeHtml(pens)}</b></span>` : ``}
+            ${isFarmer ? `<span><i class="bi bi-people"></i> Capacity: <b>${escapeHtml(cap)}</b></span>` : ``}
           </div>
         </div>
 
@@ -429,8 +421,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setText(viewEmail, acc.email || "—");
     setText(viewContact, acc.contact_no || acc.contact_info || "—");
     setText(viewAddress, acc.address || "—");
-    setText(viewPens, isFarmer ? String(acc.num_of_pens ?? "—") : "—");
-    setText(viewCapacity, isFarmer ? String(acc.pen_capacity ?? "—") : "—");
+    setText(viewPens, isFarmer ? String(acc.num_of_pens ?? "—") : "");
+    setText(viewCapacity, isFarmer ? String(acc.pen_capacity ?? "—") : "");
     setText(viewCreatedAt, formatDateTime(acc.createdAt));
     setText(viewUpdatedAt, formatDateTime(acc.updatedAt));
 
@@ -644,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${escapeHtml(acc.farmer_id || acc._id)}</td>
+        <td>${escapeHtml(toId(acc) || "—")}</td>
         <td>${escapeHtml(`${acc.first_name || ""} ${acc.last_name || ""}`.trim())}</td>
         <td>${escapeHtml(role)}</td>
         <td>${escapeHtml(acc.address || "-")}</td>
@@ -665,7 +657,7 @@ document.addEventListener("DOMContentLoaded", () => {
     list.forEach(acc => {
       recentTbody.innerHTML += `
         <tr>
-          <td>${escapeHtml(acc.farmer_id || acc._id)}</td>
+          <td>${escapeHtml(toId(acc) || "—")}</td>
           <td>${escapeHtml(`${acc.first_name || ""} ${acc.last_name || ""}`.trim())}</td>
           <td>${escapeHtml(acc.farmer_id ? "Farmer" : "Encoder")}</td>
           <td>${escapeHtml(acc.address || "-")}</td>

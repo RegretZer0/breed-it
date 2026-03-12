@@ -12,6 +12,16 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
 
+  // Formal display/reference ID for encoder accounts.
+  // Kept optional and sparse so existing non-encoder users are not affected.
+  encoder_id: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    default: null
+  },
+
   role: {
     type: String,
     enum: ["system_admin", "farm_manager", "encoder", "farmer"],

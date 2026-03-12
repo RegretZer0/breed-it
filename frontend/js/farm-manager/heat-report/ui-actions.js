@@ -1084,56 +1084,54 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   }
 
   /* =========================
-     STATS RENDERING MODULE
+    STATS RENDERING MODULE
   ========================= */
   function renderStats(reports) {
-    const virtualNow = getVirtualNow();
-    const cycle = (r) => safeLower(getCycleStatus(r));
+    const cycle = (r) => normalizeLifecycleStatus(r);
+
+    const isInHeat = (r) => {
+      const st = cycle(r);
+      return ["pending", "approved"].includes(st);
+    };
+
+    const isUnderObservation = (r) => {
+      const st = cycle(r);
+      return ["under_observation", "ai_confirmed", "waiting_heat_check"].includes(st);
+    };
+
+    const isPregnant = (r) => {
+      const st = cycle(r);
+      return st === "pregnant";
+    };
+
+    const isFarrowingReady = (r) => {
+      const st = cycle(r);
+      return ["farrowing_ready", "awaiting_farrowing"].includes(st);
+    };
+
+    const isLactating = (r) => {
+      const st = cycle(r);
+      return st === "lactating";
+    };
 
     if (countInHeat) {
-      countInHeat.textContent = reports.filter((r) => ["pending", "approved"].includes(cycle(r))).length;
+      countInHeat.textContent = reports.filter(isInHeat).length;
     }
 
     if (countAwaitingRecheck) {
-      countAwaitingRecheck.textContent = reports.filter((r) =>
-        ["under_observation", "waiting_heat_check"].includes(cycle(r))
-      ).length;
+      countAwaitingRecheck.textContent = reports.filter(isUnderObservation).length;
     }
 
-    /* Split Pregnant vs Farrowing Ready based on virtualNow */
-    if (countPregnant || countFarrowingReady) {
-      let pregnantCount = 0;
-      let farrowingReadyCount = 0;
+    if (countPregnant) {
+      countPregnant.textContent = reports.filter(isPregnant).length;
+    }
 
-      reports.forEach((r) => {
-        const st = cycle(r);
-        if (["pregnant", "farrowing_ready", "awaiting_farrowing"].includes(st)) {
-          const expected = getExpectedFarrowingDate(r) || r.expected_farrowing || null;
-
-          if (!expected) {
-            pregnantCount++;
-            return;
-          }
-
-          const farrowDate = new Date(expected);
-          farrowDate.setHours(0, 0, 0, 0);
-
-          const checkDate = new Date(virtualNow);
-          checkDate.setHours(0, 0, 0, 0);
-
-          const diffDays = Math.ceil((farrowDate - checkDate) / (1000 * 60 * 60 * 24));
-
-          if (diffDays <= 7) farrowingReadyCount++;
-          else pregnantCount++;
-        }
-      });
-
-      if (countPregnant) countPregnant.textContent = pregnantCount;
-      if (countFarrowingReady) countFarrowingReady.textContent = farrowingReadyCount;
+    if (countFarrowingReady) {
+      countFarrowingReady.textContent = reports.filter(isFarrowingReady).length;
     }
 
     if (countLactating) {
-      countLactating.textContent = reports.filter((r) => cycle(r) === "lactating").length;
+      countLactating.textContent = reports.filter(isLactating).length;
     }
 
     if (archiveBtn) {
@@ -1161,13 +1159,33 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     const pageItems = reports.slice(start, start + ROWS_PER_PAGE);
 
     if (!pageItems.length) {
-      cardList.innerHTML = "<p class='text-muted'>No reports found.</p>";
+      cardList.innerHTML = `
+        <div class="reports-empty-state">
+          <div class="reports-empty-icon">
+            <i class="bi bi-inbox"></i>
+          </div>
+
+          <div class="reports-empty-content">
+            <h5 class="reports-empty-title">No reports found</h5>
+            <p class="reports-empty-text">
+              No farmer reports match the current filters. Try changing the selected tab
+              or clearing one or more filters.
+            </p>
+          </div>
+        </div>
+      `;
+
       if (pageIndicator) pageIndicator.textContent = `Page 1 of 1`;
       if (prevPageBtn) prevPageBtn.disabled = true;
       if (nextPageBtn) nextPageBtn.disabled = true;
+
+      prevPageBtn?.classList.add("is-disabled-empty");
+      nextPageBtn?.classList.add("is-disabled-empty");
+      pageIndicator?.classList.add("is-empty-page");
+
       return;
     }
-
+    
     pageItems.forEach((r) => {
       const probability = r.heat_probability ?? 0;
 
