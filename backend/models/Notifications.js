@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
-    // user_id is optional to allow Global broadcasts (is_global: true)
     user_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -15,8 +14,7 @@ const notificationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      // 'maintenance' type included for system-wide alerts
-      enum: ["info", "success", "alert", "error", "maintenance"],
+      enum: ["info", "success", "alert", "error", "warning", "maintenance"],
       default: "info",
       index: true
     },
@@ -38,9 +36,6 @@ const notificationSchema = new mongoose.Schema(
       index: true
     },
 
-    /* ======================================================
-       MAINTENANCE LIFECYCLE
-    ====================================================== */
     status: {
       type: String,
       enum: ["scheduled", "active", "completed", "cancelled"],
@@ -73,7 +68,6 @@ const notificationSchema = new mongoose.Schema(
     read_by: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
   },
   {
-    // Custom names for the timestamp fields
     timestamps: { createdAt: "created_at", updatedAt: "updated_at" }
   }
 );

@@ -13,8 +13,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   // Buttons
   const viewAllBtn = document.getElementById("viewAllNotificationsBtn");
-  const markAllBtn = document.getElementById("markAllNotificationsReadBtn"); // offcanvas / panel
-  const markAllBtnModal = document.getElementById("markAllNotificationsReadBtnModal"); // modal / panel
+  const markAllBtn = document.getElementById("markAllNotificationsReadBtn");
+  const markAllBtnModal = document.getElementById("markAllNotificationsReadBtnModal");
 
   // Pagination UI
   const prevBtn = document.getElementById("notifPrevPageBtn");
@@ -27,6 +27,92 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
 
   const PAGE_SIZE = 10;
   let historyPage = 1;
+
+  /* =========================================================
+    MODULE: Notification Sound State
+  ========================================================= */
+  let notificationAudio = null;
+  let hasInitializedNotificationSnapshot = false;
+  let previousUnreadIds = new Set();
+  let audioUnlocked = false;
+  let lastSoundAt = 0;
+
+  function setupNotificationAudio() {
+    if (notificationAudio) return notificationAudio;
+
+    notificationAudio = new Audio("/sounds/notification.mp3");
+    notificationAudio.preload = "auto";
+    notificationAudio.volume = 1;
+
+    try {
+      notificationAudio.load();
+    } catch {}
+
+    return notificationAudio;
+  }
+
+  function armNotificationAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+
+    const audio = setupNotificationAudio();
+    if (!audio) return;
+
+    try {
+      audio.volume = 0;
+      audio.currentTime = 0;
+
+      const maybePromise = audio.play();
+      if (maybePromise && typeof maybePromise.then === "function") {
+        maybePromise
+          .then(() => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = 1;
+          })
+          .catch(() => {
+            audio.volume = 1;
+          });
+      } else {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = 1;
+      }
+    } catch {
+      audio.volume = 1;
+    }
+  }
+
+  function bindAudioUnlock() {
+    const unlockOnce = () => armNotificationAudio();
+
+    ["click", "pointerdown", "keydown", "touchstart"].forEach((evt) => {
+      document.addEventListener(evt, unlockOnce, { passive: true, once: true });
+    });
+  }
+
+  async function playNotificationSound() {
+    const now = Date.now();
+    if (now - lastSoundAt < 1200) return;
+    lastSoundAt = now;
+
+    const audio = setupNotificationAudio();
+    if (!audio) return;
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+
+      const maybePromise = audio.play();
+      if (maybePromise && typeof maybePromise.catch === "function") {
+        await maybePromise.catch((err) => {
+          console.warn("Audio play failed:", err);
+        });
+      }
+    } catch (err) {
+      console.warn("Notification sound failed:", err);
+    }
+  }
 
   /* =========================
       FETCH
@@ -45,9 +131,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     }
   }
 
-  /* =========================
-      HELPERS
-  ========================= */
+ //Fetch Notification Helper
   function normalizeType(t) {
     return (t || "info").toString().trim().toLowerCase();
   }
@@ -55,7 +139,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   function isVisibleInPanels(notification) {
     return normalizeType(notification?.type) !== "maintenance";
   }
-  
+
   function parseDate(d) {
     const dt = new Date(d);
     return Number.isNaN(dt.getTime()) ? null : dt;
@@ -76,10 +160,51 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       if (s === "read") return false;
     }
 
-    // avoid total-count bug when field missing
     return false;
   }
 
+  function getNotificationKey(n) {
+    return String(n?._id || "").trim();
+  }
+
+  function getUnreadVisibleIds(list = []) {
+    return new Set(
+      list
+        .filter(isVisibleInPanels)
+        .filter(isUnread)
+        .map(getNotificationKey)
+        .filter(Boolean)
+    );
+  }
+
+  async function handleIncomingNotificationSound(nextNotifications) {
+    const nextUnreadIds = getUnreadVisibleIds(nextNotifications);
+
+    if (!hasInitializedNotificationSnapshot) {
+      previousUnreadIds = nextUnreadIds;
+      hasInitializedNotificationSnapshot = true;
+      return;
+    }
+
+    let hasNewUnread = false;
+
+    for (const id of nextUnreadIds) {
+      if (!previousUnreadIds.has(id)) {
+        hasNewUnread = true;
+        break;
+      }
+    }
+
+    previousUnreadIds = nextUnreadIds;
+
+    if (hasNewUnread) {
+      await playNotificationSound();
+    }
+  }
+
+  /* =========================
+      HELPERS
+  ========================= */
   function withinTimeWindow(createdAt, windowValue) {
     if (!windowValue) return true;
 
@@ -95,6 +220,11 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     if (windowValue === "24h") return diffMs <= 24 * hour;
     if (windowValue === "7d") return diffMs <= 7 * day;
     if (windowValue === "30d") return diffMs <= 30 * day;
+    if (windowValue === "today") {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      return dt >= todayStart;
+    }
 
     return true;
   }
@@ -146,17 +276,14 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     const historyEl = document.getElementById("notificationHistoryModal");
     if (!historyEl) return;
 
-    // reset paging so open always starts at page 1
     historyPage = 1;
 
-    // ✅ FARM MANAGER: Bootstrap modal
     if (isBootstrapModalEl(historyEl)) {
       const inst = window.bootstrap.Modal.getOrCreateInstance(historyEl);
       inst.show();
       return;
     }
 
-    // ✅ FARMER: custom side-panel
     historyEl.classList.add("active");
     document.body.style.overflow = "hidden";
     renderHistory();
@@ -166,14 +293,12 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     const recentPanel = document.getElementById("notificationsPanel");
     if (!recentPanel) return;
 
-    // FARM MANAGER: bootstrap offcanvas
     if (isBootstrapOffcanvasEl(recentPanel)) {
       const inst = window.bootstrap.Offcanvas.getInstance(recentPanel) || window.bootstrap.Offcanvas.getOrCreateInstance(recentPanel);
       inst.hide();
       return;
     }
 
-    // FARMER: custom side-panel
     recentPanel.classList.remove("active");
   }
 
@@ -184,8 +309,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     recentList.innerHTML = "";
 
     const recent = allNotifications
-    .filter(isVisibleInPanels)
-    .slice(0, 8);
+      .filter(isVisibleInPanels)
+      .slice(0, 8);
 
     if (!recent.length) {
       recentList.innerHTML = `
@@ -308,6 +433,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
             : n
         );
 
+        previousUnreadIds = getUnreadVisibleIds(allNotifications);
+
         setBadgeCount();
         renderRecent();
         if (opts.rerenderHistory) renderHistory();
@@ -318,16 +445,12 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   }
 
   /* =========================
-      MARK ALL READ (FIX)
-      - tries bulk endpoint if you have one
-      - falls back to marking each unread item
+      MARK ALL READ
   ========================= */
   async function markAllRead() {
     try {
       setMarkAllButtonsDisabled(true);
 
-      // Prefer a bulk endpoint if your backend supports it
-      // (If not, it will just fail and we'll fallback.)
       let bulkWorked = false;
       try {
         const bulkRes = await fetch(`${backendUrl}/api/notifications/user/${userId}/read-all`, {
@@ -336,12 +459,9 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
           credentials: "include",
         });
         if (bulkRes.ok) bulkWorked = true;
-      } catch (_) {
-        // ignore, fallback below
-      }
+      } catch (_) {}
 
       if (!bulkWorked) {
-        // Fallback: mark each unread notification via existing endpoint
         const unread = allNotifications.filter((n) => isUnread(n) && n._id);
         for (const n of unread) {
           await fetch(`${backendUrl}/api/notifications/${n._id}/read`, {
@@ -352,13 +472,14 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
         }
       }
 
-      // Update local state
       const nowIso = new Date().toISOString();
       allNotifications = allNotifications.map((n) =>
         isUnread(n)
           ? { ...n, is_read: true, read: true, isRead: true, read_at: n.read_at || nowIso }
           : n
       );
+
+      previousUnreadIds = getUnreadVisibleIds(allNotifications);
 
       setBadgeCount();
       renderRecent();
@@ -371,7 +492,7 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   }
 
   /* =========================
-    PUBLIC HOOK (so navbar.js can call the real implementation)
+     PUBLIC HOOK
   ========================= */
   window.__notificationsApi = window.__notificationsApi || {};
   window.__notificationsApi.markAllRead = markAllRead;
@@ -380,7 +501,10 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
       LOAD
   ========================= */
   async function load() {
-    allNotifications = await fetchNotifications();
+    const fetched = await fetchNotifications();
+    await handleIncomingNotificationSound(fetched);
+
+    allNotifications = fetched;
     setBadgeCount();
     renderRecent();
     renderHistory();
@@ -409,20 +533,15 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     renderHistory();
   });
 
-  // View all -> works for BOTH:
-  // - Farm manager (bootstrap offcanvas + bootstrap modal)
-  // - Farmer (custom side-panels)
   viewAllBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     closeRecentUIIfNeeded();
     openHistoryUI();
   });
 
-  // ✅ MARK ALL (offcanvas + modal)
   markAllBtn?.addEventListener("click", markAllRead);
   markAllBtnModal?.addEventListener("click", markAllRead);
 
-  // ✅ If using bootstrap modal (farm manager), refresh history when it opens
   const historyEl = document.getElementById("notificationHistoryModal");
   if (historyEl && isBootstrapModalEl(historyEl)) {
     historyEl.addEventListener("shown.bs.modal", () => {
@@ -431,7 +550,6 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
     });
   }
 
-  // ✅ Allow other modules (like navbar.js) to force refresh
   window.addEventListener("notifications:refresh", () => {
     load();
   });
@@ -439,6 +557,8 @@ export async function initNotifications(userId, backendUrl = "http://localhost:5
   /* =========================
       INIT
   ========================= */
+  bindAudioUnlock();
+  setupNotificationAudio();
   await load();
   setInterval(load, 30000);
 }
