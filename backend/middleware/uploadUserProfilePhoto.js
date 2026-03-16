@@ -1,31 +1,26 @@
 // backend/middleware/uploadUserProfilePhoto.js
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 
-// ✅ Save to: /backend/uploads/user_profiles
-const UPLOAD_DIR = path.join(__dirname, "..", "uploads", "user_profiles");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+/* =========================================================
+   MODULE: Multer Configuration (Cloud Migrated)
+   PURPOSE: Switch from Disk Storage to Memory Storage to 
+            support Supabase Cloud uploads.
+========================================================= */
 
 // Allowed extensions (basic safety)
 const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
-// Storage config
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const originalExt = path.extname(file.originalname || "").toLowerCase();
-    const ext = ALLOWED_EXT.has(originalExt) ? originalExt : ".jpg";
+/**
+ * Storage config: Using memoryStorage so the file buffer 
+ * is available for Supabase upload in the controller.
+ */
+const storage = multer.memoryStorage();
 
-    const userId = req.user?.id || req.session?.user?.id || "unknown";
-    const safeUserId = String(userId).replace(/[^a-zA-Z0-9_-]/g, "");
-    cb(null, `user_${safeUserId}_${Date.now()}${ext}`);
-  },
-});
-
-// File filter: images only
+/**
+ * File filter: images only.
+ * Validates both MimeType and Extension for security.
+ */
 function fileFilter(req, file, cb) {
   if (!file?.mimetype?.startsWith("image/")) {
     return cb(new Error("Only image uploads are allowed."), false);

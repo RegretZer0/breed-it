@@ -67,6 +67,15 @@ function getManagerPrefix(managerId) {
   return idStr.substring(idStr.length - 4).toUpperCase();
 }
 
+// Helper to get Year Letter (2022=A, 2023=B, 2024=C, 2025=D, 2026=E)
+function getYearLetter(year) {
+  const startYear = 2022;
+  const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Sequence skipping I, O, Q
+  let index = year - startYear;
+  if (index < 0) index = 0;
+  return alphabet[index] || alphabet[alphabet.length - 1];
+}
+
 /* ======================================================
    PREVIEW ENDPOINTS: GET NEXT IDs (FOR FRONTEND)
 ====================================================== */
@@ -145,12 +154,15 @@ router.post(
       const virtualNow = await timeHelper.getVirtualNow();
       const currentYear = virtualNow.getFullYear();
 
-      // 1. CALCULATE YEAR BATCH (2022 = A, 2023 = B, etc.)
+      // 1. CALCULATE YEAR BATCH (2022 = A, 2023 = B, 2024 = C, 2025 = D, 2026 = E)
       const startYear = 2022;
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0; 
       
-      const yearLetter = String.fromCharCode(65 + yearIndex);
+      // Use the string index to ensure 2026 (Index 4) is always 'E'
+      const yearLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
       // 2. GENERATE UNIFIED ID (Format: Letter-Number)
       // We look for the absolute last number used for this batch letter
@@ -216,7 +228,7 @@ router.post(
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
-);q
+);
 
 /* ======================================================
     ADD NEW SWINE (UNIFIED ID LOGIC: A-1, A-2, etc.)
@@ -259,11 +271,13 @@ router.post(
       // 1. Resolve Auto-batch letter based on Year (2022 = A, 2023 = B...)
       const currentYear = virtualNow.getFullYear();
       const startYear = 2022;
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0;
 
-      // Force the batch to be the Year Letter for the unified format
-      const batchLetter = String.fromCharCode(65 + yearIndex);
+      // Force the batch to be the Year Letter (Index 4 for 2026 is strictly 'E')
+      const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
       // 2. GENERATE UNIFIED ID (Format: Letter-Number)
       // Search for the highest number currently assigned to this batch letter
@@ -885,12 +899,15 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
     const virtualNow = await timeHelper.getVirtualNow();
     const currentYear = virtualNow.getFullYear();
 
-    // 1. Resolve Batch Letter based on Year (START 2022 = A)
+    // 1. Resolve Batch Letter based on Year (2022 = A, 2023 = B, 2024 = C, 2025 = D, 2026 = E)
     const startYear = 2022;
+    const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+    
     let yearIndex = currentYear - startYear;
     if (yearIndex < 0) yearIndex = 0;
     
-    const batchLetter = String.fromCharCode(65 + yearIndex);
+    // Explicitly select the letter from the sequence to ensure 2026 (Index 4) is 'E'
+    const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
     const totalLive = Number(num_males || 0) + Number(num_females || 0);
     const totalDead = Number(num_stillborn || 0) + Number(num_mummified || 0);
@@ -929,7 +946,7 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
         current_status = "Inactive";
       }
 
-      // Generate Unified ID (e.g., A-101, A-102)
+      // Generate Unified ID (e.g., E-101, E-102)
       const currentPigletNum = startingNumber + i;
       const swineId = `${batchLetter}-${currentPigletNum}`;
 

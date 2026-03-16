@@ -376,7 +376,7 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
-// 4. PIGLET FINAL DECISION (Updated with Notifications)
+// 4. PIGLET FINAL DECISION (Aligned with Notification Model)
 // ---------------------------------------------------------
 router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
   try {
@@ -412,12 +412,14 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
 
       await swine.save();
 
-      // NOTIFICATION: Final Selection
+      // NOTIFICATION: Final Selection (Explicitly set to active status)
       await Notification.create({
         user_id: swine.farmer_id.user_id || swine.farmer_id,
         title: "Final Selection Reached 🏆",
         message: `Piglet ${swine.swine_id} has passed monitoring and is now graduated to Adult Breeder status.`,
         type: "success",
+        status: "active",           // Required: Bypasses the default "scheduled" status
+        scheduled_for: virtualNow,  // Required for proper indexing/sorting
         createdAt: virtualNow
       });
 
@@ -453,7 +455,9 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       message: hasDeformity 
         ? `Sow ${swine.swine_id} is culled due to detected deformity (${deformitiesList.join(", ")}).`
         : `Swine ${swine.swine_id} has been marked for Sale/Culling.`,
-      type: "danger",
+      type: "error",               // "danger" changed to "error" to match Notification.js enum
+      status: "active",            // Required: Bypasses the default "scheduled" status
+      scheduled_for: virtualNow,   // Required for proper indexing/sorting
       createdAt: virtualNow
     });
 
@@ -547,13 +551,15 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
     
     await swine.save();
 
-    // NOTIFICATION: Selection Milestone Update
+    // NOTIFICATION: Selection Milestone Update (Aligned with Model)
     await Notification.create({
       user_id: swine.farmer_id.user_id || swine.farmer_id,
       title: "Selection Status Updated",
       message: `Swine ${swine.swine_id} has been moved to: ${newStatus}.`,
       type: isApproved ? "success" : "warning",
-      createdAt: virtualNow
+      status: "active",           // Required: Bypasses the default "scheduled" status
+      scheduled_for: virtualNow,  // Required for proper indexing/sorting
+      createdAt: virtualNow 
     });
 
     res.json({ success: true, message: `Swine updated to ${newStatus}` });

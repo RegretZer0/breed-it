@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const multer = require("multer");
+const supabase = require("../utils/supabase"); // Ensure this utility is initialized
 
 const Farmer = require("../models/UserFarmer");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
@@ -9,18 +10,10 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 const logAction = require("../middleware/logger");
 
 /* ==========================
-   MULTER CONFIGURATION
+   MULTER CONFIGURATION (Cloud Migrated)
 ========================== */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName =
-      Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
-  },
-});
+// Using memoryStorage to bypass local disk
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -42,8 +35,7 @@ router.get(
   allowRoles("farmer"),
   async (req, res) => {
     try {
-      const farmer = await Farmer.findById(req.user.id)
-        .select("-password -__v");
+      const farmer = await Farmer.findById(req.user.id).select("-password -__v");
 
       if (!farmer) {
         return res.status(404).json({
@@ -52,11 +44,24 @@ router.get(
         });
       }
 
+      // Convert mongoose document to object to allow temporary fields
+      const farmerData = farmer.toObject();
+
+      // If farmer has a profile picture, generate a temporary Signed URL
+      if (farmerData.profile_picture) {
+        const { data, error } = await supabase.storage
+          .from("user_profiles")
+          .createSignedUrl(farmerData.profile_picture, 3600); // 1-hour access
+
+        if (!error && data) {
+          farmerData.profile_picture_url = data.signedUrl;
+        }
+      }
+
       res.json({
         success: true,
-        farmer,
+        farmer: farmerData,
       });
-
     } catch (error) {
       console.error("Fetch Farmer Profile Error:", error);
       res.status(500).json({
@@ -74,7 +79,7 @@ router.put(
   "/profile",
   requireSessionAndToken,
   allowRoles("farmer"),
-  upload.single("profile_picture"), // ✅ IMPORTANT
+  upload.single("profile_picture"),
   async (req, res) => {
     try {
       const farmer = await Farmer.findById(req.user.id);
@@ -86,9 +91,7 @@ router.put(
         });
       }
 
-      // FormData fields come as strings
-      const contact_no = req.body.contact_no;
-      const address = req.body.address;
+      const { contact_no, address } = req.body;
       const num_of_pens = Number(req.body.num_of_pens);
       const pen_capacity = Number(req.body.pen_capacity);
 
@@ -100,15 +103,28 @@ router.put(
         });
       }
 
-      // Update fields
-      farmer.contact_no = contact_no;
-      farmer.address = address;
-      farmer.num_of_pens = num_of_pens;
-      farmer.pen_capacity = pen_capacity;
+      // Update basic fields
+      farmer.contact_no = contact_no || farmer.contact_no;
+      farmer.address = address || farmer.address;
+      farmer.num_of_pens = isNaN(num_of_pens) ? farmer.num_of_pens : num_of_pens;
+      farmer.pen_capacity = isNaN(pen_capacity) ? farmer.pen_capacity : pen_capacity;
 
-      // If new image uploaded
+      // If new image uploaded to memory, send to Supabase
       if (req.file) {
-        farmer.profile_picture = "/uploads/" + req.file.filename;
+        const fileExt = path.extname(req.file.originalname);
+        const fileName = `farmer-${farmer._id}-${Date.now()}${fileExt}`;
+
+        const { data, error } = await supabase.storage
+          .from("user_profiles")
+          .upload(fileName, req.file.buffer, {
+            contentType: req.file.mimetype,
+            upsert: true,
+          });
+
+        if (error) throw error;
+
+        // Store the path in DB (not the full URL)
+        farmer.profile_picture = data.path;
       }
 
       await farmer.save();
@@ -127,12 +143,11 @@ router.put(
         message: "Profile updated successfully.",
         farmer,
       });
-
     } catch (error) {
       console.error("Update Farmer Profile Error:", error);
       res.status(500).json({
         success: false,
-        message: "Server error while updating profile.",
+        message: error.message || "Server error while updating profile.",
       });
     }
   }
