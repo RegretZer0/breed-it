@@ -427,11 +427,10 @@
   </div>
 </div>
 
-<!-- ================= TRACK PROGRESS PANEL ================= -->
 <div id="trackProgressPanel" class="progress-panel">
   <div class="progress-panel-header">
-    <div>
-      <h4 class="panel-title">Progress Tracking</h4>
+    <div class="header-content">
+      <h4 class="panel-title"><i class="bi bi-graph-up-arrow me-2"></i>Progress Tracking</h4>
       <p id="progressFarmerName" class="panel-subtitle">Farmer: —</p>
     </div>
     <button id="closeProgressPanel" class="panel-close" type="button" aria-label="Close">&times;</button>
@@ -442,7 +441,9 @@
     <div class="cycle-summary-card">
       <div class="cycle-summary-top">
         <div class="cycle-swine">
-          <i class="bi bi-heart-fill text-success"></i>
+          <div class="swine-icon-wrapper">
+            <i class="bi bi-piggy-bank-fill"></i>
+          </div>
           <strong id="progressSwineId">—</strong>
         </div>
         <span id="cycleStatus" class="cycle-status-badge">Active</span>
@@ -450,21 +451,25 @@
 
       <div class="cycle-time-info">
         <div class="time-row">
-          <span class="label">Current Stage</span>
+          <span class="label"><i class="bi bi-layers"></i> Current Stage</span>
           <strong id="currentStage">—</strong>
         </div>
 
         <div class="time-row">
-          <span class="label">Target Date</span>
+          <span class="label"><i class="bi bi-calendar-event"></i> Target Date</span>
           <strong id="targetDate">—</strong>
         </div>
-        <div class="time-row highlight">
-          <span class="label">Time Remaining</span>
-          <strong id="remainingDays">—</strong>
+        
+        <div class="time-row highlight-box">
+          <div class="highlight-label">
+            <i class="bi bi-hourglass-split"></i> Time Remaining
+          </div>
+          <div id="remainingDays" class="highlight-value">—</div>
         </div>
       </div>
     </div>
 
+    <div class="timeline-section-title">Timeline History</div>
     <div class="cycle-timeline" id="cycleTimeline">
       <div class="timeline-empty text-muted">No cycle data available.</div>
     </div>

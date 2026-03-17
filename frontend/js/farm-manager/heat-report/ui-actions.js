@@ -1680,9 +1680,16 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         let label = "—";
         let targetDate = null;
 
+        // ✅ UPDATED: Handle 'approved' status to show AI Due schedule
         if (st === "approved") {
-          if (r.next_heat_check) targetDate = new Date(r.next_heat_check);
-          label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check, getVirtualNow())} (AI Due)` : "—";
+          const rawDate = r.next_heat_check || r.nextHeatCheck;
+          if (rawDate) {
+            targetDate = new Date(rawDate);
+            const daysLeft = getDaysLeft(rawDate, getVirtualNow());
+            label = `${daysLeft} (AI Due)`;
+          } else {
+            label = "—";
+          }
         } else if (st === "under_observation" || st === "ai_confirmed") {
           if (r.next_heat_check) targetDate = new Date(r.next_heat_check);
           label = r.next_heat_check ? `${getDaysLeft(r.next_heat_check, getVirtualNow())} (Pregnancy Check)` : "—";

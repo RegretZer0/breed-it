@@ -2263,3 +2263,14 @@ html, body{
     justify-content: center;
   }
 }
+
+.ai-schedule-highlight {
+  border: 2px solid #cfe2ff !important;
+  background-color: #f8faff !important;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.08);
+}
+
+.ai-schedule-highlight .rd-info-title {
+  color: #084298;
+  font-weight: 700;
+}

@@ -477,7 +477,7 @@ router.get("/farmer", requireApiLogin, allowRoles("farmer", "farm_manager", "enc
 });
 
 /* ======================================================
-    APPROVE HEAT REPORT (Updated with Time Warp & First Success Logic)
+    APPROVE HEAT REPORT (Updated with Fixed AI Schedule)
 ====================================================== */
 router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   try {
@@ -489,14 +489,16 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
 
     const virtualNow = await timeHelper.getVirtualNow(); 
     
-    // Calculate scheduled insemination based on virtual time
+    // Calculate scheduled insemination based on virtual time (2 days window)
     const scheduledInsemination = new Date(virtualNow);
     scheduledInsemination.setDate(virtualNow.getDate() + 2);
 
     report.status = "approved";
-    report.next_heat_check = null;
+    
+    // ✅ FIX: Save the scheduled date to next_heat_check so the UI and Calendar can display it
+    report.next_heat_check = scheduledInsemination; 
+    
     report.expected_farrowing = null;
-
     report.approved_at = virtualNow;
     report.approved_by = req.user.id;
 
@@ -513,9 +515,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
         breeding_cycle_number: report.breeding_cycle_number || null
       }
     });
-    // report.still_in_heat_at = virtualNow;
-    // report.still_in_heat_by = req.user.id;
-    // report.still_in_heat_reason = "Returned to heat / pregnancy failed";
+
     report.updatedAt = virtualNow;
     await report.save();
 
@@ -551,7 +551,10 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
       "success"
     );
 
-    res.json({ success: true, message: "Report approved and cycle signs recorded." });
+    res.json({ 
+      success: true, 
+      message: "Report approved. AI scheduled for " + scheduledInsemination.toLocaleDateString() 
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

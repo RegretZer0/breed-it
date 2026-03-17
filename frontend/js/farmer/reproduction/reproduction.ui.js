@@ -1115,6 +1115,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   ========================================================= */
   const views = createReproViews({ repo, state, ui });
 
+  async function refreshMonthlyData({ includeMonitoring = false } = {}) {
+    const swineRes = await repo.loadSwine();
+    if (swineRes?.authError) return swineRes;
+
+    const perfRes = await repo.loadPerformance();
+    if (perfRes?.authError) return perfRes;
+
+    if (includeMonitoring) {
+      const monRes = await repo.loadPigletMonitoring();
+      if (monRes?.authError) return monRes;
+    }
+
+    repo.buildDerived();
+    return { success: true };
+  }
+  
   /* =========================================================
      MODULE: Legacy Rendering
      PURPOSE: Keep old containers populated while new panels

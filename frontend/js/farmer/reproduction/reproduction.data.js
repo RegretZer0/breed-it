@@ -570,6 +570,7 @@ export function createReproductionStore({ user, token, baseUrl }) {
       .map((r) => ({
         date: r?.morphology?.date || r?.createdAt || null,
         weight: Number(r?.morphology?.weight || 0),
+        body_length: Number(r?.morphology?.body_length || r?.morphology?.bodyLength || 0),
         heart_girth: Number(r?.morphology?.heart_girth || 0),
         stage: r?.morphology?.stage || "N/A",
         teeth: r?.morphology?.teeth || "N/A",
@@ -628,8 +629,12 @@ export function createReproductionStore({ user, token, baseUrl }) {
   return {
     store,
     loadAll,
+    loadSwine,
     loadPigletMonitoring,
+    loadAIRecords,
+    loadPerformance,
     loadSelection,
+    buildDerived,
 
     getPigletsForSow,
     getCyclesForSow,

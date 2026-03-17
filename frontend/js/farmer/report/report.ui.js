@@ -670,7 +670,12 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   function computeNextCheckDate(report) {
     const st = normStatus(report?.status);
 
-    if (st === "approved" || st === "under_observation") return getNextHeatCheck(report) || "";
+    // ✅ FIX: If approved, immediately look for the date we saved in the backend
+    if (st === "approved") {
+      return report?.next_heat_check || report?.nextHeatCheck || "";
+    }
+
+    if (st === "under_observation") return getNextHeatCheck(report) || "";
     if (st === "pregnant") return report?.expected_farrowing || "";
 
     if (st === "lactating") {
