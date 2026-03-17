@@ -3,10 +3,12 @@ const Swine = require("../models/Swine");
 const Farmer = require("../models/UserFarmer");
 const HeatReport = require("../models/HeatReports");
 const SystemSettings = require("../models/SystemSettings"); // Time Warp support
+const mongoose = require("mongoose");
 
 /**
  * Dashboard stats for Farm Manager (and Encoder under a manager).
- * Merged: control-70 (manager_id scope + lactating via HeatReport) + mvp (Time Warp virtualNow).
+ * Merged: control-70 (managerId scope + lactating via HeatReport) + mvp (Time Warp virtualNow).
+ * FIXED: Replaced loose spreads with strict $and wraps to force 0 on empty accounts.
  */
 async function getFarmManagerStats(req, res) {
   try {
@@ -30,34 +32,32 @@ async function getFarmManagerStats(req, res) {
       });
     }
 
-    // 3) Find all farmers under this manager (including those registered by manager)
+    const mId = new mongoose.Types.ObjectId(managerId);
+
+    // 3) Find all farmers under this manager
     const farmers = await Farmer.find({
-      $or: [{ managerId }, { registered_by: managerId }],
+      $or: [{ managerId: mId }, { registered_by: mId }],
     }).select("_id");
 
     const farmerIds = farmers.map((f) => f._id);
 
-    // 4) Scope query for all pigs under this manager
+    // 4) Unified Scope: Pigs belong to this manager or their farmers
     const scopeQuery = {
       $or: [
-        { registered_by: managerId },
-        { manager_id: managerId },
+        { registered_by: mId },
+        { managerId: mId }, 
         { farmer_id: { $in: farmerIds } },
       ],
     };
 
-    // 5) Active pigs only for operational stats
+    // 5) Active pigs only (Alive and not sold)
     const activeQuery = {
       ...scopeQuery,
-      current_status: { $ne: "Culled/Sold" },
+      current_status: { $nin: ["Culled", "Culled/Sold"] },
+      health_status: { $nin: ["Deceased", "Deceased (Before Weaning)", "Dead", "Death"] },
     };
 
-    // 6) Heat workflow scope (for lactating count via HeatReport)
-    const heatScopeQuery = {
-      $or: [{ manager_id: managerId }, { farmer_id: { $in: farmerIds } }],
-    };
-
-    // 7) Compute stats
+    // 6) Compute stats
     const [
       totalPigs,
       alive,
@@ -68,46 +68,21 @@ async function getFarmManagerStats(req, res) {
       weaning,
       lactating,
     ] = await Promise.all([
-      // Total pigs under this manager scope
+      // Total pigs
       Swine.countDocuments(scopeQuery),
 
-      // Alive pigs: not culled/sold and not deceased
-      Swine.countDocuments({
-        ...scopeQuery,
-        current_status: { $ne: "Culled/Sold" },
-        health_status: {
-          $nin: [
-            "Deceased",
-            "Deceased (Before Weaning)",
-            "Dead",
-            "Death",
-          ],
-        },
-      }),
+      // Alive pigs
+      Swine.countDocuments(activeQuery),
 
-      // Mortality: dead/deceased OR culled
+      // Mortality: FIXED with strict $and wrap
       Swine.countDocuments({
-        ...scopeQuery,
-        $or: [
+        $and: [
+          scopeQuery,
           {
-            health_status: {
-              $in: [
-                "Deceased",
-                "Deceased (Before Weaning)",
-                "Dead",
-                "Death",
-              ],
-            },
-          },
-          {
-            current_status: {
-              $in: ["Culled", "Culled/Sold"],
-            },
-          },
-          {
-            health_status: {
-              $in: ["Culled"],
-            },
+            $or: [
+              { health_status: { $in: ["Deceased", "Deceased (Before Weaning)", "Dead", "Death"] } },
+              { current_status: { $in: ["Culled", "Culled/Sold"] } },
+            ],
           },
         ],
       }),
@@ -118,7 +93,7 @@ async function getFarmManagerStats(req, res) {
         current_status: "In-Heat",
       }),
 
-      // Pregnant: expected farrowing is still in the future relative to virtualNow
+      // Pregnant
       Swine.countDocuments({
         ...activeQuery,
         sex: "Female",
@@ -126,39 +101,43 @@ async function getFarmManagerStats(req, res) {
         "breeding_cycles.expected_farrowing_date": { $gt: virtualNow },
       }),
 
-      // Farrowing: farrowing-related statuses OR pregnant whose farrowing date is due/past in virtualNow
+      // Farrowing: FIXED with strict $and wrap
       Swine.countDocuments({
-        ...activeQuery,
-        $or: [
+        $and: [
+          activeQuery,
           {
-            current_status: {
-              $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing", "Lactating"],
-            },
-          },
-          {
-            current_status: "Pregnant",
-            "breeding_cycles.expected_farrowing_date": { $lte: virtualNow },
+            $or: [
+              { current_status: { $in: ["Farrowing", "farrowing_ready", "awaiting_farrowing"] } },
+              { 
+                current_status: "Pregnant", 
+                "breeding_cycles.expected_farrowing_date": { $lte: virtualNow } 
+              },
+            ],
           },
         ],
       }),
 
-      // Weaning: already weaned/weaning OR lactating past 30 days since actual farrowing in virtualNow
+      // Weaning: FIXED with strict $and wrap
       Swine.countDocuments({
-        ...activeQuery,
-        $or: [
-          { current_status: { $in: ["Weaned", "Weaning"] } },
+        $and: [
+          activeQuery,
           {
-            current_status: "Lactating",
-            "breeding_cycles.actual_farrowing_date": {
-              $lte: new Date(virtualNow.getTime() - 30 * 24 * 60 * 60 * 1000),
-            },
+            $or: [
+              { current_status: { $in: ["Weaned", "Weaning"] } },
+              {
+                current_status: "Lactating",
+                "breeding_cycles.actual_farrowing_date": {
+                  $lte: new Date(virtualNow.getTime() - 30 * 24 * 60 * 60 * 1000),
+                },
+              },
+            ],
           },
         ],
       }),
 
       // Lactating: source of truth from heat workflow
       HeatReport.countDocuments({
-        ...heatScopeQuery,
+        $or: [{ managerId: mId }, { farmer_id: { $in: farmerIds } }],
         status: "lactating",
       }),
     ]);

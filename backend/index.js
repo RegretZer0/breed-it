@@ -165,12 +165,26 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 
 /* =========================
-    MONGODB CONNECTION
+    MONGODB CONNECTION & CLEANUP
 ========================= */
 mongoose
   .connect(process.env.MONGO_URI, { autoIndex: true })
   .then(async () => {
     console.log("✅ MongoDB Connected");
+
+    // --- TEMPORARY INDEX CLEANUP BLOCK ---
+    // This removes the stale index that blocks multiple 'null' encoder_id values.
+    // Mongoose will automatically recreate it as 'sparse' because of your UserModel.
+    try {
+      const userCollections = await mongoose.connection.db.listCollections({ name: 'users' }).toArray();
+      if (userCollections.length > 0) {
+        await mongoose.connection.db.collection('users').dropIndex('encoder_id_1');
+        console.log("🗑️ Stale encoder_id index dropped. Sparse index will be applied.");
+      }
+    } catch (err) {
+      console.log("ℹ️ Index cleanup: encoder_id_1 not found or already sparse.");
+    }
+    // ------------------------------------
     
     // Immediately sync time from DB so refreshes work from the start
     await syncGlobalTimeWithDB();
