@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const otherColorGroup = document.getElementById("otherColorGroup");
   const otherColorInput = document.getElementById("otherColorInput");
   const batchInput = document.getElementById("batch");
+  const batchYearInput = document.getElementById("batchYear");
 
   const dateTransferInput = document.getElementById("date_transfer");
 
@@ -119,6 +120,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     dateTransferInput.value = today;
     dateTransferInput.max = today;
   }
+
+  //batch year helper
+  function setDefaultYear() {
+  if (!batchYearInput) return;
+
+  const currentYear = new Date().getFullYear();
+  batchYearInput.value = currentYear;
+}
 
   function handleColorChange() {
     if (!colorSelect || !otherColorGroup || !otherColorInput) return;
@@ -391,23 +400,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateBatchField();
   });
 
-  // ================= BATCH AUTO =================
+ // ================= BATCH AUTO =================
   async function updateBatchField() {
     if (!batchInput || !ageStageSelect) return;
+
+    const yearInput = batchYearInput;
 
     const isAdult = ageStageSelect.value === "adult";
     const isPiglet = ageStageSelect.value === "piglet";
 
+    // ================= PIGLET =================
     if (isPiglet && damSelect?.value) {
       const idParts = String(damSelect.value).split("-");
       batchInput.value = idParts.length >= 2 ? idParts[1] : damSelect.value;
       batchInput.readOnly = true;
+
+      // ✅ YEAR: auto + locked
+      if (yearInput) {
+        yearInput.value = new Date().getFullYear();
+        yearInput.readOnly = true;
+      }
+
       return;
     }
 
+    // ================= ADULT =================
     if (isAdult) {
       batchInput.readOnly = true;
       batchInput.placeholder = "Generating...";
+
+      // ✅ YEAR: auto + locked
+      if (yearInput) {
+        yearInput.value = new Date().getFullYear();
+        yearInput.readOnly = true;
+      }
 
       try {
         const res = await fetch(`/api/swine/preview/next-batch-letter`, {
@@ -420,12 +446,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         batchInput.value = "";
         batchInput.readOnly = false;
       }
+
       return;
     }
 
+    // ================= OTHERS (GROWING / MANUAL) =================
     batchInput.readOnly = false;
     batchInput.value = "";
     batchInput.placeholder = "Enter Batch ID";
+
+    // ✅ YEAR: editable again
+    if (yearInput) {
+      yearInput.readOnly = false;
+
+      // optional: reset to current year if empty
+      if (!yearInput.value) {
+        yearInput.value = new Date().getFullYear();
+      }
+    }
   }
 
   // ================= VALIDATION (CENTERED MODAL) =================
@@ -480,6 +518,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const payload = {
       farmer_id: farmerSelect.value || null,
       batch: (batchInput?.value || "").trim(),
+      batch_year: batchYearInput?.value || new Date().getFullYear(), // ✅ NEW
       sex: sexSelect.value,
       age_stage: ageStageSelect.value,
       breed: "Native",
@@ -528,6 +567,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         toggleTeatField();
         toggleDeformities();
         setTodayDefaultDate();
+        setDefaultYear();
         setTimeout(updateBatchField, 300);
 
         renderFarmers(getFilteredFarmers());
