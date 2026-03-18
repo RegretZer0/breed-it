@@ -77,16 +77,62 @@ function getYearLetter(year) {
 }
 
 /* ======================================================
-   PREVIEW ENDPOINTS: GET NEXT IDs (FOR FRONTEND)
+    PREVIEW ENDPOINTS: GET NEXT IDs (FOR FRONTEND)
 ====================================================== */
+
+/**
+ * PREVIEW NEXT UNIFIED SWINE ID (Manager-Specific)
+ * Used for standard swine, piglets, and master boars.
+ * Returns the next available ID in the format: {YearLetter}-{Number}
+ */
+router.get("/preview/next-swine-id", requireSessionAndToken, async (req, res) => {
+  try {
+    const user = req.user;
+    // Identify the correct manager ID for the sequence scope
+    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    
+    // Get the virtual "Now" to determine the correct year letter
+    const virtualNow = await timeHelper.getVirtualNow();
+    const batchLetter = getYearLetter(virtualNow.getFullYear());
+
+    // Find the highest ID for THIS Batch Letter AND THIS Manager
+    const lastSwine = await Swine.findOne({
+      manager_id: managerId,
+      swine_id: new RegExp(`^${batchLetter}-`)
+    }).sort({ swine_id: -1 });
+
+    let nextNumber = 1;
+    if (lastSwine && lastSwine.swine_id) {
+      const parts = lastSwine.swine_id.split("-");
+      const lastNum = parseInt(parts[parts.length - 1]);
+      if (!isNaN(lastNum)) nextNumber = lastNum + 1;
+    }
+
+    const nextId = `${batchLetter}-${nextNumber}`;
+    res.json({ 
+      success: true, 
+      nextId, 
+      batchLetter,
+      year: virtualNow.getFullYear()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * PREVIEW NEXT BOAR ID (Legacy/Specific Format)
+ * Kept for specific boar tracking if prefix-based naming is still required.
+ */
 router.get("/preview/next-boar-id", requireSessionAndToken, async (req, res) => {
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     const prefix = getManagerPrefix(managerId);
 
+    // Count existing boars registered by this manager with the prefix
     const count = await Swine.countDocuments({
-      registered_by: managerId,
+      manager_id: managerId,
       swine_id: { $regex: new RegExp(`^${prefix}-BOAR-`) }
     });
 
@@ -97,41 +143,32 @@ router.get("/preview/next-boar-id", requireSessionAndToken, async (req, res) => 
   }
 });
 
+/**
+ * PREVIEW NEXT BATCH LETTER
+ * Automatically resolves the letter based on the current Virtual Year (e.g., 2026 = E).
+ */
 router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res) => {
   try {
-    const user = req.user;
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-
-    const existingBatches = await Swine.distinct("batch", {
-      registered_by: managerId,
-      batch: { $regex: /^[A-Z]+$/ }
+    const virtualNow = await timeHelper.getVirtualNow();
+    const nextLetter = getYearLetter(virtualNow.getFullYear());
+    
+    res.json({ 
+      success: true, 
+      nextLetter,
+      description: `Batch letter for the year ${virtualNow.getFullYear()}` 
     });
-
-    const usedIndices = existingBatches
-      .map((b) => {
-        let num = 0;
-        for (let i = 0; i < b.length; i++) {
-          num = num * 26 + (b.charCodeAt(i) - 64);
-        }
-        return num - 1;
-      })
-      .filter((n) => !isNaN(n));
-
-    let nextIndex = 0;
-    while (usedIndices.includes(nextIndex)) nextIndex++;
-    res.json({ success: true, nextLetter: getBatchLetter(nextIndex) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
 /* ======================================================
-    ADD MASTER BOAR (UNIFIED ID: A-1, A-2)
+    ADD MASTER BOAR (MANAGER-SPECIFIC UNIFIED ID)
 ====================================================== */
 router.post(
   "/add-master-boar",
   requireSessionAndToken,
-  allowRoles("farm_manager", "encoder", "admin"),
+  allowRoles(["farm_manager", "encoder", "admin"]),
   async (req, res) => {
     const {
       color,
@@ -144,30 +181,30 @@ router.post(
       health_status,
       current_status,
       breed,
-      manager_id
+      manager_id // Explicit manager selection from frontend
     } = req.body;
 
     try {
       const user = req.user;
-      const registeredBy = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
+      
+      // Determine the owner of this sequence (The Farm Manager)
+      const targetManagerId = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
       
       const virtualNow = await timeHelper.getVirtualNow();
       const currentYear = virtualNow.getFullYear();
 
-      // 1. CALCULATE YEAR BATCH (2022 = A, 2023 = B, 2024 = C, 2025 = D, 2026 = E)
+      // 1. CALCULATE YEAR BATCH (2022 = A, 2026 = E)
       const startYear = 2022;
-      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0; 
-      
-      // Use the string index to ensure 2026 (Index 4) is always 'E'
       const yearLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
-      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
-      // We look for the absolute last number used for this batch letter
-      // across all swine types to maintain a single continuous sequence.
+      // 2. GENERATE MANAGER-SPECIFIC UNIFIED ID
+      // We filter by manager_id so Manager A and Manager B have separate counts
       const lastSwineInBatch = await Swine.findOne({
+        manager_id: targetManagerId,
         swine_id: new RegExp(`^${yearLetter}-`)
       }).sort({ swine_id: -1 });
 
@@ -183,8 +220,9 @@ router.post(
       const newBoar = new Swine({
         swine_id: swineId,
         batch: yearLetter, 
-        registered_by: registeredBy,
-        farmer_id: null,
+        registered_by: user.id, // The person who clicked the button
+        manager_id: targetManagerId, // The owner of the swine sequence
+        farmer_id: null, // Master boars are usually farm-wide, not assigned to a specific farmer profile
         sex: "Male",
         breed: breed || "Native",
         color: color || "Unknown",
@@ -213,30 +251,32 @@ router.post(
         user.id,
         "REGISTER_MASTER_BOAR",
         "SWINE_MANAGEMENT",
-        `Registered Master Boar ${swineId} for Year ${currentYear} (Batch ${yearLetter})`,
+        `Registered Master Boar ${swineId} for Manager ${targetManagerId} (Batch ${yearLetter})`,
         req
       );
 
       res.status(201).json({
         success: true,
-        message: "Master Boar registered: " + swineId,
+        message: `Master Boar registered: ${swineId}`,
         swine: newBoar
       });
     } catch (error) {
       if (error.code === 11000)
-        return res.status(400).json({ success: false, message: "Duplicate ID collision." });
+        return res.status(400).json({ success: false, message: "Duplicate ID collision for this manager." });
+      
+      console.error("Add Master Boar Error:", error);
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
 );
 
 /* ======================================================
-    ADD NEW SWINE (UNIFIED ID LOGIC: A-1, A-2, etc.)
+    ADD NEW SWINE (MANAGER-SPECIFIC UNIFIED ID: A-1, A-2)
 ====================================================== */
 router.post(
   "/add",
   requireSessionAndToken,
-  allowRoles("farm_manager", "encoder"),
+  allowRoles(["farm_manager", "encoder"]),
   async (req, res) => {
     let {
       farmer_id,
@@ -248,7 +288,6 @@ router.post(
       sire_id,
       dam_id,
       date_transfer,
-      batch,
       age_stage,
       weight,
       bodyLength,
@@ -265,30 +304,31 @@ router.post(
       if (!sex) return res.status(400).json({ success: false, message: "Sex is required" });
 
       const user = req.user;
+      // Identify the owner of the sequence (The Farm Manager)
       const managerId = user.role === "farm_manager" ? user.id : user.managerId;
       const virtualNow = await timeHelper.getVirtualNow();
 
-      // 1. Resolve Auto-batch letter based on Year (2022 = A, 2023 = B...)
+      // 1. Resolve Auto-batch letter based on Year (2022 = A, 2026 = E)
       const currentYear = virtualNow.getFullYear();
       const startYear = 2022;
-      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0;
 
-      // Force the batch to be the Year Letter (Index 4 for 2026 is strictly 'E')
+      // Force the batch to be the Year Letter
       const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
-      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
-      // Search for the highest number currently assigned to this batch letter
+      // 2. GENERATE MANAGER-SPECIFIC UNIFIED ID
+      // We search for the highest number for this batch letter FOR THIS MANAGER specifically
       const lastSwineInBatch = await Swine.findOne({
+        manager_id: managerId,
         swine_id: new RegExp(`^${batchLetter}-`)
       }).sort({ swine_id: -1 });
 
       let nextNumber = 1;
       if (lastSwineInBatch && lastSwineInBatch.swine_id) {
         const parts = lastSwineInBatch.swine_id.split("-");
-        // We take the last part of the ID as the number
         const lastNum = parseInt(parts[parts.length - 1]);
         if (!isNaN(lastNum)) nextNumber = lastNum + 1;
       }
@@ -322,7 +362,8 @@ router.post(
       const newSwine = new Swine({
         swine_id: swineId,
         batch: batchLetter,
-        registered_by: managerId,
+        registered_by: user.id, // Who performed the action
+        manager_id: managerId,  // The owner of the sequence
         farmer_id: farmer_id || null,
         sex,
         color,
@@ -364,16 +405,17 @@ router.post(
         });
       }
 
-      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} (Year: ${currentYear})`, req);
+      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} for Manager ${managerId} (Batch ${batchLetter})`, req);
       
       res.status(201).json({ 
         success: true, 
-        message: "Swine added", 
+        message: `Swine added. Assigned ID: ${swineId}`, 
         swine: newSwine 
       });
 
     } catch (error) {
-      if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID collision." });
+      if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID collision for this manager." });
+      console.error("Add Swine Error:", error);
       res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -872,9 +914,9 @@ router.get(
 );
 
 /* ======================================================
-    BATCH REGISTER PIGLETS (LITTER BIRTH) - UNIFIED ID
+    BATCH REGISTER PIGLETS (LITTER BIRTH) - MANAGER-SPECIFIC
 ====================================================== */
-router.post("/batch-register-litter", requireSessionAndToken, async (req, res) => {
+router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_manager", "encoder"]), async (req, res) => {
   const {
     dam_id,
     sire_id,
@@ -894,28 +936,28 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
 
   try {
     const user = req.user;
+    // Identify the owner of the sequence (The Farm Manager)
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
     
     const virtualNow = await timeHelper.getVirtualNow();
     const currentYear = virtualNow.getFullYear();
 
-    // 1. Resolve Batch Letter based on Year (2022 = A, 2023 = B, 2024 = C, 2025 = D, 2026 = E)
+    // 1. Resolve Batch Letter based on Year (2022 = A, 2026 = E)
     const startYear = 2022;
-    const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+    const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
     
     let yearIndex = currentYear - startYear;
     if (yearIndex < 0) yearIndex = 0;
     
-    // Explicitly select the letter from the sequence to ensure 2026 (Index 4) is 'E'
     const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
     const totalLive = Number(num_males || 0) + Number(num_females || 0);
     const totalDead = Number(num_stillborn || 0) + Number(num_mummified || 0);
     const grandTotal = totalLive + totalDead;
 
-    // 2. Find the last absolute number used for THIS batch letter to continue the sequence
-    // This ensures no conflict with previously added Boars or individual pigs
+    // 2. Find the last absolute number used for THIS batch letter FOR THIS MANAGER
     const lastSwineInBatch = await Swine.findOne({
+      manager_id: managerId,
       swine_id: new RegExp(`^${batchLetter}-`)
     })
       .sort({ swine_id: -1 })
@@ -941,19 +983,20 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
       } else if (i < totalLive) {
         sex = "Female";
       } else {
+        // Handle mortality sex distribution or default
         sex = i % 2 === 0 ? "Male" : "Female";
         health_status = "Deceased (Before Weaning)";
         current_status = "Inactive";
       }
 
-      // Generate Unified ID (e.g., E-101, E-102)
       const currentPigletNum = startingNumber + i;
       const swineId = `${batchLetter}-${currentPigletNum}`;
 
       piglets.push({
         swine_id: swineId,
         batch: batchLetter,
-        registered_by: managerId,
+        registered_by: user.id, // The actor
+        manager_id: managerId,  // The sequence owner
         farmer_id: farmer_id || null,
         sex: sex,
         breed: breed || "Native",
@@ -980,6 +1023,7 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
       await Swine.insertMany(piglets, { session });
     }
 
+    // Update Dam Cycle
     await Swine.updateOne(
       { swine_id: dam_id, "breeding_cycles.is_pregnant": true },
       {
@@ -1017,14 +1061,14 @@ router.post("/batch-register-litter", requireSessionAndToken, async (req, res) =
       user.id, 
       "BATCH_REGISTER_LITTER", 
       "SWINE_MANAGEMENT", 
-      `Registered batch of ${grandTotal} piglets for Dam ${dam_id} (IDs: ${batchLetter}-${startingNumber} to ${batchLetter}-${startingNumber + grandTotal - 1})`, 
+      `Registered batch of ${grandTotal} piglets for Manager ${managerId} (Dam ${dam_id}). IDs: ${batchLetter}-${startingNumber} to ${batchLetter}-${startingNumber + grandTotal - 1}`, 
       req
     );
 
     await session.commitTransaction();
     res.status(201).json({
       success: true,
-      message: `Farrowing successful. Batch ${batchLetter} updated with ${totalLive} live and ${totalDead} deceased records.`
+      message: `Batch ${batchLetter} updated for this manager. Created ${totalLive} live and ${totalDead} deceased records starting at ${batchLetter}-${startingNumber}.`
     });
   } catch (error) {
     if (session.inTransaction()) await session.abortTransaction();

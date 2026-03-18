@@ -128,6 +128,15 @@ const heatReportSchema = new mongoose.Schema(
       default: "pending"
     },
 
+    // ---------------- FARROWING DETAILS (Accounting for the Dead) ----------------
+    farrowing_details: {
+      live_piglets: { type: Number, default: 0 },
+      dead_piglets: { type: Number, default: 0 }, // Accounting for stillborns
+      mummies: { type: Number, default: 0 },      // Accounting for mummified fetuses
+      avg_weight: { type: Number, default: 0 },
+      farrowing_notes: { type: String, default: "" }
+    },
+
     // ---------------- TRACKING DATES (Supports Time Warp) ----------------
     ai_confirmed_at: {
       type: Date,
@@ -203,7 +212,7 @@ const heatReportSchema = new mongoose.Schema(
       default: null
     },
 
-        still_in_heat_reason: {
+    still_in_heat_reason: {
       type: String,
       default: ""
     },
@@ -273,11 +282,18 @@ const heatReportSchema = new mongoose.Schema(
 
 // ------------------- LOGIC / HELPERS -------------------
 
+// Virtual to calculate total litter size (Live + Dead + Mummies)
+heatReportSchema.virtual('total_piglets').get(function() {
+  if (!this.farrowing_details) return 0;
+  const { live_piglets = 0, dead_piglets = 0, mummies = 0 } = this.farrowing_details;
+  return live_piglets + dead_piglets + mummies;
+});
+
 // Virtual to calculate days remaining until farrowing
 heatReportSchema.virtual('days_until_farrowing').get(function() {
   if (!this.expected_farrowing || this.status === 'farrowed' || this.status === 'completed') return 0;
   
-  const now = new Date();
+  const now = global.getNow ? global.getNow() : new Date();
   const diffTime = this.expected_farrowing - now;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
@@ -287,7 +303,8 @@ heatReportSchema.virtual('days_until_farrowing').get(function() {
 // Virtual to see if the 23-day heat check is overdue
 heatReportSchema.virtual('is_heat_check_overdue').get(function() {
   if (this.status !== 'under_observation' || !this.next_heat_check) return false;
-  return new Date() > this.next_heat_check;
+  const now = global.getNow ? global.getNow() : new Date();
+  return now > this.next_heat_check;
 });
 
 module.exports = mongoose.model("HeatReport", heatReportSchema);
