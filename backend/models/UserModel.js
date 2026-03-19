@@ -34,6 +34,17 @@ const userSchema = new mongoose.Schema({
     ref: "User",
     default: null
   },
+
+  /**
+   * HYBRID NAMING SYSTEM CONFIGURATION
+   * Only applicable to users with the 'farm_manager' role.
+   * Defines which year corresponds to Batch Letter 'A'.
+   * Default is 2022 (2022=A, 2023=B, 2024=C, 2025=D, 2026=E).
+   */
+  naming_start_year: {
+    type: Number,
+    default: 2022
+  },
   
   // Indexed for faster session counting in the Admin Dashboard
   lastActive: { 

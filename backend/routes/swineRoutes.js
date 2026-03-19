@@ -163,12 +163,12 @@ router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res
 });
 
 /* ======================================================
-    ADD MASTER BOAR (MANAGER-SPECIFIC UNIFIED ID)
+    ADD MASTER BOAR (HYBRID MANAGER-SPECIFIC UNIFIED ID)
 ====================================================== */
 router.post(
   "/add-master-boar",
   requireSessionAndToken,
-  allowRoles(["farm_manager", "encoder", "admin"]),
+  allowRoles("farm_manager", "encoder", "system_admin"), // ✅ FIXED: Removed brackets and updated "admin" to "system_admin"
   async (req, res) => {
     const {
       color,
@@ -187,22 +187,30 @@ router.post(
     try {
       const user = req.user;
       
-      // Determine the owner of this sequence (The Farm Manager)
-      const targetManagerId = manager_id || (user.role === "farm_manager" ? user.id : user.managerId);
+      // 1. Determine the owner of this sequence (The Farm Manager)
+      const currentUserId = user.id || user._id;
+      const targetManagerId = manager_id || (user.role === "farm_manager" ? currentUserId : user.managerId);
       
       const virtualNow = await timeHelper.getVirtualNow();
       const currentYear = virtualNow.getFullYear();
 
-      // 1. CALCULATE YEAR BATCH (2022 = A, 2026 = E)
-      const startYear = 2022;
+      // --- HYBRID START YEAR LOGIC ---
+      // Fetch the manager's profile to get their specific naming_start_year
+      const User = mongoose.model("User");
+      const managerProfile = await User.findById(targetManagerId).select("naming_start_year");
+      const startYear = managerProfile?.naming_start_year || 2022;
+
       const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0; 
+      
+      // Determine Batch Letter based on Manager's custom start year
       const yearLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
+      // -------------------------------
 
       // 2. GENERATE MANAGER-SPECIFIC UNIFIED ID
-      // We filter by manager_id so Manager A and Manager B have separate counts
+      // We filter by manager_id so different managers can have independent sequences
       const lastSwineInBatch = await Swine.findOne({
         manager_id: targetManagerId,
         swine_id: new RegExp(`^${yearLetter}-`)
@@ -220,9 +228,9 @@ router.post(
       const newBoar = new Swine({
         swine_id: swineId,
         batch: yearLetter, 
-        registered_by: user.id, // The person who clicked the button
-        manager_id: targetManagerId, // The owner of the swine sequence
-        farmer_id: null, // Master boars are usually farm-wide, not assigned to a specific farmer profile
+        registered_by: currentUserId, // The actor
+        manager_id: targetManagerId, // The sequence owner
+        farmer_id: null, 
         sex: "Male",
         breed: breed || "Native",
         color: color || "Unknown",
@@ -240,7 +248,7 @@ router.post(
             body_length: Number(bodyLength) || 0,
             heart_girth: Number(heartGirth) || 0,
             teeth_count: Number(teethCount) || 0,
-            recorded_by: user.id
+            recorded_by: currentUserId
           }
         ]
       });
@@ -248,10 +256,10 @@ router.post(
       await newBoar.save();
       
       await logAction(
-        user.id,
+        currentUserId,
         "REGISTER_MASTER_BOAR",
         "SWINE_MANAGEMENT",
-        `Registered Master Boar ${swineId} for Manager ${targetManagerId} (Batch ${yearLetter})`,
+        `Registered Master Boar ${swineId} for Manager ${targetManagerId} (Batch ${yearLetter}, Start Year: ${startYear})`,
         req
       );
 
@@ -271,12 +279,12 @@ router.post(
 );
 
 /* ======================================================
-    ADD NEW SWINE (MANAGER-SPECIFIC UNIFIED ID: A-1, A-2)
+    ADD NEW SWINE (HYBRID MANAGER-SPECIFIC UNIFIED ID)
 ====================================================== */
 router.post(
   "/add",
   requireSessionAndToken,
-  allowRoles(["farm_manager", "encoder"]),
+  allowRoles("farm_manager", "encoder"), // ✅ FIXED: Removed brackets to match middleware syntax
   async (req, res) => {
     let {
       farmer_id,
@@ -305,19 +313,23 @@ router.post(
 
       const user = req.user;
       // Identify the owner of the sequence (The Farm Manager)
-      const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+      const managerId = user.role === "farm_manager" ? (user.id || user._id) : user.managerId;
       const virtualNow = await timeHelper.getVirtualNow();
 
-      // 1. Resolve Auto-batch letter based on Year (2022 = A, 2026 = E)
+      // --- HYBRID START YEAR LOGIC ---
+      // Fetch the manager's profile to get their specific naming_start_year
+      const managerProfile = await mongoose.model("User").findById(managerId).select("naming_start_year");
+      const startYear = managerProfile?.naming_start_year || 2022;
+
       const currentYear = virtualNow.getFullYear();
-      const startYear = 2022;
       const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0;
 
-      // Force the batch to be the Year Letter
+      // Determine Batch Letter based on Manager's start year
       const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
+      // -------------------------------
 
       // 2. GENERATE MANAGER-SPECIFIC UNIFIED ID
       // We search for the highest number for this batch letter FOR THIS MANAGER specifically
@@ -362,8 +374,8 @@ router.post(
       const newSwine = new Swine({
         swine_id: swineId,
         batch: batchLetter,
-        registered_by: user.id, // Who performed the action
-        manager_id: managerId,  // The owner of the sequence
+        registered_by: user.id || user._id, 
+        manager_id: managerId,  
         farmer_id: farmer_id || null,
         sex,
         color,
@@ -387,7 +399,7 @@ router.post(
             leg_conformation: leg_conformation || "Normal",
             teat_count: Number(teat_count) || 0,
             deformities: Array.isArray(deformities) ? deformities : ["None"],
-            recorded_by: user.id
+            recorded_by: user.id || user._id
           }
         ]
       });
@@ -405,7 +417,7 @@ router.post(
         });
       }
 
-      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} for Manager ${managerId} (Batch ${batchLetter})`, req);
+      await logAction(user.id || user._id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} for Manager ${managerId} (Batch ${batchLetter})`, req);
       
       res.status(201).json({ 
         success: true, 
@@ -916,7 +928,10 @@ router.get(
 /* ======================================================
     BATCH REGISTER PIGLETS (LITTER BIRTH) - MANAGER-SPECIFIC
 ====================================================== */
-router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_manager", "encoder"]), async (req, res) => {
+router.post("/batch-register-litter", 
+  requireSessionAndToken, 
+  allowRoles("farm_manager", "encoder"), // ✅ FIXED: Removed brackets to match middleware syntax
+  async (req, res) => {
   const {
     dam_id,
     sire_id,
@@ -936,20 +951,27 @@ router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_
 
   try {
     const user = req.user;
+    const currentUserId = user.id || user._id;
+    
     // Identify the owner of the sequence (The Farm Manager)
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    const managerId = user.role === "farm_manager" ? currentUserId : user.managerId;
     
     const virtualNow = await timeHelper.getVirtualNow();
     const currentYear = virtualNow.getFullYear();
 
-    // 1. Resolve Batch Letter based on Year (2022 = A, 2026 = E)
-    const startYear = 2022;
+    // --- HYBRID START YEAR LOGIC ---
+    // Fetch the manager's profile to get their specific naming_start_year
+    const User = mongoose.model("User");
+    const managerProfile = await User.findById(managerId).select("naming_start_year").session(session);
+    const startYear = managerProfile?.naming_start_year || 2022;
+
     const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
     
     let yearIndex = currentYear - startYear;
     if (yearIndex < 0) yearIndex = 0;
     
     const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
+    // -------------------------------
 
     const totalLive = Number(num_males || 0) + Number(num_females || 0);
     const totalDead = Number(num_stillborn || 0) + Number(num_mummified || 0);
@@ -995,7 +1017,7 @@ router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_
       piglets.push({
         swine_id: swineId,
         batch: batchLetter,
-        registered_by: user.id, // The actor
+        registered_by: currentUserId, // The actor
         manager_id: managerId,  // The sequence owner
         farmer_id: farmer_id || null,
         sex: sex,
@@ -1010,7 +1032,7 @@ router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_
           {
             stage: "Monitoring (Day 1-30)",
             weight: Number(avg_weight) || 0,
-            recorded_by: user.id,
+            recorded_by: currentUserId,
             record_date: farrowing_date || virtualNow,
             remarks: health_status === "Healthy" ? "Litter Registration" : "Registered as Deceased (Farrowing)"
           }
@@ -1058,7 +1080,7 @@ router.post("/batch-register-litter", requireSessionAndToken, allowRoles(["farm_
     }
 
     await logAction(
-      user.id, 
+      currentUserId, 
       "BATCH_REGISTER_LITTER", 
       "SWINE_MANAGEMENT", 
       `Registered batch of ${grandTotal} piglets for Manager ${managerId} (Dam ${dam_id}). IDs: ${batchLetter}-${startingNumber} to ${batchLetter}-${startingNumber + grandTotal - 1}`, 

@@ -2,12 +2,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const token = localStorage.getItem("token");
 
   // ================= AUTH =================
-  const userRes = await fetch("/api/auth/me", { credentials: "include" });
-  const userData = await userRes.json();
-  if (!userData.success) return;
+  let user, managerId;
+  try {
+    const userRes = await fetch("/api/auth/me", { credentials: "include" });
+    const userData = await userRes.json();
+    if (!userData.success) return;
 
-  const user = userData.user;
-  const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+    user = userData.user;
+    managerId = user.role === "farm_manager" ? user.id : user.managerId;
+  } catch (err) {
+    console.error("Auth check failed:", err);
+  }
 
   // ================= DOM =================
   const form = document.getElementById("registerSwineForm");
@@ -73,7 +78,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replaceAll("'", "&#039;");
   }
 
-  // ✅ Ensure /uploads/... and /uploads/profiles/... work, fallback safe
   function normalizeProfilePicPath(p) {
     if (!p) return "/images/default-avatar.png";
     if (p.startsWith("http://") || p.startsWith("https://")) return p;
@@ -91,26 +95,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function showFeedback({ type = "info", title = "Notice", message = "—" }) {
     if (!feedbackModal) return;
-
-    // type: success | error | info | warn
     const map = {
       success: { icon: "bi-check-circle-fill", label: "Success" },
       error: { icon: "bi-x-circle-fill", label: "Error" },
       warn: { icon: "bi-exclamation-triangle-fill", label: "Warning" },
       info: { icon: "bi-info-circle-fill", label: "Info" }
     };
-
     const pick = map[type] || map.info;
-
     if (feedbackModalLabel) feedbackModalLabel.textContent = pick.label;
     if (feedbackTitle) feedbackTitle.textContent = title;
     if (feedbackMsg) feedbackMsg.textContent = message;
-
     if (feedbackIcon) {
       feedbackIcon.className = `bi ${pick.icon}`;
       feedbackIcon.dataset.type = type;
     }
-
     feedbackModal.show();
   }
 
@@ -121,17 +119,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     dateTransferInput.max = today;
   }
 
-  //batch year helper
   function setDefaultYear() {
-  if (!batchYearInput) return;
-
-  const currentYear = new Date().getFullYear();
-  batchYearInput.value = currentYear;
-}
+    if (!batchYearInput) return;
+    batchYearInput.value = new Date().getFullYear();
+  }
 
   function handleColorChange() {
     if (!colorSelect || !otherColorGroup || !otherColorInput) return;
-
     if (colorSelect.value === "Other") {
       otherColorGroup.classList.remove("d-none");
     } else {
@@ -142,14 +136,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function toggleTeatField() {
     if (!sexSelect || !ageStageSelect) return;
-
     if (sexSelect.value === "Female" && ageStageSelect.value === "adult") {
       teatGroup?.classList.remove("d-none");
       teatAlignmentGroup?.classList.remove("d-none");
     } else {
       teatGroup?.classList.add("d-none");
       teatAlignmentGroup?.classList.add("d-none");
-
       const teatInput = document.getElementById("teatCount");
       if (teatInput) teatInput.value = "";
       if (teatAlignmentSelect) teatAlignmentSelect.value = "Even";
@@ -158,10 +150,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function toggleDeformities() {
     if (!deformityChecklist || !ageStageSelect) return;
-
     const isAdult = ageStageSelect.value === "adult";
     deformityChecklist.style.display = isAdult ? "none" : "flex";
-
     if (isAdult) {
       deformityChecklist.querySelectorAll("input").forEach(cb => (cb.checked = false));
     }
@@ -179,7 +169,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return f.farmer_id || f._id || "—";
   }
 
-  // ✅ FIX: use schema field "profile_picture"
   function getFarmerAvatar(f) {
     return normalizeProfilePicPath(
       f?.profile_picture || f?.profile_photo || f?.avatar || "/images/default-avatar.png"
@@ -194,7 +183,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (selectedFarmerContact) selectedFarmerContact.textContent = f.contact_no || f.email || "—";
     if (selectedFarmerPenCount) selectedFarmerPenCount.textContent = (f.num_of_pens ?? "—");
     if (selectedFarmerPenCap) selectedFarmerPenCap.textContent = (f.pen_capacity ?? "—");
-
     farmerEmptyCard?.classList.add("d-none");
     selectedFarmerCard?.classList.remove("d-none");
   }
@@ -202,22 +190,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   function clearSelectedFarmer() {
     selectedFarmer = null;
     if (farmerSelect) farmerSelect.value = "";
-
-    // reset parent selects
     if (damSelect) damSelect.innerHTML = `<option value="">-- Select Sow --</option>`;
     if (sireSelect) sireSelect.innerHTML = `<option value="">-- Select Boar --</option>`;
-
     selectedFarmerCard?.classList.add("d-none");
     farmerEmptyCard?.classList.remove("d-none");
-
-    // reset preview image
     setImgSafe(selectedFarmerImg, "/images/default-avatar.png");
   }
 
   function getFilteredFarmers() {
     const q = (farmerPanelSearch?.value || "").toLowerCase().trim();
     if (!q) return farmers;
-
     return farmers.filter(f => {
       const name = getFarmerDisplayName(f).toLowerCase();
       const id = String(getFarmerIdLabel(f)).toLowerCase();
@@ -228,22 +210,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function farmerCardTemplate(f) {
     const isSelected = selectedFarmer && selectedFarmer._id === f._id;
-
     return `
       <div class="farmer-card ${isSelected ? "selected" : ""}" data-id="${escapeHtml(f._id)}">
         <div class="farmer-card-left">
           <div class="farmer-avatar">
-            <img
-              src="${escapeHtml(getFarmerAvatar(f))}"
-              alt="Farmer"
-              onerror="this.onerror=null;this.src='/images/default-avatar.png';"
-            />
+            <img src="${escapeHtml(getFarmerAvatar(f))}" alt="Farmer" onerror="this.onerror=null;this.src='/images/default-avatar.png';" />
           </div>
-
           <div class="farmer-meta">
             <div class="farmer-name">${escapeHtml(getFarmerDisplayName(f))}</div>
             <div class="farmer-sub">ID: ${escapeHtml(getFarmerIdLabel(f))}</div>
-
             <div class="farmer-badges">
               <span class="mini-pill"><i class="bi bi-geo-alt"></i> ${escapeHtml(f.address || "—")}</span>
               <span class="mini-pill"><i class="bi bi-telephone"></i> ${escapeHtml(f.contact_no || f.email || "—")}</span>
@@ -252,38 +227,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
           </div>
         </div>
-
         <div class="farmer-card-right">
-          ${
-            isSelected
-              ? `<span class="badge-soft-inline"><i class="bi bi-check-circle"></i> Selected</span>`
-              : `<button type="button" class="btn btn-success farmer-select-btn">
-                   <i class="bi bi-check2-circle me-1"></i> Select
-                 </button>`
-          }
+          ${isSelected ? `<span class="badge-soft-inline"><i class="bi bi-check-circle"></i> Selected</span>` : `<button type="button" class="btn btn-success farmer-select-btn"><i class="bi bi-check2-circle me-1"></i> Select</button>`}
         </div>
-      </div>
-    `;
+      </div>`;
   }
 
   function renderFarmers(list) {
     if (!farmerPanelList) return;
-
-    farmerPanelList.innerHTML = "";
-
-    if (!list.length) {
-      farmerPanelList.innerHTML = `<div class="text-muted small p-2">No farmers found</div>`;
-      return;
-    }
-
-    farmerPanelList.innerHTML = list.map(farmerCardTemplate).join("");
-
+    farmerPanelList.innerHTML = list.length ? list.map(farmerCardTemplate).join("") : `<div class="text-muted small p-2">No farmers found</div>`;
     farmerPanelList.querySelectorAll(".farmer-card").forEach(card => {
       card.addEventListener("click", () => {
-        const id = card.getAttribute("data-id");
-        const f = farmers.find(x => x._id === id);
-        if (!f) return;
-        selectFarmer(f);
+        const f = farmers.find(x => x._id === card.getAttribute("data-id"));
+        if (f) selectFarmer(f);
       });
     });
   }
@@ -291,242 +247,136 @@ document.addEventListener("DOMContentLoaded", async () => {
   function selectFarmer(f) {
     selectedFarmer = f;
     if (farmerSelect) farmerSelect.value = f._id;
-
     showSelectedFarmer(f);
     updateSows(f._id);
-
     renderFarmers(getFilteredFarmers());
     farmerPickerModal?.hide();
   }
 
   async function loadFarmers() {
     try {
-      const res = await fetch(`/api/auth/farmers/${managerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include"
-      });
-
+      const res = await fetch(`/api/auth/farmers/${managerId}`, { headers: { Authorization: `Bearer ${token}` }, credentials: "include" });
       const data = await res.json();
       farmers = data.success ? (data.farmers || []) : [];
       renderFarmers(farmers);
-
     } catch (err) {
       console.error("Load farmers error:", err);
-      farmers = [];
-      renderFarmers([]);
-      showFeedback({
-        type: "error",
-        title: "Failed to load farmers",
-        message: "Please refresh the page or try again."
-      });
+      showFeedback({ type: "error", title: "Failed to load farmers", message: "Please refresh the page." });
     }
   }
 
-  // open modal actions
   openFarmerModalBtn?.addEventListener("click", () => farmerPickerModal?.show());
   selectFarmerCtaBtn?.addEventListener("click", () => farmerPickerModal?.show());
   changeFarmerBtn?.addEventListener("click", () => farmerPickerModal?.show());
-
-  clearFarmerBtn?.addEventListener("click", () => {
-    clearSelectedFarmer();
-    renderFarmers(getFilteredFarmers());
-  });
-
-  farmerPanelSearch?.addEventListener("input", () => {
-    renderFarmers(getFilteredFarmers());
-  });
-
-  farmerSearchClearBtn?.addEventListener("click", () => {
-    if (!farmerPanelSearch) return;
-    farmerPanelSearch.value = "";
-    renderFarmers(farmers);
-    farmerPanelSearch.focus();
-  });
+  clearFarmerBtn?.addEventListener("click", () => { clearSelectedFarmer(); renderFarmers(getFilteredFarmers()); });
+  farmerPanelSearch?.addEventListener("input", () => renderFarmers(getFilteredFarmers()));
+  farmerSearchClearBtn?.addEventListener("click", () => { if (farmerPanelSearch) { farmerPanelSearch.value = ""; renderFarmers(farmers); farmerPanelSearch.focus(); } });
 
   // ================= CASCADE: SOWS + BOARS =================
   async function updateSows(farmerId) {
     if (damSelect) damSelect.innerHTML = `<option value="">-- Select Sow --</option>`;
     if (sireSelect) sireSelect.innerHTML = `<option value="">-- Select Boar --</option>`;
     if (!farmerId) return;
-
     try {
-      const res = await fetch(
-        `/api/swine/all?farmer_id=${encodeURIComponent(farmerId)}&sex=Female&age_stage=adult`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      const res = await fetch(`/api/swine/all?farmer_id=${encodeURIComponent(farmerId)}&sex=Female&age_stage=adult`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success && Array.isArray(data.swine)) {
-        data.swine.forEach(s => {
-          damSelect?.add(new Option(`${s.swine_id} (${s.breed})`, s.swine_id));
-        });
+        data.swine.forEach(s => damSelect?.add(new Option(`${s.swine_id} (${s.breed})`, s.swine_id)));
       }
-    } catch (err) {
-      console.error("Update sows error:", err);
-    }
+    } catch (err) { console.error("Update sows error:", err); }
   }
 
   async function updateBoars(sowId) {
     if (sireSelect) sireSelect.innerHTML = `<option value="">-- Select Boar --</option>`;
     if (!sowId) return;
-
     try {
-      const res = await fetch(`/api/swine/history/boars/${encodeURIComponent(sowId)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      const res = await fetch(`/api/swine/history/boars/${encodeURIComponent(sowId)}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) {
-        const combined = [
-          ...(data.historicalBoars || []),
-          ...(data.allActiveBoars || [])
-        ];
-
+        const combined = [...(data.historicalBoars || []), ...(data.allActiveBoars || [])];
         const seen = new Set();
         combined.forEach(b => {
-          if (!b?.swine_id) return;
-          if (seen.has(b.swine_id)) return;
-          seen.add(b.swine_id);
-          sireSelect?.add(new Option(`${b.swine_id} (${b.breed})`, b.swine_id));
+          if (b?.swine_id && !seen.has(b.swine_id)) {
+            seen.add(b.swine_id);
+            sireSelect?.add(new Option(`${b.swine_id} (${b.breed})`, b.swine_id));
+          }
         });
       }
-    } catch (err) {
-      console.error("Update boars error:", err);
-    }
+    } catch (err) { console.error("Update boars error:", err); }
   }
 
-  damSelect?.addEventListener("change", (e) => {
-    updateBoars(e.target.value);
-    updateBatchField();
-  });
+  damSelect?.addEventListener("change", (e) => { updateBoars(e.target.value); updateBatchField(); });
 
- // ================= BATCH AUTO =================
+  // ================= BATCH AUTO =================
   async function updateBatchField() {
     if (!batchInput || !ageStageSelect) return;
-
     const yearInput = batchYearInput;
-
     const isAdult = ageStageSelect.value === "adult";
     const isPiglet = ageStageSelect.value === "piglet";
 
-    // ================= PIGLET =================
     if (isPiglet && damSelect?.value) {
       const idParts = String(damSelect.value).split("-");
       batchInput.value = idParts.length >= 2 ? idParts[1] : damSelect.value;
       batchInput.readOnly = true;
-
-      // ✅ YEAR: auto + locked
-      if (yearInput) {
-        yearInput.value = new Date().getFullYear();
-        yearInput.readOnly = true;
-      }
-
+      if (yearInput) { yearInput.value = new Date().getFullYear(); yearInput.readOnly = false; }
       return;
     }
 
-    // ================= ADULT =================
     if (isAdult) {
       batchInput.readOnly = true;
       batchInput.placeholder = "Generating...";
-
-      // ✅ YEAR: auto + locked
-      if (yearInput) {
-        yearInput.value = new Date().getFullYear();
-        yearInput.readOnly = true;
-      }
-
+      if (yearInput) { yearInput.value = new Date().getFullYear(); yearInput.readOnly = false; }
       try {
-        const res = await fetch(`/api/swine/preview/next-batch-letter`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/swine/preview/next-batch-letter`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         batchInput.value = data.success ? data.nextLetter : "A";
-      } catch (err) {
-        console.error("Batch generation error:", err);
-        batchInput.value = "";
-        batchInput.readOnly = false;
-      }
-
+      } catch (err) { console.error("Batch generation error:", err); batchInput.value = ""; batchInput.readOnly = false; }
       return;
     }
 
-    // ================= OTHERS (GROWING / MANUAL) =================
     batchInput.readOnly = false;
     batchInput.value = "";
     batchInput.placeholder = "Enter Batch ID";
-
-    // ✅ YEAR: editable again
-    if (yearInput) {
-      yearInput.readOnly = false;
-
-      // optional: reset to current year if empty
-      if (!yearInput.value) {
-        yearInput.value = new Date().getFullYear();
-      }
-    }
+    if (yearInput) { yearInput.readOnly = false; if (!yearInput.value) yearInput.value = new Date().getFullYear(); }
   }
 
-  // ================= VALIDATION (CENTERED MODAL) =================
   function requireFarmerSelected() {
     if (!farmerSelect?.value) {
-      showFeedback({
-        type: "warn",
-        title: "Farmer required",
-        message: "Please select a farmer before registering a pig."
-      });
+      showFeedback({ type: "warn", title: "Farmer required", message: "Please select a farmer first." });
       return false;
     }
     return true;
   }
 
-  // ================= EVENTS =================
   colorSelect?.addEventListener("change", handleColorChange);
   sexSelect?.addEventListener("change", toggleTeatField);
-  ageStageSelect?.addEventListener("change", () => {
-    toggleTeatField();
-    toggleDeformities();
-    updateBatchField();
-  });
+  ageStageSelect?.addEventListener("change", () => { toggleTeatField(); toggleDeformities(); updateBatchField(); });
 
-  // ================= SUBMIT =================
+  // ================= SUBMIT (REPAIRING 403 ERROR CRASH) =================
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     if (!requireFarmerSelected()) return;
 
-    const deformities = deformityChecklist
-      ? [...deformityChecklist.querySelectorAll("input:checked")].map(cb => cb.value)
-      : [];
-
-    const finalColor =
-      colorSelect?.value === "Other"
-        ? (otherColorInput?.value || "").trim()
-        : (colorSelect?.value || "");
-
+    const deformities = deformityChecklist ? [...deformityChecklist.querySelectorAll("input:checked")].map(cb => cb.value) : [];
+    const finalColor = colorSelect?.value === "Other" ? (otherColorInput?.value || "").trim() : (colorSelect?.value || "");
     const birthDate = document.getElementById("birth_date")?.value;
     const weight = document.getElementById("weight")?.value;
 
     if (!birthDate || !sexSelect?.value || !ageStageSelect?.value || !weight) {
-      showFeedback({
-        type: "warn",
-        title: "Missing required fields",
-        message: "Please complete the required fields before submitting."
-      });
+      showFeedback({ type: "warn", title: "Missing fields", message: "Please complete required fields." });
       return;
     }
 
     const payload = {
       farmer_id: farmerSelect.value || null,
       batch: (batchInput?.value || "").trim(),
-      batch_year: batchYearInput?.value || new Date().getFullYear(), // ✅ NEW
+      batch_year: batchYearInput?.value || new Date().getFullYear(),
       sex: sexSelect.value,
       age_stage: ageStageSelect.value,
       breed: "Native",
       color: finalColor,
       birth_date: birthDate,
-      date_transfer:
-        document.getElementById("date_transfer")?.value ||
-        new Date().toISOString().split("T")[0],
+      date_transfer: document.getElementById("date_transfer")?.value || new Date().toISOString().split("T")[0],
       health_status: document.getElementById("health_status")?.value || "Healthy",
       dam_id: damSelect?.value || null,
       sire_id: sireSelect?.value || null,
@@ -535,9 +385,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       heartGirth: document.getElementById("heartGirth")?.value || null,
       teethCount: document.getElementById("teethCount")?.value || null,
       teatCount: document.getElementById("teatCount") ? document.getElementById("teatCount").value : null,
-      teat_alignment: document.getElementById("teatAlignment")
-        ? document.getElementById("teatAlignment").value
-        : "N/A",
+      teat_alignment: document.getElementById("teatAlignment") ? document.getElementById("teatAlignment").value : "N/A",
       deformities: deformities.length ? deformities : ["None"],
       managerId
     };
@@ -545,22 +393,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const res = await fetch("/api/swine/add", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
 
+      // CHECK FOR 403 FORBIDDEN
+      if (res.status === 403) {
+        showFeedback({ type: "error", title: "Permission Denied", message: "You do not have permission to add records. Check your role or login again." });
+        return;
+      }
+
+      // PREVENT SYNTAX ERROR IF NOT JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server error: Did not receive JSON.");
+      }
+
       const data = await res.json();
-
       if (data.success) {
-        showFeedback({
-          type: "success",
-          title: "Pig registered successfully",
-          message: "The pig has been added to the system."
-        });
-
+        showFeedback({ type: "success", title: "Saved", message: "Pig registered successfully." });
         form.reset();
         clearSelectedFarmer();
         handleColorChange();
@@ -569,22 +420,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTodayDefaultDate();
         setDefaultYear();
         setTimeout(updateBatchField, 300);
-
         renderFarmers(getFilteredFarmers());
       } else {
-        showFeedback({
-          type: "error",
-          title: "Registration failed",
-          message: data.message || "Failed to register pig."
-        });
+        showFeedback({ type: "error", title: "Registration failed", message: data.message });
       }
     } catch (err) {
       console.error(err);
-      showFeedback({
-        type: "error",
-        title: "Network error",
-        message: "Something went wrong while saving. Please try again."
-      });
+      showFeedback({ type: "error", title: "Network error", message: err.message });
     }
   });
 

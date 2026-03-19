@@ -2,6 +2,8 @@
 const router = require("express").Router();
 const upload = require("../middleware/uploadPigProfile");
 const Swine = require("../models/Swine");
+const { supabase } = require("../utils/supabaseClient"); // Ensure this utility is configured
+const path = require("path");
 
 // PUT /api/swine/profile/:swineId
 router.put("/profile/:swineId", upload.single("profile_photo"), async (req, res) => {
@@ -13,6 +15,7 @@ router.put("/profile/:swineId", upload.single("profile_photo"), async (req, res)
 
     const { breed, sex, age_stage, health_status, birth_date, color, current_status } = req.body;
 
+    // Update Text Fields
     if (breed !== undefined) sw.breed = breed;
     if (sex !== undefined) sw.sex = sex;
     if (age_stage !== undefined) sw.age_stage = age_stage;
@@ -25,13 +28,35 @@ router.put("/profile/:swineId", upload.single("profile_photo"), async (req, res)
       if (!Number.isNaN(dt.getTime())) sw.birth_date = dt;
     }
 
+    // --- SUPABASE UPLOAD LOGIC ---
     if (req.file) {
-      sw.profile_photo = `/uploads/pig-profile/${req.file.filename}`;
+      const fileExt = path.extname(req.file.originalname);
+      const fileName = `${swineId}-${Date.now()}${fileExt}`;
+      const filePath = `pig-profiles/${fileName}`;
+
+      // 1. Upload to Supabase Bucket (assumes bucket name is 'swine_assets')
+      const { data, error: uploadError } = await supabase.storage
+        .from("swine_assets") 
+        .upload(filePath, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) throw new Error(`Supabase Upload Error: ${uploadError.message}`);
+
+      // 2. Get Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("swine_assets")
+        .getPublicUrl(filePath);
+
+      // 3. Save the full URL to MongoDB
+      sw.profile_photo = publicUrl;
     }
 
     await sw.save();
-    res.json({ message: "Pig info updated", swine: sw });
+    res.json({ message: "Pig info updated with Supabase storage", swine: sw });
   } catch (err) {
+    console.error("Profile Update Error:", err);
     res.status(500).json({ message: err.message || "Server error" });
   }
 });

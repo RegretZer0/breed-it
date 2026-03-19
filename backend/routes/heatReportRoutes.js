@@ -795,9 +795,12 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 });
 
 /* ======================================================
-    UPGRADED CONFIRM FARROWING (MANAGER-SPECIFIC BATCH ID)
+    UPGRADED CONFIRM FARROWING (HYBRID MANAGER-SPECIFIC)
 ====================================================== */
-router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "farm_manager", "encoder"]), async (req, res) => {
+router.post("/:id/confirm-farrowing", 
+  requireApiLogin, 
+  allowRoles("farmer", "farm_manager", "encoder"), // ✅ FIXED: Removed brackets to match middleware syntax
+  async (req, res) => {
   // 1. Multi-click protection: Pre-check status before starting transaction
   const initialCheck = await HeatReport.findById(req.params.id).select("status");
   if (initialCheck && initialCheck.status === "lactating") {
@@ -853,22 +856,29 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
     const aiRecord = await AIRecord.findOne({ heat_report_id: report._id });
     const sire_id = aiRecord ? aiRecord.male_swine_id : "Unknown Boar";
 
-    // --- MANAGER-SPECIFIC BATCH ID GENERATION ---
-    const currentYear = farrowDate.getFullYear();
-    const startYear = 2022;
-    const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
-    let yearIndex = currentYear - startYear;
-    if (yearIndex < 0) yearIndex = 0;
-    const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
-
     // Identify the specific manager for this report sequence
     const targetManagerId = report.manager_id;
+
+    // --- HYBRID START YEAR LOGIC ---
+    // Fetch the manager's profile to get their specific naming_start_year
+    const User = mongoose.model("User");
+    const managerProfile = await User.findById(targetManagerId).select("naming_start_year");
+    const startYear = managerProfile?.naming_start_year || 2022;
+
+    const currentYear = farrowDate.getFullYear();
+    const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
+    
+    let yearIndex = currentYear - startYear;
+    if (yearIndex < 0) yearIndex = 0;
+    
+    // Determine Batch Letter based on Manager's custom start year
+    const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
     // Search for the highest number for this batch letter FOR THIS MANAGER specifically
     const lastSwineInBatch = await Swine.findOne({
       manager_id: targetManagerId,
       swine_id: new RegExp(`^${batchLetter}-`)
-    }).sort({ swine_id: -1 });
+    }).sort({ swine_id: -1 }).session(session);
 
     let nextNumber = 1;
     if (lastSwineInBatch && lastSwineInBatch.swine_id) {
@@ -878,10 +888,12 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
     }
     // -------------------------------------------------------
 
+    const currentUserId = req.user.id || req.user._id;
+
     // 2. Update Heat Report Status and Details
     report.status = "lactating";
     report.actual_farrowing_date = farrowDate;
-    report.farrowing_confirmed_by = req.user.id;
+    report.farrowing_confirmed_by = currentUserId;
     report.farrowing_details = {
       live_piglets: totalLiveNum,
       dead_piglets: mortalityNum,
@@ -928,8 +940,8 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
             dead_piglets: mortalityNum,
             alive_male: aliveMaleNum,
             alive_female: aliveFemaleNum,
-            dead_male: dead_male,
-            dead_female: dead_female
+            dead_male: deadMaleNum,
+            dead_female: deadFemaleNum
           },
           current_status: "Lactating"
         },
@@ -938,7 +950,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
       { session }
     );
 
-    // 5. Auto-Register Piglets (Sequential Naming: E-1, E-2, etc.)
+    // 5. Auto-Register Piglets (Sequential Naming)
     const pigletsToInsert = [];
     let currentIdCounter = nextNumber;
 
@@ -947,7 +959,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
       return {
         swine_id: pigletId,
         batch: batchLetter,
-        registered_by: req.user.id,
+        registered_by: currentUserId,
         farmer_id: report.farmer_id._id,
         manager_id: targetManagerId,
         sex: sex,
@@ -964,7 +976,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
             stage: "Registration",
             record_date: farrowDate,
             remarks: isAlive ? "Auto-registered live" : "Registered as stillborn (mortality)",
-            recorded_by: req.user.id
+            recorded_by: currentUserId
           }
         ]
       };
@@ -981,7 +993,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
     }
 
     // 6. Logging and Notifications
-    await logAction(req.user.id, "CONFIRM_FARROWING", "BREEDING", `Farrowing confirmed for ${sow.swine_id}. ${totalLiveNum} live, ${mortalityNum} dead recorded.`, req);
+    await logAction(currentUserId, "CONFIRM_FARROWING", "BREEDING", `Farrowing confirmed for ${sow.swine_id}. ${totalLiveNum} live, ${mortalityNum} dead. Start Year: ${startYear}`, req);
 
     await Notification.create({
       user_id: report.farmer_id.user_id,
@@ -991,7 +1003,10 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles(["farmer", "fa
     });
 
     await session.commitTransaction();
-    res.json({ success: true, message: `Farrowing confirmed. ${totalLiveNum + mortalityNum} swine records created in Batch ${batchLetter} for this manager.` });
+    res.json({ 
+      success: true, 
+      message: `Farrowing confirmed. ${totalLiveNum + mortalityNum} swine records created in Batch ${batchLetter} (Start Year: ${startYear}).` 
+    });
   } catch (err) {
     if (session.inTransaction()) await session.abortTransaction();
     console.error("Farrowing Error:", err);
