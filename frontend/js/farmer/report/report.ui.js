@@ -64,32 +64,32 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const reportModal = document.getElementById("reportModal");
   let reportConfirmPregBtn = document.getElementById("reportConfirmPregBtn");
 
-  // Ensure the header Confirm Pregnant button exists (fallback if modal.ejs wasn't updated)
-  (function ensureHeaderConfirmPregBtn() {
-    if (!reportModal) return;
-      const actionsWrap =
-        reportModal.querySelector(".report-modal-actions") ||
-        reportModal.querySelector(".modal-content") ||
-        reportModal;
+  // // Ensure the header Confirm Pregnant button exists (fallback if modal.ejs wasn't updated)
+  // (function ensureHeaderConfirmPregBtn() {
+  //   if (!reportModal) return;
+  //     const actionsWrap =
+  //       reportModal.querySelector(".report-modal-actions") ||
+  //       reportModal.querySelector(".modal-content") ||
+  //       reportModal;
 
-      reportConfirmPregBtn = reportModal.querySelector("#reportConfirmPregBtn");
-      if (reportConfirmPregBtn) return;
+  //     reportConfirmPregBtn = reportModal.querySelector("#reportConfirmPregBtn");
+  //     if (reportConfirmPregBtn) return;
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.id = "reportConfirmPregBtn";
-      btn.className = "btn-primary btn-sm hidden";
-      btn.innerHTML = `<i class="bi bi-patch-check"></i> Confirm Pregnant`;
+  //     const btn = document.createElement("button");
+  //     btn.type = "button";
+  //     btn.id = "reportConfirmPregBtn";
+  //     btn.className = "btn-primary btn-sm hidden";
+  //     btn.innerHTML = `<i class="bi bi-patch-check"></i> Confirm Pregnant`;
 
-      const closeBtn = reportModal.querySelector(".close-modal");
-      if (closeBtn?.parentElement) {
-        closeBtn.parentElement.insertBefore(btn, closeBtn);
-      } else {
-        actionsWrap.insertBefore(btn, actionsWrap.firstChild);
-      }
+  //     const closeBtn = reportModal.querySelector(".close-modal");
+  //     if (closeBtn?.parentElement) {
+  //       closeBtn.parentElement.insertBefore(btn, closeBtn);
+  //     } else {
+  //       actionsWrap.insertBefore(btn, actionsWrap.firstChild);
+  //     }
 
-    reportConfirmPregBtn = btn;
-  })();
+  //   reportConfirmPregBtn = btn;
+  // })();
   /* =========================================================
      Module: State
   ========================================================= */
@@ -494,66 +494,66 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   }
   ensureFarrowingActionStyles();
 
-  //Pregnant Button Helper
-  function hideHeaderConfirmPreg() {
-    if (!reportConfirmPregBtn) return;
-    reportConfirmPregBtn.classList.add("hidden");
-    reportConfirmPregBtn.style.display = "none";
-    reportConfirmPregBtn.disabled = true;
-    reportConfirmPregBtn.removeAttribute("data-report-id");
-  }
+  // //Pregnant Button Helper
+  // function hideHeaderConfirmPreg() {
+  //   if (!reportConfirmPregBtn) return;
+  //   reportConfirmPregBtn.classList.add("hidden");
+  //   reportConfirmPregBtn.style.display = "none";
+  //   reportConfirmPregBtn.disabled = true;
+  //   reportConfirmPregBtn.removeAttribute("data-report-id");
+  // }
 
-  function showHeaderConfirmPreg(report) {
-    if (!reportConfirmPregBtn) return;
-    reportConfirmPregBtn.classList.remove("hidden");
-    reportConfirmPregBtn.style.display = "inline-flex";
-    reportConfirmPregBtn.disabled = false;
-    reportConfirmPregBtn.setAttribute("data-report-id", report?._id || "");
-  }
+  // function showHeaderConfirmPreg(report) {
+  //   if (!reportConfirmPregBtn) return;
+  //   reportConfirmPregBtn.classList.remove("hidden");
+  //   reportConfirmPregBtn.style.display = "inline-flex";
+  //   reportConfirmPregBtn.disabled = false;
+  //   reportConfirmPregBtn.setAttribute("data-report-id", report?._id || "");
+  // }
 
-  hideHeaderConfirmPreg();
+  // hideHeaderConfirmPreg();
 
-  reportConfirmPregBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // reportConfirmPregBtn?.addEventListener("click", async (e) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
 
-    const report = currentDetailsReport;
-    if (!report?._id) return;
+  //   const report = currentDetailsReport;
+  //   if (!report?._id) return;
 
-    const swineTag = report.swine_id?.swine_id || "Unknown";
+  //   const swineTag = report.swine_id?.swine_id || "Unknown";
 
-    const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, {
-      title: "Confirm action",
-      variant: "warning"
-    });
-    if (!ok) return;
+  //   const ok = await uiConfirm(`Confirm pregnancy for ${swineTag}?`, {
+  //     title: "Confirm action",
+  //     variant: "warning"
+  //   });
+  //   if (!ok) return;
 
-    const res = await api.confirmPregnancy(report._id);
+  //   const res = await api.confirmPregnancy(report._id);
 
-    if (res?.ok) {
-      uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
-      await api.sendAdminNotification(
-        "Pregnancy Confirmed",
-        `${swineTag} confirmed pregnant by ${user.first_name}.`,
-        "success"
-      );
-      await reloadAll();
-      await viewEvidence(report._id); // refresh the modal content
-    } else if (res) {
-      let msg = "Failed to confirm pregnancy.";
-      try {
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const errData = await res.json();
-          msg = errData?.message || msg;
-        } else {
-          await res.text();
-          msg = "Failed to confirm pregnancy (server returned non-JSON response).";
-        }
-      } catch (_) {}
-      uiAlert(msg, { title: "Error", variant: "danger" });
-    }
-  });
+  //   if (res?.ok) {
+  //     uiAlert("Pregnancy confirmed!", { title: "Success", variant: "success" });
+  //     await api.sendAdminNotification(
+  //       "Pregnancy Confirmed",
+  //       `${swineTag} confirmed pregnant by ${user.first_name}.`,
+  //       "success"
+  //     );
+  //     await reloadAll();
+  //     await viewEvidence(report._id); // refresh the modal content
+  //   } else if (res) {
+  //     let msg = "Failed to confirm pregnancy.";
+  //     try {
+  //       const ct = res.headers.get("content-type") || "";
+  //       if (ct.includes("application/json")) {
+  //         const errData = await res.json();
+  //         msg = errData?.message || msg;
+  //       } else {
+  //         await res.text();
+  //         msg = "Failed to confirm pregnancy (server returned non-JSON response).";
+  //       }
+  //     } catch (_) {}
+  //     uiAlert(msg, { title: "Error", variant: "danger" });
+  //   }
+  // });
 
   /* =========================================================
      Module: Report Status Helpers (Report status, not swine status)
@@ -2012,8 +2012,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
 
       currentDetailsReport = report;
 
-      if (showConfirmPreg) showHeaderConfirmPreg(report);
-      else hideHeaderConfirmPreg();
+      // if (showConfirmPreg) showHeaderConfirmPreg(report);
+      // else hideHeaderConfirmPreg();
 
       modalBody.innerHTML = `
         <div class="details-wrap">

@@ -231,7 +231,7 @@ router.post(
 );
 
 /* ======================================================
-    ADD NEW SWINE (UNIFIED ID LOGIC: A-1, A-2, etc.)
+    ADD NEW SWINE (ROBUST ID LOGIC + COLLISION RETRY)
 ====================================================== */
 router.post(
   "/add",
@@ -271,41 +271,13 @@ router.post(
       // 1. Resolve Auto-batch letter based on Year (2022 = A, 2023 = B...)
       const currentYear = virtualNow.getFullYear();
       const startYear = 2022;
-      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0;
-
-      // Force the batch to be the Year Letter (Index 4 for 2026 is strictly 'E')
       const batchLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
-      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
-      // Search for the highest number currently assigned to this batch letter
-      const lastSwineInBatch = await Swine.findOne({
-        swine_id: new RegExp(`^${batchLetter}-`)
-      }).sort({ swine_id: -1 });
-
-      let nextNumber = 1;
-      if (lastSwineInBatch && lastSwineInBatch.swine_id) {
-        const parts = lastSwineInBatch.swine_id.split("-");
-        // We take the last part of the ID as the number
-        const lastNum = parseInt(parts[parts.length - 1]);
-        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
-      }
-      
-      const swineId = `${batchLetter}-${nextNumber}`;
-
-      // 3. Farmer authorization check
-      let targetFarmer = null;
-      if (farmer_id) {
-        targetFarmer = await Farmer.findOne({
-          _id: farmer_id,
-          $or: [{ managerId: managerId }, { registered_by: managerId }, { user_id: managerId }]
-        });
-        if (!targetFarmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
-      }
-
-      // 4. Set Initial Status
+      // 2. Set Initial Status
       let initialStatus = current_status;
       let initialPerfStage = "Registration";
 
@@ -319,52 +291,94 @@ router.post(
         }
       }
 
-      const newSwine = new Swine({
-        swine_id: swineId,
-        batch: batchLetter,
-        registered_by: managerId,
-        farmer_id: farmer_id || null,
-        sex,
-        color,
-        breed,
-        birth_date,
-        birth_cycle_number,
-        health_status: health_status || "Healthy",
-        sire_id,
-        dam_id,
-        age_stage: age_stage || "piglet",
-        current_status: initialStatus,
-        date_transfer: date_transfer || virtualNow, 
-        performance_records: [
-          {
-            stage: initialPerfStage,
-            record_date: virtualNow,
-            weight: Number(weight) || 0,
-            body_length: Number(bodyLength) || 0,
-            heart_girth: Number(heartGirth) || 0,
-            teeth_count: Number(teethCount) || 0,
-            leg_conformation: leg_conformation || "Normal",
-            teat_count: Number(teat_count) || 0,
-            deformities: Array.isArray(deformities) ? deformities : ["None"],
-            recorded_by: user.id
-          }
-        ]
-      });
+      // 3. Farmer authorization check
+      let targetFarmer = null;
+      if (farmer_id) {
+        targetFarmer = await Farmer.findOne({
+          _id: farmer_id,
+          $or: [{ managerId: managerId }, { registered_by: managerId }, { user_id: managerId }]
+        });
+        if (!targetFarmer) return res.status(400).json({ success: false, message: "Farmer unauthorized" });
+      }
 
-      await newSwine.save();
+      // 4. GENERATE ID & SAVE (With Retry Loop for extra safety)
+      let newSwine;
+      let saved = false;
+      let attempts = 0;
+
+      while (!saved && attempts < 5) {
+        // Find all existing IDs for this batch letter to calculate true numeric max
+        const existingSwines = await Swine.find({
+          swine_id: new RegExp(`^${batchLetter}-`)
+        }).select("swine_id").lean();
+
+        let maxNum = 0;
+        existingSwines.forEach(s => {
+          const parts = s.swine_id.split("-");
+          const val = parseInt(parts[parts.length - 1]);
+          if (!isNaN(val) && val > maxNum) maxNum = val;
+        });
+
+        const swineId = `${batchLetter}-${maxNum + 1}`;
+
+        try {
+          newSwine = new Swine({
+            swine_id: swineId,
+            batch: batchLetter,
+            registered_by: managerId,
+            farmer_id: farmer_id || null,
+            sex,
+            color,
+            breed,
+            birth_date,
+            birth_cycle_number,
+            health_status: health_status || "Healthy",
+            sire_id,
+            dam_id,
+            age_stage: age_stage || "piglet",
+            current_status: initialStatus,
+            date_transfer: date_transfer || virtualNow, 
+            performance_records: [
+              {
+                stage: initialPerfStage,
+                record_date: virtualNow,
+                weight: Number(weight) || 0,
+                body_length: Number(bodyLength) || 0,
+                heart_girth: Number(heartGirth) || 0,
+                teeth_count: Number(teethCount) || 0,
+                leg_conformation: leg_conformation || "Normal",
+                teat_count: Number(teat_count) || 0,
+                deformities: Array.isArray(deformities) ? deformities : ["None"],
+                recorded_by: user.id
+              }
+            ]
+          });
+
+          await newSwine.save();
+          saved = true;
+        } catch (saveError) {
+          if (saveError.code === 11000) {
+            attempts++; // ID taken, increment attempts to try nextNumber + 1
+          } else {
+            throw saveError;
+          }
+        }
+      }
+
+      if (!saved) throw new Error("Failed to generate unique ID after multiple attempts.");
 
       // NOTIFY FARMER
       if (targetFarmer && targetFarmer.user_id) {
         await Notification.create({
           user_id: targetFarmer.user_id,
           title: "New Swine Registered",
-          message: `A new ${breed} ${sex} (ID: ${swineId}) has been assigned to your profile.`,
+          message: `A new ${breed} ${sex} (ID: ${newSwine.swine_id}) has been assigned to your profile.`,
           type: "success",
           created_at: virtualNow 
         });
       }
 
-      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${swineId} (Year: ${currentYear})`, req);
+      await logAction(user.id, "REGISTER_SWINE", "SWINE_MANAGEMENT", `Registered Swine ${newSwine.swine_id} (Year: ${currentYear})`, req);
       
       res.status(201).json({ 
         success: true, 
@@ -373,7 +387,6 @@ router.post(
       });
 
     } catch (error) {
-      if (error.code === 11000) return res.status(400).json({ success: false, message: "Duplicate ID collision." });
       res.status(500).json({ success: false, message: error.message });
     }
   }

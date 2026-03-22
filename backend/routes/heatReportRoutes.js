@@ -795,13 +795,15 @@ router.post("/:id/confirm-pregnancy", requireApiLogin, allowRoles("farmer", "far
 });
 
 /* ======================================================
-    UPGRADED CONFIRM FARROWING (CLEANED & OPTIMIZED)
+    UPGRADED CONFIRM FARROWING (GLOBAL ID POOL)
 ====================================================== */
 router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), async (req, res) => {
-// 1. Multi-click protection: Pre-check status before starting transaction
   const initialCheck = await HeatReport.findById(req.params.id).select("status");
   if (initialCheck && initialCheck.status === "lactating") {
-    return res.status(400).json({ success: false, message: "Farrowing already registered for this report." });
+    return res.status(400).json({ 
+      success: false, 
+      message: "Farrowing already registered for this report." 
+    });
   }
 
   const session = await mongoose.startSession();
@@ -817,93 +819,79 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
       dead_female
     } = req.body;
         
-    // UPDATE: Removed farrowing_date from the strict null check.
-    // If it's missing or null, the logic below will apply the Virtual Date.
     const aliveMaleNum = Number(alive_male || 0);
     const aliveFemaleNum = Number(alive_female || 0);
     const deadMaleNum = Number(dead_male || 0);
     const deadFemaleNum = Number(dead_female || 0);
 
-    const totalLiveNum = Number(
-      total_live != null ? total_live : aliveMaleNum + aliveFemaleNum
-    );
+    const totalLiveNum = Number(total_live != null ? total_live : aliveMaleNum + aliveFemaleNum);
+    const mortalityNum = Number(mortality != null ? mortality : deadMaleNum + deadFemaleNum);
 
-    const mortalityNum = Number(
-      mortality != null ? mortality : deadMaleNum + deadFemaleNum
-    );
-
-    if (Number.isNaN(totalLiveNum) || totalLiveNum < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid alive piglet count."
-      });
-    }
-
-    if (Number.isNaN(mortalityNum) || mortalityNum < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid mortality count."
-      });
+    if (Number.isNaN(totalLiveNum) || totalLiveNum < 0 || Number.isNaN(mortalityNum) || mortalityNum < 0) {
+      return res.status(400).json({ success: false, message: "Invalid piglet counts." });
     }
 
     const report = await HeatReport.findById(req.params.id).populate("swine_id").populate("farmer_id");
-    if (!report) return res.status(404).json({ success: false, message: "Report not found" });
+    if (!report) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Report not found" });
+    }
 
-    ensureSubmittedHistory(report);
+    if (typeof ensureSubmittedHistory === 'function') ensureSubmittedHistory(report);
     const previousStatus = report.status;
-
-    // Get the virtual "Today"
     const virtualNow = await timeHelper.getVirtualNow();
     
-    // SMART DATE LOGIC:
-    // 1. If date is null/empty -> Use Virtual Now.
-    // 2. If date matches real-world 'today' -> User probably didn't change the default input, use Virtual Now.
-    // 3. Otherwise -> Use the manually selected date.
     const realTodayStr = new Date().toISOString().split('T')[0];
     const inputDateStr = farrowing_date ? new Date(farrowing_date).toISOString().split('T')[0] : null;
-
-    let farrowDate;
-    if (!farrowing_date || inputDateStr === realTodayStr) {
-      farrowDate = virtualNow;
-    } else {
-      farrowDate = new Date(farrowing_date); // Use manual user choice
-    }
+    let farrowDate = (!farrowing_date || inputDateStr === realTodayStr) ? virtualNow : new Date(farrowing_date);
     
     const sow = await Swine.findById(report.swine_id._id);
     const aiRecord = await AIRecord.findOne({ heat_report_id: report._id });
     const sire_id = aiRecord ? aiRecord.male_swine_id : "Unknown Boar";
 
-    // 2. Update Heat Report Status
+    // --- GLOBAL INCREMENTAL ID GENERATION ---
+    const idParts = sow.swine_id.split('-');
+    const prefix = idParts.length > 1 ? idParts[0] : "PIG";
+
+    // Find ALL swine with this prefix across ALL managers to find the absolute max
+    const allSwineWithPrefix = await Swine.find({ 
+      swine_id: new RegExp(`^${prefix}-`) 
+    }).session(session).select("swine_id").lean();
+
+    let maxNumber = 0;
+    allSwineWithPrefix.forEach(s => {
+      const parts = s.swine_id.split('-');
+      const num = parseInt(parts[parts.length - 1]);
+      if (!isNaN(num) && num > maxNumber) maxNumber = num;
+    });
+
+    let nextIdToUse = maxNumber + 1;
+    // -------------------------------------------
+
     report.status = "lactating";
     report.actual_farrowing_date = farrowDate;
     report.farrowing_confirmed_by = req.user.id;
 
-    pushProgressHistory(report, {
-      eventKey: "farrowing_confirmed",
-      title: "Farrowing Confirmed",
-      description: `Farrowing recorded with ${totalLiveNum} live piglets and ${mortalityNum} mortality.`,
-      fromStatus: previousStatus,
-      toStatus: "lactating",
-      actor: req.user,
-      actionAt: farrowDate,
-      meta: {
-        swine_code: report.swine_id?.swine_id || "",
-        total_live: totalLiveNum,
-        mortality: mortalityNum,
-        actual_farrowing_date: farrowDate
-      }
-    });
-
+    if (typeof pushProgressHistory === 'function') {
+      pushProgressHistory(report, {
+        eventKey: "farrowing_confirmed",
+        title: "Farrowing Confirmed",
+        description: `Farrowing recorded with ${totalLiveNum} live and ${mortalityNum} mortality.`,
+        fromStatus: previousStatus,
+        toStatus: "lactating",
+        actor: req.user,
+        actionAt: farrowDate,
+        meta: { swine_code: sow.swine_id, total_live: totalLiveNum, mortality: mortalityNum }
+      });
+    }
     await report.save({ session });
 
-    // 3. Update AI Record Status
     if (aiRecord) {
       aiRecord.status = "Success";
       aiRecord.farrowing_date = farrowDate;
       await aiRecord.save({ session });
     }
 
-    // 4. Update Sow (Dam) Status, Parity, and Breeding Cycle
     const currentParity = (sow.parity || 0) + 1;
     await Swine.updateOne(
       { _id: sow._id, "breeding_cycles.heat_report_id": report._id },
@@ -915,10 +903,9 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
           "breeding_cycles.$.farrowing_results": {
             total_piglets: totalLiveNum + mortalityNum,
             live_piglets: totalLiveNum,
-            alive_male: aliveMaleNum,
-            alive_female: aliveFemaleNum,
-            dead_male: deadMaleNum,
-            dead_female: deadFemaleNum
+            male_count: aliveMaleNum,
+            female_count: aliveFemaleNum,
+            mortality_count: mortalityNum
           },
           current_status: "Lactating"
         },
@@ -927,76 +914,97 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
       { session }
     );
 
-    // 5. Auto-Register Piglets
-    const liveCount = totalLiveNum;
     const pigletsToInsert = [];
     const generatedIds = [];
 
-    // Formatted date string for consistent ID generation (YYYYMMDD) using the determined farrowDate
-    const dateStr = `${farrowDate.getFullYear()}${String(farrowDate.getMonth() + 1).padStart(2, '0')}${String(farrowDate.getDate()).padStart(2, '0')}`;
-
-    for (let i = 1; i <= liveCount; i++) {
-      const pigletId = `PIG-${sow.swine_id}-${dateStr}-${i}`;
+    // --- REGISTER LIVE PIGLETS ---
+    for (let i = 0; i < totalLiveNum; i++) {
+      const pigletId = `${prefix}-${nextIdToUse}`;
       generatedIds.push(pigletId);
+      let assignedSex = (i < aliveMaleNum) ? "Male" : "Female";
 
       pigletsToInsert.push({
         swine_id: pigletId,
         registered_by: req.user.id,
         farmer_id: report.farmer_id._id,
-        manager_id: report.manager_id,
-        sex: i % 2 === 0 ? "Female" : "Male",
+        manager_id: report.farmer_id.managerId || report.manager_id,
+        sex: assignedSex,
         breed: sow.breed,
-        birth_date: farrowDate, // AGE SYNC: Age is calculated from the warped farrowDate
+        birth_date: farrowDate,
         sire_id: sire_id,
         dam_id: sow.swine_id,
         birth_cycle_number: currentParity,
         current_status: "Monitoring (Day 1-30)",
+        health_status: "Healthy",
         age_stage: "piglet",
-        performance_records: [
-          {
-            stage: "Registration",
-            record_date: farrowDate, // DATE SYNC: Record is stamped in 2026
-            remarks: "Auto-registered from farrowing report",
-            recorded_by: req.user.id
-          }
-        ]
+        performance_records: [{
+          stage: "Registration",
+          record_date: farrowDate,
+          remarks: "Auto-registered (Live) from farrowing report",
+          recorded_by: req.user.id
+        }]
       });
+      nextIdToUse++;
     }
 
-    // FEATURE: Duplicate Swine ID check
-    const existingSwine = await Swine.find({
-      swine_id: { $in: generatedIds }
-    }).select("swine_id");
+    // --- REGISTER DEAD PIGLETS ---
+    for (let j = 0; j < mortalityNum; j++) {
+      const pigletId = `${prefix}-${nextIdToUse}`;
+      generatedIds.push(pigletId);
+      let assignedSex = (j < deadMaleNum) ? "Male" : "Female";
 
-    if (existingSwine.length > 0) {
-      const duplicateIds = existingSwine.map((s) => s.swine_id);
-      throw new Error(
-        `Duplicate Swine IDs detected: ${duplicateIds.join(", ")}. Farrowing may have already been recorded.`
-      );
+      pigletsToInsert.push({
+        swine_id: pigletId,
+        registered_by: req.user.id,
+        farmer_id: report.farmer_id._id,
+        manager_id: report.farmer_id.managerId || report.manager_id,
+        sex: assignedSex,
+        breed: sow.breed,
+        birth_date: farrowDate,
+        sire_id: sire_id,
+        dam_id: sow.swine_id,
+        birth_cycle_number: currentParity,
+        current_status: "To be Culled/Sold (Deformity)",
+        health_status: "Deceased (Before Weaning)",
+        age_stage: "piglet",
+        performance_records: [{
+          stage: "Registration",
+          record_date: farrowDate,
+          remarks: "Recorded as Stillborn during farrowing",
+          recorded_by: req.user.id
+        }]
+      });
+      nextIdToUse++;
+    }
+
+    // Double check that we aren't about to insert something already in the DB
+    const collisionCheck = await Swine.countDocuments({ 
+      swine_id: { $in: generatedIds } 
+    }).session(session);
+
+    if (collisionCheck > 0) {
+      throw new Error("ID collision detected. This ID pool has been updated by another user. Please refresh and try again.");
     }
 
     if (pigletsToInsert.length > 0) {
       await Swine.insertMany(pigletsToInsert, { session });
     }
 
-    // 6. Logging and Notifications
-    await logAction(
-      req.user.id,
-      "CONFIRM_FARROWING",
-      "BREEDING",
-      `Farrowing confirmed for Swine ${sow.swine_id}. ${liveCount} piglets added.`,
-      req
-    );
+    await logAction(req.user.id, "CONFIRM_FARROWING", "BREEDING", `Farrowing confirmed for Swine ${sow.swine_id}.`, req);
 
-    await Notification.create({
-      user_id: report.farmer_id.user_id,
-      title: "Farrowing Confirmed",
-      message: `Swine ${sow.swine_id} has farrowed ${liveCount} live piglets on ${farrowDate.toLocaleDateString()}.`,
-      type: "success"
-    });
+    if (report.farmer_id && report.farmer_id.user_id) {
+        await Notification.create([{
+            user_id: report.farmer_id.user_id,
+            title: "Farrowing Confirmed 🐷",
+            message: `Swine ${sow.swine_id} farrowed ${totalLiveNum} live and ${mortalityNum} dead piglets.`,
+            type: "success",
+            createdAt: virtualNow
+          }], { session });
+    }
 
     await session.commitTransaction();
-    res.json({ success: true, message: `Farrowing confirmed. ${liveCount} piglets registered.` });
+    res.json({ success: true, message: `Farrowing confirmed. ${pigletsToInsert.length} piglets registered.` });
+
   } catch (err) {
     if (session.inTransaction()) await session.abortTransaction();
     console.error("Farrowing Error:", err);
