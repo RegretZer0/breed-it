@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const multer = require("multer");
-const supabase = require("../utils/supabase"); // Ensure this utility is initialized
+const supabase = require("../utils/supabase"); 
 
 const Farmer = require("../models/UserFarmer");
 const { requireSessionAndToken } = require("../middleware/authMiddleware");
@@ -10,25 +10,29 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 const logAction = require("../middleware/logger");
 
 /* ==========================
-   MULTER CONFIGURATION (Cloud Migrated)
+    MULTER CONFIGURATION
 ========================== */
-// Using memoryStorage to bypass local disk
 const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
   fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only image files are allowed"));
+    const filetypes = /jpeg|jpg|png|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only images (JPG, PNG, WEBP) are allowed."));
     }
-    cb(null, true);
   },
 });
 
 /* ==========================
-   GET FARMER PROFILE
-========================== */
+    GET FARMER PROFILE
+========================= */
 router.get(
   "/profile",
   requireSessionAndToken,
@@ -44,14 +48,13 @@ router.get(
         });
       }
 
-      // Convert mongoose document to object to allow temporary fields
       const farmerData = farmer.toObject();
 
-      // If farmer has a profile picture, generate a temporary Signed URL
+      // Use the 'profile-picture' bucket
       if (farmerData.profile_picture) {
         const { data, error } = await supabase.storage
-          .from("user_profiles")
-          .createSignedUrl(farmerData.profile_picture, 3600); // 1-hour access
+          .from("profile-picture")
+          .createSignedUrl(farmerData.profile_picture, 3600); 
 
         if (!error && data) {
           farmerData.profile_picture_url = data.signedUrl;
@@ -73,7 +76,7 @@ router.get(
 );
 
 /* ==========================
-   UPDATE FARMER PROFILE
+    UPDATE FARMER PROFILE
 ========================== */
 router.put(
   "/profile",
@@ -95,7 +98,6 @@ router.put(
       const num_of_pens = Number(req.body.num_of_pens);
       const pen_capacity = Number(req.body.pen_capacity);
 
-      // Basic validation
       if (num_of_pens < 0 || pen_capacity < 0) {
         return res.status(400).json({
           success: false,
@@ -109,13 +111,21 @@ router.put(
       farmer.num_of_pens = isNaN(num_of_pens) ? farmer.num_of_pens : num_of_pens;
       farmer.pen_capacity = isNaN(pen_capacity) ? farmer.pen_capacity : pen_capacity;
 
-      // If new image uploaded to memory, send to Supabase
+      // Handle Profile Picture Upload to Supabase
       if (req.file) {
-        const fileExt = path.extname(req.file.originalname);
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
         const fileName = `farmer-${farmer._id}-${Date.now()}${fileExt}`;
 
+        // 1. Delete old image from bucket if it exists to save space
+        if (farmer.profile_picture) {
+          await supabase.storage
+            .from("profile-picture")
+            .remove([farmer.profile_picture]);
+        }
+
+        // 2. Upload new image
         const { data, error } = await supabase.storage
-          .from("user_profiles")
+          .from("profile-picture")
           .upload(fileName, req.file.buffer, {
             contentType: req.file.mimetype,
             upsert: true,
@@ -123,7 +133,7 @@ router.put(
 
         if (error) throw error;
 
-        // Store the path in DB (not the full URL)
+        // Store new path in DB
         farmer.profile_picture = data.path;
       }
 

@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const path = require("path");
+const supabase = require("../utils/supabase"); // Ensure Supabase is imported
 
 const router = express.Router();
 
@@ -14,21 +15,27 @@ const { allowRoles } = require("../middleware/roleMiddleware");
 const { requireApiLogin } = require("../middleware/pageAuth.middleware");
 
 /* ======================================================
-   MULTER CONFIGURATION
+    MULTER CONFIGURATION (Memory Storage for Cloud)
 ====================================================== */
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/profiles");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
+const storage = multer.memoryStorage();
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Only images (JPG, PNG, WEBP) are allowed."));
+  }
 });
 
-const upload = multer({ storage });
-
 /* ======================================================
-   GET LOGGED-IN FARMER PROFILE
+    GET LOGGED-IN FARMER PROFILE
 ====================================================== */
 router.get("/profile", requireApiLogin, async (req, res) => {
   try {
@@ -53,14 +60,27 @@ router.get("/profile", requireApiLogin, async (req, res) => {
       .lean();
 
     if (!farmer) {
-      return res.status(404).json({
-        success: false,
-        message: "Farmer profile not found",
-      });
+      return res.status(404).json({ success: false, message: "Farmer profile not found" });
     }
 
-    farmer.name =
-      `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
+    // Generate temporary Cloud URL if profile picture exists
+    if (farmer.profile_picture) {
+      const { data, error } = await supabase.storage
+        .from("profile-picture")
+        .createSignedUrl(farmer.profile_picture, 3600); // 1 hour access
+
+      if (!error && data) {
+        // OVERWRITE the path with the signed URL so frontend <img> tags work immediately
+        farmer.profile_picture_url = data.signedUrl;
+        farmer.profile_picture = data.signedUrl; 
+      }
+    } else {
+      // FALLBACK: If no picture exists in DB, provide the default avatar path
+      farmer.profile_picture = "/images/default-avatar.png";
+      farmer.profile_picture_url = "/images/default-avatar.png";
+    }
+
+    farmer.name = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
 
     res.json({ success: true, farmer });
 
@@ -71,7 +91,7 @@ router.get("/profile", requireApiLogin, async (req, res) => {
 });
 
 /* ======================================================
-   GET FARMER SWINE
+    GET FARMER SWINE
 ====================================================== */
 router.get(
   "/farmer",
@@ -82,10 +102,7 @@ router.get(
       const farmerId = req.user.farmerProfileId;
 
       if (!farmerId) {
-        return res.status(404).json({
-          success: false,
-          message: "Farmer profile not linked",
-        });
+        return res.status(404).json({ success: false, message: "Farmer profile not linked" });
       }
 
       const swine = await Swine.find({ farmer_id: farmerId })
@@ -93,19 +110,15 @@ router.get(
         .lean();
 
       res.json({ success: true, swine });
-
     } catch (err) {
       console.error("[FETCH FARMER SWINE ERROR]:", err);
-      res.status(500).json({
-        success: false,
-        message: "Server error while fetching swine",
-      });
+      res.status(500).json({ success: false, message: "Server error while fetching swine" });
     }
   }
 );
 
 /* ======================================================
-   UPDATE LOGGED-IN FARMER PROFILE
+    UPDATE LOGGED-IN FARMER PROFILE
 ====================================================== */
 router.put(
   "/profile",
@@ -124,15 +137,7 @@ router.put(
         userObjectId = new mongoose.Types.ObjectId(user.id);
       }
 
-      const {
-        name,
-        email,
-        contact_no,
-        address,
-        num_of_pens,
-        pen_capacity,
-      } = req.body || {};
-
+      const { name, email, contact_no, address, num_of_pens, pen_capacity } = req.body || {};
       const update = {};
 
       if (name) {
@@ -144,16 +149,26 @@ router.put(
       if (email) update.email = email;
       if (contact_no) update.contact_no = contact_no;
       if (address) update.address = address;
+      if (typeof num_of_pens !== "undefined") update.num_of_pens = Number(num_of_pens);
+      if (typeof pen_capacity !== "undefined") update.pen_capacity = Number(pen_capacity);
 
-      if (typeof num_of_pens !== "undefined")
-        update.num_of_pens = Number(num_of_pens);
-
-      if (typeof pen_capacity !== "undefined")
-        update.pen_capacity = Number(pen_capacity);
-
-      // HANDLE PROFILE PICTURE
+      // HANDLE CLOUD UPLOAD
       if (req.file) {
-        update.profile_picture = `/uploads/profiles/${req.file.filename}`;
+        const fileExt = path.extname(req.file.originalname).toLowerCase();
+        const fileName = `profile-${user.id}-${Date.now()}${fileExt}`;
+
+        // Upload buffer to Supabase
+        const { data, error } = await supabase.storage
+          .from("profile-picture")
+          .upload(fileName, req.file.buffer, {
+            contentType: req.file.mimetype,
+            upsert: true,
+          });
+
+        if (error) throw error;
+
+        // Store the storage path in the database
+        update.profile_picture = data.path;
       }
 
       const updatedFarmerDoc = await Farmer.findOneAndUpdate(
@@ -168,24 +183,13 @@ router.put(
       ).select("-password");
 
       if (!updatedFarmerDoc) {
-        return res.status(404).json({
-          success: false,
-          message: "Farmer profile not found",
-        });
+        return res.status(404).json({ success: false, message: "Farmer profile not found" });
       }
 
       const updatedFarmer = updatedFarmerDoc.toObject();
+      updatedFarmer.name = `${updatedFarmer.first_name || ""} ${updatedFarmer.last_name || ""}`.trim();
 
-      updatedFarmer.name =
-        `${updatedFarmer.first_name || ""} ${updatedFarmer.last_name || ""}`.trim();
-
-      await logAction(
-        user.id,
-        "UPDATE_USER",
-        "USER_AUTH",
-        "Farmer updated profile",
-        req
-      );
+      await logAction(user.id, "UPDATE_USER", "USER_AUTH", "Farmer updated profile via cloud storage", req);
 
       res.json({ success: true, farmer: updatedFarmer });
 
@@ -197,7 +201,7 @@ router.put(
 );
 
 /* ======================================================
-   GET ALL PIGS UNDER SPECIFIC FARMER (Manager/Encoder)
+    GET ALL PIGS UNDER SPECIFIC FARMER (Manager/Encoder)
 ====================================================== */
 router.get(
   "/:id/pigs",
@@ -208,27 +212,17 @@ router.get(
       const farmerId = req.params.id;
 
       if (!mongoose.Types.ObjectId.isValid(farmerId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid farmer ID",
-        });
+        return res.status(400).json({ success: false, message: "Invalid farmer ID" });
       }
 
       const pigs = await Swine.find({ farmer_id: farmerId })
         .sort({ createdAt: -1 })
         .lean();
 
-      res.json({
-        success: true,
-        pigs
-      });
-
+      res.json({ success: true, pigs });
     } catch (err) {
       console.error("Fetch farmer pigs error:", err);
-      res.status(500).json({
-        success: false,
-        message: "Server error while fetching pigs"
-      });
+      res.status(500).json({ success: false, message: "Server error while fetching pigs" });
     }
   }
 );

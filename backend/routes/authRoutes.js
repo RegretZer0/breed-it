@@ -6,6 +6,8 @@ const validator = require("validator");
 const dns = require("dns").promises;
 const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
+const path = require("path");
+const supabase = require("../utils/supabase");
 
 const { JWT_SECRET } = require("../config/jwt");
 
@@ -73,6 +75,22 @@ function generateToken(user) {
     JWT_SECRET,
     { expiresIn: "1d" }
   );
+}
+
+async function getSignedProfileUrl(storagePath) {
+  if (!storagePath) return DEFAULT_AVATAR;
+  // If it's already a full URL or a local static path, return as is
+  if (storagePath.startsWith("http") || storagePath.startsWith("/images/")) return storagePath;
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("profile-picture")
+      .createSignedUrl(storagePath, 3600); // URL valid for 1 hour
+
+    return (data && !error) ? data.signedUrl : DEFAULT_AVATAR;
+  } catch (err) {
+    return DEFAULT_AVATAR;
+  }
 }
 
 /* ======================
@@ -580,7 +598,7 @@ router.put(
 );
 
 /* ======================
-    UPDATE PROFILE PHOTO (UPLOAD)
+    UPDATE PROFILE PHOTO (UPLOAD TO CLOUD)
     - multipart/form-data
     - field name: profile_photo
 ====================== */
@@ -600,26 +618,58 @@ router.put(
         return res.status(404).json({ success: false, message: "User not found." });
       }
 
-      const publicPath = `/uploads/user_profiles/${req.file.filename}`;
-      user.profile_photo = publicPath;
+      // 1. Generate unique filename for Supabase
+      const fileExt = path.extname(req.file.originalname).toLowerCase();
+      const fileName = `user-${user._id}-${Date.now()}${fileExt}`;
+
+      // 2. Optional: Delete old photo from Supabase if it exists to save space
+      if (user.profile_photo && !user.profile_photo.startsWith('/images/')) {
+        await supabase.storage
+          .from("profile-picture")
+          .remove([user.profile_photo]);
+      }
+
+      // 3. Upload buffer to Supabase 'profile-picture' bucket
+      const { data, error } = await supabase.storage
+        .from("profile-picture")
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (error) {
+        console.error("Supabase Upload Error:", error);
+        throw new Error("Failed to upload image to cloud storage.");
+      }
+
+      // 4. Update Database with the storage path (e.g., "profile-user-123.png")
+      const storagePath = data.path;
+      user.profile_photo = storagePath;
       await user.save();
 
-      // keep EJS session updated
+      // 5. Keep EJS session updated 
+      // Note: We use the storagePath; your frontend should resolve this via a Signed URL or Public URL
       if (req.session?.user) {
-        req.session.user.profile_photo = publicPath || DEFAULT_AVATAR;
+        req.session.user.profile_photo = storagePath;
         await new Promise((resolve) => req.session.save(() => resolve()));
       }
 
-      await logAction(req.user.id, "UPDATE_PROFILE_PHOTO", "ACCOUNT_MANAGEMENT", "User updated profile photo", req);
+      await logAction(
+        req.user.id, 
+        "UPDATE_PROFILE_PHOTO", 
+        "ACCOUNT_MANAGEMENT", 
+        "User updated profile photo via Cloud", 
+        req
+      );
 
       return res.json({
         success: true,
-        message: "Profile photo updated.",
-        profile_photo: publicPath,
+        message: "Profile photo updated successfully.",
+        profile_photo: storagePath, // Return the path for the frontend to handle
       });
     } catch (err) {
       console.error("Update profile photo error:", err);
-      return res.status(500).json({ success: false, message: "Server error" });
+      return res.status(500).json({ success: false, message: err.message || "Server error" });
     }
   }
 );
