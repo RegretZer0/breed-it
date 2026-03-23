@@ -514,37 +514,52 @@ router.post("/logout", async (req, res) => {
 });
 
 /* ======================
-    GET CURRENT USER (FIXED FOR REFRESH BUG)
+    GET CURRENT USER (FIXED FOR REFRESH BUG + SUPABASE IMAGE FIX)
 ====================== */
-router.get("/me", (req, res) => {
-  // Always prioritize the Session for EJS/Web apps
-  if (req.session?.user) {
-    return res.json({
-      success: true,
-      source: "session",
-      user: req.session.user,
-    });
-  }
-
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({
-      success: false,
-      reason: "NO_SESSION_NO_TOKEN",
-    });
-  }
-
+router.get("/me", async (req, res) => {
   try {
+    // Always prioritize the Session for EJS/Web apps
+    if (req.session?.user) {
+      const user = req.session.user;
+
+      const resolvedPhoto = await getSignedProfileUrl(user.profile_photo);
+
+      return res.json({
+        success: true,
+        source: "session",
+        user: {
+          ...user,
+          profile_photo: resolvedPhoto,
+        },
+      });
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        reason: "NO_SESSION_NO_TOKEN",
+      });
+    }
+
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    res.json({
+    const resolvedPhoto = await getSignedProfileUrl(decoded.profile_photo);
+
+    return res.json({
       success: true,
       source: "jwt",
-      user: decoded,
+      user: {
+        ...decoded,
+        profile_photo: resolvedPhoto,
+      },
     });
+
   } catch (err) {
-    res.status(401).json({
+    console.error("GET /me error:", err);
+
+    return res.status(401).json({
       success: false,
       reason: "INVALID_TOKEN",
     });
@@ -662,11 +677,14 @@ router.put(
         req
       );
 
+      const signedUrl = await getSignedProfileUrl(storagePath);
+
       return res.json({
         success: true,
         message: "Profile photo updated successfully.",
-        profile_photo: storagePath, // Return the path for the frontend to handle
+        profile_photo: signedUrl,
       });
+      
     } catch (err) {
       console.error("Update profile photo error:", err);
       return res.status(500).json({ success: false, message: err.message || "Server error" });
