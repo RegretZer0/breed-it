@@ -762,15 +762,9 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       });
     }
 
-    // 2. MANDATORY OTP CHECK
-    // This ensures the manager cannot skip the verification step
-    const storedOtp = otpStore.get(email);
-    if (!storedOtp || storedOtp.code !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP. Please verify the email first.",
-      });
-    }
+    // 2. MANDATORY OTP CHECK (FIXED)
+    // We use the internal helper to handle hashed comparison and expiration correctly
+    await verifyOTPInternal(email, otp);
 
     // 3. Security & Legitimacy Checks
     validatePassword(password);
@@ -820,7 +814,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
     });
 
     // 7. Success Cleanup
-    otpStore.delete(email); // Clear OTP so it can't be reused
+    // Note: verifyOTPInternal already deletes the OTP on success to prevent reuse.
 
     // Audit Log
     await logAction(
@@ -838,6 +832,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
     });
   } catch (error) {
     console.error("Register farmer error:", error);
+    // Return the specific error message from verifyOTPInternal (e.g., "Invalid OTP" or "OTP expired")
     res.status(400).json({
       success: false,
       message: error.message,
@@ -954,15 +949,9 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       });
     }
 
-    // 2. MANDATORY OTP CHECK
-    // Verifies that the encoder's email is actually owned by the person being registered
-    const storedOtp = otpStore.get(email);
-    if (!storedOtp || storedOtp.code !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP. Please verify the email first.",
-      });
-    }
+    // 2. MANDATORY OTP CHECK (UPDATED TO USE HELPER)
+    // verifyOTPInternal handles hashing comparison, expiration, and cleanup automatically.
+    await verifyOTPInternal(email, otp);
 
     // 3. Security & Legitimacy Checks
     validatePassword(password);
@@ -996,7 +985,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
     });
 
     // 5. Success Cleanup
-    otpStore.delete(email); // Prevent reuse of this OTP
+    // Note: verifyOTPInternal already deletes the email from otpStore upon success.
 
     // Audit Log: Register Encoder
     await logAction(
@@ -1014,6 +1003,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
     });
   } catch (error) {
     console.error("Register encoder error:", error);
+    // Returns specific error (e.g., "Invalid OTP" or "OTP expired") from verifyOTPInternal or other checks
     res.status(400).json({ success: false, message: error.message });
   }
 });
