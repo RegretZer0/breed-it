@@ -127,6 +127,8 @@ router.get("/preview/next-batch-letter", requireSessionAndToken, async (req, res
 
 /* ======================================================
     ADD MASTER BOAR (UNIFIED ID: A-1, A-2)
+    - Robust Numeric Max Calculation
+    - Collision Retry Loop
 ====================================================== */
 router.post(
   "/add-master-boar",
@@ -156,75 +158,89 @@ router.post(
 
       // 1. CALCULATE YEAR BATCH (2022 = A, 2023 = B, 2024 = C, 2025 = D, 2026 = E)
       const startYear = 2022;
-      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; // Robust lookup skipping confusing letters
+      const alphabet = "ABCDEFGHJKLMNPRSTVWXYZ"; 
       
       let yearIndex = currentYear - startYear;
       if (yearIndex < 0) yearIndex = 0; 
-      
-      // Use the string index to ensure 2026 (Index 4) is always 'E'
       const yearLetter = alphabet[yearIndex] || alphabet[alphabet.length - 1];
 
-      // 2. GENERATE UNIFIED ID (Format: Letter-Number)
-      // We look for the absolute last number used for this batch letter
-      // across all swine types to maintain a single continuous sequence.
-      const lastSwineInBatch = await Swine.findOne({
-        swine_id: new RegExp(`^${yearLetter}-`)
-      }).sort({ swine_id: -1 });
+      // 2. GENERATE ID & SAVE (With Retry Loop for extra safety)
+      let newBoar;
+      let saved = false;
+      let attempts = 0;
 
-      let nextNumber = 1;
-      if (lastSwineInBatch && lastSwineInBatch.swine_id) {
-        const parts = lastSwineInBatch.swine_id.split("-");
-        const lastNum = parseInt(parts[parts.length - 1]);
-        if (!isNaN(lastNum)) nextNumber = lastNum + 1;
+      while (!saved && attempts < 5) {
+        // Find ALL swines in this year's batch to calculate the TRUE numeric maximum
+        const existingSwines = await Swine.find({
+          swine_id: new RegExp(`^${yearLetter}-`)
+        }).select("swine_id").lean();
+
+        let maxNum = 0;
+        existingSwines.forEach(s => {
+          const parts = s.swine_id.split("-");
+          const val = parseInt(parts[parts.length - 1]);
+          if (!isNaN(val) && val > maxNum) maxNum = val;
+        });
+
+        const swineId = `${yearLetter}-${maxNum + 1}`;
+
+        try {
+          newBoar = new Swine({
+            swine_id: swineId,
+            batch: yearLetter, 
+            registered_by: registeredBy,
+            farmer_id: null,
+            sex: "Male",
+            breed: breed || "Native",
+            color: color || "Unknown",
+            age_stage: "adult",
+            birth_date: birth_date || null,
+            is_external_boar: true,
+            date_transfer: date_transfer || virtualNow, 
+            health_status: health_status || "Healthy",
+            current_status: current_status || "Active",
+            performance_records: [
+              {
+                stage: "Maintenance Registration",
+                record_date: virtualNow, 
+                weight: Number(weight) || 0,
+                body_length: Number(bodyLength) || 0,
+                heart_girth: Number(heartGirth) || 0,
+                teeth_count: Number(teethCount) || 0,
+                recorded_by: user.id
+              }
+            ]
+          });
+
+          await newBoar.save();
+          saved = true;
+        } catch (saveError) {
+          // If a duplicate ID error (11000) occurs, we increment attempts and try again
+          if (saveError.code === 11000) {
+            attempts++;
+          } else {
+            throw saveError;
+          }
+        }
       }
 
-      const swineId = `${yearLetter}-${nextNumber}`;
-
-      const newBoar = new Swine({
-        swine_id: swineId,
-        batch: yearLetter, 
-        registered_by: registeredBy,
-        farmer_id: null,
-        sex: "Male",
-        breed: breed || "Native",
-        color: color || "Unknown",
-        age_stage: "adult",
-        birth_date: birth_date || null,
-        is_external_boar: true,
-        date_transfer: date_transfer || virtualNow, 
-        health_status: health_status || "Healthy",
-        current_status: current_status || "Active",
-        performance_records: [
-          {
-            stage: "Maintenance Registration",
-            record_date: virtualNow, 
-            weight: Number(weight) || 0,
-            body_length: Number(bodyLength) || 0,
-            heart_girth: Number(heartGirth) || 0,
-            teeth_count: Number(teethCount) || 0,
-            recorded_by: user.id
-          }
-        ]
-      });
-
-      await newBoar.save();
+      if (!saved) throw new Error("Failed to generate unique ID after 5 attempts.");
       
       await logAction(
         user.id,
         "REGISTER_MASTER_BOAR",
         "SWINE_MANAGEMENT",
-        `Registered Master Boar ${swineId} for Year ${currentYear} (Batch ${yearLetter})`,
+        `Registered Master Boar ${newBoar.swine_id} for Year ${currentYear} (Batch ${yearLetter})`,
         req
       );
 
       res.status(201).json({
         success: true,
-        message: "Master Boar registered: " + swineId,
+        message: "Master Boar registered: " + newBoar.swine_id,
         swine: newBoar
       });
     } catch (error) {
-      if (error.code === 11000)
-        return res.status(400).json({ success: false, message: "Duplicate ID collision." });
+      console.error("Master Boar Registration Error:", error);
       res.status(500).json({ success: false, message: "Server error", error: error.message });
     }
   }
