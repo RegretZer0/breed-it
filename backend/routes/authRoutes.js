@@ -735,7 +735,7 @@ router.post("/register", async (req, res) => {
 });
 
 /* ======================
-    REGISTER FARMER (FIXED)
+    REGISTER FARMER (FIXED WITH OTP VERIFICATION)
 ====================== */
 router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
   try {
@@ -746,6 +746,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       contact_no,
       email,
       password,
+      otp, // Added otp to destructuring
       managerId,
       num_of_pens = 0,
       pen_capacity = 0,
@@ -753,18 +754,29 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       membership_date,
     } = req.body;
 
-    if (!email || !password || !managerId) {
+    // 1. Basic validation
+    if (!email || !password || !managerId || !otp) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message: "Missing required fields (Email, Password, Manager, and OTP are required)",
       });
     }
 
+    // 2. MANDATORY OTP CHECK
+    // This ensures the manager cannot skip the verification step
+    const storedOtp = otpStore.get(email);
+    if (!storedOtp || storedOtp.code !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please verify the email first.",
+      });
+    }
+
+    // 3. Security & Legitimacy Checks
     validatePassword(password);
-    await validateEmailLegitimacy(email);
+    // await validateEmailLegitimacy(email); // Keep if you use DNS/Email validation helpers
 
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
-
     if (existing) {
       return res.status(400).json({
         success: false,
@@ -772,7 +784,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       });
     }
 
-    // CREATE USER ACCOUNT (CRITICAL)
+    // 4. CREATE USER ACCOUNT
     const user = await User.create({
       first_name,
       last_name,
@@ -782,15 +794,15 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       password: await bcrypt.hash(password, 10),
       role: "farmer",
       managerId,
+      isVerified: true, // Mark as verified since OTP passed
     });
 
-    // Generate farmer_id
+    // 5. Generate unique farmer_id
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
     const nextNum = lastFarmer ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1 : 1;
-
     const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
-    // CREATE FARMER PROFILE LINKED TO USER
+    // 6. CREATE FARMER PROFILE LINKED TO USER
     const farmer = await Farmer.create({
       farmer_id: farmerId,
       first_name,
@@ -807,12 +819,15 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       user_id: user._id,
     });
 
-    // Audit Log: Register Farmer
+    // 7. Success Cleanup
+    otpStore.delete(email); // Clear OTP so it can't be reused
+
+    // Audit Log
     await logAction(
       req.user.id,
       "REGISTER_FARMER",
       "ACCOUNT_MANAGEMENT",
-      `Registered new Farmer: ${first_name} ${last_name} (${farmerId})`,
+      `Registered new Farmer: ${first_name} ${last_name} (${farmerId}) via OTP`,
       req
     );
 
@@ -916,16 +931,40 @@ router.put("/update-farmer/:farmerId", requireSessionAndToken, allowRoles("farm_
 });
 
 /* ======================
-    REGISTER ENCODER
+    REGISTER ENCODER (FIXED WITH OTP VERIFICATION)
 ====================== */
 router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
-  const { first_name, last_name, address, contact_no, email, password, managerId } = req.body;
+  const { 
+    first_name, 
+    last_name, 
+    address, 
+    contact_no, 
+    email, 
+    password, 
+    otp, // Added otp to destructuring
+    managerId 
+  } = req.body;
 
   try {
-    if (!first_name || !last_name || !email || !password || !managerId) {
-      return res.status(400).json({ success: false, message: "Missing required fields" });
+    // 1. Basic validation including OTP
+    if (!first_name || !last_name || !email || !password || !managerId || !otp) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing required fields (First name, last name, email, password, manager, and OTP are required)" 
+      });
     }
 
+    // 2. MANDATORY OTP CHECK
+    // Verifies that the encoder's email is actually owned by the person being registered
+    const storedOtp = otpStore.get(email);
+    if (!storedOtp || storedOtp.code !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP. Please verify the email first.",
+      });
+    }
+
+    // 3. Security & Legitimacy Checks
     validatePassword(password);
     await validateEmailLegitimacy(email);
 
@@ -941,6 +980,7 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
 
     const encoderId = await generateEncoderId();
 
+    // 4. CREATE ENCODER ACCOUNT
     const encoder = await User.create({
       first_name,
       last_name,
@@ -952,13 +992,18 @@ router.post("/register-encoder", requireSessionAndToken, allowRoles("farm_manage
       managerId,
       status: "active",
       encoder_id: encoderId,
+      isVerified: true, // Mark as verified because the OTP was successful
     });
 
+    // 5. Success Cleanup
+    otpStore.delete(email); // Prevent reuse of this OTP
+
+    // Audit Log: Register Encoder
     await logAction(
       req.user.id,
       "REGISTER_ENCODER",
       "ACCOUNT_MANAGEMENT",
-      `Registered new Encoder: ${first_name} ${last_name} (${encoderId})`,
+      `Registered new Encoder: ${first_name} ${last_name} (${encoderId}) via OTP`,
       req
     );
 

@@ -435,19 +435,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPHAddressCascading();
 
   /* =========================
-     SEND OTP
+      SEND OTP (UPDATED)
   ========================= */
   sendOtpBtn?.addEventListener("click", async () => {
-    const email = document.getElementById("email")?.value.trim();
+    const emailInput = document.getElementById("email");
+    const email = emailInput?.value.trim();
+
+    // 1. Client-side Validation
     if (!email) {
-      showStatusModal("danger", "Missing Email", "Please enter an email first.");
+      showStatusModal("danger", "Missing Email", "Please enter an email address first.");
+      if (emailInput) emailInput.classList.add("is-invalid");
+      return;
+    }
+
+    // Basic regex check before hitting the server
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      showStatusModal("danger", "Invalid Email", "Please enter a valid email format.");
       return;
     }
 
     try {
+      // 2. UI Feedback: Disable button and show loading state
       sendOtpBtn.disabled = true;
-      showStatusModal("info", "Sending OTP", "Please wait while we send your OTP...");
+      const originalText = sendOtpBtn.textContent;
+      sendOtpBtn.textContent = "Sending...";
+      
+      showStatusModal("info", "Sending OTP", "Verifying email and sending your code. Please wait...");
 
+      // 3. API Call
       const res = await fetch("/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -455,30 +471,51 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
       const contentType = res.headers.get("content-type");
-      if (!contentType?.includes("application/json")) throw new Error("Server error while sending OTP.");
+      if (!contentType?.includes("application/json")) {
+        throw new Error("Server communication error. Please try again later.");
+      }
 
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to send OTP.");
 
-      otpSent = true;
-      showStatusModal("success", "OTP Sent", "OTP has been sent to the email.");
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to send OTP.");
+      }
 
+      // 4. Success State
+      otpSent = true; 
+      showStatusModal("success", "OTP Sent", `A verification code has been sent to ${email}. Please check the inbox.`);
+
+      // 5. Cooldown Timer (Prevents Spamming)
       let cooldown = 30;
       sendOtpBtn.textContent = `Resend in ${cooldown}s`;
 
       const timer = setInterval(() => {
         cooldown--;
-        sendOtpBtn.textContent = `Resend in ${cooldown}s`;
-        if (cooldown <= 0) {
+        if (cooldown > 0) {
+          sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+        } else {
           clearInterval(timer);
           sendOtpBtn.disabled = false;
           sendOtpBtn.textContent = "Send OTP";
+          // If they changed the email after sending, reset the flag
+          otpSent = false; 
         }
       }, 1000);
+
     } catch (err) {
+      // 6. Error Handling
       sendOtpBtn.disabled = false;
+      sendOtpBtn.textContent = "Send OTP";
+      console.error("OTP Error:", err);
       showStatusModal("danger", "OTP Failed", err.message);
     }
+  });
+
+  /* EXTRA SAFETY: If the manager changes the email after 
+    sending the OTP, we must invalidate the 'otpSent' flag.
+  */
+  document.getElementById("email")?.addEventListener("input", () => {
+    otpSent = false;
   });
 
   /* =========================
@@ -512,53 +549,58 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* =========================
-   FORM SUBMIT (PREVIEW)
-  ========================= */
+    FORM SUBMIT (PREVIEW & OTP SYNC)
+   ========================= */
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
-    hideAlert();
+    // hideAlert(); // Keep if you use a specific alert div
 
     // Clear previous red borders / messages
-    clearAllValidation(form);
+    if (typeof clearAllValidation === 'function') {
+      clearAllValidation(form);
+    }
 
     let hasError = false;
 
+    // Local Helper for Field Validation
     function requireField(el, msg) {
       const val = (el?.value ?? "").toString().trim();
       if (!val) {
-        setInvalid(el, msg);
+        if (typeof setInvalid === 'function') setInvalid(el, msg);
         hasError = true;
         return false;
       }
-      setValid(el);
+      if (typeof setValid === 'function') setValid(el);
       return true;
     }
 
     // =========================
-    // FIELD VALIDATION (WITH INDICATION)
+    // FIELD VALIDATION
     // =========================
 
     // Basic user fields
     requireField(document.getElementById("first_name"), "First name is required.");
     requireField(document.getElementById("last_name"), "Last name is required.");
-    requireField(document.getElementById("email"), "Email is required.");
+    const emailEl = document.getElementById("email");
+    requireField(emailEl, "Email is required.");
     requireField(document.getElementById("contact_no"), "Contact number is required.");
 
-    // Sex (only if you added it in the EJS)
+    // Sex
     const sexEl = document.getElementById("sex");
     if (sexEl) requireField(sexEl, "Please select sex.");
 
-    // Address fields (cascading)
-    if (regionEl) requireField(regionEl, "Please select a Region.");
-    if (provEl && !provEl.disabled) requireField(provEl, "Please select a Province.");
-    if (cityEl && !cityEl.disabled) requireField(cityEl, "Please select a City / Municipality.");
-    if (brgyEl && !brgyEl.disabled) requireField(brgyEl, "Please select a Barangay.");
-    if (streetEl) requireField(streetEl, "House No. / Street / Subdivision is required.");
+    // Address fields (using your cascading logic)
+    if (typeof regionEl !== 'undefined' && regionEl) requireField(regionEl, "Please select a Region.");
+    if (typeof provEl !== 'undefined' && provEl && !provEl.disabled) requireField(provEl, "Please select a Province.");
+    if (typeof cityEl !== 'undefined' && cityEl && !cityEl.disabled) requireField(cityEl, "Please select a City / Municipality.");
+    if (typeof brgyEl !== 'undefined' && brgyEl && !brgyEl.disabled) requireField(brgyEl, "Please select a Barangay.");
+    if (typeof streetEl !== 'undefined' && streetEl) requireField(streetEl, "House No. / Street / Subdivision is required.");
 
-    // OTP
-    requireField(otpInput, "OTP is required.");
-    if (!otpSent) {
-      setInvalid(otpInput, "Please click Send OTP first.");
+    // OTP VALIDATION (CRITICAL FIX)
+    if (!requireField(otpInput, "OTP is required.")) {
+      hasError = true;
+    } else if (!otpSent) {
+      if (typeof setInvalid === 'function') setInvalid(otpInput, "Please click 'Send OTP' and verify the email first.");
       hasError = true;
     }
 
@@ -570,22 +612,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     requireField(confEl, "Confirm password is required.");
 
     if (passEl?.value && confEl?.value && passEl.value !== confEl.value) {
-      setInvalid(confEl, "Passwords do not match.");
+      if (typeof setInvalid === 'function') setInvalid(confEl, "Passwords do not match.");
       hasError = true;
     }
 
-    // Compose final address string (hidden #address)
-    const finalAddress = composePHAddress();
+    // Compose final address string (using your helper)
+    const finalAddress = typeof composePHAddress === 'function' ? composePHAddress() : "";
     if (!finalAddress) {
-      // no specific field to highlight besides the address block,
-      // but we still show a blocking modal message
-      showStatusModal("danger", "Address Required", "Please complete the Philippines address fields.");
+      if (typeof showStatusModal === 'function') {
+        showStatusModal("danger", "Address Required", "Please complete all Philippines address fields.");
+      }
       hasError = true;
     }
 
     // Stop immediately if there are invalid fields
     if (hasError) {
-      // Focus the first invalid field for better UX
       const firstInvalid = form.querySelector(".is-invalid");
       firstInvalid?.focus?.();
       return;
@@ -597,23 +638,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     const contactNo = document.getElementById("contact_no")?.value.trim();
     const password = passEl?.value;
     const otp = otpInput?.value.trim();
-
     const accountType = accountTypeSelect?.value || "encoder";
 
+    // Base Payload for all roles
     const payload = {
       first_name: document.getElementById("first_name")?.value.trim(),
       last_name: document.getElementById("last_name")?.value.trim(),
-      sex: sexEl?.value, // optional (won't crash if missing)
+      sex: sexEl?.value, 
       address: finalAddress,
       contact_no: contactNo,
-      email: document.getElementById("email")?.value.trim(),
-      password,
-      managerId,
-      otp,
+      email: emailEl?.value.trim(),
+      password: password,
+      otp: otp,           // Required by updated backend
+      managerId: managerId, // Fetched from /me at top of script
     };
 
     let endpoint = "/api/auth/register-encoder";
 
+    // Add Farmer-specific fields if applicable
     if (accountType === "farmer") {
       endpoint = "/api/auth/register-farmer";
       payload.production_type = document.getElementById("production_type")?.value;
@@ -622,29 +664,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       payload.membership_date = document.getElementById("membership_date")?.value;
     }
 
+    // Store in global variables for the Confirm Modal's "Final Save" button
     pendingPayload = payload;
     pendingEndpoint = endpoint;
 
     // =========================
-    // OPEN CONFIRM MODAL
+    // OPEN PREVIEW/CONFIRM MODAL
     // =========================
-    fillConfirmationModal(payload, accountType);
+    if (typeof fillConfirmationModal === 'function') {
+      fillConfirmationModal(payload, accountType);
+    }
 
     const confirmEl = document.getElementById("confirmModal");
     if (!confirmEl) return;
 
-    // IMPORTANT: bind once (avoid stacking listeners every submit)
+    // Bind cleanup once to handle Bootstrap modal state
     if (!confirmEl.dataset.boundCleanup) {
       confirmEl.addEventListener("hidden.bs.modal", () => {
-        hardResetBootstrapModalState();
+        if (typeof hardResetBootstrapModalState === 'function') {
+          hardResetBootstrapModalState();
+        }
       });
       confirmEl.dataset.boundCleanup = "1";
     }
 
-    bootstrap.Modal.getOrCreateInstance(confirmEl, {
-      backdrop: "static",
-      keyboard: false,
-    }).show();
+    // Show the Preview Modal
+    if (window.bootstrap) {
+      bootstrap.Modal.getOrCreateInstance(confirmEl, {
+        backdrop: "static",
+        keyboard: false,
+      }).show();
+    }
   });
 
   /* =========================
