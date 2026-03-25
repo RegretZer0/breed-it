@@ -185,7 +185,18 @@ export function initPigsModule(ctx, breedingModule) {
     activateFarmerPanelTab("farmerPanelOverviewTab");
 
     // header
-    setImage("profileAvatar", farmer.profile_picture);
+    function pickProfilePicture(f) {
+      return (
+        f?.profile_picture ||
+        f?.profile_photo ||
+        f?.profileImage ||
+        f?.avatar ||
+        f?.photo ||
+        ""
+      );
+    }
+
+    setImage("profileAvatar", pickProfilePicture(farmer));
 
     const fullName = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
     setText("profileFarmerName", fullName);

@@ -270,6 +270,31 @@ export function createReproViews({ repo, state, ui }) {
     return sum;
   }
 
+
+  function bindDeformitiesInput() {
+    const wrap = document.querySelector(".repro-deformities-wrap");
+    if (!wrap) return;
+
+    const checkboxes = wrap.querySelectorAll("input[type='checkbox']");
+    const otherInput = wrap.querySelector("#monthlyDeformitiesOther");
+    const hiddenInput = wrap.querySelector("#monthlyDeformities");
+
+    function updateValue() {
+      const selected = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+
+      const other = (otherInput?.value || "").trim();
+
+      const final = [...selected, ...(other ? [other] : [])];
+
+      hiddenInput.value = final.join(", ");
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener("change", updateValue));
+    otherInput?.addEventListener("input", updateValue);
+  }
+
   /* =========================================================
      MODULE: Piglet Monitoring Status Helpers
   ========================================================= */
@@ -645,6 +670,7 @@ export function createReproViews({ repo, state, ui }) {
           </div>
         </div>
       `;
+      
       return;
     }
 
@@ -697,6 +723,9 @@ export function createReproViews({ repo, state, ui }) {
         </div>
       </div>
     `;
+    setTimeout(() => {
+      bindDeformitiesInput();
+    }, 0);
   }
   
   /* =========================================================
@@ -917,16 +946,62 @@ export function createReproViews({ repo, state, ui }) {
 
                     <div class="col-12">
                       <label class="form-label small fw-semibold">Developed Deformities</label>
-                      <input
-                        type="text"
-                        class="form-control repro-input"
-                        id="monthlyDeformities"
-                        placeholder="Example: Hernia, Leg defect, None"
-                        value=""
-                      />
-                      <div class="small text-muted mt-1">
-                        Separate multiple deformities with commas. Leave blank if none.
-                      </div>
+
+                        <div class="repro-deformities-wrap">
+
+                          <div class="repro-deformities-options d-flex flex-wrap gap-2">
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Spay Leg">
+                              <span>Weak Legs</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Bent Legs">
+                              <span>Bent Legs</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Scrotal Hernia">
+                              <span>Hernia (Testicle)</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Umbilical Hernia">
+                              <span>Hernia (Navel)</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Atresia Ani">
+                              <span>No Anus</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Cleft Palate">
+                              <span>Split Mouth</span>
+                            </label>
+
+                          </div>
+
+                          <input
+                            type="text"
+                            class="form-control repro-input mt-2"
+                            id="monthlyDeformitiesOther"
+                            placeholder="Other (optional)"
+                          />
+
+                          <!-- FINAL VALUE (USED BY SYSTEM — DO NOT REMOVE) -->
+                          <input
+                            type="hidden"
+                            id="monthlyDeformities"
+                            value=""
+                          />
+
+                          <div class="small text-muted mt-1">
+                            Select deformities or add custom. This affects selection evaluation.
+                          </div>
+
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -1024,6 +1099,10 @@ export function createReproViews({ repo, state, ui }) {
         </div>
       </div>
     `;
+
+    setTimeout(() => {
+      bindDeformitiesInput();
+    }, 0);
   }
 
   /* =========================================================
@@ -1256,15 +1335,62 @@ export function createReproViews({ repo, state, ui }) {
 
                     <div class="col-12">
                       <label class="form-label small fw-semibold">Developed Deformities</label>
-                      <input
-                        type="text"
-                        class="form-control repro-input"
-                        id="sowMonthlyDeformities"
-                        placeholder="Example: Hernia, Leg defect, None"
-                      />
-                      <div class="small text-muted mt-1">
-                        Separate multiple deformities with commas. Leave blank if none.
-                      </div>
+
+                        <div class="repro-deformities-wrap">
+
+                          <div class="repro-deformities-options d-flex flex-wrap gap-2">
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Spay Leg">
+                              <span>Weak Legs</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Bent Legs">
+                              <span>Bent Legs</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Scrotal Hernia">
+                              <span>Hernia (Testicle)</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Umbilical Hernia">
+                              <span>Hernia (Navel)</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Atresia Ani">
+                              <span>No Anus</span>
+                            </label>
+
+                            <label class="repro-chip">
+                              <input type="checkbox" value="Cleft Palate">
+                              <span>Split Mouth</span>
+                            </label>
+
+                          </div>
+
+                          <input
+                            type="text"
+                            class="form-control repro-input mt-2"
+                            id="monthlyDeformitiesOther"
+                            placeholder="Other (optional)"
+                          />
+
+                          <!-- FINAL VALUE (DO NOT REMOVE - used by backend logic) -->
+                          <input
+                            type="hidden"
+                            id="monthlyDeformities"
+                            value=""
+                          />
+
+                          <div class="small text-muted mt-1">
+                            Select deformities or add custom. This affects selection evaluation.
+                          </div>
+
+                        </div>
                     </div>
                   </div>
                 </div>
@@ -1727,15 +1853,30 @@ export function createReproViews({ repo, state, ui }) {
       return st.includes(key);
     }
 
-    return list.filter((s) => {
-      const sowId = (s?.swine_id || s?.swine_tag || s?.tag || "").toLowerCase();
-      const st = normStage(s);
+    const filtered = list.filter((s) => {
+    const sowId = (s?.swine_id || s?.swine_tag || s?.tag || "").toLowerCase();
+    const st = normStage(s);
 
-      const termOk = !term || sowId.includes(term) || st.includes(term);
-      const statusOk = matchesStatus(st, status);
+    const termOk = !term || sowId.includes(term) || st.includes(term);
+    const statusOk = matchesStatus(st, status);
 
-      return termOk && statusOk;
-    });
+    return termOk && statusOk;
+  });
+
+  // ============================
+  // FIX: NATURAL SORT (E-6, E-8, E-10)
+  // ============================
+  filtered.sort((a, b) => {
+    const aId = String(a?.swine_id || a?.swine_tag || "").trim();
+    const bId = String(b?.swine_id || b?.swine_tag || "").trim();
+
+    const numA = parseInt(aId.replace(/\D/g, "")) || 0;
+    const numB = parseInt(bId.replace(/\D/g, "")) || 0;
+
+    return numA - numB;
+  });
+
+  return filtered;
   }
 
   function renderSowPagination(meta) {

@@ -119,9 +119,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ================= IMAGE HELPERS ================= */
   function resolveImageUrl(path) {
     if (!path) return "/images/default-avatar.png";
-    if (path.startsWith("http://") || path.startsWith("https://")) return path;
-    if (path.startsWith("/")) return path;
-    return `/uploads/profiles/${path}`;
+
+    if (typeof path !== "string") return "/images/default-avatar.png";
+
+    // ✅ Supabase / external URL
+    if (path.startsWith("http")) return path;
+
+    // ❌ DO NOT fallback to local uploads anymore
+    return "/images/default-avatar.png";
   }
 
   function setImage(id, src) {

@@ -86,7 +86,18 @@ export function initFarmersModule(ctx, pigsModule) {
       const status = f.status || "Active";
       const isActive = status === "Active";
 
-      const avatarSrc = resolveImageUrl(f.profile_picture);
+      function pickProfilePicture(f) {
+        return (
+          f?.profile_picture ||
+          f?.profile_photo ||
+          f?.profileImage ||
+          f?.avatar ||
+          f?.photo ||
+          ""
+        );
+      }
+
+      const avatarSrc = resolveImageUrl(pickProfilePicture(f));
 
       html += `
         <div class="farmer-card-modern" data-farmer-card="${f._id}">

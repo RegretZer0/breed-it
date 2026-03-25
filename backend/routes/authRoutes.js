@@ -837,8 +837,16 @@ router.get("/farmers", requireSessionAndToken, allowRoles("farm_manager", "encod
   try {
     const user = req.user;
     const managerId = user.role === "farm_manager" ? user.id : user.managerId;
-    const farmers = await Farmer.find({ managerId });
-    res.json({ success: true, farmers });
+    const farmers = await Farmer.find({ managerId }).lean();
+
+    const farmersWithPhotos = await Promise.all(
+      farmers.map(async (f) => ({
+        ...f,
+        profile_picture: await getSignedProfileUrl(f.profile_picture),
+      }))
+    );
+
+    res.json({ success: true, farmers: farmersWithPhotos });
   } catch (err) {
     console.error("Fetch farmers error:", err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -858,8 +866,16 @@ router.get("/farmers/:managerId", requireSessionAndToken, allowRoles("farm_manag
       return res.status(403).json({ success: false, message: "Unauthorized manager access" });
     }
 
-    const farmers = await Farmer.find({ managerId });
-    res.json({ success: true, farmers });
+    const farmers = await Farmer.find({ managerId }).lean();
+
+    const farmersWithPhotos = await Promise.all(
+      farmers.map(async (f) => ({
+        ...f,
+        profile_picture: await getSignedProfileUrl(f.profile_picture),
+      }))
+    );
+
+    res.json({ success: true, farmers: farmersWithPhotos });
   } catch (error) {
     console.error("Fetch farmers error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -965,9 +981,18 @@ router.get("/encoders", requireSessionAndToken, allowRoles("farm_manager"), asyn
     const encoders = await User.find({
       role: "encoder",
       managerId: req.user.id,
-    }).select("-password -__v");
+    })
+      .select("-password -__v")
+      .lean();
 
-    res.json({ success: true, encoders });
+    const encodersWithPhotos = await Promise.all(
+      encoders.map(async (e) => ({
+        ...e,
+        profile_photo: await getSignedProfileUrl(e.profile_photo),
+      }))
+    );
+
+    res.json({ success: true, encoders: encodersWithPhotos });
   } catch (error) {
     console.error("Fetch encoders error:", error);
     res.status(500).json({ success: false, message: "Server error" });

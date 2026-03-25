@@ -147,14 +147,24 @@ document.addEventListener("DOMContentLoaded", () => {
   ========================= */
   function resolveImageUrl(path) {
     if (!path) return "/images/default-avatar.png";
+
     if (typeof path !== "string") return "/images/default-avatar.png";
-    if (path.startsWith("http://") || path.startsWith("https://")) return path;
-    if (path.startsWith("/")) return path;
-    return `/uploads/profiles/${path}`;
+
+    // Supabase signed URL
+    if (path.startsWith("http")) return path;
+
+    return "/images/default-avatar.png";
   }
 
   function pickProfilePicture(acc) {
-    return acc?.profile_picture || acc?.profileImage || acc?.avatar || acc?.photo || "";
+    return (
+      acc?.profile_picture ||
+      acc?.profile_photo ||  
+      acc?.profileImage ||
+      acc?.avatar ||
+      acc?.photo ||
+      ""
+    );
   }
 
   function escapeHtml(str) {
