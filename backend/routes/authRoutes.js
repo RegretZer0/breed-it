@@ -126,14 +126,15 @@ const transporter = nodemailer.createTransport({
 });
 
 /* ======================
-    OTP SYSTEM
+    OTP SYSTEM (FIXED)
 ====================== */
 
 // 1. Send OTP Route
 router.post("/send-otp", async (req, res) => {
-  const { email } = req.body;
-
   try {
+    const { email } = req.body;
+
+    // 1. Initial Validation
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -141,11 +142,25 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
+    // 2. SPAM PREVENTION / COOLDOWN CHECK (Moved to the top)
+    const existingOTP = otpStore.get(email);
+    if (existingOTP && Date.now() < existingOTP.expires) {
+      // Calculate time elapsed since the last OTP was sent (assuming 10-minute expiry)
+      const timeSinceSent = Date.now() - (existingOTP.expires - 10 * 60 * 1000);
+      
+      if (timeSinceSent < 60000) { // 60 seconds cooldown
+        return res.status(429).json({
+          success: false,
+          message: "Please wait a moment before requesting another code.",
+        });
+      }
+    }
+
+    // 3. LEGITIMACY & DATABASE CHECKS
     await validateEmailLegitimacy(email);
 
-    // Check if email already exists
+    // Check if email already exists in User or Farmer collections
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
-
     if (existing) {
       return res.status(400).json({
         success: false,
@@ -153,10 +168,8 @@ router.post("/send-otp", async (req, res) => {
       });
     }
 
-    // Generate 6-digit OTP
+    // 4. GENERATE & STORE OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Hash OTP before storing
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     otpStore.set(email, {
@@ -164,7 +177,7 @@ router.post("/send-otp", async (req, res) => {
       expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
-    // Send branded HTML email
+    // 5. SEND EMAIL
     await transporter.sendMail({
       from: `"breedIT" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -172,15 +185,21 @@ router.post("/send-otp", async (req, res) => {
       html: otpEmailTemplate({ otp }),
     });
 
-    res.json({
+    // 6. FINAL SUCCESS RESPONSE (Always use 'return')
+    return res.json({
       success: true,
       message: "OTP sent successfully to your email.",
     });
+
   } catch (error) {
     console.error("OTP Error:", error);
-    res.status(400).json({
+
+    // Safety check: if headers were already sent by the logic above, don't try to send another response
+    if (res.headersSent) return;
+
+    return res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to process OTP request.",
     });
   }
 });
@@ -735,7 +754,7 @@ router.post("/register", async (req, res) => {
 });
 
 /* ======================
-    REGISTER FARMER (FIXED WITH OTP VERIFICATION)
+    REGISTER FARMER (FIXED WITH OTP VERIFICATION & HEADER SAFETY)
 ====================== */
 router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager"), async (req, res) => {
   try {
@@ -746,7 +765,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       contact_no,
       email,
       password,
-      otp, // Added otp to destructuring
+      otp, 
       managerId,
       num_of_pens = 0,
       pen_capacity = 0,
@@ -754,7 +773,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       membership_date,
     } = req.body;
 
-    // 1. Basic validation
+    // 1. Basic validation - Added 'return' to prevent double response
     if (!email || !password || !managerId || !otp) {
       return res.status(400).json({
         success: false,
@@ -762,14 +781,14 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       });
     }
 
-    // 2. MANDATORY OTP CHECK (FIXED)
-    // We use the internal helper to handle hashed comparison and expiration correctly
+    // 2. MANDATORY OTP CHECK
+    // If this fails, it throws an error which is caught by the catch block below
     await verifyOTPInternal(email, otp);
 
     // 3. Security & Legitimacy Checks
     validatePassword(password);
-    // await validateEmailLegitimacy(email); // Keep if you use DNS/Email validation helpers
 
+    // Check both collections to ensure email uniqueness
     const existing = (await User.findOne({ email })) || (await Farmer.findOne({ email }));
     if (existing) {
       return res.status(400).json({
@@ -779,21 +798,26 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
     }
 
     // 4. CREATE USER ACCOUNT
+    const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({
       first_name,
       last_name,
       address,
       contact_info: contact_no,
       email,
-      password: await bcrypt.hash(password, 10),
+      password: hashedPassword,
       role: "farmer",
       managerId,
-      isVerified: true, // Mark as verified since OTP passed
+      isVerified: true, 
     });
 
     // 5. Generate unique farmer_id
     const lastFarmer = await Farmer.findOne().sort({ _id: -1 });
-    const nextNum = lastFarmer ? parseInt(lastFarmer.farmer_id.split("-")[1]) + 1 : 1;
+    let nextNum = 1;
+    if (lastFarmer && lastFarmer.farmer_id) {
+        const parts = lastFarmer.farmer_id.split("-");
+        nextNum = parseInt(parts[1]) + 1;
+    }
     const farmerId = `Farmer-${String(nextNum).padStart(5, "0")}`;
 
     // 6. CREATE FARMER PROFILE LINKED TO USER
@@ -804,7 +828,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       address,
       contact_no,
       email,
-      password: user.password,
+      password: user.password, // Store the same hashed password
       managerId,
       num_of_pens,
       pen_capacity,
@@ -815,10 +839,7 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       status: "Active"
     });
 
-    // 7. Success Cleanup
-    // Note: verifyOTPInternal already deletes the OTP on success to prevent reuse.
-
-    // Audit Log
+    // 7. Audit Log
     await logAction(
       req.user.id,
       "REGISTER_FARMER",
@@ -827,17 +848,25 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       req
     );
 
-    res.status(201).json({
+    // Final Success Response - Use 'return' for consistency
+    return res.status(201).json({
       success: true,
       message: "Farmer registered successfully",
       farmer,
     });
+
   } catch (error) {
     console.error("Register farmer error:", error);
-    // Return the specific error message from verifyOTPInternal (e.g., "Invalid OTP" or "OTP expired")
-    res.status(400).json({
+    
+    // Check if headers were already sent to prevent the ERR_HTTP_HEADERS_SENT crash
+    if (res.headersSent) {
+        return;
+    }
+
+    // Return the specific error message (e.g., from verifyOTPInternal)
+    return res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "An error occurred during registration",
     });
   }
 });

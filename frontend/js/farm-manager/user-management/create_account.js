@@ -478,7 +478,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* =========================
       SEND OTP (UPDATED)
-  ========================= */
+   ========================= */
+  // Move timer variable outside to allow clearing if a second request is made
+  let otpTimerInterval = null;
+
   sendOtpBtn?.addEventListener("click", async () => {
     const emailInput = document.getElementById("email");
     const email = emailInput?.value.trim();
@@ -524,23 +527,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       // 4. Success State
+      // otpSent stays true even after the cooldown timer ends!
       otpSent = true; 
-      showStatusModal("success", "OTP Sent", `A verification code has been sent to ${email}. Please check the inbox.`);
+      showStatusModal("success", "OTP Sent", `A verification code has been sent to ${email}. It is valid for 10 minutes.`);
 
       // 5. Cooldown Timer (Prevents Spamming)
-      let cooldown = 30;
-      sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+      // Clear any existing timer if this is a resend
+      if (otpTimerInterval) clearInterval(otpTimerInterval);
 
-      const timer = setInterval(() => {
+      let cooldown = 60; // Increased to 60s to give the email more time to arrive
+      sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+      sendOtpBtn.disabled = true;
+
+      otpTimerInterval = setInterval(() => {
         cooldown--;
         if (cooldown > 0) {
           sendOtpBtn.textContent = `Resend in ${cooldown}s`;
+          sendOtpBtn.disabled = true;
         } else {
-          clearInterval(timer);
+          clearInterval(otpTimerInterval);
           sendOtpBtn.disabled = false;
           sendOtpBtn.textContent = "Send OTP";
-          // If they changed the email after sending, reset the flag
-          otpSent = false; 
+          
+          /* REMOVED: otpSent = false; 
+             We keep otpSent as TRUE so the user can still register 
+             using the code they just received.
+          */
         }
       }, 1000);
 
@@ -554,10 +566,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   /* EXTRA SAFETY: If the manager changes the email after 
-    sending the OTP, we must invalidate the 'otpSent' flag.
+    sending the OTP, we MUST invalidate the 'otpSent' flag 
+    because the code is only valid for the previous email.
   */
   document.getElementById("email")?.addEventListener("input", () => {
     otpSent = false;
+    // Optional: Reset the button if the user starts typing a different email
+    if (otpTimerInterval) {
+        clearInterval(otpTimerInterval);
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = "Send OTP";
+    }
   });
 
   /* =========================
