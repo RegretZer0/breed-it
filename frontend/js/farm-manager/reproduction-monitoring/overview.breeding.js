@@ -1398,10 +1398,6 @@ export function initBreedingModule(ctx) {
             <i class="bi bi-journal-text me-1"></i> Artificial Insemination Record
           </button></li>
 
-          <li class="nav-item"><button type="button" class="nav-link" data-target="cyclePerformanceTab">
-            <i class="bi bi-bar-chart-line me-1"></i> Breeding Performance
-          </button></li>
-
           <li class="nav-item"><button type="button" class="nav-link" data-target="cycleGrowthTab">
             <i class="bi bi-graph-up me-1"></i> Growth Monitoring
           </button></li>

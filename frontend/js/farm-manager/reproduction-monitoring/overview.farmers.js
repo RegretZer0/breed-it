@@ -16,7 +16,11 @@ export function initFarmersModule(ctx, pigsModule) {
       const data = await res.json();
       state.allFarmers = data.farmers || [];
 
-      state.allFarmers.sort((a, b) => (a.first_name || "").localeCompare(b.first_name || ""));
+      state.allFarmers.sort((a, b) => {
+        const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim().toLowerCase();
+        const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim().toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
 
       state.filteredFarmers = [...state.allFarmers];
       state.farmerPage = 1;
@@ -63,6 +67,12 @@ export function initFarmersModule(ctx, pigsModule) {
       state.filteredFarmers && state.filteredFarmers.length
         ? state.filteredFarmers
         : state.allFarmers;
+
+    list.sort((a, b) => {
+      const nameA = `${a.first_name || ""} ${a.last_name || ""}`.trim().toLowerCase();
+      const nameB = `${b.first_name || ""} ${b.last_name || ""}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
 
     const totalPages = Math.max(1, Math.ceil(list.length / state.FARMER_ROWS_PER_PAGE));
     if (state.farmerPage > totalPages) state.farmerPage = totalPages;

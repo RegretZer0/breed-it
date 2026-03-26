@@ -90,7 +90,7 @@ html, body{
 ========================= */
 @media (max-width: 991.98px) {
   .main-content {
-    margin-left: 0 !important;
+    /* margin-left: 0 !important; */
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -857,30 +857,30 @@ body.panel-open{
 ========================================================= */
 
 /* Prevent horizontal overflow everywhere */
-html, body {
+/* html, body {
   overflow-x: hidden !important;
-}
+} */
 
 /* Fix layout width when sidebar exists */
-.main-content {
+/* .main-content {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-}
+} */
 
 /* Ensure container always fills screen */
-.main-content .container-fluid {
+/* .main-content .container-fluid {
   width: 100% !important;
   max-width: 100% !important;
-}
+} */
 
 /* Critical: override sidebar push on mobile */
 @media (max-width: 991.98px) {
 
-  .main-content {
+  /* .main-content {
     margin-left: 0 !important;
     width: 100% !important;
-  }
+  } */
 
   /* Remove any leftover layout shifting */
   body {
@@ -904,10 +904,10 @@ html, body {
   }
 
   /* Fix grid compression issue */
-  .row {
+  /* .row {
     margin-left: 0 !important;
     margin-right: 0 !important;
-  }
+  } */
 
   .row > * {
     padding-left: 6px !important;
@@ -928,59 +928,18 @@ html, body {
   }
 }
 
-/* =========================================================
-   HARD OVERFLOW FIX (FINAL)
-========================================================= */
 
-/* 1. Kill ALL horizontal overflow sources */
-html, body {
-  overflow-x: hidden !important;
-}
-
-/* 2. Fix Bootstrap row overflow (BIGGEST ISSUE) */
-.row {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-
-/* Restore inner spacing safely */
-.row > * {
-  padding-left: 8px !important;
-  padding-right: 8px !important;
-}
-
-/* 3. Ensure cards never exceed screen */
-.farmer-card-modern {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: hidden;
-}
-
-/* 4. Fix reproduction grid overflow */
-.repro-grid {
-  width: 100%;
-  max-width: 100%;
-}
-
-/* Prevent grid stretching */
-.repro-metric {
-  min-width: 0 !important;
-}
-
-/* 5. Fix text causing overflow */
-.farmer-meta,
-.farmer-name {
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-/* 6. Container hard limit */
-.container-fluid {
-  max-width: 100% !important;
+/* SAFE overflow control ONLY inside module */
+.repro-page {
   overflow-x: hidden;
 }
 
-/* 7. Small screen tightening */
+/* Fix row ONLY inside module */
+.repro-page .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 @media (max-width: 576px) {
 
   .repro-grid {
