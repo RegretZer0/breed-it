@@ -107,14 +107,16 @@
                       <div class="col-12 col-md-6 col-lg-4">
                         <label class="form-label">Contact Number</label>
                           <input
-                          type="tel"
-                          id="contact_no"
-                          class="form-control"
-                          required
-                          pattern="^09[0-9]{9}$"
-                          placeholder="09XXXXXXXXX"
-                          title="Enter a valid Philippine phone number (09XXXXXXXXX)"
-                        />
+                            type="tel"
+                            id="contact_no"
+                            class="form-control"
+                            required
+                            pattern="^09[0-9]{9}$"
+                            inputmode="numeric"
+                            maxlength="11"
+                            placeholder="09XXXXXXXXX"
+                            title="Enter a valid Philippine phone number (09XXXXXXXXX)"
+                          />
                       </div>
 
                       <!-- Spacer on large screens so it feels airy -->

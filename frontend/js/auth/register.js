@@ -4,6 +4,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const otpInput = document.getElementById("otp");
   const messageEl = document.getElementById("message");
 
+  // =========================
+  // PHONE INPUT VALIDATION (FIX)
+  // =========================
+  const phoneInput = document.getElementById("phone");
+
+  if (phoneInput) {
+
+    // Prevent typing letters
+    phoneInput.addEventListener("keypress", (e) => {
+      if (!/[0-9]/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Clean pasted input + enforce length
+    phoneInput.addEventListener("input", (e) => {
+      let value = e.target.value;
+
+      // Remove non-digits
+      value = value.replace(/\D/g, "");
+
+      // Limit to 11 digits
+      if (value.length > 11) {
+        value = value.slice(0, 11);
+      }
+
+      e.target.value = value;
+    });
+  }
+
   let otpSent = false;
 
   /* ======================

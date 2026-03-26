@@ -24,14 +24,17 @@
             <!-- Phone -->
             <div class="mb-3">
               <label class="form-label">Phone number</label>
-              <input
-                type="tel"
-                class="form-control"
-                id="phone"
-                required
-                pattern="^09[0-9]{9}$"
-                placeholder="09XXXXXXXXX"
-                title="Enter a valid Philippine phone number (09XXXXXXXXX)"
+                <input
+                  type="tel"
+                  class="form-control"
+                  id="phone"
+                  required
+                  pattern="^09[0-9]{9}$"
+                  inputmode="numeric"
+                  maxlength="11"
+                  placeholder="09XXXXXXXXX"
+                  title="Enter a valid Philippine phone number (09XXXXXXXXX)"
+                />
             </div>
 
             <!-- Email -->

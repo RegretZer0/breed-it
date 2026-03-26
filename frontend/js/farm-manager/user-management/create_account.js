@@ -21,6 +21,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   const sendOtpBtn = document.getElementById("sendOtpBtn");
   const otpInput = document.getElementById("otp");
 
+  // =========================
+  // PHONE INPUT VALIDATION (FIX)
+  // =========================
+  const contactInput = document.getElementById("contact_no");
+
+  if (contactInput) {
+
+    // Prevent typing letters
+    contactInput.addEventListener("keypress", (e) => {
+      if (!/[0-9]/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Clean pasted input + enforce length
+    contactInput.addEventListener("input", (e) => {
+      let value = e.target.value;
+
+      // Remove non-digits
+      value = value.replace(/\D/g, "");
+
+      // Limit to 11 digits
+      if (value.length > 11) {
+        value = value.slice(0, 11);
+      }
+
+      e.target.value = value;
+    });
+  }
+
   let pendingPayload = null;
   let pendingEndpoint = null;
   let otpSent = false;

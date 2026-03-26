@@ -60,6 +60,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeModalBtn = document.getElementById("closeModal");
   const closeModalX = document.getElementById("closeModalX");
 
+  //safe-guard contact
+  const editContactInput = document.getElementById("editContact");
+
+  if (editContactInput) {
+
+    // Prevent letters while typing
+    editContactInput.addEventListener("keypress", (e) => {
+      if (!/[0-9]/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Clean pasted input (VERY important)
+    editContactInput.addEventListener("input", (e) => {
+      let value = e.target.value;
+
+      // Remove non-digits
+      value = value.replace(/\D/g, "");
+
+      // Limit to 11 digits
+      if (value.length > 11) {
+        value = value.slice(0, 11);
+      }
+
+      e.target.value = value;
+    });
+  }
+
   /* =========================
      VIEW PANEL (NEW)
      - You must add this markup in EJS with these IDs:
