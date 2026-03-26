@@ -237,7 +237,7 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     PERFORMANCE HELPER FALLBACK (CLIENT-SIDE SYSTEM SUGGESTION)
+   PERFORMANCE HELPER FALLBACK (CLIENT-SIDE SYSTEM SUGGESTION)
   ========================================================= */
   function computeHelperSuggestionForPiglet(piglet) {
     if (!PerformanceHelper || typeof PerformanceHelper.getSelectionStatus !== "function") return "";
@@ -255,12 +255,22 @@ export function initBreedingModule(ctx) {
       deformities: defs.length ? defs : ["None"]
     }));
 
+    // ✅ FIX 2: Use ONLY stage (not lifecycle status)
+    const stage =
+      piglet?.age_stage ||
+      piglet?.current_stage ||
+      piglet?.growth_stage ||
+      "";
+
     const swine = {
       swine_id: tag,
       swine_tag: tag,
       sex: normStr(piglet?.sex || "").toLowerCase() === "female" ? "Female" : "Male",
-      current_status: piglet?.current_status || piglet?.age_stage,
-      age_stage: piglet?.age_stage || piglet?.current_status,
+
+      // ✅ CRITICAL FIX
+      current_status: stage,
+      age_stage: stage,
+
       performance_records: perfRecords
     };
 
@@ -269,16 +279,19 @@ export function initBreedingModule(ctx) {
       ? state.rawPerformanceData.deformities
       : [];
 
+    // ✅ FIX 1: prevent false promotion when no real data
+    if (!perfRecords.length) {
+      return "Continue monitoring and record growth updates";
+    }
+
     const out = PerformanceHelper.getSelectionStatus(swine, deformitiesAnalytics);
 
     const raw = normStr(out?.suggestion);
     if (!raw) return "";
 
-    // Map common helper outputs into the two-action labels where possible,
-    // otherwise keep the helper text (but we still normalize if it resembles retain/sale).
     const normalized = normalizeSuggestionValue(raw);
 
-    // If helper returns "✅ Ready for ..." etc, keep it (not a final action)
+    // If helper returns informational message, keep it
     if (normalized === raw && !/retain|sale|sell|market|cull/i.test(raw)) return raw;
 
     return normalized || raw;
@@ -738,12 +751,14 @@ export function initBreedingModule(ctx) {
   }
 
   /* =========================================================
-     GROWTH DATA + CHART (also used by PerformanceHelper fallback)
+    GROWTH DATA + CHART (also used by PerformanceHelper fallback)
   ========================================================= */
   function getGrowthRecordsForPiglet(piglet) {
     const tag = normStr(piglet?.swine_id);
 
-    const records = Array.isArray(state.rawPerformanceData?.morphology) ? state.rawPerformanceData.morphology : [];
+    const records = Array.isArray(state.rawPerformanceData?.morphology)
+      ? state.rawPerformanceData.morphology
+      : [];
 
     const filtered = records.filter((r) => {
       const rTag = normStr(r?.swine_id || r?.swine_tag || r?.tag || r?.pig_id);
@@ -761,18 +776,26 @@ export function initBreedingModule(ctx) {
           girth: Number(m?.heart_girth ?? r?.heart_girth ?? r?.girth ?? NaN)
         };
       })
-      .filter((x) => x.date && (!Number.isNaN(x.weight) || !Number.isNaN(x.length) || !Number.isNaN(x.girth)))
+      .filter(
+        (x) =>
+          x.date &&
+          (!Number.isNaN(x.weight) || !Number.isNaN(x.length) || !Number.isNaN(x.girth))
+      )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     if (!normalized.length && piglet?.latest_growth) {
       const g = piglet.latest_growth;
-      const d = g?.date || g?.createdAt || g?.recorded_at || new Date().toISOString();
-      normalized.push({
-        date: d,
-        weight: Number(g?.weight ?? g?.weight_kg ?? NaN),
-        length: Number(g?.body_length ?? g?.length ?? NaN),
-        girth: Number(g?.heart_girth ?? g?.girth ?? NaN)
-      });
+
+      const weight = Number(g?.weight ?? g?.weight_kg ?? NaN);
+
+      if (!Number.isNaN(weight) && weight > 0) {
+        normalized.push({
+          date: g?.date || g?.createdAt || g?.recorded_at || new Date().toISOString(),
+          weight: weight,
+          length: Number(g?.body_length ?? g?.length ?? NaN),
+          girth: Number(g?.heart_girth ?? g?.girth ?? NaN)
+        });
+      }
     }
 
     return normalized;
