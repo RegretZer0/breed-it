@@ -176,6 +176,26 @@ document.addEventListener("DOMContentLoaded", () => {
       .replaceAll("'", "&#039;");
   }
 
+  function normalizePHNumber(num) {
+    if (!num) return "";
+
+    num = String(num).replace(/\D/g, ""); // remove non-digits
+
+    if (num.startsWith("639")) {
+      return "0" + num.slice(2);
+    }
+
+    if (num.startsWith("9") && num.length === 10) {
+      return "0" + num;
+    }
+
+    if (num.startsWith("09") && num.length === 11) {
+      return num;
+    }
+
+    return ""; // fallback (still editable)
+  }
+
   function toRole(acc) {
     return acc?.farmer_id ? "Farmer" : "Encoder";
   }
@@ -690,7 +710,10 @@ document.addEventListener("DOMContentLoaded", () => {
     editForm.editFirstName.value = acc.first_name || "";
     editForm.editLastName.value = acc.last_name || "";
     editForm.editAddress.value = acc.address || "";
-    editForm.editContact.value = acc.contact_no || acc.contact_info || "";
+
+    editForm.editContact.value = normalizePHNumber(
+      acc.contact_no || acc.contact_info || ""
+    );
     editForm.editStatus.value = toStatus(acc);
 
     if (isFarmer) {
@@ -720,9 +743,14 @@ document.addEventListener("DOMContentLoaded", () => {
       first_name: editForm.editFirstName.value.trim(),
       last_name: editForm.editLastName.value.trim(),
       address: editForm.editAddress.value.trim(),
-      contact_no: editForm.editContact.value.trim(),
-      status: editForm.editStatus.value, // "active"/"inactive"
+      status: editForm.editStatus.value === "active" ? "Active" : "Inactive",
     };
+
+    if (isFarmer) {
+      payload.contact_no = normalizePHNumber(editForm.editContact.value.trim());
+    } else {
+      payload.contact_info = normalizePHNumber(editForm.editContact.value.trim());
+    }
 
     if (isFarmer) {
       payload.num_of_pens = Number(editForm.editPens.value) || 0;

@@ -77,7 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const first_name = document.getElementById("first_name").value.trim();
     const last_name = document.getElementById("last_name").value.trim();
     const email = document.getElementById("email").value.trim();
-    const contact_info = document.getElementById("phone").value.trim();
+    const contact_info = normalizePHNumber(
+      document.getElementById("phone").value.trim()
+    );
     const password = document.getElementById("password").value.trim();
     const confirmPassword = document.getElementById("confirm_password").value.trim();
     const otp = otpInput.value.trim();
@@ -88,6 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!first_name || !last_name || !email || !password || !confirmPassword || !otp) {
       messageEl.style.color = "red";
       messageEl.textContent = "Please fill out all fields, including OTP.";
+      return;
+    }
+
+    if (!contact_info) {
+      messageEl.style.color = "red";
+      messageEl.textContent = "Enter a valid Philippine phone number (09XXXXXXXXX).";
       return;
     }
 
@@ -149,6 +157,18 @@ document.addEventListener("DOMContentLoaded", () => {
       messageEl.textContent = err.message || "Registration failed.";
     }
   });
+
+  function normalizePHNumber(num) {
+    if (!num) return "";
+
+    num = String(num).replace(/\D/g, "");
+
+    if (num.startsWith("639")) return "0" + num.slice(2);
+    if (num.startsWith("9") && num.length === 10) return "0" + num;
+    if (num.startsWith("09") && num.length === 11) return num;
+
+    return "";
+  }
 });
 
 /* ======================

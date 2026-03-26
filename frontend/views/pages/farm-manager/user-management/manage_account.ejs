@@ -393,15 +393,15 @@
     <input id="editAddress" class="form-control form-control-sm" required />
 
     <label class="form-label small mt-2">Contact Number</label>
-    <input
-      id="editContact"
-      class="form-control form-control-sm"
-      type="tel"
-      required
-      pattern="^(09\\d{9}|\\+639\\d{9})$"
-      placeholder="09XXXXXXXXX or +639XXXXXXXXX"
-      title="Enter a valid Philippine phone number (09XXXXXXXXX or +639XXXXXXXXX)"
-    />
+      <input
+        id="editContact"
+        class="form-control form-control-sm"
+        type="tel"
+        required
+        pattern="^09[0-9]{9}$"
+        placeholder="09XXXXXXXXX"
+        title="Enter a valid Philippine phone number (09XXXXXXXXX)"
+      />
 
     <label class="form-label small mt-2">Account Status</label>
     <select id="editStatus" class="form-select form-select-sm" required>

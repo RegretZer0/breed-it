@@ -82,6 +82,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function normalizePHNumber(num) {
+    if (!num) return "";
+
+    num = String(num).replace(/\D/g, "");
+
+    if (num.startsWith("639")) return "0" + num.slice(2);
+    if (num.startsWith("9") && num.length === 10) return "0" + num;
+    if (num.startsWith("09") && num.length === 11) return num;
+
+    return "";
+  }
+
   /* =========================================================
      FIX: STUCK GREY SCREEN / UNCLICKABLE AFTER MODAL CLOSE
      - remove lingering backdrops
@@ -635,7 +647,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =========================
     // BUILD PAYLOAD
     // =========================
-    const contactNo = document.getElementById("contact_no")?.value.trim();
+    const contactNo = normalizePHNumber(
+      document.getElementById("contact_no")?.value.trim()
+    );
     const password = passEl?.value;
     const otp = otpInput?.value.trim();
     const accountType = accountTypeSelect?.value || "encoder";
