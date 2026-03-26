@@ -87,6 +87,42 @@ router.get("/debug/status-enum", requireSessionAndToken, async (req, res) => {
 });
 
 // ---------------------------------------------------------
+// FETCH PIGLETS BY CYCLE (FIX FOR FRONTEND 404)
+// ---------------------------------------------------------
+router.get("/piglets/by-cycle", requireSessionAndToken, async (req, res) => {
+  try {
+    const { dam_id, cycle_number } = req.query;
+
+    if (!dam_id || !cycle_number) {
+      return res.status(400).json({
+        success: false,
+        message: "dam_id and cycle_number are required"
+      });
+    }
+
+    const piglets = await Swine.find({
+      dam_id: dam_id,
+      $or: [
+        { birth_cycle_number: cycle_number },
+        { cycle_number: cycle_number }
+      ]
+    }).lean();
+
+    return res.json({
+      success: true,
+      data: piglets
+    });
+
+  } catch (err) {
+    console.error("Fetch piglets by cycle error:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+});
+
+// ---------------------------------------------------------
 // 1. FETCH AI HISTORY
 // ---------------------------------------------------------
 router.get("/ai-history", requireSessionAndToken, async (req, res) => {

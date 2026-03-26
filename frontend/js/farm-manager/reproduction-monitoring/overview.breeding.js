@@ -2099,21 +2099,34 @@ export function initBreedingModule(ctx) {
           }
 
           <div class="d-flex flex-column flex-md-row gap-2">
+
             <div class="flex-grow-1">
-              <button type="button" class="btn btn-success w-100" data-action="retain" id="btnSelRetain">
+              <button type="button" class="btn btn-success w-100 selection-btn"
+                data-action="retain" id="btnSelRetain" disabled>
                 <i class="bi bi-check-circle me-1"></i> Retain for Breeding
               </button>
             </div>
+
+            <!-- 🆕 PENDING -->
             <div class="flex-grow-1">
-              <button type="button" class="btn btn-outline-danger w-100" data-action="sale" id="btnSelSale">
+              <button type="button" class="btn btn-outline-secondary w-100 selection-btn"
+                data-action="pending" id="btnSelPending" disabled>
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Set to Pending
+              </button>
+            </div>
+
+            <div class="flex-grow-1">
+              <button type="button" class="btn btn-outline-danger w-100 selection-btn"
+                data-action="sale" id="btnSelSale" disabled>
                 <i class="bi bi-tag-fill me-1"></i> Mark for Sale
               </button>
             </div>
+
           </div>
 
           <div class="d-flex justify-content-end mt-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm ${locked ? "" : "d-none"}" id="btnOverrideDecision">
-              <i class="bi bi-exclamation-triangle me-1"></i> Override Decision
+            <button type="button" class="btn btn-warning btn-sm" id="btnOverrideDecision">
+              <i class="bi bi-unlock me-1"></i> Override Decision
             </button>
           </div>
 
@@ -2127,6 +2140,53 @@ export function initBreedingModule(ctx) {
     document.getElementById("closeSelectionDetailBtn")?.addEventListener("click", () => {
       toggleSelectionDetailMode(false);
       toggleSowFilter(state.__reproView === "SOWS");
+    });
+
+    // OVERRIDE → unlock buttons
+    document.getElementById("btnOverrideDecision")?.addEventListener("click", () => {
+      document.querySelectorAll(".selection-btn").forEach(btn => {
+        btn.disabled = false;
+      });
+
+      const btn = document.getElementById("btnOverrideDecision");
+      btn.classList.remove("btn-warning");
+      btn.classList.add("btn-success");
+      btn.innerHTML = `<i class="bi bi-check-circle me-1"></i> Override Active`;
+    });
+
+    // ACTION BUTTONS
+    document.querySelectorAll(".selection-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+
+        const action = btn.dataset.action;
+
+        // PENDING = RESET ONLY (no API)
+        if (action === "pending") {
+          document.querySelectorAll(".selection-btn").forEach(b => b.disabled = true);
+          return;
+        }
+
+        let finalStatus = "Pending";
+        if (action === "retain") finalStatus = "Retain for Breeding";
+        if (action === "sale") finalStatus = "Mark for Sale";
+
+        try {
+          await updateSelectionStatus({
+            swine_id: piglet.swine_id,
+            swine_db_id: piglet._id,
+            selection_status: finalStatus
+          });
+
+          // lock again after action
+          document.querySelectorAll(".selection-btn").forEach(b => b.disabled = true);
+
+          state.__selectionRender?.(true);
+
+        } catch (err) {
+          console.error(err);
+          alert("Failed to update selection");
+        }
+      });
     });
 
     const hint = document.getElementById("selectionActionHint");
