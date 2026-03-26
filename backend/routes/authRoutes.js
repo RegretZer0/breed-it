@@ -811,6 +811,8 @@ router.post("/register-farmer", requireSessionAndToken, allowRoles("farm_manager
       production_type,
       membership_date,
       user_id: user._id,
+
+      status: "Active"
     });
 
     // 7. Success Cleanup
@@ -853,6 +855,8 @@ router.get("/farmers", requireSessionAndToken, allowRoles("farm_manager", "encod
       farmers.map(async (f) => ({
         ...f,
         profile_picture: await getSignedProfileUrl(f.profile_picture),
+
+        status: (f.status || "active").toLowerCase()
       }))
     );
 
@@ -866,31 +870,60 @@ router.get("/farmers", requireSessionAndToken, allowRoles("farm_manager", "encod
 /* ======================
     GET FARMERS (LEGACY PARAM ROUTE)
 ====================== */
-router.get("/farmers/:managerId", requireSessionAndToken, allowRoles("farm_manager", "encoder"), async (req, res) => {
-  try {
-    const paramManagerId = req.params.managerId;
-    const user = req.user;
-    const managerId = user.role === "farm_manager" ? user.id : user.managerId;
+router.get(
+  "/farmers/:managerId",
+  requireSessionAndToken,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const paramManagerId = req.params.managerId;
+      const user = req.user;
 
-    if (paramManagerId !== managerId) {
-      return res.status(403).json({ success: false, message: "Unauthorized manager access" });
+      // Resolve actual managerId based on role
+      const managerId =
+        user.role === "farm_manager" ? user.id : user.managerId;
+
+      // 🔒 Strict authorization check
+      if (String(paramManagerId) !== String(managerId)) {
+        return res.status(403).json({
+          success: false,
+          message: "Unauthorized manager access",
+        });
+      }
+
+      const farmers = await Farmer.find({ managerId }).lean();
+
+      const farmersWithPhotos = await Promise.all(
+        farmers.map(async (f) => {
+          // Normalize status safely
+          const normalizedStatus =
+            String(f.status || "active").toLowerCase() === "active"
+              ? "active"
+              : "inactive";
+
+          return {
+            ...f,
+            profile_picture: await getSignedProfileUrl(f.profile_picture),
+
+            // Always consistent output
+            status: normalizedStatus,
+          };
+        })
+      );
+
+      res.json({
+        success: true,
+        farmers: farmersWithPhotos,
+      });
+    } catch (error) {
+      console.error("Fetch farmers error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+      });
     }
-
-    const farmers = await Farmer.find({ managerId }).lean();
-
-    const farmersWithPhotos = await Promise.all(
-      farmers.map(async (f) => ({
-        ...f,
-        profile_picture: await getSignedProfileUrl(f.profile_picture),
-      }))
-    );
-
-    res.json({ success: true, farmers: farmersWithPhotos });
-  } catch (error) {
-    console.error("Fetch farmers error:", error);
-    res.status(500).json({ success: false, message: "Server error" });
   }
-});
+);
 
 /* ======================
     UPDATE FARMER
@@ -910,7 +943,12 @@ router.put("/update-farmer/:farmerId", requireSessionAndToken, allowRoles("farm_
 
     fieldsToUpdate.forEach((field) => {
       if (req.body[field] !== undefined) {
-        farmer[field] = req.body[field];
+        if (field === "status") {
+          const val = String(req.body[field]).toLowerCase();
+          farmer.status = val === "active" ? "active" : "inactive";
+        } else {
+          farmer[field] = req.body[field];
+        }
       }
     });
 

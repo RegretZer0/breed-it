@@ -94,7 +94,7 @@ export function initFarmersModule(ctx, pigsModule) {
     pageItems.forEach((f) => {
       const fullName = `${f.first_name || ""} ${f.last_name || ""}`.trim();
       const status = f.status || "Active";
-      const isActive = status === "Active";
+      const isActive = String(status).toLowerCase() === "active";
 
       function pickProfilePicture(f) {
         return (
@@ -140,7 +140,7 @@ export function initFarmersModule(ctx, pigsModule) {
               <span id="attn-${f._id}" class="badge rounded-pill farmer-attn-pill d-none"></span>
 
               <span class="farmer-status ${isActive ? "status-active" : "status-inactive"}">
-                ${status}
+                ${isActive ? "Active" : "Inactive"}
               </span>
             </div>
           </div>

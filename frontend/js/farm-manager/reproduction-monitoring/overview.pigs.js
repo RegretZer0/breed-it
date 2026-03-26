@@ -228,8 +228,10 @@ export function initPigsModule(ctx, breedingModule) {
     // status badge
     const badge = document.getElementById("profileFarmerStatus");
     if (badge) {
-      const isActive = farmer.status === "Active";
-      badge.textContent = farmer.status || "Inactive";
+      const isActive = String(farmer.status || "active").toLowerCase() === "active";
+
+      badge.textContent = isActive ? "Active" : "Inactive";
+
       badge.className = `badge rounded-pill px-3 py-1 ${
         isActive ? "bg-success-subtle text-success" : "bg-secondary-subtle text-secondary"
       }`;
