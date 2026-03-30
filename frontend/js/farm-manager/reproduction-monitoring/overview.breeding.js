@@ -2370,11 +2370,14 @@ export function initBreedingModule(ctx) {
     function render(forceKeepPage = false) {
       toggleSelectionDetailMode(false);
 
-      // ✅ re-enrich here too, now with PerformanceHelper fallback
+      // re-enrich here too, now with PerformanceHelper fallback
       enrichPigletsWithSelectionMeta(list);
 
+      // ALWAYS use FULL list for KPIs
+      updateKpis(list);
+
+      // Use filtered list only for display
       const filtered = applyFilters(list);
-      updateKpis(filtered);
 
       if (!forceKeepPage) uiState.page = Number(uiState.page || 1);
 

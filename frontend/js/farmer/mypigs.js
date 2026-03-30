@@ -454,44 +454,129 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function buildOffspringCycleChart(cycles) {
     const canvas = document.getElementById("offspringCycleChart");
-    if (!canvas) return;
+    const filter = document.getElementById("cycleFilter");
 
+    if (!canvas || !filter) return;
+
+    // Destroy existing chart
     if (offspringChartInstance) {
       offspringChartInstance.destroy();
       offspringChartInstance = null;
     }
 
-    const sorted = [...cycles].sort((a, b) => (a.cycle_number || 0) - (b.cycle_number || 0));
-    const labels = sorted.map((c) => `C${c.cycle_number}`);
-    const live = sorted.map((c) => toNum(c.live));
-    const dead = sorted.map((c) => toNum(c.dead));
+    // Normalize + extract cycle numbers
+    const cycleNumbers = cycles
+      .map(c => Number(c.cycle_number))
+      .filter(n => !Number.isNaN(n) && n > 0)
+      .sort((a, b) => a - b);
 
-    offspringChartInstance = new Chart(canvas, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Live",
-            data: live,
-            backgroundColor: "rgba(31,167,116,0.70)",
-            borderRadius: 12,
+    const uniqueCycles = [...new Set(cycleNumbers)];
+
+    // Populate filter (dynamic)
+    filter.innerHTML = `
+      <option value="all" selected>All</option>
+      ${uniqueCycles.map(c => `<option value="${c}">Cycle ${c}</option>`).join("")}
+    `;
+
+    // Render function
+    function render(selected = "all") {
+      const filtered = selected === "all"
+        ? cycles
+        : cycles.filter(c => String(c.cycle_number) === String(selected));
+
+      const sorted = [...filtered].sort(
+        (a, b) => (Number(a.cycle_number) || 0) - (Number(b.cycle_number) || 0)
+      );
+
+      const labels = sorted.map(c => `C${c.cycle_number}`);
+      const live = sorted.map(c => toNum(c.live));
+      const dead = sorted.map(c => toNum(c.dead));
+
+      if (offspringChartInstance) {
+        offspringChartInstance.destroy();
+      }
+
+      offspringChartInstance = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Live",
+              data: live,
+              backgroundColor: "rgba(31,167,116,0.75)",
+              borderRadius: 12,
+              barThickness: 48,
+              maxBarThickness: 56,
+            },
+            {
+              label: "Dead",
+              data: dead,
+              backgroundColor: "rgba(220,38,38,0.6)",
+              borderRadius: 12,
+              barThickness: 48,
+              maxBarThickness: 56,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          layout: {
+            padding: {
+              top: 16,
+              bottom: 8,
+              left: 8,
+              right: 8,
+            },
           },
-          {
-            label: "Dead",
-            data: dead,
-            backgroundColor: "rgba(220,38,38,0.55)",
-            borderRadius: 12,
+
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                usePointStyle: true,
+                boxWidth: 10,
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}`,
+              },
+            },
           },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom" } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-      },
-    });
+
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                },
+              },
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                stepSize: 1,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    // Initial render
+    render("all");
+
+    // Prevent duplicate listeners
+    filter.onchange = (e) => {
+      render(e.target.value);
+    };
   }
 
   function getDisplayPiglets(motherPig, cycle) {
@@ -900,12 +985,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!records.length) {
       return `
         <div class="growth-section">
-          <div class="growth-topbar">
-            <button class="back-btn growth-back-btn" id="backToOverviewGrowth" type="button">
-              <i class="bi bi-arrow-left"></i>
-              <span>Back to Overview</span>
-            </button>
-          </div>
 
           <div class="empty-state">
             <i class="bi bi-graph-up"></i>
@@ -918,14 +997,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return `
       <div class="growth-section">
 
-        <div class="growth-topbar">
-          <button class="back-btn growth-back-btn" id="backToOverviewGrowth" type="button">
-            <i class="bi bi-arrow-left"></i>
-            <span>Back to Overview</span>
-          </button>
-        </div>
-
         <div class="chart-card growth-chart-card">
+
+          <!-- HEADER -->
           <div class="chart-card-head">
             <div>
               <h4 class="mb-1">Weight Trend</h4>
@@ -938,8 +1012,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
           </div>
 
+          <!-- FILTER (MOVED HERE - FULL WIDTH LIKE MONTHLY) -->
+          <div class="growth-filter-card chart-filter-spacing">
+            <div class="growth-filter-left">
+              <div class="growth-filter-label">
+                <i class="bi bi-calendar3"></i>
+                <span>Select Year</span>
+              </div>
+
+              <div class="growth-select-box">
+                <select id="chartYearFilter"></select>
+                <i class="bi bi-chevron-down select-arrow"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHART -->
           <div class="chart-canvas-wrap">
-            <canvas id="weightChart"></canvas>
+            <div class="chart-inner">
+              <canvas id="weightChart"></canvas>
+            </div>
           </div>
         </div>
 
@@ -977,8 +1069,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
   }
 
+  function bindMonthToggle() {
+    const cards = document.querySelectorAll("[data-month]");
+
+    cards.forEach((card) => {
+      const btn = card.querySelector(".month-toggle-btn");
+      const body = card.querySelector(".month-body");
+      const text = card.querySelector(".toggle-text");
+      const icon = card.querySelector(".toggle-icon");
+
+      btn?.addEventListener("click", () => {
+        const isOpen = !body.classList.contains("collapsed");
+
+        // Close all first
+        document.querySelectorAll(".month-body").forEach((b) => {
+          b.classList.add("collapsed");
+        });
+
+        document.querySelectorAll(".toggle-text").forEach((t) => {
+          t.textContent = "View details";
+        });
+
+        document.querySelectorAll(".toggle-icon").forEach((i) => {
+          i.classList.remove("rotate");
+        });
+
+        // Open current if closed
+        if (!isOpen) {
+          body.classList.remove("collapsed");
+          text.textContent = "Hide details";
+          icon.classList.add("rotate");
+        }
+      });
+    });
+  }
+
   function initializeGrowthChart(pig) {
-    const records = [...(pig.performance_records || [])]
+    const allRecords = [...(pig.performance_records || [])]
       .filter((r) => {
         const weightNum = Number(r.weight);
         return (
@@ -990,64 +1117,91 @@ document.addEventListener("DOMContentLoaded", async () => {
           !Number.isNaN(weightNum) &&
           weightNum > 0
         );
-      })
-      .sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+      });
 
     const ctx = document.getElementById("weightChart");
-    if (!ctx) return;
+    const yearFilter = document.getElementById("chartYearFilter");
 
-    if (weightChartInstance) {
-      weightChartInstance.destroy();
-      weightChartInstance = null;
-    }
+    if (!ctx || !yearFilter) return;
 
-    if (!records.length) return;
+    // Get available years dynamically
+    const years = [...new Set(allRecords.map(r => new Date(r.record_date).getFullYear()))]
+      .sort((a, b) => b - a);
 
-    const labels = records.map((r) =>
-      new Date(r.record_date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
-    );
+    yearFilter.innerHTML = years
+      .map(y => `<option value="${y}">${y}</option>`)
+      .join("");
 
-    const weights = records.map((r) => Number(r.weight));
+    function renderChart(year) {
+      const records = allRecords
+        .filter(r => new Date(r.record_date).getFullYear() == year)
+        .sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
 
-    weightChartInstance = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Weight (kg)",
-            data: weights,
-            borderColor: "#1FA774",
-            backgroundColor: "rgba(31,167,116,0.15)",
-            fill: true,
-            tension: 0.3,
-            pointRadius: 4,
+      if (weightChartInstance) {
+        weightChartInstance.destroy();
+        weightChartInstance = null;
+      }
+
+      if (!records.length) return;
+
+      const labels = records.map((r) =>
+        new Date(r.record_date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
+      );
+
+      const weights = records.map((r) => Number(r.weight));
+
+      weightChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Weight (kg)",
+              data: weights,
+              borderColor: "#1FA774",
+              backgroundColor: "rgba(31,167,116,0.15)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
           },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        devicePixelRatio: window.devicePixelRatio,
-        layout: { padding: { bottom: 20 } },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            ticks: { autoSkip: true, maxRotation: 0 },
-          },
-          y: {
-            ticks: {
-              callback: (value) => value + " kg",
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: true,
+                maxRotation: 0,
+              },
+            },
+            y: {
+              ticks: {
+                callback: (value) => value + " kg",
+              },
             },
           },
         },
-      },
+      });
+    }
+
+    // Initial render
+    if (years.length) renderChart(years[0]);
+
+    // On change
+    yearFilter.addEventListener("change", (e) => {
+      renderChart(e.target.value);
     });
 
-    generateMonthlySummary(records);
+    // Keep monthly summary synced
+    generateMonthlySummary(allRecords);
   }
 
   /* ===============================
@@ -1107,72 +1261,69 @@ document.addEventListener("DOMContentLoaded", async () => {
           const diff = (end - start).toFixed(1);
 
           return `
-            <div class="month-card">
+            <div class="month-card" data-month>
+
+              <!-- HEADER -->
               <div class="month-header">
-                <div class="month-header-left">
-                  <strong>${monthData.name} ${year}</strong>
-                  <small>${data.length} update${data.length > 1 ? "s" : ""}</small>
+                <div>
+                  <h5 class="mb-0">${monthData.name}</h5>
+                  <small>${data.length} updates</small>
                 </div>
 
-                <div class="month-right">
-                  <span class="month-range">${start} → ${end} kg</span>
-                  <span class="gain-badge ${diff > 0 ? "positive" : "neutral"}">
-                    ${diff > 0 ? "+" : ""}${diff} kg
-                  </span>
+                <div class="month-right d-flex align-items-center gap-2">
+                  <strong>${start} → ${end} kg</strong>
+                  <span class="badge">${diff} kg</span>
+
+                  <button class="month-toggle-btn" type="button">
+                    <span class="toggle-text">View details</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                  </button>
                 </div>
               </div>
 
-              <button class="month-toggle-btn" type="button">
-                View details
-              </button>
-
-              <div class="month-details hidden">
+              <!-- COLLAPSIBLE BODY -->
+              <div class="month-body collapsed">
                 ${data
                   .map(
                     (r) => `
-                      <div class="month-row">
-                        <div class="month-row-date">
+                      <div class="month-record">
+                        <div class="record-date">
                           ${new Date(r.record_date).toLocaleDateString()}
                         </div>
 
-                        <div class="month-row-metrics">
-                          <span>Weight <strong>${r.weight || "-"}</strong> kg</span>
-                          <span>Length <strong>${r.body_length || "-"}</strong> cm</span>
-                          <span>Girth <strong>${r.heart_girth || "-"}</strong> cm</span>
+                        <div class="record-grid">
+                          <div>
+                            <small>Weight</small>
+                            <strong>${r.weight || "-"} kg</strong>
+                          </div>
+
+                          <div>
+                            <small>Length</small>
+                            <strong>${r.body_length || "-"} cm</strong>
+                          </div>
+
+                          <div>
+                            <small>Girth</small>
+                            <strong>${r.heart_girth || "-"} cm</strong>
+                          </div>
                         </div>
                       </div>
                     `
                   )
                   .join("")}
               </div>
+
             </div>
           `;
         })
         .join("");
 
-      attachMonthToggle();
+      bindMonthToggle();
     }
 
     if (years.length) render(years[0]);
 
     yearFilter.addEventListener("change", (e) => render(e.target.value));
-  }
-
-  /* ============================================
-     MODULE: MONTH TOGGLE BINDINGS
-  ============================================= */
-  function attachMonthToggle() {
-    document.querySelectorAll(".month-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const details = btn.nextElementSibling;
-        if (!details) return;
-
-        const isHidden = details.classList.contains("hidden");
-        details.classList.toggle("hidden");
-
-        btn.textContent = isHidden ? "Hide details" : "View details";
-      });
-    });
   }
 
   /* =========================================================
@@ -1210,9 +1361,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       { total: 0, live: 0, dead: 0, cycles: 0 }
     );
 
-    const cycleOptions = cycles
-      .map((c) => `<option value="${c.cycle_number}">Cycle ${c.cycle_number}</option>`)
-      .join("");
+    const cycleOptions = `
+      <option value="all" selected>All Cycles</option>
+      ${cycles
+        .sort((a, b) => (b.cycle_number || 0) - (a.cycle_number || 0))
+        .map(c => `
+          <option value="${c.cycle_number}">
+            Cycle ${c.cycle_number}
+          </option>
+        `)
+        .join("")}
+    `;
 
     return `
       <div class="offspring-section">
@@ -1243,38 +1402,79 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </div>
 
+        <!-- CHART CARD -->
         <div class="chart-card offspring-chart-card">
-          <div class="chart-header">
-            <h4 class="mb-0">Piglets per Cycle</h4>
-            <small class="d-block">Alive vs Dead comparison</small>
+
+          <div class="chart-card-head">
+            <div>
+              <h4 class="mb-1">Piglets per Cycle</h4>
+              <small>Alive vs Dead comparison</small>
+            </div>
           </div>
-          <canvas id="offspringCycleChart"></canvas>
+
+          <!-- FILTER -->
+          <div class="growth-filter-card chart-filter-spacing">
+            <div class="growth-filter-left">
+              <div class="growth-filter-label">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>Filter Cycle</span>
+              </div>
+
+              <div class="growth-select-box">
+                <select id="cycleFilter"></select>
+                <i class="bi bi-chevron-down select-arrow"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHART -->
+          <div class="offspring-chart-wrap">
+            <div class="offspring-chart-inner">
+              <canvas id="offspringCycleChart"></canvas>
+            </div>
+          </div>
         </div>
 
-        <div class="cycle-filter-card">
-          <div class="cycle-filter-label">
-            <i class="bi bi-funnel"></i>
-            <span>Select Cycle</span>
+        <!-- WRAPPED CYCLE SECTION -->
+        <div class="summary-card-light cycle-section-card">
+
+          <!-- TITLE -->
+          <div class="cycle-section-head">
+            <div>
+              <h4 class="mb-1">Cycle Records</h4>
+              <small>View and filter breeding cycles</small>
+            </div>
           </div>
 
-          <div class="cycle-filter-row">
-            <div class="cycle-select-box">
-              <i class="bi bi-repeat"></i>
-              <select id="cycleSelect">
-                ${cycleOptions}
-              </select>
-              <i class="bi bi-chevron-down cycle-select-arrow"></i>
+          <!-- FILTER -->
+          <div class="cycle-filter-card">
+            <div class="cycle-filter-label">
+              <i class="bi bi-funnel"></i>
+              <span>Filter Cycle</span>
             </div>
 
-            <button class="cycle-latest-btn" id="jumpLatestCycleBtn" type="button">
-              <i class="bi bi-arrow-clockwise"></i>
-              <span>Latest</span>
-            </button>
+            <div class="cycle-filter-row">
+              <div class="cycle-select-box">
+                <i class="bi bi-repeat"></i>
+                <select id="cycleSelect">
+                  ${cycleOptions}
+                </select>
+                <i class="bi bi-chevron-down cycle-select-arrow"></i>
+              </div>
+
+              <button class="cycle-latest-btn" id="jumpLatestCycleBtn" type="button">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Latest</span>
+              </button>
+            </div>
           </div>
+
+          <!-- CYCLE CARDS -->
+          <div id="cycleCardsArea" class="cycle-cards-area"></div>
+
         </div>
 
-        <div id="cycleCardsArea" class="cycle-cards-area"></div>
-
+        <!-- HINT -->
         <div class="offspring-hint">
           <i class="bi bi-info-circle"></i>
           <span>Tip: Click a cycle card to view mother, father, and piglet list.</span>
@@ -1565,10 +1765,56 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    renderSelectedCycle(latestCycleNum);
+    function renderAllCycles() {
+      if (!cycleCardsArea) return;
+
+      cycleCardsArea.innerHTML = cycles.map((c) => {
+        const dateLabel = c.actual_farrowing_date
+          ? new Date(c.actual_farrowing_date).toLocaleDateString()
+          : "Date not recorded";
+
+        return `
+          <div class="cycle-card modern-cycle-card">
+            <div class="cycle-card-top">
+              <div class="min-w-0">
+                <strong>Cycle ${c.cycle_number}</strong>
+                <small class="d-block text-truncate">${dateLabel}</small>
+              </div>
+
+              <div class="cycle-badges">
+                <span class="mini-badge total"><i class="bi bi-collection"></i> ${c.total}</span>
+                <span class="mini-badge live"><i class="bi bi-heart-pulse"></i> ${c.live}</span>
+                <span class="mini-badge dead"><i class="bi bi-x-circle"></i> ${c.dead}</span>
+              </div>
+            </div>
+
+            <div class="cycle-card-bottom">
+              <div class="cycle-mini">
+                <small>Mother</small>
+                <div class="mono">${c.mother_id || "-"}</div>
+              </div>
+              <div class="cycle-mini">
+                <small>Father</small>
+                <div class="mono">—</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    if (cycleSelect) cycleSelect.value = "all";
+    renderAllCycles();
 
     cycleSelect?.addEventListener("change", (e) => {
-      renderSelectedCycle(toNum(e.target.value));
+      const value = e.target.value;
+
+      if (value === "all") {
+        renderAllCycles();
+        return;
+      }
+
+      renderSelectedCycle(toNum(value));
     });
 
     jumpLatestBtn?.addEventListener("click", () => {
@@ -1577,6 +1823,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderSelectedCycle(latestCycleNum);
     });
   }
+
+  
 
   /* =========================================================
      MODULE: RENDER SWINE LIST

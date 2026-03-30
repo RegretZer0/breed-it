@@ -682,6 +682,12 @@ body {
   animation: fadeIn 0.25s ease;
 }
 
+/* Subtle vertical scroll (modal) */
+.modal-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
 .modal-panel::-webkit-scrollbar {
   width: 6px;
 }
@@ -692,7 +698,11 @@ body {
 
 .modal-panel::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
+  border-radius: 999px;
+}
+
+.modal-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
@@ -1068,7 +1078,7 @@ body {
   border: 1px solid var(--border);
   margin-bottom: 18px;
   position: relative;
-  height: 300px;
+  height: auto;
 }
 
 .chart-card canvas {
@@ -1231,12 +1241,6 @@ body {
   color: #64748b;
 }
 
-@media (max-width: 767.98px) {
-  .chart-card {
-    height: 230px;
-  }
-}
-
 /* =========================================================
    MODULE: OFFSPRING
 ========================================================= */
@@ -1306,7 +1310,26 @@ body {
 }
 
 .offspring-chart-card {
-  height: 260px;
+  padding-bottom: 16px;
+}
+
+/* SAME SYSTEM AS GROWTH */
+.offspring-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.offspring-chart-inner {
+  position: relative;
+  width: 100%;
+  height: 360px; 
+}
+
+@media (max-width: 768px) {
+  .offspring-chart-inner {
+    width: 480px;
+    height: 300px;
+  }
 }
 
 .offspring-hint {
@@ -2490,4 +2513,135 @@ body {
     width: 100%;
     min-width: 0;
   }
+}
+
+/* Monthly Collapse */
+.month-body {
+  margin-top: 12px;
+  transition: all 0.25s ease;
+}
+
+.month-body.collapsed {
+  display: none;
+}
+
+.month-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--app-green);
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.month-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+@media (max-width: 576px) {
+  .month-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .month-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .month-toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Monthly Record Card */
+.month-record {
+  background: var(--soft);
+  border: 1px solid rgba(31, 167, 116, 0.08);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+
+/* Date emphasis */
+.record-date {
+  font-weight: 800;
+  color: var(--app-green);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+/* Grid layout */
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.record-grid small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.record-grid strong {
+  display: block;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.chart-canvas-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chart-inner {
+  position: relative;
+  width: 100%;
+  height: 260px;
+}
+
+@media (max-width: 768px) {
+  .chart-inner {
+    width: 480px;
+    height: 260px;
+  }
+}
+
+/* Subtle horizontal scroll (chart) */
+.chart-canvas-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+
+.chart-canvas-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.chart-canvas-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chart-canvas-wrap::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+  transition: 0.2s ease;
+}
+
+.chart-canvas-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.offspring-chart-card {
+  margin-bottom: 18px;
+}
+
+.cycle-section-card {
+  margin-top: 8px;
+}
+
+.cycle-section-head {
+  margin-bottom: 12px;
 }
