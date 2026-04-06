@@ -6,6 +6,89 @@ import { createReproductionStore } from "./reproduction.data.js";
 import { createReproViews } from "./reproduction.views.js";
 import { submitSelectionAction } from "./reproduction.actions.js";
 
+  /* =========================================================
+   MODULE: Sell Reason Modal
+  ========================================================= */
+  function ensureSellReasonModal() {
+    let modalEl = document.getElementById("reproSellReasonModal");
+
+    if (!modalEl) {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div class="modal fade" id="reproSellReasonModal" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+              <div class="modal-header">
+                <h5 class="modal-title">Sell Piglet</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+
+              <div class="modal-body">
+                <label class="form-label small">Reason for selling</label>
+                <textarea id="sellReasonInput" class="form-control" rows="3"
+                  placeholder="Enter reason..."></textarea>
+              </div>
+
+              <div class="modal-footer">
+                <button class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-danger btn-sm" id="confirmSellBtn">Confirm Sell</button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+        `
+      );
+
+      modalEl = document.getElementById("reproSellReasonModal");
+    }
+
+    return modalEl;
+  }
+
+  /* =========================================================
+    MODULE: Sell Action Handler with Reason
+  ========================================================= */
+  function handleSellWithReason(pigletId) {
+    const modalEl = ensureSellReasonModal();
+    const input = document.getElementById("sellReasonInput");
+    const confirmBtn = document.getElementById("confirmSellBtn");
+
+    if (input) input.value = "";
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+
+    confirmBtn.onclick = async () => {
+      const reason = (input?.value || "").trim();
+
+      if (!reason) {
+        alert("Please provide a reason.");
+        return;
+      }
+
+      const res = await submitSelectionAction({
+        token,              // now taken from closure
+        baseUrl: BASE_URL,  // now taken from closure
+        swineId: pigletId,
+        action: "sell",
+        reason
+      });
+
+      modal.hide();
+
+      showReproModal({
+        title: res?.success ? "Piglet Marked for Sale" : "Action Failed",
+        message: res?.message || "Sell action completed.",
+        type: res?.success ? "success" : "danger",
+      });
+    };
+  }
+
+  window.handleSellWithReason = handleSellWithReason;
+
 document.addEventListener("DOMContentLoaded", async () => {
   console.time("Reproduction_Load_Time");
 

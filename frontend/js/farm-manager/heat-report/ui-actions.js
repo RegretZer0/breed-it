@@ -85,6 +85,18 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const progressPanel = document.getElementById("trackProgressPanel");
 
   /* =========================
+   DOM (RE-HEAT MODAL)
+  ========================= */
+  const reheatBtn = document.getElementById("reheatBtn");
+  const reheatModal = document.getElementById("reheatModal");
+  const closeReheatModal = document.getElementById("closeReheatModal");
+
+  const reheatList = document.getElementById("reheatList");
+  const reheatPrevBtn = document.getElementById("reheatPrevBtn");
+  const reheatNextBtn = document.getElementById("reheatNextBtn");
+  const reheatPageIndicator = document.getElementById("reheatPageIndicator");
+
+  /* =========================
      DOM (ARCHIVE MODAL)
   ========================= */
   const archiveBtn = document.getElementById("archiveBtn");
@@ -154,6 +166,13 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
   let archivedAll = [];
   let archivedFiltered = [];
+
+  /* =========================
+   STATE (RE-HEAT MONITOR)
+  ========================= */
+  let reheatPage = 1;
+  const REHEAT_ROWS_PER_PAGE = 5;
+  let reheatData = [];
 
   /* =========================
      URL HELPERS MODULE
@@ -396,6 +415,39 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     modalEl.style.display = "none";
     unlockScrollIfNoOverlayOpen();
   }
+
+  /* =========================
+   FUNCTION: openReheatModal
+  ========================= */
+  function openReheatModal() {
+    if (!reheatModal) return;
+
+    reheatPage = 1;
+    renderReheatList();
+
+    reheatModal.style.display = "flex";
+    lockScroll();
+  }
+
+  /* =========================
+   FUNCTION: closeReheatModalFn
+  ========================= */
+  function closeReheatModalFn() {
+    if (!reheatModal) return;
+
+    reheatModal.style.display = "none";
+    unlockScrollIfNoOverlayOpen();
+  }
+
+  /* =========================
+   EVENT: Reheat Modal Bindings
+  ========================= */
+  reheatBtn?.addEventListener("click", openReheatModal);
+  closeReheatModal?.addEventListener("click", closeReheatModalFn);
+
+  reheatModal?.addEventListener("click", (e) => {
+    if (e.target === reheatModal) closeReheatModalFn();
+  });
 
   //Overlay Helper
   function isOverlayOpen(el) {
@@ -1033,6 +1085,24 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   });
 
   /* =========================
+   EVENT: Reheat Pagination
+  ========================= */
+  reheatPrevBtn?.addEventListener("click", () => {
+    if (reheatPage > 1) {
+      reheatPage--;
+      renderReheatList();
+    }
+  });
+
+  reheatNextBtn?.addEventListener("click", () => {
+    const totalPages = Math.ceil(reheatData.length / REHEAT_ROWS_PER_PAGE);
+    if (reheatPage < totalPages) {
+      reheatPage++;
+      renderReheatList();
+    }
+  });
+
+  /* =========================
      FETCH REPORTS MODULE
   ========================= */
   async function loadReports() {
@@ -1378,6 +1448,57 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     archiveCardList.querySelectorAll(".btn-track").forEach((btn) => {
       btn.onclick = () => closeArchiveAndThen(() => openProgressPanel(btn.dataset.id));
     });
+  }
+
+  /* =========================
+   FUNCTION: renderReheatList
+  ========================= */
+  function renderReheatList() {
+    if (!reheatList) return;
+
+    reheatList.innerHTML = "";
+
+    const totalPages = Math.ceil(reheatData.length / REHEAT_ROWS_PER_PAGE);
+    if (reheatPage > totalPages) reheatPage = totalPages || 1;
+
+    const start = (reheatPage - 1) * REHEAT_ROWS_PER_PAGE;
+    const pageItems = reheatData.slice(start, start + REHEAT_ROWS_PER_PAGE);
+
+    if (!pageItems.length) {
+      reheatList.innerHTML = `<div class="text-muted">No re-heat records.</div>`;
+    } else {
+      pageItems.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "report-card";
+
+        card.innerHTML = `
+          <div class="report-card-header">
+            <div class="report-head-left">
+              <div class="report-mini-icon"><i class="bi bi-arrow-repeat"></i></div>
+
+              <div class="report-head-text">
+                <strong class="swine-id">${item.tag || "-"}</strong>
+
+                <div class="report-meta">
+                  <span>Farmer: ${item.farmer || "Unknown"}</span>
+                </div>
+              </div>
+            </div>
+
+            <span class="status-badge pending">re-heat</span>
+          </div>
+        `;
+
+        reheatList.appendChild(card);
+      });
+    }
+
+    if (reheatPageIndicator) {
+      reheatPageIndicator.textContent = `Page ${reheatPage} of ${totalPages || 1}`;
+    }
+
+    if (reheatPrevBtn) reheatPrevBtn.disabled = reheatPage === 1;
+    if (reheatNextBtn) reheatNextBtn.disabled = reheatPage === totalPages || totalPages === 0;
   }
 
   function escHtml(value) {
@@ -2026,6 +2147,21 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
     }
   }
+
+  /* =========================
+    TEMP: Reheat Test Data
+  ========================= */
+  reheatData = allReports
+    .filter(r => {
+      const status = safeLower(getReportStatus(r));
+      return status === "waiting_heat_check"; // sample logic
+    })
+    .map(r => ({
+      tag: r.swine_id?.swine_id,
+      farmer: r.farmer_id
+        ? `${r.farmer_id.first_name} ${r.farmer_id.last_name}`
+        : "Unknown"
+    }));
 
   /* =========================
      ACTION HANDLER MODULE

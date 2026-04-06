@@ -352,6 +352,16 @@ export function createReproViews({ repo, state, ui }) {
     };
   }
 
+  /* =========================================================
+   MODULE: Filter Helper — Exclude Deceased Piglets
+  ========================================================= */
+  function excludeDeceasedPiglets(piglets) {
+    return (piglets || []).filter((p) => {
+      const meta = getMonitoringMeta(p);
+      return !meta.isDeceased;
+    });
+  }
+
   function monitoringPhaseVariant(phaseText) {
     const s = String(phaseText || "").toLowerCase().trim();
 
@@ -652,13 +662,16 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   /* =========================================================
-     MODULE: Monthly Updates Panel
-     PURPOSE: Render a dedicated sow-level monthly monitoring panel.
+   MODULE: Monthly Updates Panel
+   PURPOSE: Render a dedicated sow-level monthly monitoring panel.
   ========================================================= */
   function renderSowMonthlyUpdatesPanel(sowId, mountEl) {
     if (!mountEl) return;
 
-    const piglets = repo.getPigletsForSow(sowId) || [];
+    let piglets = repo.getPigletsForSow(sowId) || [];
+
+    /* APPLY FILTER HERE — EXCLUDE DECEASED */
+    piglets = excludeDeceasedPiglets(piglets);
 
     if (!piglets.length) {
       mountEl.innerHTML = `
@@ -723,6 +736,7 @@ export function createReproViews({ repo, state, ui }) {
         </div>
       </div>
     `;
+    
     setTimeout(() => {
       bindDeformitiesInput();
     }, 0);
@@ -3372,7 +3386,7 @@ export function createReproViews({ repo, state, ui }) {
                   type="button"
                   class="btn btn-outline-danger btn-sm"
                   ${!canAct ? "disabled" : ""}
-                  onclick="processPigletAction('${esc(actionSwineId)}','sell')"
+                  onclick="handleSellWithReason('${esc(actionSwineId)}')"
                 >
                   <i class="bi bi-tag-fill me-1"></i> Sell
                 </button>
@@ -3515,8 +3529,8 @@ export function createReproViews({ repo, state, ui }) {
   }
 
   /* =========================================================
-     MODULE: Cycle Panel (Tabs Container)
-     PURPOSE: Render the cycle details container with tabs.
+   MODULE: Cycle Panel (Tabs Container)
+   PURPOSE: Render the cycle details container with tabs.
   ========================================================= */
   function renderCyclePanel(sowId, cycleId, keepTabTarget = null) {
     const mount = document.getElementById("cyclePanelMount");
@@ -3529,7 +3543,11 @@ export function createReproViews({ repo, state, ui }) {
       return;
     }
 
-    const piglets = repo.getPigletsForSow(sowId);
+    let piglets = repo.getPigletsForSow(sowId) || [];
+
+    /* APPLY FILTER HERE — EXCLUDE DECEASED */
+    piglets = excludeDeceasedPiglets(piglets);
+
     const target = keepTabTarget || getCurrentActiveCycleTabTarget();
     setCycleTabTarget(target);
 
