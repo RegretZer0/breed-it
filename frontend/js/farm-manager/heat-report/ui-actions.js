@@ -175,6 +175,66 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const REHEAT_ROWS_PER_PAGE = 5;
   let reheatData = [];
 
+
+  /* =========================
+   FETCH REHEAT DATA
+  ========================= */
+  async function loadReheatData() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat/reheat-monitor`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        reheatData = result.data || [];
+      } else {
+        reheatData = [];
+      }
+
+      // UPDATE BUTTON COUNT
+      updateReheatCount();
+
+    } catch (err) {
+      console.error("Failed to load reheat data:", err);
+      reheatData = [];
+    }
+  }
+
+  /* =========================
+   UPDATE REHEAT COUNT BADGE
+  ========================= */
+  function updateReheatCount() {
+    if (!reheatBtn) return;
+
+    const count = reheatData.length;
+
+    // TEXT
+    reheatBtn.innerHTML = `
+      <i class="bi bi-arrow-repeat me-1"></i>
+      Re-Heat Monitor${count ? ` <span class="ms-1">(${count})</span>` : ""}
+    `;
+
+    // STYLE SWITCH
+    if (count > 0) {
+      // FULL COLOR (ACTIVE STATE)
+      reheatBtn.classList.remove("btn-outline-success");
+      reheatBtn.classList.add("btn-success");
+
+      // Optional: stronger emphasis
+      reheatBtn.style.boxShadow = "0 4px 12px rgba(25, 135, 84, 0.4)";
+    } else {
+      // BACK TO NORMAL
+      reheatBtn.classList.remove("btn-success");
+      reheatBtn.classList.add("btn-outline-success");
+
+      reheatBtn.style.boxShadow = "none";
+    }
+  }
+
   /* =========================
      URL HELPERS MODULE
   ========================= */
@@ -442,10 +502,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   /* =========================
    FUNCTION: openReheatModal
   ========================= */
-  function openReheatModal() {
+  async function openReheatModal() {
     if (!reheatModal) return;
 
     reheatPage = 1;
+
+    // FETCH DATA FIRST
+    await loadReheatData();
+
+    // THEN RENDER
     renderReheatList();
 
     reheatModal.style.display = "flex";
@@ -1161,6 +1226,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       currentPage = 1;
       renderCards(filteredReports);
       await autoOpenReportFromUrl();
+      await loadReheatData();
 
       if (archiveModal && archiveModal.style.display === "flex") {
         applyArchiveFilters();
@@ -1494,16 +1560,23 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         const card = document.createElement("div");
         card.className = "report-card";
 
+        // DATA MAPPING
+        const swineCode = item.swine_id?.swine_id || "-";
+
+        const farmerName = item.farmer_id
+          ? `${item.farmer_id.first_name || ""} ${item.farmer_id.last_name || ""}`.trim()
+          : "Unknown";
+
         card.innerHTML = `
           <div class="report-card-header">
             <div class="report-head-left">
               <div class="report-mini-icon"><i class="bi bi-arrow-repeat"></i></div>
 
               <div class="report-head-text">
-                <strong class="swine-id">${item.tag || "-"}</strong>
+                <strong class="swine-id">${swineCode}</strong>
 
                 <div class="report-meta">
-                  <span>Farmer: ${item.farmer || "Unknown"}</span>
+                  <span>Farmer: ${farmerName}</span>
                 </div>
               </div>
             </div>

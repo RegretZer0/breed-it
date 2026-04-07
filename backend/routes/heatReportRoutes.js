@@ -477,6 +477,44 @@ router.get("/farmer", requireApiLogin, allowRoles("farmer", "farm_manager", "enc
 });
 
 /* ======================================================
+   GET RE-HEAT MONITOR DATA
+====================================================== */
+router.get(
+  "/reheat-monitor",
+  requireApiLogin,
+  allowRoles("farm_manager", "encoder"),
+  async (req, res) => {
+    try {
+      const managerId =
+        req.user.role === "farm_manager"
+          ? req.user.id
+          : req.user.managerId;
+
+      // Logic: find reports that are STILL IN HEAT / NEED RECHECK
+      const reports = await HeatReport.find({
+        manager_id: managerId,
+        status: { $in: ["approved", "pending"] } // adjust if needed
+      })
+        .populate("swine_id", "swine_id breed current_status")
+        .populate("farmer_id", "first_name last_name")
+        .sort({ createdAt: -1 })
+        .lean();
+
+      res.json({
+        success: true,
+        data: reports
+      });
+    } catch (err) {
+      console.error("Reheat fetch error:", err);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch reheat data"
+      });
+    }
+  }
+);
+
+/* ======================================================
     APPROVE HEAT REPORT (Updated with Fixed AI Schedule)
 ====================================================== */
 router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
