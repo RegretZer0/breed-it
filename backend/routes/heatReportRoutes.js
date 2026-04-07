@@ -560,6 +560,99 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
   }
 });
 
+/**
+ * GET /api/heat-reports/
+ * Fetches all active heat reports and calculates real-time statuses like 'Overheat'
+ */
+router.get("/", requireApiLogin, async (req, res) => {
+  try {
+    const virtualNow = await timeHelper.getNow();
+    const managerId = req.user.managerId || req.user.id;
+
+    // Fetch reports belonging to this manager/farm
+    const reports = await HeatReport.find({ manager_id: managerId })
+      .populate("swine_id")
+      .populate("farmer_id")
+      .sort({ createdAt: -1 }) // Newest first
+      .lean();
+
+    // Map through reports to add dynamic "Overheat" flagging
+    const formatted = reports.map(r => {
+      const reportDate = new Date(r.createdAt);
+      const hoursInHeat = Math.floor((virtualNow - reportDate) / (1000 * 60 * 60));
+      
+      return {
+        ...r,
+        // If 'in-heat' for > 72 hours, flag as overheat
+        is_overheat: r.status === "in-heat" && hoursInHeat > 72,
+        hours_active: hoursInHeat
+      };
+    });
+
+    res.json({ 
+      success: true, 
+      count: formatted.length, 
+      data: formatted 
+    });
+  } catch (err) {
+    console.error("Error fetching heat reports:", err);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+});
+
+/* ======================================================
+    MONITORING LOGIC (Combined Overdue & Overheat)
+====================================================== */
+
+router.get("/monitoring-stats", requireApiLogin, async (req, res) => {
+  try {
+    const virtualNow = await timeHelper.getNow();
+    const managerId = req.user.managerId || req.user.id;
+
+    // --- 1. LOGIC FOR OVERDUE HEAT (21+ Days) ---
+    const potentialSows = await Swine.find({
+      manager_id: managerId,
+      sex: "Female",
+      current_status: { $in: ["Open", "Monitoring (Day 1-30)", "Under Observation"] }
+    }).lean();
+
+    const overdueSows = potentialSows.filter(sow => {
+      const referenceDate = sow.status_date || sow.updatedAt || sow.createdAt;
+      const daysSince = Math.floor((virtualNow - new Date(referenceDate)) / (1000 * 60 * 60 * 24));
+      return daysSince > 21; 
+    });
+
+    // --- 2. LOGIC FOR OVERHEAT (3+ Days / 72 Hours) ---
+    const activeHeatReports = await HeatReport.find({
+      status: "in-heat"
+    }).populate("swine_id").lean();
+
+    const overheatReports = activeHeatReports.filter(report => {
+      const reportDate = new Date(report.createdAt);
+      const hoursInHeat = Math.floor((virtualNow - reportDate) / (1000 * 60 * 60));
+      return hoursInHeat > 72;
+    });
+
+    res.json({
+      success: true,
+      overdueCount: overdueSows.length,
+      overheatCount: overheatReports.length,
+      overdueData: overdueSows.map(s => ({
+        id: s._id,
+        swine_tag: s.swine_id,
+        days_overdue: Math.floor((virtualNow - new Date(s.status_date || s.updatedAt)) / (1000 * 60 * 60 * 24)) - 21
+      })),
+      overheatData: overheatReports.map(r => ({
+        reportId: r._id,
+        swine_tag: r.swine_id?.swine_id,
+        hoursActive: Math.floor((virtualNow - new Date(r.createdAt)) / (1000 * 60 * 60))
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 /* ======================================================
     CONFIRM AI (With Time Warp & Updated Double-Entry Protection)
 ====================================================== */

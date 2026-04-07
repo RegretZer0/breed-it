@@ -8,6 +8,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const countPregnant = document.getElementById("countPregnant");
   const countFarrowingReady = document.getElementById("countFarrowingReady");
   const countLactating = document.getElementById("countLactating");
+  const countOverdueHeat = document.getElementById("countOverdueHeat");
 
   const reportDetailsModal = document.getElementById("reportDetailsModal");
   const closeReportModal = document.getElementById("closeReportModal");
@@ -230,6 +231,28 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       r?.farrowing_due_date ||
       null
     );
+  }
+  
+  /* ======================================================
+     NEW: FETCH OVERDUE DATA (Place it here)
+  ====================================================== */
+  async function updateOverdueCount() {
+    if (!countOverdueHeat) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/heat-reports/overdue-heat`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const result = await res.json();
+      if (result.success) {
+        countOverdueHeat.textContent = result.count;
+        if (result.count > 0) {
+          countOverdueHeat.parentElement.classList.add("bg-light-danger");
+          countOverdueHeat.classList.add("text-danger", "fw-bold");
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching overdue heat count:", err);
+    }
   }
 
   /* =========================
