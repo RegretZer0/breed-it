@@ -38,6 +38,9 @@ const swineSchema = new mongoose.Schema({
     default: "Monitoring (Day 1-30)" 
   },
 
+  status_reason: { type: String, default: null },
+  status_date: { type: Date, default: null },
+
   age_stage: { 
     type: String, 
     enum: [

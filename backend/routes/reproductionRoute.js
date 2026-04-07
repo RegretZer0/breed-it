@@ -79,6 +79,59 @@ function setEnumSafeCurrentStatus(swineDoc, candidates, fuzzyKeywords) {
 }
 
 /* =========================================================
+    NEW: SUBMIT SELECTION ACTION (Used by your UI Modal)
+========================================================= */
+router.post("/submit-selection-action", requireSessionAndToken, async (req, res) => {
+  try {
+    const { swineId, action, reason } = req.body;
+
+    if (!swineId || !action) {
+      return res.status(400).json({ success: false, message: "Swine ID and Action are required." });
+    }
+
+    const swine = await Swine.findById(swineId);
+    if (!swine) {
+      return res.status(404).json({ success: false, message: "Swine not found." });
+    }
+
+    const virtualNow = await timeHelper.getVirtualNow();
+
+    if (action === "sell" || action === "cull") {
+      if (!reason) {
+        return res.status(400).json({ success: false, message: "A reason is required." });
+      }
+
+      // Use your existing Enum value from Swine.js
+      swine.current_status = "Culled/Sold";
+      swine.status_reason = reason; // New field we added to Swine.js
+      swine.status_date = virtualNow;
+      
+      await swine.save();
+
+      // Send Notification
+      await Notification.create({
+        user_id: swine.farmer_id || swine.registered_by,
+        title: "Swine Marked for Sale/Culling ⚠️",
+        message: `Swine ${swine.swine_id} is now ${swine.current_status}. Reason: ${reason}`,
+        type: "error", // Matches Notification.js enum
+        status: "active",
+        scheduled_for: virtualNow,
+        createdAt: virtualNow
+      });
+
+      return res.json({ success: true, message: `Swine marked as ${swine.current_status}.` });
+    }
+
+    return res.status(400).json({ success: false, message: "Invalid selection action." });
+
+  } catch (err) {
+    console.error("Selection Action Error:", err);
+    if (res.headersSent) return;
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/* =========================================================
     Optional debug endpoint to see allowed enum values
 ========================================================= */
 router.get("/debug/status-enum", requireSessionAndToken, async (req, res) => {
@@ -416,7 +469,7 @@ router.get("/piglet-monitoring", requireSessionAndToken, async (req, res) => {
 // ---------------------------------------------------------
 router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
   try {
-    const { swineId, action } = req.body; 
+    const { swineId, action, reason } = req.body; 
     const swine = await Swine.findById(swineId).populate("farmer_id");
 
     if (!swine) return res.status(404).json({ success: false, message: "Swine not found" });
@@ -448,14 +501,14 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
 
       await swine.save();
 
-      // NOTIFICATION: Final Selection (Explicitly set to active status)
+      // NOTIFICATION: Final Selection
       await Notification.create({
         user_id: swine.farmer_id.user_id || swine.farmer_id,
         title: "Final Selection Reached 🏆",
         message: `Piglet ${swine.swine_id} has passed monitoring and is now graduated to Adult Breeder status.`,
         type: "success",
-        status: "active",           // Required: Bypasses the default "scheduled" status
-        scheduled_for: virtualNow,  // Required for proper indexing/sorting
+        status: "active",
+        scheduled_for: virtualNow,
         createdAt: virtualNow
       });
 
@@ -477,10 +530,9 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
       return res.status(400).json({ success: false, message: "No enum-safe status found for Sale." });
     }
 
-    // Check for deformities to customize message
-    const latestPerf = swine.performance_records?.[swine.performance_records.length - 1] || {};
-    const deformitiesList = latestPerf.deformities || [];
-    const hasDeformity = deformitiesList.some(d => d && d !== "None" && d !== "");
+    // Update with reason if provided
+    swine.status_reason = reason || "Sold/Culled from monitoring";
+    swine.status_date = virtualNow;
 
     await swine.save();
 
@@ -488,12 +540,10 @@ router.post("/piglet-action", requireSessionAndToken, async (req, res) => {
     await Notification.create({
       user_id: swine.farmer_id.user_id || swine.farmer_id,
       title: "Swine Culled/Sold ⚠️",
-      message: hasDeformity 
-        ? `Sow ${swine.swine_id} is culled due to detected deformity (${deformitiesList.join(", ")}).`
-        : `Swine ${swine.swine_id} has been marked for Sale/Culling.`,
-      type: "error",               // "danger" changed to "error" to match Notification.js enum
-      status: "active",            // Required: Bypasses the default "scheduled" status
-      scheduled_for: virtualNow,   // Required for proper indexing/sorting
+      message: `Swine ${swine.swine_id} has been marked for Sale/Culling. Reason: ${swine.status_reason}`,
+      type: "error", // "danger" changed to "error" to match Notification.js enum
+      status: "active",
+      scheduled_for: virtualNow,
       createdAt: virtualNow
     });
 
@@ -580,21 +630,21 @@ router.put("/process-selection", requireSessionAndToken, async (req, res) => {
       ? swine.current_status === "1st Selection Ongoing"
         ? "2nd Selection Ongoing"
         : "Active Breeder"
-      : "Marked for Sale";
+      : "Culled/Sold";
 
     swine.current_status = newStatus;
     if (newStatus === "Active Breeder") swine.age_stage = "adult";
     
     await swine.save();
 
-    // NOTIFICATION: Selection Milestone Update (Aligned with Model)
+    // NOTIFICATION: Selection Milestone Update
     await Notification.create({
       user_id: swine.farmer_id.user_id || swine.farmer_id,
       title: "Selection Status Updated",
       message: `Swine ${swine.swine_id} has been moved to: ${newStatus}.`,
       type: isApproved ? "success" : "warning",
-      status: "active",           // Required: Bypasses the default "scheduled" status
-      scheduled_for: virtualNow,  // Required for proper indexing/sorting
+      status: "active",
+      scheduled_for: virtualNow,
       createdAt: virtualNow 
     });
 
