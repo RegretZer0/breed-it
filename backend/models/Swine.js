@@ -68,13 +68,16 @@ const swineSchema = new mongoose.Schema({
     report_id: { type: mongoose.Schema.Types.ObjectId, ref: "HeatReport" }
   },
 
+  reheat_count: { type: Number, default: 0 },
+
   // ------------------- Reproductive Cycles (For Females) -------------------
   breeding_cycles: [{
     cycle_number: { type: Number },
     heat_report_id: { type: mongoose.Schema.Types.ObjectId, ref: "HeatReport" },
     ai_record_id: { type: mongoose.Schema.Types.ObjectId, ref: "AIRecord" },
     
-    estrus_date: { type: Date },           
+    estrus_date: { type: Date },
+    cycle_reheat_count: { type: Number, default: 0 },           
     ai_service_date: { type: Date },       
     
     observed_signs: [String],
@@ -246,6 +249,14 @@ swineSchema.virtual('selection_suggestion').get(function() {
     return "Cull or Sell for Market";
   }
   return "Monitoring";
+});
+
+// Calculates total reheats across all past cycles + current count
+swineSchema.virtual('total_reheats_all_time').get(function() {
+  const pastCyclesCount = (this.breeding_cycles || []).reduce((acc, cycle) => {
+    return acc + (cycle.cycle_reheat_count || 0);
+  }, 0);
+  return pastCyclesCount + (this.reheat_count || 0);
 });
 
 // Pre-save hook

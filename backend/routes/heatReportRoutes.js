@@ -190,13 +190,13 @@ function ensureSubmittedHistory(report, actor = null) {
 }
 
 /* ======================================================
-    ADD NEW HEAT REPORT (With Culling & Supabase Cloud Storage)
+    ADD NEW HEAT REPORT (With Culling, Supabase & Reheat Check)
 ====================================================== */
 router.post(
   "/add",
   requireApiLogin,
   allowRoles("farm_manager", "encoder", "farmer"),
-  upload.array("evidence", 5), // 'upload' must now be using multer.memoryStorage()
+  upload.array("evidence", 5),
   async (req, res) => {
     try {
       const { swineId, signs, remarks } = req.body;
@@ -238,15 +238,26 @@ router.post(
         return res.status(404).json({ success: false, message: "Swine not found" });
       }
 
+      // NEW: REHEAT COUNTER CHECK
+      // If the swine has already failed multiple times, we notify the manager
+      // so they can decide whether to proceed or consider culling.
+      if (swine.reheat_count >= 3) {
+        await notifyBreedingTeam(
+          farmer.managerId,
+          null,
+          "⚠️ Repeat Breeder Alert",
+          `Swine ${swine.swine_id} has reached ${swine.reheat_count} reheat cycles. Management review suggested.`
+        );
+      }
+
       // --- SUPABASE CLOUD UPLOAD START ---
       const evidenceData = [];
       for (const file of files) {
-        // Create a unique path: evidence/SWINE_ID/TIMESTAMP-FILENAME
         const fileName = `${Date.now()}-${file.originalname}`;
         const filePath = `evidence/${swineId}/${fileName}`;
 
         const { data, error } = await supabase.storage
-          .from('heat-report-evidence') // The bucket you created
+          .from('heat-report-evidence')
           .upload(filePath, file.buffer, {
             contentType: file.mimetype,
             upsert: false
@@ -257,7 +268,6 @@ router.post(
           throw new Error("Failed to upload images to cloud storage.");
         }
         
-        // Store the path in the array to be saved in MongoDB
         evidenceData.push(data.path);
       }
       // --- SUPABASE CLOUD UPLOAD END ---
@@ -308,7 +318,7 @@ router.post(
         signs: parsedSigns,
         standing_reflex: parsedSigns.includes("Standing Reflex"),
         back_pressure_test: parsedSigns.includes("Back Pressure Test"),
-        evidence_url: evidenceData, // Stores Supabase paths
+        evidence_url: evidenceData,
         heat_probability: computedProbability,
         remarks: cleanRemarks,
         status: "pending",
@@ -326,7 +336,8 @@ router.post(
             meta: {
               swine_code: swine.swine_id,
               signs: parsedSigns,
-              heat_probability: computedProbability
+              heat_probability: computedProbability,
+              reheat_cycle: swine.reheat_count // Log the cycle number in history
             }
           }
         ]
@@ -339,7 +350,7 @@ router.post(
         req.user.id,
         "ADD_HEAT_REPORT",
         "BREEDING",
-        `Farmer ${farmer.first_name} submitted a heat report for Swine ${swineId}.`,
+        `Farmer ${farmer.first_name} submitted a heat report for Swine ${swineId}. Cycle: ${swine.reheat_count}`,
         req
       );
 
@@ -515,7 +526,7 @@ router.get(
 );
 
 /* ======================================================
-    APPROVE HEAT REPORT (Updated with Fixed AI Schedule)
+    APPROVE HEAT REPORT (Updated with Reheat Counter)
 ====================================================== */
 router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (req, res) => {
   try {
@@ -564,15 +575,18 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     const hasBasis = swine.first_success_basis && swine.first_success_basis.signs.length > 0;
     const matchesBasis = hasBasis ? report.signs.every((sign) => swine.first_success_basis.signs.includes(sign)) : false;
 
+    // ✅ UPDATED: Added $inc for reheat_count and cycle_reheat_count
     await Swine.findByIdAndUpdate(report.swine_id, {
       current_status: "In-Heat",
+      $inc: { reheat_count: 1 }, // Increments the lifetime/current reheat counter
       $push: {
         breeding_cycles: {
           cycle_number: nextCycleNumber,
           heat_report_id: report._id,
           estrus_date: report.approved_at,
           observed_signs: report.signs,
-          is_pregnant: false
+          is_pregnant: false,
+          cycle_reheat_count: 1 // Starts the count for this specific cycle
         }
       }
     });
@@ -609,21 +623,25 @@ router.get("/", requireApiLogin, async (req, res) => {
 
     // Fetch reports belonging to this manager/farm
     const reports = await HeatReport.find({ manager_id: managerId })
-      .populate("swine_id")
+      .populate("swine_id") // Populations include the new reheat_count field from Swine.js
       .populate("farmer_id")
       .sort({ createdAt: -1 }) // Newest first
       .lean();
 
-    // Map through reports to add dynamic "Overheat" flagging
+    // Map through reports to add dynamic "Overheat" flagging and Reheat Counter
     const formatted = reports.map(r => {
       const reportDate = new Date(r.createdAt);
       const hoursInHeat = Math.floor((virtualNow - reportDate) / (1000 * 60 * 60));
       
       return {
         ...r,
-        // If 'in-heat' for > 72 hours, flag as overheat
+        // If 'in-heat' for > 72 hours (3 days), flag as overheat
         is_overheat: r.status === "in-heat" && hoursInHeat > 72,
-        hours_active: hoursInHeat
+        hours_active: hoursInHeat,
+
+        // Pass the reheat count from the populated swine model to the frontend
+        // This allows ui-actions.js to display it on the card
+        reheat_count: r.swine_id?.reheat_count || 0
       };
     });
 

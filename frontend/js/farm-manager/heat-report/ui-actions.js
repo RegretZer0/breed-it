@@ -1302,8 +1302,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     }
   }
 
-  /* =========================
-     MAIN CARD LIST RENDERING MODULE
+/* =========================
+      MAIN CARD LIST RENDERING MODULE
   ========================= */
   function renderCards(reports) {
     const cardList = document.getElementById("reportsCardList");
@@ -1351,8 +1351,13 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
 
+      // Reheat logic: use the mapped value from the backend
+      const reheatCount = r.reheat_count || 0;
+      const isOverheat = r.is_overheat === true;
+
       const card = document.createElement("div");
-      card.className = "report-card";
+      // Add 'border-danger' if the sow is in overheat state
+      card.className = `report-card ${isOverheat ? 'border border-danger' : ''}`;
 
       card.innerHTML = `
         <div class="report-card-header">
@@ -1371,13 +1376,26 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
                   }
                 </span>
                 <span class="report-dot">•</span>
-                <span class="report-date">Date Created: ${new Date(r.createdAt).toLocaleDateString()}</span>
+                <span class="report-date">Date: ${new Date(r.createdAt).toLocaleDateString()}</span>
+                
+                <div class="mt-1">
+                  <span class="badge ${reheatCount > 0 ? 'bg-info text-dark' : 'bg-light text-muted'}" style="font-size: 0.7rem; padding: 0.35em 0.65em;">
+                    <i class="bi bi-arrow-repeat me-1"></i> Reheat: ${reheatCount}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           <span class="status-badge ${pillStatus}">${pillLabel}</span>
         </div>
+
+        ${isOverheat ? `
+          <div class="alert alert-danger py-1 px-2 mb-2 small d-flex align-items-center" style="font-size: 0.75rem;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+            <strong>OVERHEAT:</strong> ${r.hours_active}h Active
+          </div>
+        ` : ""}
 
         <div class="probability-block">
           <div class="label">Probability</div>
@@ -1539,7 +1557,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     });
   }
 
-  /* =========================
+/* =========================
    FUNCTION: renderReheatList
   ========================= */
   function renderReheatList() {
@@ -1558,14 +1576,18 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     } else {
       pageItems.forEach((item) => {
         const card = document.createElement("div");
-        card.className = "report-card";
-
-        // DATA MAPPING
+        
+        // Data Mapping
         const swineCode = item.swine_id?.swine_id || "-";
+        const reheatCount = item.reheat_count || 0;
+        const isOverheat = item.is_overheat === true;
 
         const farmerName = item.farmer_id
           ? `${item.farmer_id.first_name || ""} ${item.farmer_id.last_name || ""}`.trim()
           : "Unknown";
+
+        // Apply border-danger if in overheat state
+        card.className = `report-card ${isOverheat ? 'border border-danger' : ''}`;
 
         card.innerHTML = `
           <div class="report-card-header">
@@ -1577,12 +1599,23 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 
                 <div class="report-meta">
                   <span>Farmer: ${farmerName}</span>
+                  <br>
+                  <span class="text-info fw-bold" style="font-size: 0.85rem;">
+                    <i class="bi bi-arrow-clockwise"></i> Total Cycles: ${reheatCount}
+                  </span>
                 </div>
               </div>
             </div>
 
             <span class="status-badge pending">re-heat</span>
           </div>
+
+          ${isOverheat ? `
+            <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small d-flex align-items-center" style="font-size: 0.75rem;">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+              <strong>OVERHEAT:</strong> ${item.hours_active}h since report
+            </div>
+          ` : ""}
         `;
 
         reheatList.appendChild(card);
@@ -1979,8 +2012,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     }
   }
 
-  /* =========================
-     VIEW DETAILS MODULE
+/* =========================
+      VIEW DETAILS MODULE
   ========================= */
   async function viewReport(id) {
     try {
@@ -2013,13 +2046,36 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const hsEl = document.getElementById("reportHealthStatus");
       if (hsEl) hsEl.dataset.health = hs;
 
-      if (reportSwine) reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"}`;
+      // UPDATED: Added Reheat Count badge next to Swine ID
+      if (reportSwine) {
+        const reheatCount = r.swine_id?.reheat_count || 0;
+        const reheatBadge = reheatCount > 0 
+          ? `<span class="badge bg-info text-dark ms-2" style="font-size:0.7rem;"><i class="bi bi-arrow-repeat"></i> Reheat: ${reheatCount}</span>` 
+          : "";
+        
+        reportSwine.innerHTML = `<strong>Swine:</strong> ${r.swine_id?.swine_id || "Unknown"} ${reheatBadge}`;
+      }
 
       const rs = safeLower(getReportStatus(r));
       const rsLabel = statusLabelOf(rs);
       if (reportStatus) {
         reportStatus.textContent = rsLabel;
         reportStatus.setAttribute("data-status", rs);
+      }
+
+      // UPDATED: Display Overheat alert at the top of the modal if applicable
+      // Ensure you have an element with id="reportOverheatAlert" in your HTML modal body
+      const overheatAlertBox = document.getElementById("reportOverheatAlert");
+      if (overheatAlertBox) {
+        // Overheat logic: Status is in-heat and has been active for more than 72 hours
+        const isOverheat = rs === "in-heat" && r.hours_active > 72; 
+        overheatAlertBox.style.display = isOverheat ? "block" : "none";
+        overheatAlertBox.innerHTML = isOverheat 
+          ? `<div class="alert alert-danger mb-3 py-2 small d-flex align-items-center">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+              <div><strong>Sow Overheat:</strong> Active for ${r.hours_active} hours. Immediate action required.</div>
+             </div>` 
+          : "";
       }
 
       if (reportFarmer) {
@@ -2181,7 +2237,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       }
 
       /* =========================
-         ACTION BUTTONS MODULE
+          ACTION BUTTONS MODULE
       ========================= */
       if (approveBtn) approveBtn.style.display = "none";
       if (rejectBtn) rejectBtn.style.display = "none";
@@ -2243,7 +2299,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
     }
   }
-
+  
   /* =========================
     TEMP: Reheat Test Data
   ========================= */
