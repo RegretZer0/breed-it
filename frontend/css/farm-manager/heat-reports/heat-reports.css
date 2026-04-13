@@ -2284,3 +2284,232 @@ html, body{
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+
+/* =========================
+   REHEAT MODAL CARD (NEW)
+========================= */
+
+.reheat-card-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.reheat-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.reheat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reheat-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.reheat-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* CLEAN STAT STYLE (NOT BUTTON LOOK) */
+.reheat-stats .stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.stat-cycles {
+  background: #e7f3ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.stat-reheat {
+  background: #fff7e0;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.reheat-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* =========================
+   REHEAT CARD RESPONSIVE FIX
+========================= */
+
+.reheat-card-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* LEFT SIDE */
+.reheat-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* TEXT BLOCK */
+.reheat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* STATS */
+.reheat-stats.compact {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+/* ACTIONS */
+.reheat-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* =========================
+   MOBILE FIX (IMPORTANT)
+========================= */
+@media (max-width: 576px) {
+
+  .reheat-card-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reheat-left {
+    width: 100%;
+  }
+
+  .reheat-info {
+    width: 100%;
+  }
+
+  /* stats stay inline but wrap nicely */
+  .reheat-stats.compact {
+    justify-content: flex-start;
+  }
+
+  /* buttons go full width cleanly */
+  .reheat-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .reheat-actions button,
+  .reheat-actions .reheat-status-chip {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* =========================
+   COMPACT STATS (ENHANCED)
+========================= */
+
+.reheat-stats.compact {
+  display: flex;
+  gap: 14px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ICON COLORS (VISIBLE) */
+.stat-cycles i {
+  color: #2563eb; /* blue */
+}
+
+.stat-reheat i {
+  color: #f59e0b; /* orange */
+}
+
+/* VALUE EMPHASIS */
+.stat-inline strong {
+  font-weight: 700;
+}
+
+/* OPTIONAL subtle highlight */
+.stat-cycles {
+  background: rgba(37, 99, 235, 0.08);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.stat-reheat {
+  background: rgba(245, 158, 11, 0.12);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* =========================
+   REHEAT FILTER RESPONSIVE
+========================= */
+
+.reheat-filter-inner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* inputs grow nicely */
+.reheat-filter-inner input {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* =========================
+   MOBILE OPTIMIZATION
+========================= */
+@media (max-width: 576px) {
+
+  .reheat-filter-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reheat-filter-inner input,
+  .reheat-filter-inner button {
+    width: 100%;
+  }
+
+  #reheatResetBtn {
+    margin-top: 4px;
+  }
+}

@@ -97,6 +97,10 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   const reheatNextBtn = document.getElementById("reheatNextBtn");
   const reheatPageIndicator = document.getElementById("reheatPageIndicator");
 
+  const reheatSearch = document.getElementById("reheatSearch");
+  const reheatFarmerSearch = document.getElementById("reheatFarmerSearch");
+  const reheatResetBtn = document.getElementById("reheatResetBtn");
+
   /* =========================
      DOM (ARCHIVE MODAL)
   ========================= */
@@ -148,6 +152,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   let currentReportId = null;
 
   let urlAutoOpened = false;
+  let initialLoadDone = false;
 
   const filterState = {
     selectedStatus: "",
@@ -210,7 +215,9 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   function updateReheatCount() {
     if (!reheatBtn) return;
 
-    const count = reheatData.length;
+    const count = reheatData.reduce((total, r) => {
+      return total + (r.swine_id?.reheat_count ?? r.reheat_count ?? 0);
+    }, 0);
 
     // TEXT
     reheatBtn.innerHTML = `
@@ -250,7 +257,15 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     if (!rid) return;
 
     urlAutoOpened = true;
+
+    // Open modal
     await viewReport(rid);
+
+    // REMOVE reportId from URL (CRITICAL FIX)
+    const url = new URL(window.location.href);
+    url.searchParams.delete("reportId");
+
+    window.history.replaceState({}, document.title, url.pathname + url.search);
   }
 
   /* =========================
@@ -585,6 +600,36 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       openEvidenceViewer({ type: type === "video" ? "video" : "image", src });
     });
   }
+
+  // =========================
+  // REHEAT FILTER EVENTS (ADD HERE)
+  // =========================
+
+  // Search by Swine ID
+  reheatSearch?.addEventListener("input", (e) => {
+    reheatFilter.search = e.target.value;
+    reheatPage = 1;
+    renderReheatList();
+  });
+
+  // Search by Farmer
+  reheatFarmerSearch?.addEventListener("input", (e) => {
+    reheatFilter.farmer = e.target.value;
+    reheatPage = 1;
+    renderReheatList();
+  });
+
+  // Reset button
+  reheatResetBtn?.addEventListener("click", () => {
+    reheatFilter.search = "";
+    reheatFilter.farmer = "";
+
+    if (reheatSearch) reheatSearch.value = "";
+    if (reheatFarmerSearch) reheatFarmerSearch.value = "";
+
+    reheatPage = 1;
+    renderReheatList();
+  });
 
   /* =========================
      FEEDBACK MODAL HELPERS MODULE
@@ -1183,7 +1228,7 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   });
 
   reheatNextBtn?.addEventListener("click", () => {
-    const totalPages = Math.ceil(reheatData.length / REHEAT_ROWS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / REHEAT_ROWS_PER_PAGE);
     if (reheatPage < totalPages) {
       reheatPage++;
       renderReheatList();
@@ -1224,9 +1269,14 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
         : [...allReports];
 
       currentPage = 1;
+
       renderCards(filteredReports);
-      await autoOpenReportFromUrl();
       await loadReheatData();
+
+      if (!initialLoadDone) {
+        await autoOpenReportFromUrl();
+        initialLoadDone = true;
+      }
 
       if (archiveModal && archiveModal.style.display === "flex") {
         applyArchiveFilters();
@@ -1302,8 +1352,8 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
     }
   }
 
-/* =========================
-      MAIN CARD LIST RENDERING MODULE
+  /* =========================
+  MAIN CARD LIST RENDERING MODULE
   ========================= */
   function renderCards(reports) {
     const cardList = document.getElementById("reportsCardList");
@@ -1351,8 +1401,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       const pillStatus = safeLower(getReportStatus(r));
       const pillLabel = statusLabelOf(pillStatus);
 
-      // Reheat logic: use the mapped value from the backend
-      const reheatCount = r.reheat_count || 0;
+      // ✅ FIX 4 APPLIED HERE (CRITICAL)
+      const reheatCount =
+        r.swine_id?.reheat_count ??
+        r.reheat_count ??
+        0;
+
       const isOverheat = r.is_overheat === true;
 
       const card = document.createElement("div");
@@ -1560,26 +1614,66 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
 /* =========================
    FUNCTION: renderReheatList
   ========================= */
+  //filter
+  let reheatFilter = {
+    search: "",
+    farmer: ""
+  };
+
   function renderReheatList() {
     if (!reheatList) return;
 
     reheatList.innerHTML = "";
 
-    const totalPages = Math.ceil(reheatData.length / REHEAT_ROWS_PER_PAGE);
+    let filteredData = [...reheatData];
+    reheatFilter.search = (reheatFilter.search || "").trim();
+    reheatFilter.farmer = (reheatFilter.farmer || "").trim();
+
+    // search by swine id
+    if (reheatFilter.search) {
+      filteredData = filteredData.filter(r =>
+        (r.swine_id?.swine_id || "")
+          .toLowerCase()
+          .includes(reheatFilter.search.toLowerCase())
+      );
+    }
+
+    // filter by farmer
+    if (reheatFilter.farmer) {
+      filteredData = filteredData.filter(r =>
+        `${r.farmer_id?.first_name || ""} ${r.farmer_id?.last_name || ""}`
+          .toLowerCase()
+          .includes(reheatFilter.farmer.toLowerCase())
+      );
+    }
+
+    const totalPages = Math.ceil(filteredData.length / REHEAT_ROWS_PER_PAGE);
     if (reheatPage > totalPages) reheatPage = totalPages || 1;
 
     const start = (reheatPage - 1) * REHEAT_ROWS_PER_PAGE;
-    const pageItems = reheatData.slice(start, start + REHEAT_ROWS_PER_PAGE);
+    const pageItems = filteredData.slice(start, start + REHEAT_ROWS_PER_PAGE);
 
     if (!pageItems.length) {
       reheatList.innerHTML = `<div class="text-muted">No re-heat records.</div>`;
     } else {
       pageItems.forEach((item) => {
         const card = document.createElement("div");
-        
-        // Data Mapping
-        const swineCode = item.swine_id?.swine_id || "-";
-        const reheatCount = item.reheat_count || 0;
+
+        // =========================
+        // DATA MAPPING (FIXED)
+        // =========================
+        const swine = item.swine_id || {};
+
+        const swineCode = swine.swine_id || "-";
+
+        // ✅ FIX: use correct source from populated swine
+        const reheatCount = swine.reheat_count || 0;
+
+        // ✅ FIX: actual cycle count
+        const totalCycles = Array.isArray(swine.breeding_cycles)
+          ? swine.breeding_cycles.length
+          : 0;
+
         const isOverheat = item.is_overheat === true;
 
         const farmerName = item.farmer_id
@@ -1587,36 +1681,58 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
           : "Unknown";
 
         // Apply border-danger if in overheat state
-        card.className = `report-card ${isOverheat ? 'border border-danger' : ''}`;
+        card.className = `report-card ${isOverheat ? "border border-danger" : ""}`;
 
         card.innerHTML = `
-          <div class="report-card-header">
-            <div class="report-head-left">
-              <div class="report-mini-icon"><i class="bi bi-arrow-repeat"></i></div>
+          <div class="reheat-card-inner">
 
-              <div class="report-head-text">
+            <!-- LEFT -->
+            <div class="reheat-left">
+              <div class="report-mini-icon">
+                <i class="bi bi-arrow-repeat"></i>
+              </div>
+
+              <div class="reheat-info">
                 <strong class="swine-id">${swineCode}</strong>
 
-                <div class="report-meta">
+                <div class="reheat-meta">
                   <span>Farmer: ${farmerName}</span>
-                  <br>
-                  <span class="text-info fw-bold" style="font-size: 0.85rem;">
-                    <i class="bi bi-arrow-clockwise"></i> Total Cycles: ${reheatCount}
-                  </span>
+
+                  <div class="reheat-stats compact">
+                    <span class="stat-inline stat-cycles">
+                      <i class="bi bi-diagram-3-fill"></i>
+                      Cycles: <strong>${totalCycles}</strong>
+                    </span>
+
+                    <span class="stat-inline stat-reheat">
+                      <i class="bi bi-arrow-repeat"></i>
+                      Reheats: <strong>${reheatCount}</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <span class="status-badge pending">re-heat</span>
-          </div>
+            <!-- RIGHT -->
+            <div class="reheat-actions">
+              <button class="btn btn-sm btn-outline-primary view-report-btn">
+                <i class="bi bi-eye me-1"></i> View
+              </button>
 
-          ${isOverheat ? `
-            <div class="alert alert-danger py-1 px-2 mt-2 mb-0 small d-flex align-items-center" style="font-size: 0.75rem;">
-              <i class="bi bi-exclamation-triangle-fill me-2"></i> 
-              <strong>OVERHEAT:</strong> ${item.hours_active}h since report
             </div>
-          ` : ""}
+
+          </div>
         `;
+
+        const viewBtn = card.querySelector(".view-report-btn");
+          if (viewBtn) {
+            viewBtn.addEventListener("click", () => {
+              if (item._id) {
+                // redirect using your existing system
+                window.location.href = `?reportId=${item._id}`;
+              }
+            });
+          }
 
         reheatList.appendChild(card);
       });
@@ -2539,6 +2655,20 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
       });
     };
   }
+
+  //Re-Heat Modal - Filter Functions
+  reheatResetBtn?.addEventListener("click", () => {
+    reheatFilter.search = "";
+    reheatFilter.farmer = "";
+
+    const s = document.getElementById("reheatSearch");
+    const f = document.getElementById("reheatFarmerSearch");
+
+    if (s) s.value = "";
+    if (f) f.value = "";
+
+    renderReheatList();
+  });
 
   /* Remaining part of your file continues unchanged */
   /* Keep your farrowingForm submit handler, evidence viewer, and filtering modules as-is */

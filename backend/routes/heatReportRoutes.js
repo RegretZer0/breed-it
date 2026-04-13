@@ -406,7 +406,7 @@ router.get("/all", requireApiLogin, allowRoles("farm_manager", "encoder"), async
   try {
     const managerId = req.user.role === "farm_manager" ? req.user.id : req.user.managerId;
     const reports = await HeatReport.find({ manager_id: managerId })
-      .populate("swine_id", "swine_id breed current_status")
+      .populate("swine_id", "swine_id breed current_status reheat_count breeding_cycles")
       .populate("farmer_id", "first_name last_name farmer_id user_id")
       .sort({ createdAt: -1 })
       .lean();
@@ -504,16 +504,22 @@ router.get(
       // Logic: find reports that are STILL IN HEAT / NEED RECHECK
       const reports = await HeatReport.find({
         manager_id: managerId,
-        status: { $in: ["approved", "pending"] } // adjust if needed
+        status: "approved", // only approved cycles
       })
-        .populate("swine_id", "swine_id breed current_status")
+        .populate("swine_id", "swine_id breed current_status reheat_count breeding_cycles")
         .populate("farmer_id", "first_name last_name")
         .sort({ createdAt: -1 })
         .lean();
 
+      // ✅ FILTER ONLY TRUE REHEATS
+      const filtered = reports.filter(r => {
+        return (r.swine_id?.reheat_count || 0) > 0;
+      });
+
+    
       res.json({
         success: true,
-        data: reports
+        data: filtered
       });
     } catch (err) {
       console.error("Reheat fetch error:", err);
@@ -576,9 +582,12 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     const matchesBasis = hasBasis ? report.signs.every((sign) => swine.first_success_basis.signs.includes(sign)) : false;
 
     // ✅ UPDATED: Added $inc for reheat_count and cycle_reheat_count
+    // ✅ CHECK if this is NOT the first cycle
+    const isFirstCycle = (swine.breeding_cycles?.length || 0) === 0;
+
     await Swine.findByIdAndUpdate(report.swine_id, {
       current_status: "In-Heat",
-      $inc: { reheat_count: 1 }, // Increments the lifetime/current reheat counter
+      ...(isFirstCycle ? {} : { $inc: { reheat_count: 1 } }), // ✅ ONLY increment if NOT first cycle
       $push: {
         breeding_cycles: {
           cycle_number: nextCycleNumber,
@@ -586,7 +595,7 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
           estrus_date: report.approved_at,
           observed_signs: report.signs,
           is_pregnant: false,
-          cycle_reheat_count: 1 // Starts the count for this specific cycle
+          cycle_reheat_count: 1
         }
       }
     });
