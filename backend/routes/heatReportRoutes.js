@@ -585,9 +585,11 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
     // ✅ CHECK if this is NOT the first cycle
     const isFirstCycle = (swine.breeding_cycles?.length || 0) === 0;
 
-    await Swine.findByIdAndUpdate(report.swine_id, {
-      current_status: "In-Heat",
-      ...(isFirstCycle ? {} : { $inc: { reheat_count: 1 } }), // ✅ ONLY increment if NOT first cycle
+    // 1. Prepare the base update object with status and the new breeding cycle entry
+    const updateData = {
+      $set: { 
+        current_status: "In-Heat" 
+      },
       $push: {
         breeding_cycles: {
           cycle_number: nextCycleNumber,
@@ -595,10 +597,19 @@ router.post("/:id/approve", requireApiLogin, allowRoles("farm_manager"), async (
           estrus_date: report.approved_at,
           observed_signs: report.signs,
           is_pregnant: false,
-          cycle_reheat_count: 1
+          cycle_reheat_count: isFirstCycle ? 0 : 1 // Tracks if this specific cycle was a reheat
         }
       }
-    });
+    };
+
+    // 2. Conditionally add the lifetime reheat_count increment
+    // If it is NOT the first cycle, increment the global counter
+    if (!isFirstCycle) {
+      updateData.$inc = { reheat_count: 1 };
+    }
+
+    // 3. Execute the update
+    await Swine.findByIdAndUpdate(report.swine_id, updateData);
 
     await logAction(req.user.id, "APPROVE_HEAT_REPORT", "BREEDING", `Approved heat for Swine ${swine.swine_id}.`, req);
 
@@ -1173,11 +1184,10 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
 });
 
 /* ======================================================
-    STILL IN HEAT (Cycle Reset)
+   STILL IN HEAT (Cycle Reset)
 ====================================================== */
 router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
-    // FIX: Added fallback to empty object to prevent "req.body is undefined" crash
     const { heat_signs, notes } = req.body || {}; 
 
     const report = await HeatReport.findById(req.params.id)
@@ -1188,10 +1198,10 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
+    const swine = report.swine_id; // Reference for logic checks
     ensureSubmittedHistory(report);
     const previousStatus = report.status;
     
-    // Get virtual time for consistent status logging (Timewarp Sync)
     const virtualNow = await timeHelper.getVirtualNow();
 
     // CALCULATION: Set next heat check to 3 days from the current virtual date
@@ -1200,79 +1210,90 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
 
     // 1. Update Heat Report
     report.status = "approved";
-    report.expected_farrowing = null; // Clear failed pregnancy projections
-    
-    // Set the new check date for the calendar/task list
+    report.expected_farrowing = null; 
     report.next_heat_check = threeDaysFromNow; 
-    
     report.still_in_heat_at = virtualNow;
     report.still_in_heat_by = req.user.id;
     report.still_in_heat_reason = notes || "Returned to heat / pregnancy failed";
     
+    // Store selected signs if provided
+    if (heat_signs && Array.isArray(heat_signs)) {
+      report.signs = heat_signs; // Updated to 'signs' to match your HeatReport.js schema
+    }
+
+    // Prepare history entry with the new incremented count for the UI
+    const newCount = (swine.reheat_count || 0) + 1;
+
     pushProgressHistory(report, {
       eventKey: "cycle_reset_still_in_heat",
       title: "Cycle Reset to In-Heat",
-      description: `Sow returned to heat after AI/observation. Previous progress preserved and a new heat cycle was recorded.`,
+      description: `Sow returned to heat. Reheat count incremented to ${newCount}.`,
       fromStatus: previousStatus,
       toStatus: "approved",
       actor: req.user,
       actionAt: virtualNow,
       meta: {
-        swine_code: report.swine_id?.swine_id || "",
+        swine_code: swine?.swine_id || "",
         next_heat_check: threeDaysFromNow,
-        notes: notes || "",
-        heat_signs: Array.isArray(heat_signs) ? heat_signs : []
+        reheat_count: newCount
       }
     });
-
-    // Store selected signs if provided
-    if (heat_signs && Array.isArray(heat_signs)) {
-      report.heat_signs = heat_signs; 
-    }
 
     report.updatedAt = virtualNow;
     await report.save();
 
-    // 2. Fail the linked AI Record (Stop ongoing breeding tracking)
+    // 2. Fail the linked AI Record
     await AIRecord.findOneAndUpdate(
       { heat_report_id: report._id, status: "Ongoing" }, 
       {
         still_in_heat: true,
         status: "Failed",
-        // Record exactly when the failure was noted in the warp timeline
         failed_at: virtualNow 
       }
     );
 
-    // 3. Revert Swine Status to In-Heat for immediate UI visibility
-    await Swine.findByIdAndUpdate(report.swine_id._id, { 
-        current_status: "In-Heat",
-        last_updated: virtualNow 
-    });
+    // 3. Update Swine Status & INCREMENT COUNTERS
+    // We update the lifetime count AND the specific cycle's reheat count
+    const swineUpdate = {
+      $set: { 
+          current_status: "In-Heat",
+          last_updated: virtualNow 
+      },
+      $inc: { reheat_count: 1 } // ✅ FIXED: Increments lifetime total
+    };
 
-    // 4. Log the action with specific signs
+    // Also increment count for the current breeding cycle in the array
+    if (swine.breeding_cycles && swine.breeding_cycles.length > 0) {
+        const lastIndex = swine.breeding_cycles.length - 1;
+        swineUpdate.$inc[`breeding_cycles.${lastIndex}.cycle_reheat_count`] = 1;
+        swineUpdate.$set[`breeding_cycles.${lastIndex}.is_pregnant`] = false;
+    }
+
+    await Swine.findByIdAndUpdate(swine._id, swineUpdate);
+
+    // 4. Log the action
     const signsText = heat_signs ? ` (Signs: ${heat_signs.join(", ")})` : "";
     await logAction(
         req.user.id, 
         "STILL_IN_HEAT", 
         "BREEDING", 
-        `Still In Heat for Swine ${report.swine_id.swine_id} recorded on ${virtualNow.toDateString()}.${signsText}`, 
+        `Still In Heat for Swine ${swine.swine_id} recorded. Total Reheats: ${newCount}.${signsText}`, 
         req
     );
 
     // 5. Notify the Breeding Team
-    // FIXED: Using "alert" to match your Notification.js schema enum: ["info", "success", "alert", "error", "maintenance"]
     await notifyBreedingTeam(
       report.manager_id,
       report.farmer_id.user_id,
       "Breeding Cycle Reset",
-      `Swine ${report.swine_id.swine_id} is still in heat${signsText}. Cycle reset. Next check scheduled for ${threeDaysFromNow.toLocaleDateString()}.`,
+      `Swine ${swine.swine_id} is still in heat. Cycle reset. Lifetime Reheats: ${newCount}.`,
       "alert" 
     );
 
     res.json({ 
       success: true, 
-      message: "Cycle reset. Next heat check scheduled in 3 days." 
+      message: `Cycle reset. Reheat count is now ${newCount}.`,
+      reheat_count: newCount
     });
 
   } catch (err) {
