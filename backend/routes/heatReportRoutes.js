@@ -1184,7 +1184,7 @@ router.post("/:id/confirm-farrowing", requireApiLogin, allowRoles("farmer"), asy
 });
 
 /* ======================================================
-   STILL IN HEAT (Cycle Reset)
+    STILL IN HEAT (Cycle Reset)
 ====================================================== */
 router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manager"), async (req, res) => {
   try {
@@ -1198,10 +1198,11 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
       return res.status(404).json({ success: false, message: "Report not found" });
     }
 
-    const swine = report.swine_id; // Reference for logic checks
+    const swine = report.swine_id; 
     ensureSubmittedHistory(report);
     const previousStatus = report.status;
     
+    // Get virtual time for consistent status logging (Timewarp Sync)
     const virtualNow = await timeHelper.getVirtualNow();
 
     // CALCULATION: Set next heat check to 3 days from the current virtual date
@@ -1218,10 +1219,10 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     
     // Store selected signs if provided
     if (heat_signs && Array.isArray(heat_signs)) {
-      report.signs = heat_signs; // Updated to 'signs' to match your HeatReport.js schema
+      report.signs = heat_signs; 
     }
 
-    // Prepare history entry with the new incremented count for the UI
+    // Determine the NEW count for logic and notifications
     const newCount = (swine.reheat_count || 0) + 1;
 
     pushProgressHistory(report, {
@@ -1253,16 +1254,15 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
     );
 
     // 3. Update Swine Status & INCREMENT COUNTERS
-    // We update the lifetime count AND the specific cycle's reheat count
     const swineUpdate = {
       $set: { 
           current_status: "In-Heat",
           last_updated: virtualNow 
       },
-      $inc: { reheat_count: 1 } // ✅ FIXED: Increments lifetime total
+      $inc: { reheat_count: 1 } 
     };
 
-    // Also increment count for the current breeding cycle in the array
+    // Also update current breeding cycle in the array
     if (swine.breeding_cycles && swine.breeding_cycles.length > 0) {
         const lastIndex = swine.breeding_cycles.length - 1;
         swineUpdate.$inc[`breeding_cycles.${lastIndex}.cycle_reheat_count`] = 1;
@@ -1281,7 +1281,7 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
         req
     );
 
-    // 5. Notify the Breeding Team
+    // 5. General Notification (Notifies both Manager and Farmer via notifyBreedingTeam)
     await notifyBreedingTeam(
       report.manager_id,
       report.farmer_id.user_id,
@@ -1289,6 +1289,34 @@ router.post("/:id/still-heat", requireApiLogin, allowRoles("farmer", "farm_manag
       `Swine ${swine.swine_id} is still in heat. Cycle reset. Lifetime Reheats: ${newCount}.`,
       "alert" 
     );
+
+    // 6. HIGH REHEAT ALERT (Threshold Check)
+    // Notify both Farm Manager AND Farmer if threshold is reached
+    const REHEAT_THRESHOLD = 3;
+    if (newCount >= REHEAT_THRESHOLD) {
+      const alertTitle = "⚠️ High Reheat Warning";
+      const alertMessage = `Swine ${swine.swine_id} has reached ${newCount} reheats. Immediate review for culling or vet check recommended.`;
+
+      // Notify Manager
+      await Notification.create({
+        user_id: report.manager_id,
+        title: alertTitle,
+        message: alertMessage,
+        type: "error", 
+        createdAt: virtualNow
+      });
+
+      // Notify Farmer
+      if (report.farmer_id && report.farmer_id.user_id) {
+        await Notification.create({
+          user_id: report.farmer_id.user_id,
+          title: alertTitle,
+          message: alertMessage,
+          type: "error",
+          createdAt: virtualNow
+        });
+      }
+    }
 
     res.json({ 
       success: true, 
