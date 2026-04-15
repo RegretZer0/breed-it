@@ -6,6 +6,8 @@ import { createReproductionStore } from "./reproduction.data.js";
 import { createReproViews } from "./reproduction.views.js";
 import { submitSelectionAction } from "./reproduction.actions.js";
 
+const BASE_URL = "http://localhost:5000";
+
   /* =========================================================
      MODULE: Local Selection Lock Persistence
      PURPOSE: Persist local selection decisions so refresh
@@ -485,8 +487,18 @@ import { submitSelectionAction } from "./reproduction.actions.js";
     return modalEl;
   }
 
+  document.addEventListener("DOMContentLoaded", async () => {
+    console.time("Reproduction_Load_Time");
+
+    const user = await authGuard("farmer");
+    SELECTION_LOCK_KEY = `reproSelectionLock:${user?._id || user?.id || "anon"}`;
+    if (!user) {
+      debugLog("AUTH", "No user found, redirecting...", true);
+      return;
+    }
+  
   /* =========================================================
-    MODULE: Sell Action Handler with Reason
+    MODULE: Sell Action Handler with Reason (FIXED SCOPE)
   ========================================================= */
   function handleSellWithReason(pigletId) {
     const modalEl = ensureSellReasonModal();
@@ -500,14 +512,15 @@ import { submitSelectionAction } from "./reproduction.actions.js";
 
     confirmBtn.onclick = async () => {
       const reason = (input?.value || "").trim();
+
       if (!reason) {
         alert("Please enter a reason for selling.");
         return;
       }
-  
+
       const res = await submitSelectionAction({
-        token,              // now taken from closure
-        baseUrl: BASE_URL,  // now taken from closure
+        token,
+        baseUrl: BASE_URL, // ✅ NOW WORKS
         swineId: pigletId,
         action: "sell",
         reason
@@ -523,20 +536,8 @@ import { submitSelectionAction } from "./reproduction.actions.js";
     };
   }
 
-  window.handleSellWithReason = handleSellWithReason;
+  window.handleSellWithReason = handleSellWithReason;    
 
-document.addEventListener("DOMContentLoaded", async () => {
-  console.time("Reproduction_Load_Time");
-
-  const user = await authGuard("farmer");
-  SELECTION_LOCK_KEY = `reproSelectionLock:${user?._id || user?.id || "anon"}`;
-  if (!user) {
-    debugLog("AUTH", "No user found, redirecting...", true);
-    return;
-  }
-
-  const BASE_URL = "http://localhost:5000";
-  
   /* =========================================================
      MODULE: Sow Monthly Confirmation Summary
      PURPOSE: Build review markup before saving sow monthly update.

@@ -830,14 +830,14 @@ export function createReproViews({ repo, state, ui }) {
                   </div>
                 </div>
 
-                <div class="col-6 col-md-4">
+                <div class="col-12 col-sm-6 col-md-4">
                   <div class="repro-sow-statbox">
                     <div class="k">Body Length</div>
                     <div class="v">${latestBodyLength != null ? `${esc(latestBodyLength)} cm` : "N/A"}</div>
                   </div>
                 </div>
 
-                <div class="col-6 col-md-4">
+                <div class="col-12 col-sm-6 col-md-4">
                   <div class="repro-sow-statbox">
                     <div class="k">Heart Girth</div>
                     <div class="v">${latestHeartGirth != null ? `${esc(latestHeartGirth)} cm` : "N/A"}</div>
@@ -1224,14 +1224,14 @@ export function createReproViews({ repo, state, ui }) {
                   </div>
                 </div>
 
-                <div class="col-6 col-md-4">
+                <div class="col-12 col-sm-6 col-md-4">
                   <div class="repro-sow-statbox">
                     <div class="k">Body Length</div>
                     <div class="v">${latestBodyLength != null ? `${esc(latestBodyLength)} cm` : "N/A"}</div>
                   </div>
                 </div>
 
-                <div class="col-6 col-md-4">
+                <div class="col-12 col-sm-6 col-md-4">
                   <div class="repro-sow-statbox">
                     <div class="k">Heart Girth</div>
                     <div class="v">${latestHeartGirth != null ? `${esc(latestHeartGirth)} cm` : "N/A"}</div>
@@ -3823,25 +3823,25 @@ export function createReproViews({ repo, state, ui }) {
                       </div>
 
                       <div class="row g-2">
-                        <div class="col-6 col-md-4">
+                        <div class="col-12 col-sm-6 col-md-4">
                           <div class="repro-sow-statbox">
                             <div class="k">Weight</div>
                             <div class="v">${latestWeight != null ? esc(latestWeight) + " kg" : "N/A"}</div>
                           </div>
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-12 col-sm-6 col-md-4">
                           <div class="repro-sow-statbox">
                             <div class="k">Body Length</div>
                             <div class="v">${latestBodyLength != null ? esc(latestBodyLength) + " cm" : "N/A"}</div>
                           </div>
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-12 col-sm-6 col-md-4">
                           <div class="repro-sow-statbox">
                             <div class="k">Heart Girth</div>
                             <div class="v">${latestHeartGirth != null ? esc(latestHeartGirth) + " cm" : "N/A"}</div>
                           </div>
                         </div>
-                        <div class="col-6 col-md-4">
+                        <div class="col-12 col-sm-6 col-md-4">
                           <div class="repro-sow-statbox">
                             <div class="k">Teat Count</div>
                             <div class="v">${latestTeat != null ? esc(latestTeat) : "N/A"}</div>

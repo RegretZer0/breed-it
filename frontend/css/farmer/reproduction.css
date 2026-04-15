@@ -2058,3 +2058,53 @@ body{
     height: 230px;
   }
 }
+
+/* ===== FORCE MONITORING GRID LAYOUT ===== */
+.repro-monitor-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+}
+
+/* ===== TABLET / DESKTOP ===== */
+@media (min-width: 768px) {
+  .repro-monitor-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+.repro-monitor-card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 12px !important;
+  border-radius: 14px !important;
+}
+
+.repro-monitor-card-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.repro-monitor-label {
+  font-size: 12px !important;
+}
+
+.repro-monitor-value {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-top: 6px;
+}
+
+.repro-monitor-phase-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.repro-monitor-card * {
+  min-width: 0 !important;
+  word-break: break-word;
+}
