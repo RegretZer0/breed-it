@@ -215,9 +215,12 @@ export function initHeatReportUI({ user, token, BACKEND_URL }) {
   function updateReheatCount() {
     if (!reheatBtn) return;
 
-    const count = reheatData.reduce((total, r) => {
-      return total + (r.swine_id?.reheat_count ?? r.reheat_count ?? 0);
-    }, 0);
+    // ✅ COUNT PER UNIQUE SWINE (NOT TOTAL REHEATS)
+    const uniqueSwine = new Set(
+      reheatData.map(r => r.swine_id?._id || r.swine_id)
+    );
+
+    const count = uniqueSwine.size;
 
     // TEXT
     reheatBtn.innerHTML = `
