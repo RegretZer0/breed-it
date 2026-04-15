@@ -11,7 +11,7 @@ import { submitSelectionAction } from "./reproduction.actions.js";
      PURPOSE: Persist local selection decisions so refresh
               will not reset locked piglet actions.
   ========================================================= */
-  const SELECTION_LOCK_KEY = `reproSelectionLock:${user?._id || user?.id || "anon"}`;
+  let SELECTION_LOCK_KEY = "reproSelectionLock:anon";
 
   function loadSelectionLockFromStorage() {
     try {
@@ -51,9 +51,8 @@ import { submitSelectionAction } from "./reproduction.actions.js";
   const sowPager = document.getElementById("sowPager");
 
   if (!sowCardsWrap || !sowPager) {
-    debugLog("DOM_MISSING", "Required containers not found in EJS.", true);
-    return;
-  }
+  debugLog("DOM_MISSING", "Required containers not found in EJS.", true);
+  } else {
 
   /* =========================================================
      MODULE: Auth Helpers
@@ -110,7 +109,9 @@ import { submitSelectionAction } from "./reproduction.actions.js";
   }
 
   const token = getValidTokenOrLogout();
-  if (!token) return;
+  if (!token) {
+    debugLog("AUTH", "No valid token, stopping module", true);
+  } else {
 
   /* =========================================================
      MODULE: Action Feedback Modal
@@ -516,6 +517,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   console.time("Reproduction_Load_Time");
 
   const user = await authGuard("farmer");
+  SELECTION_LOCK_KEY = `reproSelectionLock:${user?._id || user?.id || "anon"}`;
   if (!user) {
     debugLog("AUTH", "No user found, redirecting...", true);
     return;
@@ -2124,15 +2126,17 @@ document.addEventListener("DOMContentLoaded", async () => {
      PURPOSE: Seed initial filter state and load data.
   ========================================================= */
   if (searchInput && typeof searchInput.value === "string" && searchInput.value.trim()) {
-    state.sowTermDraft = searchInput.value || "";
-    state.sowTerm = searchInput.value || "";
+      state.sowTermDraft = searchInput.value || "";
+      state.sowTerm = searchInput.value || "";
+    }
+
+    if (statusFilterEl) {
+      state.sowStatus = String(statusFilterEl.value || "all").trim();
+    }
+
+    await loadAllSafe();
+
+    console.timeEnd("Reproduction_Load_Time");
+  });
+}
   }
-
-  if (statusFilterEl) {
-    state.sowStatus = String(statusFilterEl.value || "all").trim();
-  }
-
-  await loadAllSafe();
-
-  console.timeEnd("Reproduction_Load_Time");
-});
