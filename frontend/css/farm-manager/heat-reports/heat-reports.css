@@ -2513,3 +2513,31 @@ html, body{
     margin-top: 4px;
   }
 }
+
+/* MOBILE ONLY */
+@media (max-width: 576px) {
+  .btn[data-bs-dismiss="modal"] {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  .btn[data-bs-dismiss="modal"] .close-text {
+    display: none;
+  }
+}
+
+/* DESKTOP / TABLET */
+@media (min-width: 577px) {
+  .btn[data-bs-dismiss="modal"] {
+    width: auto;
+    height: auto;
+    padding: 0.375rem 0.75rem; /* Bootstrap default */
+    border-radius: 999px;
+  }
+
+  .btn[data-bs-dismiss="modal"] .close-text {
+    display: inline;
+  }
+}

@@ -283,8 +283,14 @@ import { submitSelectionAction } from "./reproduction.actions.js";
                   </div>
                 </div>
 
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius:999px;">
-                  <i class="bi bi-x-lg me-1"></i> Close
+                <button type="button"
+                  class="btn btn-light btn-sm d-flex align-items-center justify-content-center"
+                  data-bs-dismiss="modal"
+                  style="border-radius:999px;">
+
+                  <i class="bi bi-x-lg"></i>
+                  <span class="close-text ms-1">Close</span>
+
                 </button>
               </div>
 
@@ -350,8 +356,14 @@ import { submitSelectionAction } from "./reproduction.actions.js";
                   </div>
                 </div>
 
-                <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal" style="border-radius:999px;">
-                  <i class="bi bi-x-lg me-1"></i> Close
+                <button type="button"
+                  class="btn btn-light btn-sm d-flex align-items-center justify-content-center"
+                  data-bs-dismiss="modal"
+                  style="border-radius:999px;">
+
+                  <i class="bi bi-x-lg"></i>
+                  <span class="close-text ms-1">Close</span>
+
                 </button>
               </div>
 
@@ -1868,14 +1880,35 @@ document.addEventListener("DOMContentLoaded", async () => {
           const title = modalEl.querySelector("#reproSowModalLabel");
           if (title) title.textContent = `Sow • ${state.activeSowId}`;
 
-          if (modal) {
-            modal.show();
-            modalEl.addEventListener("shown.bs.modal", () => views?.renderSowPanel?.(state.activeSowId, mount), {
-              once: true,
-            });
-          } else {
-            views?.renderSowPanel?.(state.activeSowId, mount);
+          const renderWithData = async () => {
+          // Ensure required data is loaded before rendering cycles
+          if (!repo.store.loaded?.performance) {
+            await repo.loadPerformance();
           }
+
+          if (!repo.store.loaded?.monitoring) {
+            await repo.loadPigletMonitoring();
+          }
+
+          if (!repo.store.loaded?.selection) {
+            await repo.loadSelection?.();
+          }
+
+          repo.buildDerived();
+
+          views?.renderSowPanel?.(state.activeSowId, mount);
+        };
+
+        if (modal) {
+          modal.show();
+          modalEl.addEventListener(
+            "shown.bs.modal",
+            () => renderWithData(),
+            { once: true }
+          );
+        } else {
+          renderWithData();
+        }
           return;
         }
 
