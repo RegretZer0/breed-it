@@ -1331,18 +1331,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!tok) return false;
 
     try {
-      const res = await repo.loadAll();
+      // =========================
+      // STEP 1: LOAD ONLY SWINE (FAST)
+      // =========================
+      const swineRes = await repo.loadSwine();
 
-      if (res?.authError) {
-        views?.renderListError?.("Unable to load your swine data", "Your session may have expired. Please login again.");
+      if (swineRes?.authError) {
+        views?.renderListError?.(
+          "Unable to load your swine data",
+          "Your session may have expired. Please login again."
+        );
         return false;
       }
 
       if (!repo.store.loaded?.swine) {
-        views?.renderListError?.("Unable to load your swine data", "Server did not respond for swine list. Try again.");
+        views?.renderListError?.(
+          "Unable to load your swine data",
+          "Server did not respond for swine list. Try again."
+        );
         return false;
       }
 
+      // =========================
+      // STEP 2: APPLY LOCAL LOCK SYNC (KEEP YOUR LOGIC)
+      // =========================
       try {
         const sw = repo.store?.allSwineData || repo.store?.swine || repo.store?.sows || [];
         let changed = false;
@@ -1377,12 +1389,42 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (changed) saveSelectionLockToStorage(state.localSelectionLock);
       } catch {}
 
-      renderLegacy();
+      // =========================
+      // STEP 3: RENDER IMMEDIATELY (FAST UI)
+      // =========================
+      repo.buildDerived();
       views?.renderSowCards?.();
+
+      // =========================
+      // STEP 4: LOAD HEAVY DATA IN BACKGROUND
+      // =========================
+      setTimeout(async () => {
+        try {
+          await repo.loadPerformance();
+          await repo.loadPigletMonitoring();
+          await repo.loadSelection?.();
+          await repo.loadAi?.();
+
+          repo.buildDerived();
+
+          // defer legacy rendering to avoid blocking
+          setTimeout(() => {
+            renderLegacy();
+          }, 0);
+
+          views?.renderSowCards?.();
+        } catch (err) {
+          debugLog("BACKGROUND_LOAD_ERROR", err?.message || err, true);
+        }
+      }, 0);
+
       return true;
     } catch (err) {
       debugLog("LOAD_ALL_ERROR", err?.message || err, true);
-      views?.renderListError?.("Unable to load your swine data", "Unexpected error while loading. Try again.");
+      views?.renderListError?.(
+        "Unable to load your swine data",
+        "Unexpected error while loading. Try again."
+      );
       return false;
     }
   }
@@ -1447,9 +1489,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         type: "success",
       });
 
-      await repo.loadAll();
+      // Only refresh affected parts
+      await repo.loadSwine();
+      repo.buildDerived();
 
-      renderLegacy();
       views?.renderSowCards?.();
 
       if (state.activeSowId && state.activeCycleId) {
@@ -1672,8 +1715,14 @@ document.addEventListener("DOMContentLoaded", async () => {
               }
 
               await repo.loadAll();
-              renderLegacy();
-              views?.renderSowCards?.();
+              setTimeout(() => {
+                renderLegacy();
+              }, 0);
+              
+              if (!state._renderedOnce) {
+                views?.renderSowCards?.();
+                state._renderedOnce = true;
+              }
 
               const monthlyModalEl = document.getElementById("reproMonthlyUpdatesModal");
               const monthlyModal =
