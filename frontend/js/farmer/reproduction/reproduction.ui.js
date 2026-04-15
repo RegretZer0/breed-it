@@ -1880,35 +1880,35 @@ document.addEventListener("DOMContentLoaded", async () => {
           const title = modalEl.querySelector("#reproSowModalLabel");
           if (title) title.textContent = `Sow • ${state.activeSowId}`;
 
+          // FIX STARTS HERE
           const renderWithData = async () => {
-          // Ensure required data is loaded before rendering cycles
-          if (!repo.store.loaded?.performance) {
-            await repo.loadPerformance();
+            // show loading (prevents empty UI flash)
+            if (mount) {
+              mount.innerHTML = `<div class="text-center py-4">Loading sow data...</div>`;
+            }
+
+            // CRITICAL: load ALL required data
+            await repo.loadAll();
+
+            // CRITICAL: rebuild derived (cycles depend on this)
+            repo.buildDerived();
+
+            // render after data is ready
+            views?.renderSowPanel?.(state.activeSowId, mount);
+          };
+          // FIX ENDS HERE
+
+          if (modal) {
+            modal.show();
+            modalEl.addEventListener(
+              "shown.bs.modal",
+              () => renderWithData(),
+              { once: true }
+            );
+          } else {
+            renderWithData();
           }
 
-          if (!repo.store.loaded?.monitoring) {
-            await repo.loadPigletMonitoring();
-          }
-
-          if (!repo.store.loaded?.selection) {
-            await repo.loadSelection?.();
-          }
-
-          repo.buildDerived();
-
-          views?.renderSowPanel?.(state.activeSowId, mount);
-        };
-
-        if (modal) {
-          modal.show();
-          modalEl.addEventListener(
-            "shown.bs.modal",
-            () => renderWithData(),
-            { once: true }
-          );
-        } else {
-          renderWithData();
-        }
           return;
         }
 
