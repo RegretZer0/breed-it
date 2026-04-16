@@ -133,10 +133,11 @@ async function runSwineTransitions() {
       }
     }
 
-    // --- PART 3: AUTO-CULL FOR UNPRODUCTIVE "OPEN" SOWS (7-DAY WINDOW) ---
+    // --- PART 3: REMINDER FOR OVERDUE "OPEN" SOWS (Updated: Notification Only) ---
     const sevenDaysAgo = new Date(now.getTime());
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Look for sows stuck in 'Open' status
     const openSows = await Swine.find({ current_status: "Open" });
 
     for (const sow of openSows) {
@@ -148,33 +149,64 @@ async function runSwineTransitions() {
       const weaningDate = toValidDate(lastCycle?.weaning_date);
       if (!weaningDate) continue;
 
+      // If it's been more than 7 days since weaning
       if (weaningDate < sevenDaysAgo) {
+        // Check if a heat report was already created after weaning
         const recentReport = await HeatReport.findOne({
           swine_id: sow._id,
           createdAt: { $gt: weaningDate },
         });
 
+        // If no heat report is found, trigger alerts instead of Auto-Culling
         if (!recentReport) {
-          sow.current_status = "Culled/Sold";
-          await sow.save();
-
-          console.log(`Swine ${sow.swine_id} auto-culled (Virtual Time Check: 7 days post-weaning).`);
-
           const managerId = sow.registered_by || sow.manager_id;
-          if (managerId) {
-            await Notification.create({
-              user_id: managerId,
-              title: "Productivity Cull",
-              message: `Swine ${sow.swine_id} has been automatically culled. It failed to show heat signs within 7 days post-weaning (Warp Check).`,
-              type: "danger",
-            });
+          const farmerUserId = sow.farmer_id?.user_id; 
+
+          // Anti-Spam Check: Don't notify if a warning was already sent today
+          const todayStart = new Date(now.getTime());
+          todayStart.setHours(0, 0, 0, 0);
+
+          const existingNotif = await Notification.findOne({
+            user_id: managerId,
+            title: "Productivity Warning",
+            createdAt: { $gte: todayStart },
+            message: new RegExp(sow.swine_id) 
+          });
+
+          if (!existingNotif) {
+            const alertTitle = "Productivity Warning";
+            const alertMessage = `Swine ${sow.swine_id} has been 'Open' for 7+ days post-weaning without a new Heat Report. Please evaluate for heat signs or manual culling.`;
+
+            // Notify Manager
+            if (managerId) {
+              await Notification.create({
+                user_id: managerId,
+                title: alertTitle,
+                message: alertMessage,
+                type: "alert",
+                createdAt: now
+              });
+            }
+
+            // Notify Farmer (if applicable)
+            if (farmerUserId) {
+              await Notification.create({
+                user_id: farmerUserId,
+                title: alertTitle,
+                message: alertMessage,
+                type: "alert",
+                createdAt: now
+              });
+            }
+
+            console.log(`[Productivity Warning] Alert sent for Swine ${sow.swine_id} (7 days post-weaning).`);
           }
         }
       }
-    }
+    } // End of for-loop
   } catch (err) {
     console.error("Cron Job Error:", err);
   }
-}
+};
 
 module.exports = { initHeatCron, runSwineTransitions };
