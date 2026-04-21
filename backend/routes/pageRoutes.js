@@ -485,4 +485,21 @@ router.get(
   }
 );
 
+// ==========================
+// System Settings
+// ==========================
+router.get(
+  "/farm-manager/system-settings/index",
+  requireLogin,
+  requireFarmManager,
+  (req, res) => {
+    res.render("pages/farm-manager/system-settings/index", {
+      page_title: "System Settings",
+      current_section: "system_settings",
+      current_page: "system_settings",
+      user: req.session.user,
+    });
+  }
+);
+
 module.exports = router;

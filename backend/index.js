@@ -229,6 +229,7 @@ app.use("/api/reproduction", reproductionRoute);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/support", supportRoutes);
+app.use("/api/system-settings", require("./routes/systemSettingsRoutes"));
 
 /* =========================
     HEALTH CHECK (TIME WARP SYNCED)

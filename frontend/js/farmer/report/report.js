@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // initial
   await ui.reloadAll();
+  await ui.loadHeatSigns?.();
 
   // keep your timers
   setInterval(() => updateCountdowns(), 30000);

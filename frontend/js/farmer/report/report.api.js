@@ -127,6 +127,13 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
     });
   }
 
+  // Fetch heat signs from system settings
+  async function fetchHeatSigns() {
+    const res = await fetchWithAuth(`${BACKEND_URL}/api/system-settings/heat-signs`);
+    if (!res) return null;
+    return res.json();
+  }
+
   return {
     fetchWithAuth,
     post,
@@ -138,6 +145,7 @@ export function createApi({ BACKEND_URL, getToken, onUnauthorized }) {
     confirmPregnancy,
     confirmFarrowing,
     confirmWeaning,
-    submitHeatReport
+    submitHeatReport,
+    fetchHeatSigns
   };
 }

@@ -1,15 +1,28 @@
 const mongoose = require("mongoose");
 
+const heatSignSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  weight: { type: Number, default: 0 },
+  isCritical: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true }
+}, { _id: false });
+
 const systemSettingsSchema = new mongoose.Schema({
-  // This stores our "Virtual Date" for the Time Warp
+  // Time Warp
   mockDate: { 
     type: Date, 
     default: null 
   },
-  // You can add other global settings here later
+
   lastCronRun: { 
     type: Date 
+  },
+
+  // 🔥 ADD THIS BLOCK
+  heat_detection: {
+    signs: [heatSignSchema]
   }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model("SystemSettings", systemSettingsSchema);

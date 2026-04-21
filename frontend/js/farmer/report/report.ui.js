@@ -949,6 +949,29 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   }
 
   /* =========================================================
+   Module: Heat Signs (DYNAMIC)
+  ========================================================= */
+  async function loadHeatSigns() {
+    const container = document.getElementById("heatSignsContainer");
+    if (!container) return;
+
+    const res = await api.fetchHeatSigns();
+    const signs = res?.data || [];
+
+    if (!signs.length) {
+      container.innerHTML = `<div class="empty-state">No heat signs configured</div>`;
+      return;
+    }
+
+    container.innerHTML = signs.map(sign => `
+      <label class="chip">
+        <input type="checkbox" name="signs" value="${sign.name}">
+        <span>${sign.name}</span>
+      </label>
+    `).join("");
+  }
+
+  /* =========================================================
      Module: Title and Tabs
   ========================================================= */
   function setModuleTitle(mode) {
@@ -2609,6 +2632,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   return {
     reloadAll,
     tickCountdowns: () => updateCountdowns(),
-    tickReportsReload: () => loadReports()
+    tickReportsReload: () => loadReports(),
+    loadHeatSigns
   };
 }

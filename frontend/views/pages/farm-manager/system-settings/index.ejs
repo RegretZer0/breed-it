@@ -1,0 +1,138 @@
+<%- include("../../../partials/farm-manager/header") %>
+<%- include("../../../partials/farm-manager/navbar") %>
+<%- include("../../../partials/farm-manager/sidepanel") %>
+
+<div class="app-root">
+  <main class="container-fluid py-3 settings-page-full">
+
+    <!-- ================= HEADER / HERO ================= -->
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+
+        <div>
+          <h4 class="fw-bold mb-1">
+            <i class="bi bi-gear"></i> System Settings
+          </h4>
+          <small class="text-muted">
+            Manage estrus heat signs used for detection and scoring
+          </small>
+        </div>
+
+        <button class="btn btn-success fw-semibold" id="addHeatSignBtn">
+          <i class="bi bi-plus-circle"></i> Add Heat Sign
+        </button>
+
+      </div>
+    </div>
+
+    <!-- ================= MAIN GRID ================= -->
+    <div class="row g-3">
+
+      <!-- ================= TABLE CARD ================= -->
+      <div class="col-12">
+        <div class="card shadow-sm border-0">
+
+          <!-- HEADER -->
+          <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="fw-bold mb-0">Estrus Heat Signs</h6>
+              <small class="text-muted">Configured detection indicators</small>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="card-body p-0">
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0 settings-table">
+                <thead class="table-light">
+                  <tr>
+                    <th>Sign</th>
+                    <th>Weight</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                  </tr>
+                </thead>
+
+                <tbody id="heatSignsTable"></tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- PAGINATION -->
+          <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <button class="btn btn-outline-secondary btn-sm" id="prevPageBtn">
+              <i class="bi bi-chevron-left"></i> Previous
+            </button>
+
+            <span id="pageInfo" class="small fw-semibold"></span>
+
+            <button class="btn btn-outline-secondary btn-sm" id="nextPageBtn">
+              Next <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- ================= MODAL ================= -->
+<div id="heatSignModal" class="settings-modal">
+  <div class="settings-modal-panel">
+
+    <!-- HEADER -->
+    <div class="settings-modal-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-bold" id="modalTitle">Heat Sign</h6>
+      <button class="btn btn-sm btn-light" id="closeModalBtn">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- BODY -->
+    <div class="settings-modal-body">
+
+      <div>
+        <label class="form-label">Sign Name</label>
+        <input type="text" id="signName" class="form-control">
+      </div>
+
+      <div>
+        <label class="form-label">Weight</label>
+        <input type="number" id="signWeight" class="form-control">
+      </div>
+
+      <div>
+        <label class="form-label">Category</label>
+        <select id="signType" class="form-select">
+          <option value="normal">Normal</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="signActive">
+        <label class="form-check-label">Active</label>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="settings-modal-footer">
+      <button class="btn btn-outline-secondary" id="closeModalBtn">
+        Cancel
+      </button>
+      <button class="btn btn-success fw-semibold" id="saveHeatSignBtn">
+        Save
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<%- include("../../../partials/farm-manager/footer") %>

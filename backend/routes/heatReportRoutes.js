@@ -42,7 +42,10 @@ const upload = multer({
   }
 });
 
-const calculateProbability = (signs, swine) => {
+// =========================
+// DYNAMIC PROBABILITY (FROM SYSTEM SETTINGS)
+// =========================
+const calculateProbability = async (signs, swine) => {
   // 1. Check if the swine has an established "First Success Basis"
   const hasBasis =
     swine.first_success_basis && 
@@ -62,26 +65,30 @@ const calculateProbability = (signs, swine) => {
     }
   }
 
-  // 2. Default weighted calculation if no basis exists or signs don't match exactly
-  const weights = {
-    "Reddened Vulva": 20,
-    "Swollen Vulva": 10,
-    "Mucous Discharge": 5,
-    "Tail raising": 2,
-    "Perked/Twitching Ears": 5,
-    "Standing Reflex": 50,
-    "Restlessness or noticeable behavioral change": 2,
-    "Increased vocalization": 2,
-    "Decreased appetite": 2,
-    "Increased alertness or irritability": 2
-  };
+  // 2. Fetch System Settings (Dynamic Weights)
+  let settings;
+  try {
+    settings = await SystemSettings.findOne();
+  } catch (err) {
+    console.error("Failed to load system settings:", err);
+    return 0;
+  }
 
+  const dbSigns = settings?.heat_detection?.signs || [];
+
+  // 3. Calculate Score
   let score = 0;
   const parsedSigns = Array.isArray(signs) ? signs : [];
-  parsedSigns.forEach((sign) => {
-    if (weights[sign]) score += weights[sign];
+
+  parsedSigns.forEach((signName) => {
+    const match = dbSigns.find(s => s.name === signName);
+
+    if (match && match.isActive !== false) {
+      score += match.weight || 0;
+    }
   });
 
+  // 4. Final Score (Capped at 100)
   return score > 100 ? 100 : score;
 };
 
@@ -309,7 +316,7 @@ router.post(
       }
 
       // 6. Create the Heat Report
-      const computedProbability = calculateProbability(parsedSigns, swine);
+      const computedProbability = await calculateProbability(parsedSigns, swine);
 
       const newReport = new HeatReport({
         swine_id: swine._id,
