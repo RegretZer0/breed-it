@@ -66,31 +66,29 @@
           </div>
 
           <!-- RIGHT -->
-          <div class="settings-side">
-
-            <div class="settings-card side-card">
-
-              <h6>Quick Info</h6>
-
-              <ul class="info-list">
-                <li>
-                  <i class="bi bi-info-circle"></i>
-                  Heat signs help determine estrus readiness
-                </li>
-
-                <li>
-                  <i class="bi bi-lightning-charge"></i>
-                  Critical signs carry higher weight
-                </li>
-
-                <li>
-                  <i class="bi bi-toggle-on"></i>
-                  Only active signs affect scoring
-                </li>
-              </ul>
-
+          <div class="settings-card side-card">
+            <div id="weightTotalDisplay" class="weight-total-display">
+              Total Active Weight: <strong id="totalWeightValue">0%</strong>
             </div>
 
+            <h6>Quick Info</h6>
+
+            <ul class="info-list">
+              <li>
+                <i class="bi bi-info-circle"></i>
+                Heat signs help determine estrus readiness
+              </li>
+
+              <li>
+                <i class="bi bi-lightning-charge"></i>
+                Critical signs carry higher weight
+              </li>
+
+              <li>
+                <i class="bi bi-toggle-on"></i>
+                Only active signs affect scoring
+              </li>
+            </ul>
           </div>
 
         </div>
@@ -126,22 +124,6 @@
             <label>Weight</label>
             <input id="signWeight" type="number" class="modern-input" placeholder="e.g. 10">
           </div>
-
-          <div>
-            <label>Type</label>
-            <select id="signType" class="modern-input">
-              <option value="normal">Normal</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-toggle">
-          <label class="toggle">
-            <input type="checkbox" id="signActive" checked>
-            <span class="slider"></span>
-          </label>
-          <span>Active</span>
         </div>
 
       </div>

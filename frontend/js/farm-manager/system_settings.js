@@ -16,7 +16,7 @@ function renderTable() {
   const el = document.getElementById("heatSignsTable");
 
   const filtered = heatSigns.filter(s =>
-    currentTab === "active" ? s.isActive !== false : s.isActive === false
+    currentTab === "active" ? s.isActive === true : s.isActive === false
   );
 
   const start = (currentPage - 1) * pageSize;
@@ -24,7 +24,7 @@ function renderTable() {
 
   // COUNTS
   document.getElementById("activeCount").innerText =
-    heatSigns.filter(s => s.isActive !== false).length;
+    heatSigns.filter(s => s.isActive === true).length;
 
   document.getElementById("inactiveCount").innerText =
     heatSigns.filter(s => s.isActive === false).length;
@@ -57,14 +57,15 @@ function renderTable() {
       <div class="heat-right">
 
         <div class="heat-badges">
-          <span class="badge ${s.isCritical ? 'badge-critical' : 'badge-normal'}">
-            ${s.isCritical ? 'Critical' : 'Normal'}
-          </span>
 
           <span class="badge ${s.isActive ? 'badge-active' : 'badge-disabled'}">
             ${s.isActive ? 'Active' : 'Inactive'}
           </span>
         </div>
+
+        <button class="toggle-btn" data-name="${s.name}">
+          ${s.isActive ? 'Disable' : 'Enable'}
+        </button>
 
         <button class="edit-btn" data-name="${s.name}">
           <i class="bi bi-pencil"></i>
@@ -108,37 +109,104 @@ function closeModal() {
   modal.classList.remove("show");
   modal.style.display = "none";
 
-  // reset form
-  document.getElementById("signName").value = "";
-  document.getElementById("signWeight").value = "";
-  document.getElementById("signType").value = "normal";
-  document.getElementById("signActive").checked = true;
+  const nameEl = document.getElementById("signName");
+  const weightEl = document.getElementById("signWeight");
+
+  if (nameEl) nameEl.value = "";
+  if (weightEl) weightEl.value = "";
 
   editingName = null;
 }
 
+function getTotalWeight(signs) {
+  return signs
+    .filter(s => s.isActive === true)
+    .reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
+}
+
 async function saveHeatSign() {
   const name = document.getElementById("signName").value.trim();
-  const weight = parseInt(document.getElementById("signWeight").value);
-  const isCritical = document.getElementById("signType").value === "critical";
-  const isActive = document.getElementById("signActive").checked;
+  const weightInput = document.getElementById("signWeight").value;
+  const weight = Number(weightInput);
+
+  if (isNaN(weight) || weight < 0) {
+    alert("Invalid weight value");
+    return;
+  }
+  const existing = heatSigns.find(s => s.name === editingName);
+  const isActive = editingName ? (existing?.isActive === true) : true;
+  const isCritical = false;
+  let finalWeight = weight;
 
   if (!name) {
     alert("Sign name required");
     return;
   }
 
-  // ✅ UPDATE LOCAL STATE (IMPORTANT)
+  // 🧠 CREATE TEMP COPY (DO NOT MUTATE YET)
+  let tempSigns = [...heatSigns];
+
   if (editingName) {
-    const index = heatSigns.findIndex(s => s.name === editingName);
+    const index = tempSigns.findIndex(s => s.name === editingName);
     if (index !== -1) {
-      heatSigns[index] = { name, weight, isCritical, isActive };
+      tempSigns[index] = {
+        name,
+        weight: finalWeight,
+        isActive
+      };
     }
   } else {
-    heatSigns.push({ name, weight, isCritical, isActive });
+    tempSigns.push({
+      name,
+      weight: finalWeight,
+      isActive
+    });
   }
 
-  // ✅ SEND CORRECT FORMAT TO BACKEND
+  // REMOVE ANY INVALID OR STALE DATA
+  tempSigns = tempSigns.map(s => ({
+    name: s.name,
+    isActive: s.isActive === true || s.isActive === "true",
+    weight: Number(s.weight) || 0
+  }));
+
+  const totalWeight = getTotalWeight(tempSigns);
+
+  if (totalWeight > 100) {
+
+    // ONLY AUTO-FIX IF ADDING NEW
+    if (!editingName) {
+
+      // Find the newly added sign
+      const newIndex = tempSigns.findIndex(s => s.name === name);
+
+      if (newIndex !== -1) {
+        tempSigns[newIndex].isActive = false;
+      }
+
+      // RECOMPUTE TOTAL AFTER FIX
+      const correctedTotal = getTotalWeight(tempSigns);
+
+      // Show warning but DO NOT BLOCK
+      showWeightLimitModal(
+        tempSigns.filter(s => s.isActive === true),
+        correctedTotal
+      );
+
+    } else {
+      // editing existing → still block (safer)
+      showWeightLimitModal(
+        tempSigns.filter(s => s.isActive === true),
+        totalWeight
+      );
+      return;
+    }
+  }
+
+  // APPLY ONLY IF VALID
+  heatSigns = tempSigns;
+
+  // SEND CORRECT FORMAT TO BACKEND
   try {
     await fetch("/api/system-settings/heat-signs", {
       method: "POST",
@@ -161,6 +229,58 @@ async function saveHeatSign() {
 
   closeModal();
   renderTable();
+}
+
+function showWeightLimitModal(signs, total) {
+  const modalHtml = `
+    <div class="custom-overlay">
+
+      <div class="custom-modal">
+
+        <!-- HEADER -->
+        <div class="weight-modal-header">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <div>
+            <h4>Weight Limit Exceeded</h4>
+            <p>Total weight cannot exceed <strong>100%</strong></p>
+          </div>
+        </div>
+
+        <!-- LIST -->
+        <div class="weight-list">
+          ${signs
+            .filter(s => s.isActive === true)
+            .map(s => `
+              <div class="weight-item">
+                <span class="weight-name">${s.name}</span>
+                <span class="weight-value">${s.weight}</span>
+              </div>
+            `).join("")}
+        </div>
+
+        <!-- TOTAL -->
+        <div class="weight-total">
+          <span>Total</span>
+          <strong>${total}%</strong>
+        </div>
+
+        <!-- ACTION -->
+        <div class="weight-actions">
+          <button id="closeWeightModal" class="btn-save">
+            OK
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  document.getElementById("closeWeightModal").onclick = () => {
+    document.querySelector(".custom-overlay").remove();
+  };
 }
 
 /* ================= EVENTS ================= */
@@ -188,27 +308,81 @@ function bindEvents() {
   document.getElementById("closeModalBtn").onclick = closeModal;
   document.getElementById("closeModalX").onclick = closeModal;
 
-  //Save button
+  // Save button
   document.getElementById("saveHeatSignBtn")
-  .addEventListener("click", saveHeatSign);
+    .addEventListener("click", saveHeatSign);
 
-  // 🔥 EDIT BUTTON (EVENT DELEGATION — IMPORTANT)
-  document.getElementById("heatSignsTable").addEventListener("click", (e) => {
-    const btn = e.target.closest(".edit-btn");
-    if (!btn) return;
+  // 🔥 COMBINED EVENT DELEGATION (TOGGLE + EDIT)
+  document.getElementById("heatSignsTable").addEventListener("click", async (e) => {
 
-    const name = btn.dataset.name;
-    const sign = heatSigns.find(s => s.name === name);
-    if (!sign) return;
+    // ===== TOGGLE BUTTON =====
+    const toggleBtn = e.target.closest(".toggle-btn");
+      if (toggleBtn) {
+        const name = toggleBtn.dataset.name;
+        const sign = heatSigns.find(s => s.name === name);
+        if (!sign) return;
 
-    editingName = name;
+        const newState = !sign.isActive;
 
-    document.getElementById("signName").value = sign.name;
-    document.getElementById("signWeight").value = sign.weight;
-    document.getElementById("signType").value = sign.isCritical ? "critical" : "normal";
-    document.getElementById("signActive").checked = sign.isActive !== false;
+        // 🔥 IF ENABLING → VALIDATE FIRST
+        if (newState === true) {
 
-    openModal();
+          // simulate enabling
+          const tempSigns = heatSigns.map(s =>
+            s.name === name ? { ...s, isActive: true } : s
+          );
+
+          const totalWeight = getTotalWeight(tempSigns);
+
+          if (totalWeight > 100) {
+            // ❌ BLOCK ENABLE
+            showWeightLimitModal(
+              tempSigns.filter(s => s.isActive === true),
+              totalWeight
+            );
+            return;
+          }
+        }
+
+        // ✅ APPLY CHANGE (safe)
+        sign.isActive = newState;
+
+        try {
+          await fetch("/api/system-settings/heat-signs", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              signs: heatSigns
+            })
+          });
+
+          await fetchHeatSigns();
+          renderTable();
+
+        } catch (err) {
+          console.error("Toggle failed:", err);
+          alert("Failed to update status");
+        }
+
+        return;
+      }
+
+    // ===== EDIT BUTTON =====
+  const btn = e.target.closest(".edit-btn");
+  if (!btn) return;
+
+  const name = btn.dataset.name;
+  const sign = heatSigns.find(s => s.name === name);
+  if (!sign) return;
+
+  editingName = name;
+
+  document.getElementById("signName").value = sign.name;
+  document.getElementById("signWeight").value = sign.weight;
+
+  openModal();
   });
 
   // PREV BUTTON
@@ -222,7 +396,7 @@ function bindEvents() {
   // NEXT BUTTON
   document.getElementById("nextPageBtn").onclick = () => {
     const filtered = heatSigns.filter(s =>
-      currentTab === "active" ? s.isActive !== false : s.isActive === false
+      currentTab === "active" ? s.isActive === true : s.isActive === false
     );
 
     const pages = Math.ceil(filtered.length / pageSize);
@@ -234,10 +408,32 @@ function bindEvents() {
   };
 }
 
+//Displays Total Weight and highlights if over 100%
+function updateLiveTotal() {
+  const total = getTotalWeight(heatSigns);
+
+  const el = document.getElementById("totalWeightValue");
+  const wrapper = document.getElementById("weightTotalDisplay");
+
+  if (!el || !wrapper) return;
+
+  el.innerText = `${total}%`;
+
+  // Visual feedback
+  wrapper.classList.remove("safe", "warn");
+
+  if (total > 100) {
+    wrapper.classList.add("warn");
+  } else {
+    wrapper.classList.add("safe");
+  }
+}
+
 /* ================= INIT ================= */
 async function init() {
   await fetchHeatSigns();
   renderTable();
+  updateLiveTotal();
   bindEvents();
 }
 
