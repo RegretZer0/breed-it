@@ -42,8 +42,32 @@
       <div class="heat-chips" id="heatSignsContainer">
         <!-- dynamic signs will render here -->
       </div>
+
+        <!-- ================= HEAT PROBABILITY BAR ================= -->
+        <div id="heatProbabilityWrap" style="margin: 16px 0;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <strong>Probability</strong>
+            <span id="heatProbabilityValue">0%</span>
+          </div>
+
+          <div style="
+            width:100%;
+            height:10px;
+            background:#e5e7eb;
+            border-radius:8px;
+            overflow:hidden;
+          ">
+            <div id="heatProbabilityBar" style="
+              height:100%;
+              width:0%;
+              background:linear-gradient(90deg,#22c55e,#16a34a);
+              transition:width 0.3s ease;
+            "></div>
+          </div>
+        </div>
     <small class="hint-text">Select all that apply</small>
   </div>
+
 
 
   <!-- ================= REMARKS ================= -->

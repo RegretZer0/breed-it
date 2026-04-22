@@ -64,40 +64,15 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   const reportModal = document.getElementById("reportModal");
   let reportConfirmPregBtn = document.getElementById("reportConfirmPregBtn");
 
-  // // Ensure the header Confirm Pregnant button exists (fallback if modal.ejs wasn't updated)
-  // (function ensureHeaderConfirmPregBtn() {
-  //   if (!reportModal) return;
-  //     const actionsWrap =
-  //       reportModal.querySelector(".report-modal-actions") ||
-  //       reportModal.querySelector(".modal-content") ||
-  //       reportModal;
 
-  //     reportConfirmPregBtn = reportModal.querySelector("#reportConfirmPregBtn");
-  //     if (reportConfirmPregBtn) return;
-
-  //     const btn = document.createElement("button");
-  //     btn.type = "button";
-  //     btn.id = "reportConfirmPregBtn";
-  //     btn.className = "btn-primary btn-sm hidden";
-  //     btn.innerHTML = `<i class="bi bi-patch-check"></i> Confirm Pregnant`;
-
-  //     const closeBtn = reportModal.querySelector(".close-modal");
-  //     if (closeBtn?.parentElement) {
-  //       closeBtn.parentElement.insertBefore(btn, closeBtn);
-  //     } else {
-  //       actionsWrap.insertBefore(btn, actionsWrap.firstChild);
-  //     }
-
-  //   reportConfirmPregBtn = btn;
-  // })();
   /* =========================================================
      Module: State
   ========================================================= */
   const PAGE_SIZE = 5;
 
   let allReports = [];
-  let activeReports = [];   // Logs (Pending/Approved/Ongoing/etc + Rejected (still within 24h))
-  let archiveReports = [];  // Archive (Completed + Rejected after 24h)
+  let activeReports = [];  
+  let archiveReports = [];
 
   let filteredReports = [];
   let currentPage = 1;
@@ -109,6 +84,8 @@ export function createReportUI({ BACKEND_URL, user, api }) {
   let filteredOpenSows = [];
   let pigPickerPage = 1;
   const PIGS_PER_PAGE = 5;
+
+  let heatSignsConfig = [];
 
   let currentDetailsReport = null; // report currently shown in Report Details modal
 
@@ -969,6 +946,83 @@ export function createReportUI({ BACKEND_URL, user, api }) {
         <span>${sign.name}</span>
       </label>
     `).join("");
+
+    // ✅ ADD THIS BLOCK (CRITICAL)
+    const checkboxes = container.querySelectorAll("input[name='signs']");
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener("change", () => {
+        const selected = Array.from(checkboxes)
+          .filter(c => c.checked)
+          .map(c => c.value);
+
+        updateHeatProbabilityUI(selected);
+      });
+    });
+
+    // ✅ INITIAL STATE
+    updateHeatProbabilityUI([]);
+  }
+
+  async function loadHeatSignsConfig() {
+    try {
+      const res = await api.fetchHeatSigns();
+      if (res?.success) {
+        heatSignsConfig = res.data || [];
+      }
+    } catch (err) {
+      console.error("Failed to load heat signs config:", err);
+    }
+  }
+
+  async function init() {
+    await loadHeatSignsConfig();
+    await loadHeatSigns();
+  }
+
+  init();
+
+
+  function computeHeatProbability(selectedSigns = []) {
+    if (!Array.isArray(selectedSigns)) return 0;
+
+    let score = 0;
+
+    selectedSigns.forEach(sign => {
+      const match = heatSignsConfig.find(s => s.name === sign);
+      if (match && match.isActive !== false) {
+        score += match.weight || 0;
+      }
+    });
+
+    return score > 100 ? 100 : score;
+  }
+
+  function getProbabilityColor(prob) {
+    if (prob >= 70) return "linear-gradient(90deg,#22c55e,#16a34a)";
+    if (prob >= 40) return "linear-gradient(90deg,#facc15,#eab308)";
+    return "linear-gradient(90deg,#ef4444,#dc2626)";
+  }
+
+  function updateHeatProbabilityUI(selectedSigns) {
+    const valueEl = document.getElementById("heatProbabilityValue");
+    const barEl = document.getElementById("heatProbabilityBar");
+
+    if (!valueEl || !barEl) return;
+
+    const prob = computeHeatProbability(selectedSigns);
+
+    valueEl.textContent = `${prob}%`;
+    barEl.style.width = `${prob}%`;
+
+    // Color logic
+    if (prob >= 70) {
+      barEl.style.background = "linear-gradient(90deg,#22c55e,#16a34a)";
+    } else if (prob >= 40) {
+      barEl.style.background = "linear-gradient(90deg,#facc15,#eab308)";
+    } else {
+      barEl.style.background = "linear-gradient(90deg,#ef4444,#dc2626)";
+    }
   }
 
   /* =========================================================
@@ -2101,6 +2155,28 @@ export function createReportUI({ BACKEND_URL, user, api }) {
               <i class="bi bi-clipboard2-pulse"></i> Observed signs
             </div>
             ${signsHtml}
+
+            <!-- ================= HEAT PROBABILITY (DETAILS) ================= -->
+            <div style="margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                <strong>Probability</strong>
+                <span>${computeHeatProbability(report.signs || [])}%</span>
+              </div>
+
+              <div style="
+                width:100%;
+                height:10px;
+                background:#e5e7eb;
+                border-radius:8px;
+                overflow:hidden;
+              ">
+                <div style="
+                  height:100%;
+                  width:${computeHeatProbability(report.signs || [])}%;
+                  background:${getProbabilityColor(computeHeatProbability(report.signs || []))};
+                "></div>
+              </div>
+            </div>
           </div>
 
           <div class="details-block">

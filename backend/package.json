@@ -20,7 +20,7 @@
     "firebase": "^12.10.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.3",
-    "multer": "^2.0.2",
+    "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.12",
     "philippine-location-json-for-geer": "^1.1.11",

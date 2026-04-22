@@ -29,26 +29,9 @@ const heatReportSchema = new mongoose.Schema(
     },
 
     // ---------------- HEAT DETAILS ----------------
-    signs: [
-      {
-        type: String,
-        enum: [
-          "Reddened Vulva",
-          "Swollen Vulva",
-          "Mucous Discharge",
-          "Seeking the Boar",
-          "Tail raising",
-          "Perked/Twitching Ears",
-          "Standing Reflex",
-          "Back Pressure Test",
-          "Restlessness or noticeable behavioral change",
-          "Increased vocalization",
-          "Decreased appetite",
-          "Increased alertness or irritability"
-        ],
-        required: true
-      }
-    ],
+    signs: [{
+      type: String
+    }],
 
     standing_reflex: {
       type: Boolean,
