@@ -18,7 +18,6 @@ const systemSettingsSchema = new mongoose.Schema({
     type: Date 
   },
 
-  // 🔥 ADD THIS BLOCK
   heat_detection: {
     signs: [heatSignSchema]
   }

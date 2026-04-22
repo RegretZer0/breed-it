@@ -7,42 +7,59 @@ router.get("/heat-signs", async (req, res) => {
   try {
     const settings = await SystemSettings.findOne();
 
-    // 🔥 DEBUG: See what is actually coming from DB
-    console.log("🔥 SETTINGS FROM DB:", JSON.stringify(settings, null, 2));
-
-    // ❌ Case 1: No document at all
-    if (!settings) {
-      console.log("❌ No SystemSettings document found");
+    if (!settings || !settings.heat_detection) {
       return res.json({ success: true, data: [] });
     }
 
-    // ❌ Case 2: Missing heat_detection field
-    if (!settings.heat_detection) {
-      console.log("❌ heat_detection field is missing in DB document");
-      return res.json({ success: true, data: [] });
-    }
+    const signs = settings.heat_detection.signs || [];
 
-    let signs = settings.heat_detection.signs || [];
+    // 👇 CHECK QUERY PARAM
+    const { activeOnly } = req.query;
 
-    // 🔥 DEBUG: check raw signs structure
-    console.log("🧪 RAW SIGNS:", signs);
-
-    // 🔥 FIX: Convert object → array if needed
-    if (!Array.isArray(signs)) {
-      console.log("⚠️ Signs is NOT an array, converting using Object.values()");
-      signs = Object.values(signs);
-    }
-
-    // 🔥 DEBUG: after conversion
-    console.log("✅ FINAL SIGNS ARRAY:", signs);
+    const result =
+      activeOnly === "true"
+        ? signs.filter(s => s.isActive !== false)
+        : signs;
 
     res.json({
       success: true,
-      data: signs
+      data: result
     });
 
   } catch (err) {
-    console.error("❌ ERROR FETCHING HEAT SIGNS:", err);
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
+  
+// =========================
+// ADD THIS BLOCK HERE
+// =========================
+router.post("/heat-signs", async (req, res) => {
+  try {
+    const { signs } = req.body;
+
+    if (!Array.isArray(signs)) {
+      return res.status(400).json({ success: false, message: "Invalid data" });
+    }
+
+    let settings = await SystemSettings.findOne();
+
+    if (!settings) {
+      settings = new SystemSettings();
+    }
+
+    settings.heat_detection = {
+      ...settings.heat_detection,
+      signs
+    };
+
+    await settings.save();
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("SAVE ERROR:", err);
     res.status(500).json({ success: false });
   }
 });

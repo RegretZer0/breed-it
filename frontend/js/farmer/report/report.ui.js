@@ -956,7 +956,7 @@ export function createReportUI({ BACKEND_URL, user, api }) {
     if (!container) return;
 
     const res = await api.fetchHeatSigns();
-    const signs = res?.data || [];
+    const signs = (res?.data || []).filter(s => s.isActive !== false);
 
     if (!signs.length) {
       container.innerHTML = `<div class="empty-state">No heat signs configured</div>`;
