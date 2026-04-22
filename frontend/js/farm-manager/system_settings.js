@@ -1,181 +1,134 @@
-/* =========================================================
-   SYSTEM SETTINGS - HEAT SIGNS
-========================================================= */
-
-/* ---------------- STATE ---------------- */
 let heatSigns = [];
 let currentPage = 1;
-const pageSize = 6;
-let editingName = null;
+const pageSize = 5;
 let currentTab = "active";
+let editingName = null; // track edit mode
 
-/* ---------------- FETCH DATA ---------------- */
+/* ================= FETCH ================= */
 async function fetchHeatSigns() {
   const res = await fetch("/api/system-settings/heat-signs");
   const data = await res.json();
   heatSigns = data.data || [];
 }
 
-/* ---------------- RENDERING ---------------- */
+/* ================= RENDER ================= */
 function renderTable() {
-  const container = document.getElementById("heatSignsTable");
-  if (!container) return;
+  const el = document.getElementById("heatSignsTable");
 
-  // ---------------- UPDATE TAB COUNTS ----------------
-  const activeCount = heatSigns.filter(s => s.isActive !== false).length;
-  const inactiveCount = heatSigns.filter(s => s.isActive === false).length;
+  const filtered = heatSigns.filter(s =>
+    currentTab === "active" ? s.isActive !== false : s.isActive === false
+  );
 
-  document.getElementById("activeCount").innerText = activeCount;
-  document.getElementById("inactiveCount").innerText = inactiveCount;
-
-
-
-  // ---------------- FILTER BASED ON TAB ----------------
-  const filtered = heatSigns.filter(sign => {
-    if (currentTab === "active") return sign.isActive !== false;
-    if (currentTab === "inactive") return sign.isActive === false;
-    return true;
-  });
-
-  // ---------------- PAGINATION ----------------
   const start = (currentPage - 1) * pageSize;
-  const pageData = filtered.slice(start, start + pageSize);
+  const page = filtered.slice(start, start + pageSize);
 
-  // ---------------- EMPTY STATE ----------------
-  if (!pageData.length) {
-  container.innerHTML = `
-    <div class="col-12 h-100 d-flex">
-      <div class="empty-state text-center w-100">
-          ${
-            currentTab === "inactive"
-              ? "No disabled heat signs. All signs are active."
-              : "No active heat signs available."
-          }
-        </div>
+  // COUNTS
+  document.getElementById("activeCount").innerText =
+    heatSigns.filter(s => s.isActive !== false).length;
+
+  document.getElementById("inactiveCount").innerText =
+    heatSigns.filter(s => s.isActive === false).length;
+
+  // EMPTY STATE
+  if (!page.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        ${
+          currentTab === "inactive"
+            ? "No disabled heat signs"
+            : "No active heat signs"
+        }
       </div>
     `;
     renderPagination(filtered.length);
     return;
   }
 
-  // ---------------- RENDER ----------------
-  container.innerHTML = pageData.map(sign => `
-    <div class="col-12">
+  el.innerHTML = page.map(s => `
+    <div class="heat-item">
 
-      <div class="card heat-card shadow-sm border-0">
-
-        <div class="card-body heat-row">
-
-          <!-- TITLE -->
-          <div class="heat-title">
-            ${sign.name}
-          </div>
-
-          <!-- WEIGHT -->
-          <div class="heat-weight-inline">
-            Weight: <strong>${sign.weight}</strong>
-          </div>
-
-          <!-- CATEGORY -->
-          <div>
-            <span class="badge ${sign.isCritical ? 'badge-critical' : 'badge-normal'}">
-              <i class="bi ${sign.isCritical ? 'bi-exclamation-triangle' : 'bi-check-circle'}"></i>
-              ${sign.isCritical ? 'Critical' : 'Normal'}
-            </span>
-          </div>
-
-          <!-- STATUS -->
-          <div>
-            <span class="badge ${sign.isActive ? 'badge-active' : 'badge-disabled'}">
-              <i class="bi ${sign.isActive ? 'bi-toggle-on' : 'bi-toggle-off'}"></i>
-              ${sign.isActive ? 'Active' : 'Disabled'}
-            </span>
-          </div>
-
-          <!-- ACTION -->
-          <button 
-            class="btn btn-sm btn-light edit-btn ms-auto d-flex align-items-center gap-1"
-            data-name="${sign.name}"
-            data-weight="${sign.weight}"
-            data-critical="${sign.isCritical}"
-            data-active="${sign.isActive}">
-            <i class="bi bi-pencil"></i>
-            <span>Edit</span>
-          </button>
-
+      <div class="heat-left">
+        <div class="heat-name">${s.name}</div>
+        <div class="heat-sub">
+          Weight: <strong>${s.weight}</strong>
         </div>
+      </div>
+
+      <div class="heat-right">
+
+        <div class="heat-badges">
+          <span class="badge ${s.isCritical ? 'badge-critical' : 'badge-normal'}">
+            ${s.isCritical ? 'Critical' : 'Normal'}
+          </span>
+
+          <span class="badge ${s.isActive ? 'badge-active' : 'badge-disabled'}">
+            ${s.isActive ? 'Active' : 'Inactive'}
+          </span>
+        </div>
+
+        <button class="edit-btn" data-name="${s.name}">
+          <i class="bi bi-pencil"></i>
+        </button>
 
       </div>
 
     </div>
   `).join("");
 
-
-  // ---------------- PAGINATION ----------------
   renderPagination(filtered.length);
-  }
+}
 
-/* ---------------- PAGINATION ---------------- */
-function renderPagination(totalItems) {
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+/* ================= PAGINATION ================= */
+function renderPagination(total) {
+  const pages = Math.ceil(total / pageSize) || 1;
 
   document.getElementById("pageInfo").innerText =
-    `Page ${currentPage} of ${totalPages}`;
+    `Page ${currentPage} of ${pages}`;
 
-  document.getElementById("prevPageBtn").disabled = currentPage === 1;
-  document.getElementById("nextPageBtn").disabled = currentPage === totalPages;
+  const prevBtn = document.getElementById("prevPageBtn");
+  const nextBtn = document.getElementById("nextPageBtn");
+
+  // Disable buttons properly
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage === pages;
+
+  prevBtn.style.opacity = currentPage === 1 ? "0.4" : "1";
+  nextBtn.style.opacity = currentPage === pages ? "0.4" : "1";
 }
-/* ---------------- TAB UI HELPER ---------------- */
-function setActiveTab(id) {
-  document.querySelectorAll(".heat-tab").forEach(btn => {
-    btn.classList.remove("active");
-  });
-  document.getElementById(id)?.classList.add("active");
-}
 
-/* ---------------- MODAL CONTROL ---------------- */
-let bsModal;
-
-function openModal(isEdit = false, data = null) {
-  const modalEl = document.getElementById("heatSignModal");
-  bsModal = new bootstrap.Modal(modalEl);
-
-  if (isEdit && data) {
-    editingName = data.name;
-    document.getElementById("modalTitle").innerText = "Edit Heat Sign";
-
-    document.getElementById("signName").value = data.name;
-    document.getElementById("signWeight").value = data.weight;
-    document.getElementById("signType").value =
-      data.isCritical ? "critical" : "normal";
-    document.getElementById("signActive").checked = data.isActive;
-  } else {
-    editingName = null;
-    document.getElementById("modalTitle").innerText = "Add Heat Sign";
-
-    document.getElementById("signName").value = "";
-    document.getElementById("signWeight").value = "";
-    document.getElementById("signType").value = "normal";
-    document.getElementById("signActive").checked = true;
-  }
-
-  bsModal.show();
+/* ================= MODAL ================= */
+function openModal() {
+  const modal = document.getElementById("heatSignModal");
+  modal.classList.add("show");
+  modal.style.display = "block";
 }
 
 function closeModal() {
-  if (bsModal) bsModal.hide();
+  const modal = document.getElementById("heatSignModal");
+  modal.classList.remove("show");
+  modal.style.display = "none";
+
+  // reset form
+  document.getElementById("signName").value = "";
+  document.getElementById("signWeight").value = "";
+  document.getElementById("signType").value = "normal";
+  document.getElementById("signActive").checked = true;
+
+  editingName = null;
 }
 
-/* ---------------- SAVE (CONNECTED TO BACKEND) ---------------- */
 async function saveHeatSign() {
   const name = document.getElementById("signName").value.trim();
   const weight = parseInt(document.getElementById("signWeight").value);
   const isCritical = document.getElementById("signType").value === "critical";
   const isActive = document.getElementById("signActive").checked;
 
-  if (!name) return alert("Sign name required");
+  if (!name) {
+    alert("Sign name required");
+    return;
+  }
 
-  // ---------------- UPDATE LOCAL STATE ----------------
+  // ✅ UPDATE LOCAL STATE (IMPORTANT)
   if (editingName) {
     const index = heatSigns.findIndex(s => s.name === editingName);
     if (index !== -1) {
@@ -185,17 +138,19 @@ async function saveHeatSign() {
     heatSigns.push({ name, weight, isCritical, isActive });
   }
 
-  // ---------------- SAVE TO BACKEND ----------------
+  // ✅ SEND CORRECT FORMAT TO BACKEND
   try {
     await fetch("/api/system-settings/heat-signs", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ signs: heatSigns })
+      body: JSON.stringify({
+        signs: heatSigns   // 🔥 CRITICAL FIX
+      })
     });
 
-    // IMPORTANT: reload from DB so UI is always correct
+    // reload fresh data
     await fetchHeatSigns();
 
   } catch (err) {
@@ -208,67 +163,82 @@ async function saveHeatSign() {
   renderTable();
 }
 
-/* ---------------- EVENT BINDINGS ---------------- */
+/* ================= EVENTS ================= */
 function bindEvents() {
-
-  document.getElementById("addHeatSignBtn")
-    .addEventListener("click", () => openModal());
-
-  // ---------------- TAB SWITCHING ----------------
-  document.getElementById("tabActive")?.addEventListener("click", () => {
+  // Tabs
+  document.getElementById("tabActive").onclick = () => {
     currentTab = "active";
     currentPage = 1;
-    setActiveTab("tabActive");
     renderTable();
-  });
+  };
 
-  document.getElementById("tabInactive")?.addEventListener("click", () => {
+  document.getElementById("tabInactive").onclick = () => {
     currentTab = "inactive";
     currentPage = 1;
-    setActiveTab("tabInactive");
     renderTable();
-  });
+  };
 
-  document.getElementById("closeModalX")
-    .addEventListener("click", closeModal);
+  // Add button
+  document.getElementById("addHeatSignBtn").onclick = () => {
+    editingName = null;
+    openModal();
+  };
 
+  // Close modal
+  document.getElementById("closeModalBtn").onclick = closeModal;
+  document.getElementById("closeModalX").onclick = closeModal;
+
+  //Save button
   document.getElementById("saveHeatSignBtn")
-    .addEventListener("click", saveHeatSign);
+  .addEventListener("click", saveHeatSign);
 
-  document.getElementById("prevPageBtn")
-    .addEventListener("click", () => {
-      currentPage--;
-      renderTable();
-    });
-
-  document.getElementById("nextPageBtn")
-    .addEventListener("click", () => {
-      currentPage++;
-      renderTable();
-    });
-
-  document.addEventListener("click", (e) => {
+  // 🔥 EDIT BUTTON (EVENT DELEGATION — IMPORTANT)
+  document.getElementById("heatSignsTable").addEventListener("click", (e) => {
     const btn = e.target.closest(".edit-btn");
     if (!btn) return;
 
-    openModal(true, {
-      name: btn.dataset.name,
-      weight: btn.dataset.weight,
-      isCritical: btn.dataset.critical === "true",
-      isActive: btn.dataset.active === "true"
-    });
+    const name = btn.dataset.name;
+    const sign = heatSigns.find(s => s.name === name);
+    if (!sign) return;
+
+    editingName = name;
+
+    document.getElementById("signName").value = sign.name;
+    document.getElementById("signWeight").value = sign.weight;
+    document.getElementById("signType").value = sign.isCritical ? "critical" : "normal";
+    document.getElementById("signActive").checked = sign.isActive !== false;
+
+    openModal();
   });
+
+  // PREV BUTTON
+  document.getElementById("prevPageBtn").onclick = () => {
+    if (currentPage > 1) {
+      currentPage--;
+      renderTable();
+    }
+  };
+
+  // NEXT BUTTON
+  document.getElementById("nextPageBtn").onclick = () => {
+    const filtered = heatSigns.filter(s =>
+      currentTab === "active" ? s.isActive !== false : s.isActive === false
+    );
+
+    const pages = Math.ceil(filtered.length / pageSize);
+
+    if (currentPage < pages) {
+      currentPage++;
+      renderTable();
+    }
+  };
 }
 
-/* ---------------- INIT ---------------- */
-async function initSystemSettings() {
+/* ================= INIT ================= */
+async function init() {
   await fetchHeatSigns();
-
-  // set default tab UI
-  setActiveTab("tabActive");
-
   renderTable();
   bindEvents();
 }
 
-document.addEventListener("DOMContentLoaded", initSystemSettings);
+document.addEventListener("DOMContentLoaded", init);

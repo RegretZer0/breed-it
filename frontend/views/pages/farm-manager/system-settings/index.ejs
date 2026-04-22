@@ -2,121 +2,95 @@
 <%- include("../../../partials/farm-manager/navbar") %>
 
 <div class="app-shell">
-
-  <!-- ================= SIDEBAR ================= -->
   <%- include("../../../partials/farm-manager/sidepanel") %>
 
-  <!-- ================= MAIN CONTENT ================= -->
-  <div class="main-content">
+  <div class="main-content settings-theme">
 
-    <main class="container-fluid py-3 settings-page-full">
+    <main class="settings-container">
 
-      <!-- ================= HEADER ================= -->
-      <div class="row g-3 mb-2">
-        <div class="col-12 col-sm-6 col-lg-6 col-xl-12">
-          <div class="card border-0 shadow-sm settings-header modern-card">
+      <!-- OUTER SHELL (MATCH DASHBOARD STYLE) -->
+      <div class="settings-shell">
 
-            <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <!-- HEADER -->
+        <div class="settings-header-card">
+          <div>
+            <h4><i class="bi bi-gear-fill"></i> System Settings</h4>
+            <small>Manage estrus heat signs used for detection and scoring</small>
+          </div>
 
-              <div>
-                <h4 class="fw-bold mb-1 d-flex align-items-center gap-2">
-                  <i class="bi bi-gear-fill text-success"></i>
-                  System Settings
-                </h4>
-                <small class="text-muted">
-                  Manage estrus heat signs used for detection and scoring
-                </small>
+          <button class="btn-add" id="addHeatSignBtn">
+            <i class="bi bi-plus-circle"></i>
+            Add Heat Sign
+          </button>
+        </div>
+
+        <!-- GRID -->
+        <div class="settings-grid">
+
+          <!-- LEFT -->
+          <div class="settings-main">
+
+            <div class="settings-card main-card">
+
+              <!-- TITLE -->
+              <div class="settings-title">
+                <h6>Estrus Heat Signs</h6>
+                <span>Configured detection indicators</span>
               </div>
 
-              <button class="btn btn-success px-4 fw-semibold d-flex align-items-center gap-2"
-                id="addHeatSignBtn">
-                <i class="bi bi-plus-circle"></i>
-                Add Heat Sign
-              </button>
+              <!-- TABS -->
+              <div class="heat-tabs">
+                <button class="heat-tab active" id="tabActive">
+                  Active (<span id="activeCount">0</span>)
+                </button>
 
-            </div>
-          </div>
-        </div>
-      </div>
+                <button class="heat-tab" id="tabInactive">
+                  Inactive (<span id="inactiveCount">0</span>)
+                </button>
+              </div>
 
-      <!-- ================= CONTENT ================= -->
-      <div class="row g-3 align-items-stretch">
+              <!-- CONTENT -->
+              <div class="heat-table-wrap">
+                <div id="heatSignsTable" class="heat-grid"></div>
+              </div>
 
-        <!-- ================= MAIN TABLE ================= -->
-        <div class="col-12 col-xl-9" id="mainHeatContainer">
-
-          <div class="card border-0 shadow-sm settings-card modern-card">
-
-            <!-- HEADER -->
-            <div class="card-header bg-transparent border-0 pb-0">
-              <h6 class="fw-bold mb-0">Estrus Heat Signs</h6>
-              <small class="text-muted">Configured detection indicators</small>
-            </div>
-
-            <div class="heat-tabs">
-              <button class="heat-tab active" id="tabActive">
-                Active (<span id="activeCount">0</span>)
-              </button>
-
-              <button class="heat-tab" id="tabInactive">
-                Inactive (<span id="inactiveCount">0</span>)
-              </button>
-            </div>
-
-            <!-- BODY -->
-            <div class="card-body pt-3">
-
-              <!-- GRID VIEW -->
-              <div class="row g-3" id="heatSignsTable"></div>
-
-            </div>
-
-            <!-- PAGINATION -->
-            <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
-
-              <button class="btn btn-light btn-sm px-3" id="prevPageBtn">
-                <i class="bi bi-chevron-left"></i>
-              </button>
-
-              <span id="pageInfo" class="fw-semibold small"></span>
-
-              <button class="btn btn-light btn-sm px-3" id="nextPageBtn">
-                <i class="bi bi-chevron-right"></i>
-              </button>
+              <!-- PAGINATION -->
+              <div class="pagination-bar">
+                <button id="prevPageBtn"><i class="bi bi-chevron-left"></i></button>
+                <span id="pageInfo"></span>
+                <button id="nextPageBtn"><i class="bi bi-chevron-right"></i></button>
+              </div>
 
             </div>
 
           </div>
-        </div>
 
-        <!-- ================= SIDE INFO PANEL ================= -->
-        <div class="col-12 col-xl-3">
+          <!-- RIGHT -->
+          <div class="settings-side">
 
-          <div class="card border-0 shadow-sm modern-card">
+            <div class="settings-card side-card">
 
-            <div class="card-body">
-              <h6 class="fw-bold mb-3">Quick Info</h6>
+              <h6>Quick Info</h6>
 
-              <div class="d-flex flex-column gap-3 small text-muted">
+              <ul class="info-list">
+                <li>
+                  <i class="bi bi-info-circle"></i>
+                  Heat signs help determine estrus readiness
+                </li>
 
-                <div>
-                  <i class="bi bi-info-circle text-success me-2"></i>
-                  Heat signs help determine estrus readiness.
-                </div>
+                <li>
+                  <i class="bi bi-lightning-charge"></i>
+                  Critical signs carry higher weight
+                </li>
 
-                <div>
-                  <i class="bi bi-lightning-charge text-warning me-2"></i>
-                  Critical signs carry higher weight.
-                </div>
-
-                <div>
-                  <i class="bi bi-toggle-on text-primary me-2"></i>
-                  Only active signs affect scoring.
-                </div>
-
-              </div>
+                <li>
+                  <i class="bi bi-toggle-on"></i>
+                  Only active signs affect scoring
+                </li>
+              </ul>
 
             </div>
+
           </div>
 
         </div>
@@ -128,49 +102,54 @@
   </div>
 </div>
 
-<!-- ================= MODAL ================= -->
-<div class="modal fade" id="heatSignModal" tabindex="-1">
+<!-- MODAL -->
+<div class="modal fade" id="heatSignModal">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content modern-modal">
 
       <!-- HEADER -->
       <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold" id="modalTitle">Add Heat Sign</h5>
-        <button type="button" class="btn-close" id="closeModalX"></button>
+        <h5 id="modalTitle">Add Heat Sign</h5>
+        <button class="btn-close" id="closeModalX"></button>
       </div>
 
       <!-- BODY -->
-      <div class="modal-body">
+      <div class="modal-body modern-modal-body">
 
-        <div class="mb-3">
-          <label class="form-label">Sign Name</label>
-          <input type="text" id="signName" class="form-control modern-input">
+        <div class="form-row">
+          <label>Sign Name</label>
+          <input id="signName" class="modern-input" placeholder="Enter sign name">
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Weight</label>
-          <input type="number" id="signWeight" class="form-control modern-input">
+        <div class="form-row-inline">
+          <div>
+            <label>Weight</label>
+            <input id="signWeight" type="number" class="modern-input" placeholder="e.g. 10">
+          </div>
+
+          <div>
+            <label>Type</label>
+            <select id="signType" class="modern-input">
+              <option value="normal">Normal</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Category</label>
-          <select id="signType" class="form-select modern-input">
-            <option value="normal">Normal</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
-
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="signActive">
-          <label class="form-check-label">Active</label>
+        <div class="form-toggle">
+          <label class="toggle">
+            <input type="checkbox" id="signActive" checked>
+            <span class="slider"></span>
+          </label>
+          <span>Active</span>
         </div>
 
       </div>
 
       <!-- FOOTER -->
-      <div class="modal-footer border-0">
-        <button class="btn btn-light" id="closeModalBtn">Cancel</button>
-        <button class="btn btn-success px-4" id="saveHeatSignBtn">Save</button>
+      <div class="modal-footer modern-footer border-0">
+        <button id="closeModalBtn" class="btn-cancel">Cancel</button>
+        <button id="saveHeatSignBtn" class="btn-save">Save</button>
       </div>
 
     </div>
