@@ -584,3 +584,11 @@ a{ text-decoration:none; }
   .lp-brand-text{ font-size: 18px; }
   .lp-nav-cta{ height: 38px; padding: 0 14px; }
 }
+
+
+/* DISABLED FEATURE */
+.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
